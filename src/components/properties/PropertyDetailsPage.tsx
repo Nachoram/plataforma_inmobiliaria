@@ -39,9 +39,12 @@ export const PropertyDetailsPage: React.FC = () => {
         .from('profiles')
         .select('*')
         .eq('id', propertyData.owner_id)
-        .single();
+        .maybeSingle();
 
-      if (ownerError) throw ownerError;
+      if (ownerError) {
+        console.error('Error fetching owner profile:', ownerError);
+        // Continue without owner data if profile doesn't exist
+      }
       setOwner(ownerData);
     } catch (error) {
       console.error('Error fetching property details:', error);

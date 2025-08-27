@@ -21,7 +21,7 @@ interface OfferWithDetails {
     full_name: string | null;
     contact_email: string | null;
     contact_phone: string | null;
-  };
+  } | null;
 }
 
 export const OffersPage: React.FC = () => {
@@ -200,13 +200,13 @@ export const OffersPage: React.FC = () => {
                     <div className="space-y-1 text-sm">
                       <div>
                         <span className="text-gray-500">Nombre: </span>
-                        <span className="font-medium">{offer.buyer.full_name || 'No especificado'}</span>
+                        <span className="font-medium">{offer.buyer?.full_name || 'No especificado'}</span>
                       </div>
                       <div>
                         <span className="text-gray-500">Email: </span>
-                        <span className="font-medium">{offer.buyer.contact_email}</span>
+                        <span className="font-medium">{offer.buyer?.contact_email || 'No especificado'}</span>
                       </div>
-                      {offer.buyer.contact_phone && (
+                      {offer.buyer?.contact_phone && (
                         <div>
                           <span className="text-gray-500">Teléfono: </span>
                           <span className="font-medium">{offer.buyer.contact_phone}</span>

@@ -27,12 +27,19 @@ export interface Property {
   country: string;
   description: string | null;
   price: number;
+  common_expenses: number;
   bedrooms: number;
   bathrooms: number;
   area_sqm: number | null;
   photos_urls: string[];
   documents_urls: string[];
   status: 'disponible' | 'vendida' | 'arrendada';
+  owner_full_name: string;
+  owner_address: string | null;
+  owner_email: string;
+  owner_phone: string | null;
+  marital_status: 'soltero' | 'casado' | 'divorciado' | 'viudo';
+  property_regime: string | null;
   created_at: string;
 }
 

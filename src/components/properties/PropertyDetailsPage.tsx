@@ -4,7 +4,7 @@ import { MapPin, Bed, Bath, Square, DollarSign, Calendar, User, Building, ArrowL
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { ApplicationForm } from './ApplicationForm';
-import { OfferForm } from './OfferForm';
+import { AdvancedOfferForm } from './AdvancedOfferForm';
 
 export const PropertyDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,7 +14,7 @@ export const PropertyDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
-  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [showAdvancedOfferForm, setShowAdvancedOfferForm] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -261,7 +261,7 @@ export const PropertyDetailsPage: React.FC = () => {
                 </button>
               ) : (
                 <button
-                  onClick={() => setShowOfferForm(true)}
+                  onClick={() => setShowAdvancedOfferForm(true)}
                   className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                 >
                   Hacer Oferta de Compra
@@ -298,12 +298,12 @@ export const PropertyDetailsPage: React.FC = () => {
         />
       )}
 
-      {showOfferForm && property.listing_type === 'venta' && (
-        <OfferForm
+      {showAdvancedOfferForm && property.listing_type === 'venta' && (
+        <AdvancedOfferForm
           propertyId={property.id}
           propertyAddress={property.address}
           askingPrice={property.price}
-          onClose={() => setShowOfferForm(false)}
+          onClose={() => setShowAdvancedOfferForm(false)}
         />
       )}
     </div>

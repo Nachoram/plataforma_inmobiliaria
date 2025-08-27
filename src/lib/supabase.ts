@@ -59,5 +59,18 @@ export interface Offer {
   offer_amount: number;
   message: string | null;
   status: 'pendiente' | 'aceptada' | 'rechazada';
+  financing_type: 'contado' | 'credito_preaprobado' | 'credito_tramitacion';
+  selected_services: string[];
+  services_total_cost: number;
+  buyer_info: {
+    fullName: string;
+    rut: string;
+    address: string;
+    email: string;
+    phone: string;
+    maritalStatus: string;
+    propertyRegime: string;
+  };
+  payment_status: 'no_aplica' | 'pendiente' | 'pagado' | 'cancelado';
   created_at: string;
 }

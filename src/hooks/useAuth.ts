@@ -53,7 +53,29 @@ export const useAuth = () => {
   };
 
   const signIn = async (email: string, password: string) => {
-    return await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (data.user && !error) {
+      // Check if profile exists, create one if it doesn't
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (!profile) {
+        // Create profile if it doesn't exist
+        await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            full_name: data.user.user_metadata?.full_name || '',
+            contact_email: data.user.email || email,
+          });
+      }
+    }
+    
+    return { data, error };
   };
 
   const signOut = async () => {

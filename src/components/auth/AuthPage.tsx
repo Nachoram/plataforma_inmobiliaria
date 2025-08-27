@@ -36,7 +36,7 @@ export const AuthPage: React.FC = () => {
       }
     } catch (error: any) {
       // Handle specific error cases
-      if (error.message?.includes('email_not_confirmed') || error.message?.includes('Email not confirmed')) {
+      if (error.message?.toLowerCase().includes('email not confirmed')) {
         setError('Tu email no ha sido confirmado. Por favor revisa tu bandeja de entrada y haz clic en el enlace de confirmación que te enviamos.');
       } else {
         setError(error.message || 'Ha ocurrido un error');

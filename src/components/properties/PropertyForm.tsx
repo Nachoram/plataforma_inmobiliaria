@@ -218,6 +218,23 @@ export const PropertyForm: React.FC = () => {
     setLoading(true);
 
     try {
+      // First, ensure the user's profile exists in the profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user?.id,
+          full_name: formData.owner_full_name,
+          contact_email: formData.owner_email,
+          contact_phone: formData.owner_phone || null,
+        }, {
+          onConflict: 'id'
+        });
+
+      if (profileError) {
+        console.error('Error upserting profile:', profileError);
+        throw profileError;
+      }
+
       let photoUrls = formData.photos_urls;
       let documentUrls: string[] = [];
 

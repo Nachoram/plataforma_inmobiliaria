@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, MapPin, Bed, Bath, Square, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Bed, Bath, Square, DollarSign, Building } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 

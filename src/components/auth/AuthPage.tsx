@@ -28,12 +28,19 @@ export const AuthPage: React.FC = () => {
       if (isSignUp) {
         const { error } = await signUp(formData.email, formData.password, formData.fullName);
         if (error) throw error;
+        // Show success message for sign-up
+        setError('¡Cuenta creada exitosamente! Por favor revisa tu email y haz clic en el enlace de confirmación para activar tu cuenta.');
       } else {
         const { error } = await signIn(formData.email, formData.password);
         if (error) throw error;
       }
     } catch (error: any) {
-      setError(error.message || 'Ha ocurrido un error');
+      // Handle specific error cases
+      if (error.message?.includes('email_not_confirmed') || error.message?.includes('Email not confirmed')) {
+        setError('Tu email no ha sido confirmado. Por favor revisa tu bandeja de entrada y haz clic en el enlace de confirmación que te enviamos.');
+      } else {
+        setError(error.message || 'Ha ocurrido un error');
+      }
     } finally {
       setLoading(false);
     }
@@ -125,7 +132,11 @@ export const AuthPage: React.FC = () => {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div className={`border px-4 py-3 rounded-lg text-sm ${
+                error.includes('exitosamente') 
+                  ? 'bg-green-50 border-green-200 text-green-700' 
+                  : 'bg-red-50 border-red-200 text-red-600'
+              }`}>
                 {error}
               </div>
             )}

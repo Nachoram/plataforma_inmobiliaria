@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, DollarSign, Calendar, User, Building, ArrowLeft } from 'lucide-react';
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { ApplicationForm } from './ApplicationForm';
+import { RentalApplicationForm } from './RentalApplicationForm';
 import { AdvancedOfferForm } from './AdvancedOfferForm';
 
 export const PropertyDetailsPage: React.FC = () => {
@@ -13,7 +13,7 @@ export const PropertyDetailsPage: React.FC = () => {
   const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
-  const [showApplicationForm, setShowApplicationForm] = useState(false);
+  const [showRentalApplicationForm, setShowRentalApplicationForm] = useState(false);
   const [showAdvancedOfferForm, setShowAdvancedOfferForm] = useState(false);
 
   useEffect(() => {
@@ -254,7 +254,7 @@ export const PropertyDetailsPage: React.FC = () => {
               
               {property.listing_type === 'arriendo' ? (
                 <button
-                  onClick={() => setShowApplicationForm(true)}
+                  onClick={() => setShowRentalApplicationForm(true)}
                   className="w-full bg-emerald-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
                 >
                   Postular a Arriendo
@@ -290,11 +290,11 @@ export const PropertyDetailsPage: React.FC = () => {
       </div>
 
       {/* Forms */}
-      {showApplicationForm && property.listing_type === 'arriendo' && (
-        <ApplicationForm
+      {showRentalApplicationForm && property.listing_type === 'arriendo' && (
+        <RentalApplicationForm
           propertyId={property.id}
           propertyAddress={property.address}
-          onClose={() => setShowApplicationForm(false)}
+          onClose={() => setShowRentalApplicationForm(false)}
         />
       )}
 

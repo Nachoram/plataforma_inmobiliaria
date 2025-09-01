@@ -296,6 +296,15 @@ export const UserProfile: React.FC = () => {
 
   // Handle document upload
   const handleDocumentUpload = async (documentType: keyof typeof documentFiles, file: File) => {
+    // Check if storage is available before attempting upload
+    if (!storageAvailable) {
+      setErrors(prev => ({
+        ...prev,
+        [documentType]: 'La funcionalidad de carga de documentos no está disponible. El bucket de almacenamiento debe ser configurado.'
+      }));
+      return;
+    }
+
     setUploading(true);
     setErrors(prev => ({ ...prev, [documentType]: '' })); // Clear previous errors
     
@@ -696,6 +705,21 @@ export const UserProfile: React.FC = () => {
           </div>
 
           <div className="space-y-4">
+            {/* Mensaje informativo sobre documentos */}
+            {!storageAvailable && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
+                <p className="text-sm">
+                  <strong>Aviso:</strong> La funcionalidad de carga de documentos no está disponible. El bucket de almacenamiento 'user-documents' debe ser creado en Supabase Storage.
+                </p>
+              </div>
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4">
+              <p className="text-sm">
+                <strong>Información:</strong> Los documentos son opcionales y pueden ayudar a fortalecer las postulaciones de arriendo.
+              </p>
+            </div>
+
             {/* Cédula de Identidad */}
             <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
               <div className="flex-1">
@@ -735,7 +759,7 @@ export const UserProfile: React.FC = () => {
                         }
                       }}
                       className="hidden"
-                      disabled={uploading}
+                      disabled={uploading || !storageAvailable}
                     />
                   </label>
                 )}
@@ -781,7 +805,7 @@ export const UserProfile: React.FC = () => {
                         }
                       }}
                       className="hidden"
-                      disabled={uploading}
+                      disabled={uploading || !storageAvailable}
                     />
                   </label>
                 )}
@@ -1071,7 +1095,7 @@ export const UserProfile: React.FC = () => {
                           }
                         }}
                         className="hidden"
-                        disabled={uploading}
+                        disabled={uploading || !storageAvailable}
                       />
                     </label>
                   )}
@@ -1117,7 +1141,7 @@ export const UserProfile: React.FC = () => {
                           }
                         }}
                         className="hidden"
-                        disabled={uploading}
+                        disabled={uploading || !storageAvailable}
                       />
                     </label>
                   )}

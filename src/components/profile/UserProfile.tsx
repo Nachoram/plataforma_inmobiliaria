@@ -275,6 +275,18 @@ export const UserProfile: React.FC = () => {
   const handleDocumentUpload = async (documentType: keyof typeof documentFiles, file: File) => {
     setUploading(true);
     try {
+      // First, try to create the bucket if it doesn't exist
+      const { error: bucketError } = await supabase.storage.createBucket('user-documents', {
+        public: false,
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'application/pdf'],
+        fileSizeLimit: 10485760 // 10MB
+      });
+      
+      // Ignore error if bucket already exists
+      if (bucketError && !bucketError.message.includes('already exists')) {
+        console.warn('Could not create bucket:', bucketError);
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}/${documentType}-${Date.now()}.${fileExt}`;
 
@@ -305,7 +317,7 @@ export const UserProfile: React.FC = () => {
       console.error('Error uploading document:', error);
       setErrors(prev => ({
         ...prev,
-        [documentType]: 'Error al subir el archivo'
+        [documentType]: 'Error al subir el archivo. Por favor, intenta nuevamente.'
       }));
     } finally {
       setUploading(false);

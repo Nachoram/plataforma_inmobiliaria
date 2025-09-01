@@ -9,6 +9,88 @@ interface RentalApplicationFormProps {
   onClose: () => void;
 }
 
+// Datos de regiones y comunas de Chile
+const CHILE_REGIONS_COMMUNES = {
+  'region-metropolitana': {
+    name: 'Región Metropolitana de Santiago',
+    communes: [
+      'Cerrillos', 'Cerro Navia', 'Conchalí', 'El Bosque', 'Estación Central',
+      'Huechuraba', 'Independencia', 'La Cisterna', 'La Florida', 'La Granja',
+      'La Pintana', 'La Reina', 'Las Condes', 'Lo Barnechea', 'Lo Espejo',
+      'Lo Prado', 'Macul', 'Maipú', 'Ñuñoa', 'Pedro Aguirre Cerda',
+      'Peñalolén', 'Providencia', 'Pudahuel', 'Quilicura', 'Quinta Normal',
+      'Recoleta', 'Renca', 'San Joaquín', 'San Miguel', 'San Ramón',
+      'Santiago', 'Vitacura', 'Puente Alto', 'Pirque', 'San José de Maipo',
+      'Colina', 'Lampa', 'Tiltil', 'San Bernardo', 'Buin', 'Calera de Tango',
+      'Paine', 'Melipilla', 'Alhué', 'Curacaví', 'María Pinto', 'San Pedro',
+      'Talagante', 'El Monte', 'Isla de Maipo', 'Padre Hurtado', 'Peñaflor'
+    ]
+  },
+  'valparaiso': {
+    name: 'Región de Valparaíso',
+    communes: [
+      'Valparaíso', 'Viña del Mar', 'Concón', 'Quintero', 'Puchuncaví',
+      'Casablanca', 'Juan Fernández', 'San Antonio', 'Santo Domingo',
+      'Cartagena', 'El Tabo', 'El Quisco', 'Algarrobo', 'San Felipe',
+      'Llaillay', 'Putaendo', 'Santa María', 'Catemu', 'Panquehue',
+      'Los Andes', 'Calle Larga', 'Rinconada', 'San Esteban',
+      'La Ligua', 'Cabildo', 'Papudo', 'Zapallar', 'Petorca', 'Chincolco',
+      'Hijuelas', 'La Calera', 'La Cruz', 'Limache', 'Nogales',
+      'Olmué', 'Quillota'
+    ]
+  },
+  'biobio': {
+    name: 'Región del Biobío',
+    communes: [
+      'Concepción', 'Talcahuano', 'Hualpén', 'Chiguayante', 'San Pedro de la Paz',
+      'Coronel', 'Lota', 'Hualqui', 'Santa Juana', 'Laja', 'Quilleco',
+      'Cabrero', 'Tucapel', 'Antuco', 'San Rosendo', 'Yumbel', 'Pemuco',
+      'Bulnes', 'Quillón', 'Florida', 'Chillán', 'Chillán Viejo', 'El Carmen',
+      'Pemuco', 'Pinto', 'Coihueco', 'Ñiquén', 'San Ignacio', 'Quirihue',
+      'Cobquecura', 'Trehuaco', 'Portezuelo', 'Coelemu', 'Ránquil',
+      'Ninhue', 'San Carlos', 'Ñipas', 'San Fabián', 'San Nicolás',
+      'Cañete', 'Contulmo', 'Curanilahue', 'Los Álamos', 'Tirúa',
+      'Arauco', 'Lebu', 'Los Angeles', 'Cabrero', 'Tucapel', 'Antuco',
+      'Quilleco', 'Santa Bárbara', 'Quilaco', 'Mulchén', 'Negrete',
+      'Nacimiento', 'Laja'
+    ]
+  },
+  'araucania': {
+    name: 'Región de La Araucanía',
+    communes: [
+      'Temuco', 'Padre Las Casas', 'Lautaro', 'Perquenco', 'Vilcún',
+      'Cholchol', 'Nueva Imperial', 'Carahue', 'Saavedra', 'Teodoro Schmidt',
+      'Pitrufquén', 'Gorbea', 'Loncoche', 'Toltén', 'Cunco', 'Melipeuco',
+      'Curarrehue', 'Pucón', 'Villarrica', 'Freire', 'Angol', 'Renaico',
+      'Collipulli', 'Lonquimay', 'Curacautín', 'Ercilla', 'Victoria',
+      'Traiguén', 'Lumaco', 'Purén', 'Los Sauces'
+    ]
+  },
+  'los-lagos': {
+    name: 'Región de Los Lagos',
+    communes: [
+      'Puerto Montt', 'Puerto Varas', 'Cochamó', 'Los Muermos', 'Fresia',
+      'Frutillar', 'Llanquihue', 'Maullín', 'Calbuco', 'Castro', 'Ancud',
+      'Quemchi', 'Dalcahue', 'Curaco de Vélez', 'Quinchao', 'Puqueldón',
+      'Chonchi', 'Queilén', 'Quellón', 'Osorno', 'San Pablo', 'Puyehue',
+      'Río Negro', 'Purranque', 'Puerto Octay', 'Frutillar', 'San Juan de la Costa',
+      'Chaitén', 'Futaleufú', 'Hualaihué', 'Palena'
+    ]
+  },
+  'ohiggins': {
+    name: 'Región del Libertador General Bernardo O\'Higgins',
+    communes: [
+      'Rancagua', 'Codegua', 'Coinco', 'Coltauco', 'Doñihue', 'Graneros',
+      'Las Cabras', 'Machalí', 'Malloa', 'Mostazal', 'Olivar', 'Peumo',
+      'Pichidegua', 'Quinta de Tilcoco', 'Rengo', 'Requínoa', 'San Vicente',
+      'Pichilemu', 'La Estrella', 'Litueche', 'Marchihue', 'Navidad',
+      'Paredones', 'San Fernando', 'Chépica', 'Chimbarongo', 'Lolol',
+      'Nancagua', 'Palmilla', 'Peralillo', 'Placilla', 'Pumanque',
+      'Santa Cruz'
+    ]
+  }
+};
+
 interface ApplicationData {
   // Datos del Postulante
   applicant: {
@@ -20,14 +102,15 @@ interface ApplicationData {
     workExperience: string;
     email: string;
     phone: string;
+    address: string;
+    apartmentNumber: string;
+    region: string;
+    commune: string;
   };
   
-  // Documentos del Postulante
+  // Documentos del Postulante (simplificados)
   applicantDocuments: {
     nationalId: File | null;
-    workContract: File | null;
-    paySlips: File | null;
-    pensionCertificate: File | null;
     creditReport: File | null;
   };
   
@@ -39,14 +122,20 @@ interface ApplicationData {
     monthlyIncome: string;
     email: string;
     phone: string;
+    address: string;
+    apartmentNumber: string;
+    region: string;
+    commune: string;
   };
   
-  // Documentos del Aval
+  // Documentos del Aval (simplificados)
   guarantorDocuments: {
     nationalId: File | null;
-    paySlips: File | null;
     creditReport: File | null;
   };
+  
+  // Opción de mismo domicilio
+  sameAddressAsApplicant: boolean;
   
   // Confirmación
   declarationAccepted: boolean;
@@ -73,12 +162,13 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       workExperience: '',
       email: user?.email || '',
       phone: '',
+      address: '',
+      apartmentNumber: '',
+      region: '',
+      commune: '',
     },
     applicantDocuments: {
       nationalId: null,
-      workContract: null,
-      paySlips: null,
-      pensionCertificate: null,
       creditReport: null,
     },
     hasGuarantor: false,
@@ -88,27 +178,70 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       monthlyIncome: '',
       email: '',
       phone: '',
+      address: '',
+      apartmentNumber: '',
+      region: '',
+      commune: '',
     },
     guarantorDocuments: {
       nationalId: null,
-      paySlips: null,
       creditReport: null,
     },
+    sameAddressAsApplicant: false,
     declarationAccepted: false,
   });
 
-  // Configuración de documentos requeridos
+  // Obtener comunas disponibles según la región seleccionada
+  const getAvailableCommunes = (regionKey: string) => {
+    return CHILE_REGIONS_COMMUNES[regionKey as keyof typeof CHILE_REGIONS_COMMUNES]?.communes || [];
+  };
+
+  // Manejar cambio de región (resetear comuna)
+  const handleRegionChange = (regionKey: string, isGuarantor: boolean = false) => {
+    if (isGuarantor) {
+      setApplicationData(prev => ({
+        ...prev,
+        guarantor: {
+          ...prev.guarantor,
+          region: regionKey,
+          commune: '' // Resetear comuna cuando cambia la región
+        }
+      }));
+    } else {
+      setApplicationData(prev => ({
+        ...prev,
+        applicant: {
+          ...prev.applicant,
+          region: regionKey,
+          commune: '' // Resetear comuna cuando cambia la región
+        }
+      }));
+    }
+  };
+
+  // Manejar checkbox "Mismo domicilio"
+  const handleSameAddressChange = (checked: boolean) => {
+    setApplicationData(prev => ({
+      ...prev,
+      sameAddressAsApplicant: checked,
+      guarantor: {
+        ...prev.guarantor,
+        address: checked ? prev.applicant.address : '',
+        apartmentNumber: checked ? prev.applicant.apartmentNumber : '',
+        region: checked ? prev.applicant.region : '',
+        commune: checked ? prev.applicant.commune : '',
+      }
+    }));
+  };
+
+  // Configuración de documentos requeridos (simplificados)
   const requiredApplicantDocuments = [
     { key: 'nationalId', label: 'Cédula de Identidad (ambos lados)', icon: <User className="h-5 w-5" /> },
-    { key: 'workContract', label: 'Contrato de Trabajo Indefinido', icon: <FileText className="h-5 w-5" /> },
-    { key: 'paySlips', label: 'Últimas 3 Liquidaciones de Sueldo', icon: <FileText className="h-5 w-5" /> },
-    { key: 'pensionCertificate', label: 'Certificado de Cotizaciones AFP (12 meses)', icon: <Shield className="h-5 w-5" /> },
     { key: 'creditReport', label: 'Informe Comercial (ej: Equifax Platinum 360)', icon: <FileText className="h-5 w-5" /> },
   ];
 
   const requiredGuarantorDocuments = [
     { key: 'nationalId', label: 'Cédula de Identidad del Aval (ambos lados)', icon: <User className="h-5 w-5" /> },
-    { key: 'paySlips', label: 'Últimas 3 Liquidaciones de Sueldo del Aval', icon: <FileText className="h-5 w-5" /> },
     { key: 'creditReport', label: 'Informe Comercial del Aval', icon: <FileText className="h-5 w-5" /> },
   ];
 
@@ -170,8 +303,17 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     if (!applicationData.applicant.phone.trim()) {
       newErrors.applicantPhone = 'El teléfono es requerido';
     }
+    if (!applicationData.applicant.address.trim()) {
+      newErrors.applicantAddress = 'La dirección es requerida';
+    }
+    if (!applicationData.applicant.region) {
+      newErrors.applicantRegion = 'La región es requerida';
+    }
+    if (!applicationData.applicant.commune) {
+      newErrors.applicantCommune = 'La comuna es requerida';
+    }
 
-    // Validar documentos del postulante
+    // Validar documentos del postulante (simplificados)
     requiredApplicantDocuments.forEach(doc => {
       if (!applicationData.applicantDocuments[doc.key as keyof typeof applicationData.applicantDocuments]) {
         newErrors[`applicantDoc_${doc.key}`] = 'Documento requerido';
@@ -195,8 +337,17 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       if (!applicationData.guarantor.phone.trim()) {
         newErrors.guarantorPhone = 'El teléfono del aval es requerido';
       }
+      if (!applicationData.guarantor.address.trim()) {
+        newErrors.guarantorAddress = 'La dirección del aval es requerida';
+      }
+      if (!applicationData.guarantor.region) {
+        newErrors.guarantorRegion = 'La región del aval es requerida';
+      }
+      if (!applicationData.guarantor.commune) {
+        newErrors.guarantorCommune = 'La comuna del aval es requerida';
+      }
 
-      // Validar documentos del aval
+      // Validar documentos del aval (simplificados)
       requiredGuarantorDocuments.forEach(doc => {
         if (!applicationData.guarantorDocuments[doc.key as keyof typeof applicationData.guarantorDocuments]) {
           newErrors[`guarantorDoc_${doc.key}`] = 'Documento requerido';
@@ -593,9 +744,106 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* Domicilio del Postulante */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-800">Domicilio del Postulante</h4>
+                  
+                  <div className="grid grid-cols-1 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Dirección *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={applicationData.applicant.address}
+                        onChange={(e) => setApplicationData(prev => ({
+                          ...prev,
+                          applicant: { ...prev.applicant, address: e.target.value }
+                        }))}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          errors.applicantAddress ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="Ej: Av. Libertador 1234"
+                      />
+                      {errors.applicantAddress && (
+                        <p className="mt-1 text-sm text-red-600">{errors.applicantAddress}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Departamento / Oficina / Casa N° (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={applicationData.applicant.apartmentNumber}
+                        onChange={(e) => setApplicationData(prev => ({
+                          ...prev,
+                          applicant: { ...prev.applicant, apartmentNumber: e.target.value }
+                        }))}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        placeholder="Ej: Depto 501, Casa 15"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Región *
+                        </label>
+                        <select
+                          required
+                          value={applicationData.applicant.region}
+                          onChange={(e) => handleRegionChange(e.target.value)}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.applicantRegion ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="">Seleccionar región</option>
+                          {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
+                            <option key={key} value={key}>{region.name}</option>
+                          ))}
+                        </select>
+                        {errors.applicantRegion && (
+                          <p className="mt-1 text-sm text-red-600">{errors.applicantRegion}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Comuna *
+                        </label>
+                        <select
+                          required
+                          value={applicationData.applicant.commune}
+                          onChange={(e) => setApplicationData(prev => ({
+                            ...prev,
+                            applicant: { ...prev.applicant, commune: e.target.value }
+                          }))}
+                          disabled={!applicationData.applicant.region}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.applicantCommune ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          } ${!applicationData.applicant.region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                        >
+                          <option value="">
+                            {applicationData.applicant.region ? 'Seleccionar comuna' : 'Primero selecciona una región'}
+                          </option>
+                          {applicationData.applicant.region && getAvailableCommunes(applicationData.applicant.region).map((commune) => (
+                            <option key={commune} value={commune}>{commune}</option>
+                          ))}
+                        </select>
+                        {errors.applicantCommune && (
+                          <p className="mt-1 text-sm text-red-600">{errors.applicantCommune}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Sección 2: Documentación del Postulante */}
+              {/* Sección 2: Documentación del Postulante (Simplificada) */}
               <div className="space-y-6">
                 <div className="border-b pb-2">
                   <h3 className="text-xl font-bold text-gray-900 flex items-center">
@@ -603,7 +851,7 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                     Documentación del Postulante
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    Todos los documentos son requeridos para procesar tu postulación
+                    Documentos requeridos para procesar tu postulación
                   </p>
                 </div>
 
@@ -644,7 +892,12 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                         monthlyIncome: '',
                         email: '',
                         phone: '',
-                      }
+                        address: '',
+                        apartmentNumber: '',
+                        region: '',
+                        commune: '',
+                      },
+                      sameAddressAsApplicant: false
                     }))}
                     className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
                   />
@@ -655,122 +908,240 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
                 {/* Formulario condicional del aval */}
                 {applicationData.hasGuarantor && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Nombre Completo del Aval *
-                      </label>
-                      <input
-                        type="text"
-                        required={applicationData.hasGuarantor}
-                        value={applicationData.guarantor.fullName}
-                        onChange={(e) => setApplicationData(prev => ({
-                          ...prev,
-                          guarantor: { ...prev.guarantor, fullName: e.target.value }
-                        }))}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                          errors.guarantorFullName ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="María Elena González"
-                      />
-                      {errors.guarantorFullName && (
-                        <p className="mt-1 text-sm text-red-600">{errors.guarantorFullName}</p>
-                      )}
+                  <div className="space-y-6 p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Nombre Completo del Aval *
+                        </label>
+                        <input
+                          type="text"
+                          required={applicationData.hasGuarantor}
+                          value={applicationData.guarantor.fullName}
+                          onChange={(e) => setApplicationData(prev => ({
+                            ...prev,
+                            guarantor: { ...prev.guarantor, fullName: e.target.value }
+                          }))}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.guarantorFullName ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="María Elena González"
+                        />
+                        {errors.guarantorFullName && (
+                          <p className="mt-1 text-sm text-red-600">{errors.guarantorFullName}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          RUT o Identificación Nacional del Aval *
+                        </label>
+                        <input
+                          type="text"
+                          required={applicationData.hasGuarantor}
+                          value={applicationData.guarantor.rut}
+                          onChange={(e) => setApplicationData(prev => ({
+                            ...prev,
+                            guarantor: { ...prev.guarantor, rut: e.target.value }
+                          }))}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.guarantorRut ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="98.765.432-1"
+                        />
+                        {errors.guarantorRut && (
+                          <p className="mt-1 text-sm text-red-600">{errors.guarantorRut}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Renta Líquida Mensual del Aval (CLP) *
+                        </label>
+                        <input
+                          type="number"
+                          required={applicationData.hasGuarantor}
+                          min="0"
+                          value={applicationData.guarantor.monthlyIncome}
+                          onChange={(e) => setApplicationData(prev => ({
+                            ...prev,
+                            guarantor: { ...prev.guarantor, monthlyIncome: e.target.value }
+                          }))}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.guarantorIncome ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="2000000"
+                        />
+                        {errors.guarantorIncome && (
+                          <p className="mt-1 text-sm text-red-600">{errors.guarantorIncome}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Email de Contacto del Aval *
+                        </label>
+                        <input
+                          type="email"
+                          required={applicationData.hasGuarantor}
+                          value={applicationData.guarantor.email}
+                          onChange={(e) => setApplicationData(prev => ({
+                            ...prev,
+                            guarantor: { ...prev.guarantor, email: e.target.value }
+                          }))}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.guarantorEmail ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="maria@email.com"
+                        />
+                        {errors.guarantorEmail && (
+                          <p className="mt-1 text-sm text-red-600">{errors.guarantorEmail}</p>
+                        )}
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Teléfono de Contacto del Aval *
+                        </label>
+                        <input
+                          type="tel"
+                          required={applicationData.hasGuarantor}
+                          value={applicationData.guarantor.phone}
+                          onChange={(e) => setApplicationData(prev => ({
+                            ...prev,
+                            guarantor: { ...prev.guarantor, phone: e.target.value }
+                          }))}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.guarantorPhone ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="+56 9 8765 4321"
+                        />
+                        {errors.guarantorPhone && (
+                          <p className="mt-1 text-sm text-red-600">{errors.guarantorPhone}</p>
+                        )}
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        RUT o Identificación Nacional del Aval *
-                      </label>
-                      <input
-                        type="text"
-                        required={applicationData.hasGuarantor}
-                        value={applicationData.guarantor.rut}
-                        onChange={(e) => setApplicationData(prev => ({
-                          ...prev,
-                          guarantor: { ...prev.guarantor, rut: e.target.value }
-                        }))}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                          errors.guarantorRut ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="98.765.432-1"
-                      />
-                      {errors.guarantorRut && (
-                        <p className="mt-1 text-sm text-red-600">{errors.guarantorRut}</p>
-                      )}
-                    </div>
+                    {/* Domicilio del Aval */}
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-800">Domicilio del Aval</h4>
+                      
+                      {/* Checkbox "Mismo domicilio" */}
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="sameAddress"
+                          checked={applicationData.sameAddressAsApplicant}
+                          onChange={(e) => handleSameAddressChange(e.target.checked)}
+                          className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                        />
+                        <label htmlFor="sameAddress" className="text-sm font-medium text-gray-700">
+                          El aval tiene el mismo domicilio que el postulante
+                        </label>
+                      </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Renta Líquida Mensual del Aval (CLP) *
-                      </label>
-                      <input
-                        type="number"
-                        required={applicationData.hasGuarantor}
-                        min="0"
-                        value={applicationData.guarantor.monthlyIncome}
-                        onChange={(e) => setApplicationData(prev => ({
-                          ...prev,
-                          guarantor: { ...prev.guarantor, monthlyIncome: e.target.value }
-                        }))}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                          errors.guarantorIncome ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="2000000"
-                      />
-                      {errors.guarantorIncome && (
-                        <p className="mt-1 text-sm text-red-600">{errors.guarantorIncome}</p>
-                      )}
-                    </div>
+                      <div className="grid grid-cols-1 gap-6">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Dirección del Aval *
+                          </label>
+                          <input
+                            type="text"
+                            required={applicationData.hasGuarantor}
+                            value={applicationData.guarantor.address}
+                            onChange={(e) => setApplicationData(prev => ({
+                              ...prev,
+                              guarantor: { ...prev.guarantor, address: e.target.value }
+                            }))}
+                            disabled={applicationData.sameAddressAsApplicant}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                              errors.guarantorAddress ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                            } ${applicationData.sameAddressAsApplicant ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            placeholder="Ej: Av. Providencia 2500"
+                          />
+                          {errors.guarantorAddress && (
+                            <p className="mt-1 text-sm text-red-600">{errors.guarantorAddress}</p>
+                          )}
+                        </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Email de Contacto del Aval *
-                      </label>
-                      <input
-                        type="email"
-                        required={applicationData.hasGuarantor}
-                        value={applicationData.guarantor.email}
-                        onChange={(e) => setApplicationData(prev => ({
-                          ...prev,
-                          guarantor: { ...prev.guarantor, email: e.target.value }
-                        }))}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                          errors.guarantorEmail ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="maria@email.com"
-                      />
-                      {errors.guarantorEmail && (
-                        <p className="mt-1 text-sm text-red-600">{errors.guarantorEmail}</p>
-                      )}
-                    </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Departamento / Oficina / Casa N° (Opcional)
+                          </label>
+                          <input
+                            type="text"
+                            value={applicationData.guarantor.apartmentNumber}
+                            onChange={(e) => setApplicationData(prev => ({
+                              ...prev,
+                              guarantor: { ...prev.guarantor, apartmentNumber: e.target.value }
+                            }))}
+                            disabled={applicationData.sameAddressAsApplicant}
+                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                              applicationData.sameAddressAsApplicant ? 'bg-gray-100 cursor-not-allowed' : ''
+                            }`}
+                            placeholder="Ej: Depto 1205, Casa 8"
+                          />
+                        </div>
 
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Teléfono de Contacto del Aval *
-                      </label>
-                      <input
-                        type="tel"
-                        required={applicationData.hasGuarantor}
-                        value={applicationData.guarantor.phone}
-                        onChange={(e) => setApplicationData(prev => ({
-                          ...prev,
-                          guarantor: { ...prev.guarantor, phone: e.target.value }
-                        }))}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                          errors.guarantorPhone ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="+56 9 8765 4321"
-                      />
-                      {errors.guarantorPhone && (
-                        <p className="mt-1 text-sm text-red-600">{errors.guarantorPhone}</p>
-                      )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Región del Aval *
+                            </label>
+                            <select
+                              required={applicationData.hasGuarantor}
+                              value={applicationData.guarantor.region}
+                              onChange={(e) => handleRegionChange(e.target.value, true)}
+                              disabled={applicationData.sameAddressAsApplicant}
+                              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                                errors.guarantorRegion ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                              } ${applicationData.sameAddressAsApplicant ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            >
+                              <option value="">Seleccionar región</option>
+                              {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
+                                <option key={key} value={key}>{region.name}</option>
+                              ))}
+                            </select>
+                            {errors.guarantorRegion && (
+                              <p className="mt-1 text-sm text-red-600">{errors.guarantorRegion}</p>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Comuna del Aval *
+                            </label>
+                            <select
+                              required={applicationData.hasGuarantor}
+                              value={applicationData.guarantor.commune}
+                              onChange={(e) => setApplicationData(prev => ({
+                                ...prev,
+                                guarantor: { ...prev.guarantor, commune: e.target.value }
+                              }))}
+                              disabled={applicationData.sameAddressAsApplicant || !applicationData.guarantor.region}
+                              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                                errors.guarantorCommune ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                              } ${applicationData.sameAddressAsApplicant || !applicationData.guarantor.region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            >
+                              <option value="">
+                                {applicationData.guarantor.region ? 'Seleccionar comuna' : 'Primero selecciona una región'}
+                              </option>
+                              {applicationData.guarantor.region && getAvailableCommunes(applicationData.guarantor.region).map((commune) => (
+                                <option key={commune} value={commune}>{commune}</option>
+                              ))}
+                            </select>
+                            {errors.guarantorCommune && (
+                              <p className="mt-1 text-sm text-red-600">{errors.guarantorCommune}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Sección 4: Documentación del Aval */}
+              {/* Sección 4: Documentación del Aval (Simplificada) */}
               {applicationData.hasGuarantor && (
                 <div className="space-y-6">
                   <div className="border-b pb-2">

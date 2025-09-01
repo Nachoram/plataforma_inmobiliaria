@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Settings } from 'lucide-react';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -47,11 +47,13 @@ export const ApplicationsPage: React.FC = () => {
   const fetchReceivedApplications = async () => {
     try {
       const { data, error } = await supabase
-        .from('applications')
+        .from('applications_with_legacy_data')
         .select(`
           *,
           property:properties!inner(address, city, price, listing_type, photos_urls),
-          applicant:profiles!applications_applicant_id_fkey(full_name, contact_email, contact_phone)
+          applicant:profiles!applications_applicant_id_fkey(full_name, contact_email, contact_phone),
+          structured_applicant:applicants(full_name, contact_email, contact_phone, rut, profession, company),
+          structured_guarantor:guarantors(full_name, contact_email, contact_phone, rut, profession, company)
         `)
         .eq('properties.owner_id', user?.id)
         .order('created_at', { ascending: false });
@@ -68,7 +70,7 @@ export const ApplicationsPage: React.FC = () => {
   const fetchSentApplications = async () => {
     try {
       const { data, error } = await supabase
-        .from('applications')
+        .from('applications_with_legacy_data')
         .select(`
           *,
           property:properties!inner(address, city, price, listing_type, photos_urls)
@@ -236,8 +238,8 @@ export const ApplicationsPage: React.FC = () => {
     
     // Pre-cargar texto según el tipo
     const preloadedText = type === 'documents' 
-      ? `Estimado/a ${application.applicant?.full_name || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
-      : `Estimado/a ${application.applicant?.full_name || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
+      ? `Estimado/a ${application.structured_applicant?.full_name || application.applicant?.full_name || application.applicant_full_name || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
+      : `Estimado/a ${application.structured_applicant?.full_name || application.applicant?.full_name || application.applicant_full_name || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
     
     setMessageText(preloadedText);
     setShowMessageModal(true);
@@ -400,16 +402,44 @@ export const ApplicationsPage: React.FC = () => {
                 <div className="space-y-1 text-sm">
                   <div>
                     <span className="text-gray-500">Nombre: </span>
-                    <span className="font-medium">{application.applicant?.full_name || 'No especificado'}</span>
+                    <span className="font-medium">
+                      {application.structured_applicant?.full_name || 
+                       application.applicant?.full_name || 
+                       application.applicant_full_name || 
+                       'No especificado'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-500">Email: </span>
-                    <span className="font-medium">{application.applicant?.contact_email || 'No especificado'}</span>
+                    <span className="font-medium">
+                      {application.structured_applicant?.contact_email || 
+                       application.applicant?.contact_email || 
+                       application.applicant_email || 
+                       'No especificado'}
+                    </span>
                   </div>
-                  {application.applicant?.contact_phone && (
+                  {(application.structured_applicant?.contact_phone || 
+                    application.applicant?.contact_phone || 
+                    application.applicant_phone) && (
                     <div>
                       <span className="text-gray-500">Teléfono: </span>
-                      <span className="font-medium">{application.applicant.contact_phone}</span>
+                      <span className="font-medium">
+                        {application.structured_applicant?.contact_phone || 
+                         application.applicant?.contact_phone || 
+                         application.applicant_phone}
+                      </span>
+                    </div>
+                  )}
+                  {application.structured_applicant?.profession && (
+                    <div>
+                      <span className="text-gray-500">Profesión: </span>
+                      <span className="font-medium">{application.structured_applicant.profession}</span>
+                    </div>
+                  )}
+                  {application.structured_applicant?.company && (
+                    <div>
+                      <span className="text-gray-500">Empresa: </span>
+                      <span className="font-medium">{application.structured_applicant.company}</span>
                     </div>
                   )}
                 </div>
@@ -650,7 +680,10 @@ export const ApplicationsPage: React.FC = () => {
                 <h3 className="font-semibold text-gray-900 mb-2">Postulación:</h3>
                 <p className="text-gray-700">{selectedApplication.property.address}</p>
                 <p className="text-sm text-gray-600">
-                  Postulante: {selectedApplication.applicant?.full_name || 'No especificado'}
+                  Postulante: {selectedApplication.structured_applicant?.full_name || 
+                              selectedApplication.applicant?.full_name || 
+                              selectedApplication.applicant_full_name || 
+                              'No especificado'}
                 </p>
               </div>
 
@@ -667,7 +700,11 @@ export const ApplicationsPage: React.FC = () => {
                   placeholder="Escriba su mensaje aquí..."
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Este mensaje será enviado al email del postulante: {selectedApplication.applicant?.contact_email}
+                  Este mensaje será enviado al email del postulante: {
+                    selectedApplication.structured_applicant?.contact_email || 
+                    selectedApplication.applicant?.contact_email || 
+                    selectedApplication.applicant_email
+                  }
                 </p>
               </div>
 

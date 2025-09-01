@@ -10,6 +10,64 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Database types
+export interface Address {
+  id: string;
+  street_address: string;
+  apartment_number: string | null;
+  region: string;
+  commune: string;
+  country: string;
+  created_at: string;
+}
+
+export interface Applicant {
+  id: string;
+  user_id: string | null;
+  full_name: string;
+  rut: string | null;
+  profession: string | null;
+  company: string | null;
+  monthly_income: number;
+  work_seniority_years: number;
+  contact_email: string;
+  contact_phone: string | null;
+  address_id: string | null;
+  created_at: string;
+  updated_at: string;
+  address?: Address;
+}
+
+export interface Guarantor {
+  id: string;
+  full_name: string;
+  rut: string | null;
+  profession: string | null;
+  company: string | null;
+  monthly_income: number;
+  work_seniority_years: number;
+  contact_email: string | null;
+  contact_phone: string | null;
+  address_id: string | null;
+  created_at: string;
+  updated_at: string;
+  address?: Address;
+}
+
+export interface Document {
+  id: string;
+  uploader_user_id: string;
+  application_id: string | null;
+  property_id: string | null;
+  applicant_id: string | null;
+  guarantor_id: string | null;
+  document_type: string;
+  file_url: string;
+  storage_path: string | null;
+  file_size_bytes: number;
+  mime_type: string | null;
+  uploaded_at: string;
+}
+
 export interface Profile {
   id: string;
   full_name: string | null;
@@ -23,9 +81,8 @@ export interface Property {
   owner_id: string;
   listing_type: 'venta' | 'arriendo';
   address: string;
-  apartment_number: string | null;
-  region: string;
-  commune: string;
+  city: string;
+  country: string;
   description: string | null;
   price: number;
   common_expenses: number;
@@ -35,16 +92,8 @@ export interface Property {
   photos_urls: string[];
   documents_urls: string[];
   status: 'disponible' | 'vendida' | 'arrendada';
-  owner_full_name: string;
-  owner_address: string | null;
-  owner_apartment_number: string | null;
-  owner_region: string;
-  owner_commune: string;
-  marital_status: 'soltero' | 'casado' | 'divorciado' | 'viudo';
-  property_regime: string | null;
-  available_days: string[];
-  available_time_slots: string[];
   created_at: string;
+  address_id: string | null;
 }
 
 export interface Application {
@@ -54,6 +103,9 @@ export interface Application {
   message: string | null;
   status: 'pendiente' | 'aprobada' | 'rechazada';
   created_at: string;
+  structured_applicant_id: string | null;
+  structured_guarantor_id: string | null;
+  applicant_data: any; // Legacy JSONB data
 }
 
 export interface Offer {
@@ -77,4 +129,5 @@ export interface Offer {
   };
   payment_status: 'no_aplica' | 'pendiente' | 'pagado' | 'cancelado';
   created_at: string;
+  structured_applicant_id: string | null;
 }

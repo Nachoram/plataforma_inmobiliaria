@@ -81,10 +81,12 @@ export interface Property {
   owner_id: string;
   listing_type: 'venta' | 'arriendo';
   address: string;
-  city: string;
+  commune: string;
+  region: string;
   country: string;
   description: string | null;
   price: number;
+  common_expenses: number;
   common_expenses: number;
   bedrooms: number;
   bathrooms: number;
@@ -94,6 +96,8 @@ export interface Property {
   status: 'disponible' | 'vendida' | 'arrendada';
   created_at: string;
   address_id: string | null;
+  // Legacy compatibility
+  city?: string;
 }
 
 export interface Application {
@@ -106,6 +110,9 @@ export interface Application {
   structured_applicant_id: string | null;
   structured_guarantor_id: string | null;
   applicant_data: any; // Legacy JSONB data
+  // Normalized data access
+  structured_applicant?: Applicant;
+  structured_guarantor?: Guarantor;
 }
 
 export interface Offer {
@@ -130,4 +137,58 @@ export interface Offer {
   payment_status: 'no_aplica' | 'pendiente' | 'pagado' | 'cancelado';
   created_at: string;
   structured_applicant_id: string | null;
+  // Normalized data access
+  structured_applicant?: Applicant;
+}
+
+export interface VisitRequest {
+  id: string;
+  property_id: string;
+  user_id: string;
+  requested_date: string;
+  requested_time_slot: 'morning' | 'afternoon' | 'flexible';
+  message: string | null;
+  status: 'pending' | 'confirmed' | 'rejected' | 'completed';
+  created_at: string;
+}
+
+// Helper functions for normalized data operations
+export const createNormalizedApplication = async (
+  propertyId: string,
+  applicantData: any,
+  guarantorData?: any,
+  message?: string
+) => {
+  const { data, error } = await supabase.rpc('create_normalized_application', {
+    p_property_id: propertyId,
+    p_applicant_data: applicantData,
+    p_guarantor_data: guarantorData || null,
+    p_message: message || null
+  });
+  
+  return { data, error };
+};
+
+export const searchApplicants = async (criteria: {
+  company?: string;
+  profession?: string;
+  minIncome?: number;
+  region?: string;
+}) => {
+  const { data, error } = await supabase.rpc('search_applicants', {
+    p_company: criteria.company || null,
+    p_profession: criteria.profession || null,
+    p_min_income: criteria.minIncome || null,
+    p_region: criteria.region || null
+  });
+  
+  return { data, error };
+};
+
+export const getPropertyStatistics = async (propertyId: string) => {
+  const { data, error } = await supabase.rpc('get_property_statistics', {
+    p_property_id: propertyId
+  });
+  
+  return { data, error };
 }

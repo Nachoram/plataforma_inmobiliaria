@@ -1001,7 +1001,7 @@ export const UserProfile: React.FC = () => {
               <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
                 <p className="text-sm">
                   <strong>Nota:</strong> La funcionalidad de carga de documentos no está disponible actualmente. 
-                  El bucket de almacenamiento 'user-documents' debe ser creado en Supabase Storage.
+                  El bucket de almacenamiento 'user-documents\' debe ser creado en Supabase Storage.
                 </p>
               </div>
             )}

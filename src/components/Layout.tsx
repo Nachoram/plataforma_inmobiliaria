@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, LogOut, Building, Mail, DollarSign } from 'lucide-react';
+import { Home, User, LogOut, Building, Mail, DollarSign, UserCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface LayoutProps {
@@ -79,6 +79,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   >
                     Ofertas
                   </Link>
+                  <Link 
+                    to="/profile" 
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      isActive('/profile') 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    Mi Perfil
+                  </Link>
                 </>
               )}
             </nav>
@@ -148,6 +158,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 >
                   <DollarSign className="h-4 w-4" />
                   <span>Ofertas</span>
+                </Link>
+                <Link 
+                  to="/profile" 
+                  className={`flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+                    isActive('/profile') 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                  }`}
+                >
+                  <UserCircle className="h-4 w-4" />
+                  <span>Mi Perfil</span>
                 </Link>
               </div>
             </div>

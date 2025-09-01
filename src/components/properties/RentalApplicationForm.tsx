@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, Check, FileText, User, Building, Shield, AlertCircle } from 'lucide-react';
+import { X, Upload, Check, FileText, User, Building, Shield, AlertCircle, Download, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -150,6 +150,7 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   // Estado del formulario
   const [applicationData, setApplicationData] = useState<ApplicationData>({
@@ -232,6 +233,88 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         commune: checked ? prev.applicant.commune : '',
       }
     }));
+  };
+
+  // Auto-fill functions
+  const autoFillApplicantData = async () => {
+    setLoadingProfile(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        throw error;
+      }
+
+      if (data) {
+        setApplicationData(prev => ({
+          ...prev,
+          applicant: {
+            fullName: data.full_name || '',
+            rut: data.rut || '',
+            profession: data.profession || '',
+            company: data.company || '',
+            monthlyIncome: data.monthly_income?.toString() || '',
+            workExperience: data.work_seniority || '',
+            email: data.contact_email || '',
+            phone: data.contact_phone || '',
+            address: data.address || '',
+            apartmentNumber: data.apartment_number || '',
+            region: data.region || '',
+            commune: data.commune || '',
+          }
+        }));
+      } else {
+        setErrors(prev => ({ ...prev, profile: 'No se encontró información guardada en tu perfil. Ve a "Mi Perfil" para guardar tus datos.' }));
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setErrors(prev => ({ ...prev, profile: 'Error al cargar los datos del perfil.' }));
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  const autoFillGuarantorData = async () => {
+    setLoadingProfile(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data && data.guarantor_full_name) {
+        setApplicationData(prev => ({
+          ...prev,
+          guarantor: {
+            fullName: data.guarantor_full_name || '',
+            rut: data.guarantor_rut || '',
+            monthlyIncome: data.guarantor_monthly_income?.toString() || '',
+            email: data.guarantor_contact_email || '',
+            phone: data.guarantor_contact_phone || '',
+            address: data.guarantor_address || '',
+            apartmentNumber: data.guarantor_apartment_number || '',
+            region: data.guarantor_region || '',
+            commune: data.guarantor_commune || '',
+          }
+        }));
+      } else {
+        setErrors(prev => ({ ...prev, profile: 'No se encontró información del aval en tu perfil. Ve a "Mi Perfil" para guardar los datos de tu aval.' }));
+      }
+    } catch (error) {
+      console.error('Error fetching guarantor profile:', error);
+      setErrors(prev => ({ ...prev, profile: 'Error al cargar los datos del aval.' }));
+    } finally {
+      setLoadingProfile(false);
+    }
   };
 
   // Configuración de documentos requeridos (simplificados)
@@ -560,10 +643,25 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               {/* Sección 1: Datos del Postulante */}
               <div className="space-y-6">
                 <div className="border-b pb-2">
-                  <h3 className="text-xl font-bold text-gray-900 flex items-center">
-                    <User className="h-6 w-6 mr-2 text-emerald-600" />
-                    Datos del Postulante
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                      <User className="h-6 w-6 mr-2 text-emerald-600" />
+                      Datos del Postulante
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={autoFillApplicantData}
+                      disabled={loadingProfile}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 transition-colors text-sm font-medium"
+                    >
+                      {loadingProfile ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      <span>Rellenar con mis datos guardados</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -872,10 +970,25 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               {/* Sección 3: Datos del Aval o Codeudor */}
               <div className="space-y-6">
                 <div className="border-b pb-2">
-                  <h3 className="text-xl font-bold text-gray-900 flex items-center">
-                    <Shield className="h-6 w-6 mr-2 text-emerald-600" />
-                    Aval o Codeudor
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                      <Shield className="h-6 w-6 mr-2 text-emerald-600" />
+                      Aval o Codeudor
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={autoFillGuarantorData}
+                      disabled={loadingProfile}
+                      className="flex items-center space-x-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 transition-colors text-sm font-medium"
+                    >
+                      {loadingProfile ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      <span>Rellenar con datos de mi aval guardado</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
@@ -1169,6 +1282,14 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                 </div>
               )}
 
+              {/* Loading state for profile data */}
+              {loadingProfile && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg flex items-center">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cargando datos del perfil...
+                </div>
+              )}
+
               {/* Sección 5: Confirmación */}
               <div className="space-y-6">
                 <div className="border-b pb-2">
@@ -1210,6 +1331,13 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                 {errors.submit && (
                   <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
                     <p className="text-sm text-red-600">{errors.submit}</p>
+                  </div>
+                )}
+
+                {errors.profile && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    {errors.profile}
                   </div>
                 )}
               </div>

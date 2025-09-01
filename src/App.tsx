@@ -10,6 +10,7 @@ import { PropertyForm } from './components/properties/PropertyForm';
 import { RentalPublicationForm } from './components/properties/RentalPublicationForm';
 import { ApplicationsPage } from './components/dashboard/ApplicationsPage';
 import { OffersPage } from './components/dashboard/OffersPage';
+import { UserProfile } from './components/profile/UserProfile';
 
 function App() {
   return (
@@ -67,6 +68,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OffersPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <UserProfile />
               </ProtectedRoute>
             } 
           />

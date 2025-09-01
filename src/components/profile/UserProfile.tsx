@@ -319,7 +319,7 @@ export const UserProfile: React.FC = () => {
       if (error) throw error;
       
       console.log('File uploaded successfully:', data.path);
-
+        .from('user-documents')
       const { data: { publicUrl } } = supabase.storage
         .from('user-documents')
         .getPublicUrl(data.path);

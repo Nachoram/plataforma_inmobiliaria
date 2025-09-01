@@ -9,8 +9,26 @@ export const useAuth = () => {
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error && error.message?.includes('Invalid Refresh Token: Refresh Token Not Found')) {
+          // Clear invalid session data
+          await supabase.auth.signOut();
+          setUser(null);
+        } else {
+          setUser(session?.user ?? null);
+        }
+      } catch (error: any) {
+        if (error.message?.includes('Invalid Refresh Token: Refresh Token Not Found')) {
+          // Clear invalid session data
+          await supabase.auth.signOut();
+          setUser(null);
+        } else {
+          console.error('Error getting session:', error);
+          setUser(null);
+        }
+      }
       setLoading(false);
     };
 

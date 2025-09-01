@@ -473,6 +473,21 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
   // Subir archivos a Supabase Storage
   const uploadFiles = async () => {
+    // Check if storage bucket exists before attempting upload
+    try {
+      const { data, error } = await supabase.storage
+        .from('rental-documents')
+        .list('', { limit: 1 });
+      
+      if (error) {
+        console.log('Storage bucket not available, skipping file uploads');
+        return { uploadedUrls: [] };
+      }
+    } catch (error) {
+      console.log('Storage bucket not available, skipping file uploads');
+      return { uploadedUrls: [] };
+    }
+
     // If storage is not available, return empty arrays
     if (!storageAvailable) {
       console.warn('Storage not available, skipping file uploads');

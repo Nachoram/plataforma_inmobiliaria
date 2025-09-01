@@ -47,14 +47,8 @@ export const ApplicationsPage: React.FC = () => {
   const fetchReceivedApplications = async () => {
     try {
       const { data, error } = await supabase
-        .from('applications_with_legacy_data')
-        .select(`
-          *,
-          property:properties!inner(address, city, price, listing_type, photos_urls),
-          applicant:profiles!applications_applicant_id_fkey(full_name, contact_email, contact_phone),
-          structured_applicant:applicants(full_name, contact_email, contact_phone, rut, profession, company),
-          structured_guarantor:guarantors(full_name, contact_email, contact_phone, rut, profession, company)
-        `)
+        .from('applications_complete')
+        .select('*')
         .eq('properties.owner_id', user?.id)
         .order('created_at', { ascending: false });
 
@@ -70,11 +64,8 @@ export const ApplicationsPage: React.FC = () => {
   const fetchSentApplications = async () => {
     try {
       const { data, error } = await supabase
-        .from('applications_with_legacy_data')
-        .select(`
-          *,
-          property:properties!inner(address, city, price, listing_type, photos_urls)
-        `)
+        .from('applications_complete')
+        .select('*')
         .eq('applicant_id', user?.id)
         .order('created_at', { ascending: false });
 
@@ -402,44 +393,34 @@ export const ApplicationsPage: React.FC = () => {
                 <div className="space-y-1 text-sm">
                   <div>
                     <span className="text-gray-500">Nombre: </span>
-                    <span className="font-medium">
-                      {application.structured_applicant?.full_name || 
-                       application.applicant?.full_name || 
-                       application.applicant_full_name || 
-                       'No especificado'}
-                    </span>
+                    <span className="font-medium">{application.applicant_name || 'No especificado'}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Email: </span>
-                    <span className="font-medium">
-                      {application.structured_applicant?.contact_email || 
-                       application.applicant?.contact_email || 
-                       application.applicant_email || 
-                       'No especificado'}
-                    </span>
+                    <span className="font-medium">{application.applicant_email || 'No especificado'}</span>
                   </div>
-                  {(application.structured_applicant?.contact_phone || 
-                    application.applicant?.contact_phone || 
-                    application.applicant_phone) && (
+                  {application.applicant_phone && (
                     <div>
                       <span className="text-gray-500">Teléfono: </span>
-                      <span className="font-medium">
-                        {application.structured_applicant?.contact_phone || 
-                         application.applicant?.contact_phone || 
-                         application.applicant_phone}
-                      </span>
+                      <span className="font-medium">{application.applicant_phone}</span>
                     </div>
                   )}
-                  {application.structured_applicant?.profession && (
+                  {application.applicant_profession && (
                     <div>
                       <span className="text-gray-500">Profesión: </span>
-                      <span className="font-medium">{application.structured_applicant.profession}</span>
+                      <span className="font-medium">{application.applicant_profession}</span>
                     </div>
                   )}
-                  {application.structured_applicant?.company && (
+                  {application.applicant_company && (
                     <div>
                       <span className="text-gray-500">Empresa: </span>
-                      <span className="font-medium">{application.structured_applicant.company}</span>
+                      <span className="font-medium">{application.applicant_company}</span>
+                    </div>
+                  )}
+                  {application.applicant_income && application.applicant_income > 0 && (
+                    <div>
+                      <span className="text-gray-500">Ingresos: </span>
+                      <span className="font-medium">{formatPrice(application.applicant_income)}</span>
                     </div>
                   )}
                 </div>
@@ -467,7 +448,7 @@ export const ApplicationsPage: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     {/* Acciones Secundarias */}
                     <button
-                      onClick={() => openMessageModal(application, 'info')}
+                      onClick={() => openMessageModal(application as any, 'info')}
                       disabled={updating?.startsWith(application.id)}
                       className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
                       title="Solicitar Más Información"
@@ -476,7 +457,7 @@ export const ApplicationsPage: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => openMessageModal(application, 'documents')}
+                      onClick={() => openMessageModal(application as any, 'documents')}
                       disabled={updating?.startsWith(application.id)}
                       className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
                       title="Solicitar Documentos Faltantes"
@@ -485,7 +466,7 @@ export const ApplicationsPage: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => handleRequestCommercialReport(application)}
+                      onClick={() => handleRequestCommercialReport(application as any)}
                       disabled={updating?.startsWith(application.id)}
                       className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
                       title="Solicitar Informe Comercial"
@@ -502,7 +483,7 @@ export const ApplicationsPage: React.FC = () => {
 
                     {/* Acciones Principales */}
                     <button
-                      onClick={() => handleRejectApplication(application)}
+                      onClick={() => handleRejectApplication(application as any)}
                       disabled={updating?.startsWith(application.id)}
                       className="flex items-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 hover:shadow-sm active:bg-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       title="Rechazar Postulación"
@@ -516,7 +497,7 @@ export const ApplicationsPage: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => handleApproveApplication(application)}
+                      onClick={() => handleApproveApplication(application as any)}
                       disabled={updating?.startsWith(application.id)}
                       className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:shadow-sm active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       title="Aprobar Postulación"
@@ -592,7 +573,7 @@ export const ApplicationsPage: React.FC = () => {
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 mb-1">Precio de arriendo mensual</div>
                   <div className="text-lg font-bold text-emerald-600">
-                    {formatPrice(application.property.price)}
+                    {formatPrice(application.property_price)}
                   </div>
                 </div>
               </div>
@@ -682,7 +663,7 @@ export const ApplicationsPage: React.FC = () => {
                 <p className="text-sm text-gray-600">
                   Postulante: {selectedApplication.structured_applicant?.full_name || 
                               selectedApplication.applicant?.full_name || 
-                              selectedApplication.applicant_full_name || 
+                              selectedApplication.applicant_name || 
                               'No especificado'}
                 </p>
               </div>

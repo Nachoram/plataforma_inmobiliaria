@@ -475,20 +475,6 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   const uploadFiles = async () => {
     const uploadedUrls: string[] = [];
     
-    // Check if storage bucket exists before attempting upload
-    try {
-      const { data, error } = await supabase.storage
-        .from('rental-documents')
-        .list('', { limit: 1 });
-      
-      if (error) {
-        console.log('Storage bucket not available, skipping file uploads');
-        return { uploadedUrls: [] };
-      }
-    } catch (error) {
-      console.log('Storage bucket not available, skipping file uploads');
-      return { uploadedUrls: [] };
-    }
 
     // Subir documentos del postulante
     for (const [key, file] of Object.entries(applicationData.applicantDocuments)) {
@@ -518,13 +504,13 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           const fileName = `${user?.id}/guarantor_${key}_${Date.now()}.${fileExt}`;
 
           const { data, error } = await supabase.storage
-            .from('rental-documents')
+            .from('user-documents')
             .upload(fileName, file);
 
           if (error) throw error;
 
           const { data: { publicUrl } } = supabase.storage
-            .from('rental-documents')
+            .from('user-documents')
             .getPublicUrl(data.path);
 
           uploadedUrls.push(publicUrl);

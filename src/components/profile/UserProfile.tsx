@@ -204,10 +204,14 @@ export const UserProfile: React.FC = () => {
   // Check if storage bucket is available
   const checkStorageAvailability = async () => {
     try {
-      const { data, error } = await supabase.storage.getBucket('user-documents');
+      const { data, error } = await supabase.storage.listBuckets();
       if (error) {
         setStorageAvailable(false);
+        return;
       }
+      
+      const bucketExists = data?.some(bucket => bucket.name === 'user-documents');
+      setStorageAvailable(bucketExists || false);
     } catch (error) {
       setStorageAvailable(false);
     }

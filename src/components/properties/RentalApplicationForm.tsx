@@ -483,13 +483,13 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         const fileName = `${user?.id}/applicant_${key}_${Date.now()}.${fileExt}`;
 
         const { data, error } = await supabase.storage
-          .from('applicant-documents')
+          .from('property-documents')
           .upload(fileName, file);
 
         if (error) throw error;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('applicant-documents')
+          .from('property-documents')
           .getPublicUrl(data.path);
 
         uploadedUrls.push(publicUrl);

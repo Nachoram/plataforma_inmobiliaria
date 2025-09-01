@@ -753,6 +753,10 @@ export const UserProfile: React.FC = () => {
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
                       onChange={(e) => {
+                        if (!storageAvailable) {
+                          e.target.value = '';
+                          return;
+                        }
                         const file = e.target.files?.[0];
                         if (file) {
                           handleDocumentUpload('id_document', file);
@@ -799,6 +803,10 @@ export const UserProfile: React.FC = () => {
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
                       onChange={(e) => {
+                        if (!storageAvailable) {
+                          e.target.value = '';
+                          return;
+                        }
                         const file = e.target.files?.[0];
                         if (file) {
                           handleDocumentUpload('commercial_report', file);

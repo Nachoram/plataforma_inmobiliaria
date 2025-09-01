@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus } from 'lucide-react';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Settings } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 

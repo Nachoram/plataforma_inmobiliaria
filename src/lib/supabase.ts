@@ -42,6 +42,8 @@ export interface Property {
   owner_commune: string;
   marital_status: 'soltero' | 'casado' | 'divorciado' | 'viudo';
   property_regime: string | null;
+  available_days: string[];
+  available_time_slots: string[];
   created_at: string;
 }
 

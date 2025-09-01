@@ -5,6 +5,7 @@ import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { RentalApplicationForm } from './RentalApplicationForm';
 import { AdvancedOfferForm } from './AdvancedOfferForm';
+import { CommercialReportButton } from './CommercialReportButton';
 
 export const PropertyDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -269,6 +270,17 @@ export const PropertyDetailsPage: React.FC = () => {
               )}
             </div>
           )}
+
+          {/* Commercial Report Button - Available for all users */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Información Adicional
+            </h3>
+            <CommercialReportButton 
+              propertyId={property.id}
+              propertyAddress={property.address}
+            />
+          </div>
 
           {!user && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">

@@ -204,15 +204,20 @@ export const UserProfile: React.FC = () => {
   // Check if storage bucket is available
   const checkStorageAvailability = async () => {
     try {
-      const { data, error } = await supabase.storage.listBuckets();
-      if (error) {
-        setStorageAvailable(false);
-        return;
-      }
+      // Try to list files in the bucket to check if it exists and is accessible
+      const { data, error } = await supabase.storage
+        .from('user-documents')
+        .list('', { limit: 1 });
       
-      const bucketExists = data?.some(bucket => bucket.name === 'user-documents');
-      setStorageAvailable(bucketExists || false);
+      if (error && error.message.includes('Bucket not found')) {
+        console.log('Storage bucket not available:', error.message);
+        setStorageAvailable(false);
+      } else {
+        // If we can list (even if empty), the bucket exists and is accessible
+        setStorageAvailable(true);
+      }
     } catch (error) {
+      console.error('Error checking storage availability:', error);
       setStorageAvailable(false);
     }
   };
@@ -291,15 +296,9 @@ export const UserProfile: React.FC = () => {
 
   // Handle document upload
   const handleDocumentUpload = async (documentType: keyof typeof documentFiles, file: File) => {
-    if (!storageAvailable) {
-      setErrors(prev => ({
-        ...prev,
-        [documentType]: 'El almacenamiento de documentos no está disponible. Contacta al administrador.'
-      }));
-      return;
-    }
-
     setUploading(true);
+    setErrors(prev => ({ ...prev, [documentType]: '' })); // Clear previous errors
+    
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}/${documentType}-${Date.now()}.${fileExt}`;
@@ -309,6 +308,8 @@ export const UserProfile: React.FC = () => {
         .upload(fileName, file);
 
       if (error) throw error;
+      
+      console.log('File uploaded successfully:', data.path);
 
       const { data: { publicUrl } } = supabase.storage
         .from('user-documents')
@@ -326,12 +327,15 @@ export const UserProfile: React.FC = () => {
         ...prev,
         [documentType]: file
       }));
+      
+      // Clear any previous errors
+      setErrors(prev => ({ ...prev, [documentType]: '' }));
 
     } catch (error) {
       console.error('Error uploading document:', error);
       setErrors(prev => ({
         ...prev,
-        [documentType]: 'Error al subir el archivo. Asegúrate de que el bucket de almacenamiento esté configurado correctamente.'
+        [documentType]: `Error al subir el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`
       }));
     } finally {
       setUploading(false);
@@ -702,6 +706,12 @@ export const UserProfile: React.FC = () => {
                     Documento subido
                   </p>
                 )}
+                {errors.id_document && (
+                  <p className="text-sm text-red-600 mt-1 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.id_document}
+                  </p>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 {formData.id_document_url ? (
@@ -725,7 +735,7 @@ export const UserProfile: React.FC = () => {
                         }
                       }}
                       className="hidden"
-                      disabled={uploading || !storageAvailable}
+                      disabled={uploading}
                     />
                   </label>
                 )}
@@ -740,6 +750,12 @@ export const UserProfile: React.FC = () => {
                   <p className="text-sm text-green-600 mt-1 flex items-center">
                     <Check className="h-4 w-4 mr-1" />
                     Documento subido
+                  </p>
+                )}
+                {errors.commercial_report && (
+                  <p className="text-sm text-red-600 mt-1 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.commercial_report}
                   </p>
                 )}
               </div>
@@ -765,7 +781,7 @@ export const UserProfile: React.FC = () => {
                         }
                       }}
                       className="hidden"
-                      disabled={uploading || !storageAvailable}
+                      disabled={uploading}
                     />
                   </label>
                 )}
@@ -1001,14 +1017,20 @@ export const UserProfile: React.FC = () => {
             </h3>
 
             <div className="space-y-4">
-            {!storageAvailable && (
-              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
+              {/* Mensaje informativo sobre documentos */}
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4">
                 <p className="text-sm">
-                  <strong>Nota:</strong> La funcionalidad de carga de documentos no está disponible actualmente. 
-                  El bucket de almacenamiento 'user-documents\' debe ser creado en Supabase Storage.
+                  <strong>Información:</strong> Los documentos del aval son opcionales y pueden ayudar a fortalecer las postulaciones de arriendo.
                 </p>
               </div>
-            )}
+
+              {!storageAvailable && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
+                <p className="text-sm">
+                  <strong>Aviso:</strong> La funcionalidad de carga de documentos del aval no está disponible en este momento.
+                </p>
+              </div>
+              )}
 
               {/* Cédula del Aval */}
               <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
@@ -1018,6 +1040,12 @@ export const UserProfile: React.FC = () => {
                     <p className="text-sm text-green-600 mt-1 flex items-center">
                       <Check className="h-4 w-4 mr-1" />
                       Documento subido
+                    </p>
+                  )}
+                  {errors.guarantor_id_document && (
+                    <p className="text-sm text-red-600 mt-1 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.guarantor_id_document}
                     </p>
                   )}
                 </div>
@@ -1043,7 +1071,7 @@ export const UserProfile: React.FC = () => {
                           }
                         }}
                         className="hidden"
-                        disabled={uploading || !storageAvailable}
+                        disabled={uploading}
                       />
                     </label>
                   )}
@@ -1058,6 +1086,12 @@ export const UserProfile: React.FC = () => {
                     <p className="text-sm text-green-600 mt-1 flex items-center">
                       <Check className="h-4 w-4 mr-1" />
                       Documento subido
+                    </p>
+                  )}
+                  {errors.guarantor_commercial_report && (
+                    <p className="text-sm text-red-600 mt-1 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.guarantor_commercial_report}
                     </p>
                   )}
                 </div>
@@ -1083,7 +1117,7 @@ export const UserProfile: React.FC = () => {
                           }
                         }}
                         className="hidden"
-                        disabled={uploading || !storageAvailable}
+                        disabled={uploading}
                       />
                     </label>
                   )}

@@ -246,13 +246,13 @@ export const RentalPublicationForm: React.FC = () => {
       const fileName = `${user?.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
-        .from('property-photos')
+        .from('property-documents')
         .upload(fileName, file);
 
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('property-photos')
+        .from('property-documents')
         .getPublicUrl(data.path);
 
       uploadedPhotoUrls.push(publicUrl);

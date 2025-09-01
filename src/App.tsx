@@ -7,6 +7,7 @@ import { PublicPropertiesPage } from './components/properties/PublicPropertiesPa
 import { PropertyDetailsPage } from './components/properties/PropertyDetailsPage';
 import { PortfolioPage } from './components/portfolio/PortfolioPage';
 import { PropertyForm } from './components/properties/PropertyForm';
+import { RentalPublicationForm } from './components/properties/RentalPublicationForm';
 import { ApplicationsPage } from './components/dashboard/ApplicationsPage';
 import { OffersPage } from './components/dashboard/OffersPage';
 
@@ -34,6 +35,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PropertyForm />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/property/new/rental" 
+            element={
+              <ProtectedRoute>
+                <RentalPublicationForm />
               </ProtectedRoute>
             } 
           />

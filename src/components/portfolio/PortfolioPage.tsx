@@ -91,7 +91,7 @@ export const PortfolioPage: React.FC = () => {
             <span>Publicar Propiedad en Venta</span>
           </Link>
           <Link
-            to="/property/new?type=arriendo"
+            to="/property/new/rental"
             className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
           >
             <Plus className="h-5 w-5" />
@@ -115,7 +115,7 @@ export const PortfolioPage: React.FC = () => {
               <span>Publicar en Venta</span>
             </Link>
             <Link
-              to="/property/new?type=arriendo"
+              to="/property/new/rental"
               className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
             >
               <Plus className="h-5 w-5" />

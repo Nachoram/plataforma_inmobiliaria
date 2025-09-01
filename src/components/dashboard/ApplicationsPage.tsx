@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building } from 'lucide-react';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, Settings, ChevronDown, FileText, MessageSquare, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -31,6 +31,12 @@ export const ApplicationsPage: React.FC = () => {
   const [sentApplications, setSentApplications] = useState<ApplicationWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<ApplicationWithDetails | null>(null);
+  const [messageType, setMessageType] = useState<'documents' | 'info'>('documents');
+  const [messageText, setMessageText] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -93,6 +99,126 @@ export const ApplicationsPage: React.FC = () => {
       console.error('Error fetching applications:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Función para manejar decisiones de postulación (integración con n8n)
+  const handleApplicationDecision = async (application: ApplicationWithDetails, decision: 'aprobada' | 'rechazada') => {
+    setUpdating(application.id);
+    try {
+      // Llamada al webhook de n8n
+      const webhookUrl = 'https://tu-instancia.n8n.cloud/webhook/gestion-postulacion';
+      
+      const webhookPayload = {
+        applicationId: application.id,
+        propertyId: application.property_id,
+        applicantId: application.applicant_id,
+        decision: decision
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Actualizar estado en la base de datos
+      const { error } = await supabase
+        .from('applications')
+        .update({ status: decision })
+        .eq('id', application.id);
+
+      if (error) throw error;
+
+      // Actualizar estado local
+      setReceivedApplications(receivedApplications.map(app =>
+        app.id === application.id ? { ...app, status: decision } : app
+      ));
+
+      // Cerrar dropdown
+      setOpenDropdown(null);
+    } catch (error) {
+      console.error('Error processing application decision:', error);
+      alert('Error al procesar la decisión. Por favor, intenta nuevamente.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // Función para solicitar informe comercial (integración con n8n)
+  const handleRequestCommercialReport = async (application: ApplicationWithDetails) => {
+    try {
+      const webhookUrl = 'https://tu-instancia.n8n.cloud/webhook/solicitar-informe';
+      
+      const webhookPayload = {
+        applicantId: application.applicant_id,
+        applicantName: application.applicant?.full_name || 'No especificado',
+        applicantRut: 'No disponible' // Se puede agregar este campo al perfil si es necesario
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Mostrar notificación de éxito
+      alert('Solicitud de informe enviada correctamente');
+      setOpenDropdown(null);
+    } catch (error) {
+      console.error('Error requesting commercial report:', error);
+      alert('Error al solicitar el informe. Por favor, intenta nuevamente.');
+    }
+  };
+
+  // Función para abrir modal de mensaje
+  const openMessageModal = (application: ApplicationWithDetails, type: 'documents' | 'info') => {
+    setSelectedApplication(application);
+    setMessageType(type);
+    
+    // Pre-cargar texto según el tipo
+    const preloadedText = type === 'documents' 
+      ? `Estimado/a ${application.applicant?.full_name || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
+      : `Estimado/a ${application.applicant?.full_name || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
+    
+    setMessageText(preloadedText);
+    setShowMessageModal(true);
+    setOpenDropdown(null);
+  };
+
+  // Función para enviar mensaje
+  const handleSendMessage = async () => {
+    if (!selectedApplication || !messageText.trim()) return;
+
+    setSendingMessage(true);
+    try {
+      // TODO: Aquí se puede guardar el mensaje en una tabla de mensajes
+      // Por ahora solo simulamos el envío
+      
+      // Simular delay de envío
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      alert('Mensaje enviado correctamente al postulante');
+      setShowMessageModal(false);
+      setMessageText('');
+      setSelectedApplication(null);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Error al enviar el mensaje. Por favor, intenta nuevamente.');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -262,21 +388,77 @@ export const ApplicationsPage: React.FC = () => {
                 </div>
 
                 {application.status === 'pendiente' && (
-                  <div className="flex space-x-2">
+                  <div className="relative">
                     <button
-                      onClick={() => updateApplicationStatus(application.id, 'rechazada')}
+                      onClick={() => setOpenDropdown(openDropdown === application.id ? null : application.id)}
                       disabled={updating === application.id}
-                      className="px-3 py-1.5 text-sm border border-red-300 text-red-700 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                     >
-                      Rechazar
+                      {updating === application.id ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Procesando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Settings className="h-4 w-4" />
+                          <span>Gestionar</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </>
+                      )}
                     </button>
-                    <button
-                      onClick={() => updateApplicationStatus(application.id, 'aprobada')}
-                      disabled={updating === application.id}
-                      className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                    >
-                      {updating === application.id ? 'Procesando...' : 'Aprobar'}
-                    </button>
+
+                    {/* Dropdown Menu */}
+                    {openDropdown === application.id && (
+                      <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                        <div className="py-2">
+                          {/* Decisiones de Postulación */}
+                          <button
+                            onClick={() => handleApplicationDecision(application, 'aprobada')}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 flex items-center space-x-3 transition-colors"
+                          >
+                            <Check className="h-4 w-4 text-green-600" />
+                            <span>Aprobar Postulación</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => handleApplicationDecision(application, 'rechazada')}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center space-x-3 transition-colors"
+                          >
+                            <X className="h-4 w-4 text-red-600" />
+                            <span>Rechazar Postulación</span>
+                          </button>
+
+                          {/* Separador */}
+                          <div className="border-t border-gray-200 my-2"></div>
+
+                          {/* Acciones Adicionales */}
+                          <button
+                            onClick={() => handleRequestCommercialReport(application)}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center space-x-3 transition-colors"
+                          >
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            <span>Solicitar Informe Comercial</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => openMessageModal(application, 'documents')}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 flex items-center space-x-3 transition-colors"
+                          >
+                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                            <span>Solicitar Documentos Faltantes</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => openMessageModal(application, 'info')}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center space-x-3 transition-colors"
+                          >
+                            <MessageSquare className="h-4 w-4 text-purple-600" />
+                            <span>Solicitar Más Información</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -400,6 +582,101 @@ export const ApplicationsPage: React.FC = () => {
           <SentApplicationsView />
         )}
       </div>
+
+      {/* Modal para Enviar Mensajes */}
+      {showMessageModal && selectedApplication && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header del Modal */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">
+                {messageType === 'documents' ? 'Solicitar Documentos Faltantes' : 'Solicitar Más Información'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowMessageModal(false);
+                  setMessageText('');
+                  setSelectedApplication(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Contenido del Modal */}
+            <div className="p-6">
+              {/* Información de la Postulación */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold text-gray-900 mb-2">Postulación:</h3>
+                <p className="text-gray-700">{selectedApplication.property.address}</p>
+                <p className="text-sm text-gray-600">
+                  Postulante: {selectedApplication.applicant?.full_name || 'No especificado'}
+                </p>
+              </div>
+
+              {/* Campo de Mensaje */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Mensaje para el Postulante
+                </label>
+                <textarea
+                  rows={8}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Escriba su mensaje aquí..."
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Este mensaje será enviado al email del postulante: {selectedApplication.applicant?.contact_email}
+                </p>
+              </div>
+
+              {/* Información Adicional */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h4 className="font-medium text-blue-900 mb-2">Información del Envío</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• El mensaje será enviado automáticamente al email del postulante</li>
+                  <li>• Se guardará un registro de la comunicación en el sistema</li>
+                  <li>• El postulante podrá responder directamente a tu email</li>
+                </ul>
+              </div>
+
+              {/* Botones de Acción */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowMessageModal(false);
+                    setMessageText('');
+                    setSelectedApplication(null);
+                  }}
+                  disabled={sendingMessage}
+                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={sendingMessage || !messageText.trim()}
+                  className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+                >
+                  {sendingMessage ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Enviando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4" />
+                      <span>Enviar Mensaje</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

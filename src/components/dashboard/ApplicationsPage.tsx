@@ -410,7 +410,7 @@ export const ApplicationsPage: React.FC = () => {
 
                     {/* Dropdown Menu */}
                     {openDropdown === application.id && (
-                      <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                      <div className="absolute left-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
                         <div className="py-2">
                           {/* Decisiones de Postulación */}
                           <button

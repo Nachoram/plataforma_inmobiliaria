@@ -136,6 +136,7 @@ export const UserProfile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
+  const [storageAvailable, setStorageAvailable] = useState(true);
   
   // Form data state
   const [formData, setFormData] = useState<UserProfileData>({
@@ -196,8 +197,21 @@ export const UserProfile: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchUserProfile();
+      checkStorageAvailability();
     }
   }, [user]);
+
+  // Check if storage bucket is available
+  const checkStorageAvailability = async () => {
+    try {
+      const { data, error } = await supabase.storage.getBucket('user-documents');
+      if (error) {
+        setStorageAvailable(false);
+      }
+    } catch (error) {
+      setStorageAvailable(false);
+    }
+  };
 
   // Fetch existing user profile
   const fetchUserProfile = async () => {
@@ -273,6 +287,14 @@ export const UserProfile: React.FC = () => {
 
   // Handle document upload
   const handleDocumentUpload = async (documentType: keyof typeof documentFiles, file: File) => {
+    if (!storageAvailable) {
+      setErrors(prev => ({
+        ...prev,
+        [documentType]: 'El almacenamiento de documentos no está disponible. Contacta al administrador.'
+      }));
+      return;
+    }
+
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
@@ -699,7 +721,7 @@ export const UserProfile: React.FC = () => {
                         }
                       }}
                       className="hidden"
-                      disabled={uploading}
+                      disabled={uploading || !storageAvailable}
                     />
                   </label>
                 )}
@@ -739,7 +761,7 @@ export const UserProfile: React.FC = () => {
                         }
                       }}
                       className="hidden"
-                      disabled={uploading}
+                      disabled={uploading || !storageAvailable}
                     />
                   </label>
                 )}
@@ -975,6 +997,15 @@ export const UserProfile: React.FC = () => {
             </h3>
 
             <div className="space-y-4">
+            {!storageAvailable && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
+                <p className="text-sm">
+                  <strong>Nota:</strong> La funcionalidad de carga de documentos no está disponible actualmente. 
+                  El bucket de almacenamiento 'user-documents' debe ser creado en Supabase Storage.
+                </p>
+              </div>
+            )}
+
               {/* Cédula del Aval */}
               <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
                 <div className="flex-1">
@@ -1008,7 +1039,7 @@ export const UserProfile: React.FC = () => {
                           }
                         }}
                         className="hidden"
-                        disabled={uploading}
+                        disabled={uploading || !storageAvailable}
                       />
                     </label>
                   )}
@@ -1048,7 +1079,7 @@ export const UserProfile: React.FC = () => {
                           }
                         }}
                         className="hidden"
-                        disabled={uploading}
+                        disabled={uploading || !storageAvailable}
                       />
                     </label>
                   )}

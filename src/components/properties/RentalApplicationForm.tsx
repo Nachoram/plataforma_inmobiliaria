@@ -9,6 +9,20 @@ interface RentalApplicationFormProps {
   onClose: () => void;
 }
 
+// Check if storage bucket exists
+const checkStorageAvailability = async () => {
+  try {
+    const { data, error } = await supabase.storage
+      .from('rental-documents')
+      .list('', { limit: 1 });
+    
+    return !error;
+  } catch (error) {
+    console.log('Storage bucket not available:', error);
+    return false;
+  }
+};
+
 // Datos de regiones y comunas de Chile
 const CHILE_REGIONS_COMMUNES = {
   'region-metropolitana': {
@@ -151,6 +165,7 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [storageAvailable, setStorageAvailable] = useState(false);
 
   // Estado del formulario
   const [applicationData, setApplicationData] = useState<ApplicationData>({
@@ -191,6 +206,15 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     sameAddressAsApplicant: false,
     declarationAccepted: false,
   });
+
+  // Check storage availability on component mount
+  React.useEffect(() => {
+    const checkStorage = async () => {
+      const available = await checkStorageAvailability();
+      setStorageAvailable(available);
+    };
+    checkStorage();
+  }, []);
 
   // Obtener comunas disponibles según la región seleccionada
   const getAvailableCommunes = (regionKey: string) => {
@@ -449,6 +473,12 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
   // Subir archivos a Supabase Storage
   const uploadFiles = async () => {
+    // If storage is not available, return empty arrays
+    if (!storageAvailable) {
+      console.warn('Storage not available, skipping file uploads');
+      return [];
+    }
+
     const uploadedUrls: string[] = [];
 
     // Subir documentos del postulante
@@ -508,6 +538,13 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     try {
       // Subir archivos
       const documentUrls = await uploadFiles();
+
+      // If storage is not available, show warning but continue with submission
+      if (!storageAvailable && (Object.values(applicationData.applicantDocuments).some(doc => doc) || Object.values(applicationData.guarantorDocuments).some(doc => doc))) {
+        console.warn('Files could not be uploaded due to missing storage bucket');
+        setErrors({ submit: 'Advertencia: Los archivos no pudieron ser subidos. La postulación se enviará sin archivos adjuntos.' });
+        // Continue with submission but without files
+      }
 
       // Preparar datos para la base de datos
       const applicationPayload = {
@@ -577,6 +614,12 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               {error}
             </p>
           )}
+          {!storageAvailable && (
+            <p className="text-sm text-yellow-600 flex items-center">
+              <AlertCircle className="h-4 w-4 mr-1" />
+              Carga de archivos no disponible
+            </p>
+          )}
         </div>
       </div>
       <div className="flex items-center space-x-2">
@@ -589,12 +632,21 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             Eliminar
           </button>
         ) : (
-          <label className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
-            Subir Archivo
+          <label className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+            storageAvailable 
+              ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' 
+              : 'bg-gray-400 text-white cursor-not-allowed'
+          }`}>
+            {storageAvailable ? 'Subir Archivo' : 'No Disponible'}
             <input
               type="file"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              disabled={!storageAvailable}
               onChange={(e) => {
+                if (!storageAvailable) {
+                  e.target.value = '';
+                  return;
+                }
                 const selectedFile = e.target.files?.[0];
                 if (selectedFile) {
                   onUpload(selectedFile);
@@ -637,6 +689,19 @@ export const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                 <X className="h-6 w-6" />
               </button>
             </div>
+
+            {/* Storage availability warning */}
+            {!storageAvailable && (
+              <div className="p-4 bg-yellow-50 border-b border-yellow-200">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mr-2" />
+                  <p className="text-sm text-yellow-800">
+                    La funcionalidad de carga de documentos no está disponible actualmente. 
+                    Podrás enviar tu postulación sin archivos adjuntos.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Formulario */}
             <form onSubmit={handleSubmit} className="p-6 space-y-8">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building, Settings, ChevronDown, FileText, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, Settings, ChevronDown, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -392,7 +392,7 @@ export const ApplicationsPage: React.FC = () => {
                     <button
                       onClick={() => setOpenDropdown(openDropdown === application.id ? null : application.id)}
                       disabled={updating === application.id}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-md active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                     >
                       {updating === application.id ? (
                         <>
@@ -410,50 +410,50 @@ export const ApplicationsPage: React.FC = () => {
 
                     {/* Dropdown Menu */}
                     {openDropdown === application.id && (
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                      <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
                         <div className="py-2">
                           {/* Decisiones de Postulación */}
                           <button
                             onClick={() => handleApplicationDecision(application, 'aprobada')}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 flex items-center space-x-3 transition-colors"
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 flex items-center space-x-3 transition-colors duration-200"
                           >
-                            <Check className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
                             <span>Aprobar Postulación</span>
                           </button>
                           
                           <button
                             onClick={() => handleApplicationDecision(application, 'rechazada')}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center space-x-3 transition-colors"
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center space-x-3 transition-colors duration-200"
                           >
-                            <X className="h-4 w-4 text-red-600" />
+                            <XCircle className="h-5 w-5 text-red-600" />
                             <span>Rechazar Postulación</span>
                           </button>
 
                           {/* Separador */}
-                          <div className="border-t border-gray-200 my-2"></div>
+                          <div className="border-t border-gray-100 my-2"></div>
 
                           {/* Acciones Adicionales */}
                           <button
                             onClick={() => handleRequestCommercialReport(application)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center space-x-3 transition-colors"
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center space-x-3 transition-colors duration-200"
                           >
-                            <FileText className="h-4 w-4 text-blue-600" />
+                            <FileText className="h-5 w-5 text-blue-600" />
                             <span>Solicitar Informe Comercial</span>
                           </button>
                           
                           <button
                             onClick={() => openMessageModal(application, 'documents')}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 flex items-center space-x-3 transition-colors"
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 flex items-center space-x-3 transition-colors duration-200"
                           >
-                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                            <FileStack className="h-5 w-5 text-yellow-600" />
                             <span>Solicitar Documentos Faltantes</span>
                           </button>
                           
                           <button
                             onClick={() => openMessageModal(application, 'info')}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center space-x-3 transition-colors"
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center space-x-3 transition-colors duration-200"
                           >
-                            <MessageSquare className="h-4 w-4 text-purple-600" />
+                            <MessageSquarePlus className="h-5 w-5 text-purple-600" />
                             <span>Solicitar Más Información</span>
                           </button>
                         </div>

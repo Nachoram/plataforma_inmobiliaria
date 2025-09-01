@@ -4,6 +4,88 @@ import { Upload, X, FileText, Image, Check, AlertCircle, Loader2 } from 'lucide-
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
+// Datos de regiones y comunas de Chile
+const CHILE_REGIONS_COMMUNES = {
+  'region-metropolitana': {
+    name: 'Región Metropolitana de Santiago',
+    communes: [
+      'Cerrillos', 'Cerro Navia', 'Conchalí', 'El Bosque', 'Estación Central',
+      'Huechuraba', 'Independencia', 'La Cisterna', 'La Florida', 'La Granja',
+      'La Pintana', 'La Reina', 'Las Condes', 'Lo Barnechea', 'Lo Espejo',
+      'Lo Prado', 'Macul', 'Maipú', 'Ñuñoa', 'Pedro Aguirre Cerda',
+      'Peñalolén', 'Providencia', 'Pudahuel', 'Quilicura', 'Quinta Normal',
+      'Recoleta', 'Renca', 'San Joaquín', 'San Miguel', 'San Ramón',
+      'Santiago', 'Vitacura', 'Puente Alto', 'Pirque', 'San José de Maipo',
+      'Colina', 'Lampa', 'Tiltil', 'San Bernardo', 'Buin', 'Calera de Tango',
+      'Paine', 'Melipilla', 'Alhué', 'Curacaví', 'María Pinto', 'San Pedro',
+      'Talagante', 'El Monte', 'Isla de Maipo', 'Padre Hurtado', 'Peñaflor'
+    ]
+  },
+  'valparaiso': {
+    name: 'Región de Valparaíso',
+    communes: [
+      'Valparaíso', 'Viña del Mar', 'Concón', 'Quintero', 'Puchuncaví',
+      'Casablanca', 'Juan Fernández', 'San Antonio', 'Santo Domingo',
+      'Cartagena', 'El Tabo', 'El Quisco', 'Algarrobo', 'San Felipe',
+      'Llaillay', 'Putaendo', 'Santa María', 'Catemu', 'Panquehue',
+      'Los Andes', 'Calle Larga', 'Rinconada', 'San Esteban',
+      'La Ligua', 'Cabildo', 'Papudo', 'Zapallar', 'Petorca', 'Chincolco',
+      'Hijuelas', 'La Calera', 'La Cruz', 'Limache', 'Nogales',
+      'Olmué', 'Quillota'
+    ]
+  },
+  'biobio': {
+    name: 'Región del Biobío',
+    communes: [
+      'Concepción', 'Talcahuano', 'Hualpén', 'Chiguayante', 'San Pedro de la Paz',
+      'Coronel', 'Lota', 'Hualqui', 'Santa Juana', 'Laja', 'Quilleco',
+      'Cabrero', 'Tucapel', 'Antuco', 'San Rosendo', 'Yumbel', 'Pemuco',
+      'Bulnes', 'Quillón', 'Florida', 'Chillán', 'Chillán Viejo', 'El Carmen',
+      'Pemuco', 'Pinto', 'Coihueco', 'Ñiquén', 'San Ignacio', 'Quirihue',
+      'Cobquecura', 'Trehuaco', 'Portezuelo', 'Coelemu', 'Ránquil',
+      'Ninhue', 'San Carlos', 'Ñipas', 'San Fabián', 'San Nicolás',
+      'Cañete', 'Contulmo', 'Curanilahue', 'Los Álamos', 'Tirúa',
+      'Arauco', 'Lebu', 'Los Angeles', 'Cabrero', 'Tucapel', 'Antuco',
+      'Quilleco', 'Santa Bárbara', 'Quilaco', 'Mulchén', 'Negrete',
+      'Nacimiento', 'Laja'
+    ]
+  },
+  'araucania': {
+    name: 'Región de La Araucanía',
+    communes: [
+      'Temuco', 'Padre Las Casas', 'Lautaro', 'Perquenco', 'Vilcún',
+      'Cholchol', 'Nueva Imperial', 'Carahue', 'Saavedra', 'Teodoro Schmidt',
+      'Pitrufquén', 'Gorbea', 'Loncoche', 'Toltén', 'Cunco', 'Melipeuco',
+      'Curarrehue', 'Pucón', 'Villarrica', 'Freire', 'Angol', 'Renaico',
+      'Collipulli', 'Lonquimay', 'Curacautín', 'Ercilla', 'Victoria',
+      'Traiguén', 'Lumaco', 'Purén', 'Los Sauces'
+    ]
+  },
+  'los-lagos': {
+    name: 'Región de Los Lagos',
+    communes: [
+      'Puerto Montt', 'Puerto Varas', 'Cochamó', 'Los Muermos', 'Fresia',
+      'Frutillar', 'Llanquihue', 'Maullín', 'Calbuco', 'Castro', 'Ancud',
+      'Quemchi', 'Dalcahue', 'Curaco de Vélez', 'Quinchao', 'Puqueldón',
+      'Chonchi', 'Queilén', 'Quellón', 'Osorno', 'San Pablo', 'Puyehue',
+      'Río Negro', 'Purranque', 'Puerto Octay', 'Frutillar', 'San Juan de la Costa',
+      'Chaitén', 'Futaleufú', 'Hualaihué', 'Palena'
+    ]
+  },
+  'ohiggins': {
+    name: 'Región del Libertador General Bernardo O\'Higgins',
+    communes: [
+      'Rancagua', 'Codegua', 'Coinco', 'Coltauco', 'Doñihue', 'Graneros',
+      'Las Cabras', 'Machalí', 'Malloa', 'Mostazal', 'Olivar', 'Peumo',
+      'Pichidegua', 'Quinta de Tilcoco', 'Rengo', 'Requínoa', 'San Vicente',
+      'Pichilemu', 'La Estrella', 'Litueche', 'Marchihue', 'Navidad',
+      'Paredones', 'San Fernando', 'Chépica', 'Chimbarongo', 'Lolol',
+      'Nancagua', 'Palmilla', 'Peralillo', 'Placilla', 'Pumanque',
+      'Santa Cruz'
+    ]
+  }
+};
+
 export const PropertyForm: React.FC = () => {
   const { user } = useAuth();
   const { id } = useParams();
@@ -21,7 +103,9 @@ export const PropertyForm: React.FC = () => {
   const [formData, setFormData] = useState({
     listing_type: listingType,
     address: '',
-    city: '',
+    apartment_number: '',
+    region: '',
+    commune: '',
     country: 'Chile',
     price: '',
     common_expenses: '',
@@ -31,8 +115,9 @@ export const PropertyForm: React.FC = () => {
     description: '',
     owner_full_name: '',
     owner_address: '',
-    owner_email: '',
-    owner_phone: '',
+    owner_apartment_number: '',
+    owner_region: '',
+    owner_commune: '',
     marital_status: '',
     property_regime: '',
     photos_urls: [] as string[],
@@ -74,7 +159,9 @@ export const PropertyForm: React.FC = () => {
         ...prev,
         listing_type: data.listing_type,
         address: data.address,
-        city: data.city,
+        apartment_number: data.apartment_number || '',
+        region: data.region || '',
+        commune: data.commune || '',
         country: data.country,
         description: data.description || '',
         price: data.price.toString(),
@@ -85,6 +172,28 @@ export const PropertyForm: React.FC = () => {
       }));
     } catch (error) {
       console.error('Error fetching property:', error);
+    }
+  };
+
+  // Obtener comunas disponibles según la región seleccionada
+  const getAvailableCommunes = (regionKey: string) => {
+    return CHILE_REGIONS_COMMUNES[regionKey as keyof typeof CHILE_REGIONS_COMMUNES]?.communes || [];
+  };
+
+  // Manejar cambio de región (resetear comuna)
+  const handleRegionChange = (regionKey: string, isOwner: boolean = false) => {
+    if (isOwner) {
+      setFormData(prev => ({
+        ...prev,
+        owner_region: regionKey,
+        owner_commune: '' // Resetear comuna cuando cambia la región
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        region: regionKey,
+        commune: '' // Resetear comuna cuando cambia la región
+      }));
     }
   };
 
@@ -140,10 +249,13 @@ export const PropertyForm: React.FC = () => {
 
     // Required fields validation
     if (!formData.address.trim()) newErrors.address = 'La dirección es requerida';
-    if (!formData.city.trim()) newErrors.city = 'La ciudad es requerida';
+    if (!formData.region) newErrors.region = 'La región es requerida';
+    if (!formData.commune) newErrors.commune = 'La comuna es requerida';
     if (!formData.price.trim()) newErrors.price = 'El precio es requerido';
     if (!formData.owner_full_name.trim()) newErrors.owner_full_name = 'El nombre del propietario es requerido';
-    if (!formData.owner_email.trim()) newErrors.owner_email = 'El email de contacto es requerido';
+    if (!formData.owner_address.trim()) newErrors.owner_address = 'La dirección del propietario es requerida';
+    if (!formData.owner_region) newErrors.owner_region = 'La región del propietario es requerida';
+    if (!formData.owner_commune) newErrors.owner_commune = 'La comuna del propietario es requerida';
     if (!formData.marital_status) newErrors.marital_status = 'El estado civil es requerido';
 
     // Required documents validation (only for new properties)
@@ -224,8 +336,8 @@ export const PropertyForm: React.FC = () => {
         .upsert({
           id: user?.id,
           full_name: formData.owner_full_name,
-          contact_email: formData.owner_email,
-          contact_phone: formData.owner_phone || null,
+          contact_email: user?.email || '',
+          contact_phone: null,
         }, {
           onConflict: 'id'
         });
@@ -249,7 +361,9 @@ export const PropertyForm: React.FC = () => {
         owner_id: user?.id,
         listing_type: formData.listing_type,
         address: formData.address,
-        city: formData.city,
+        apartment_number: formData.apartment_number || null,
+        region: formData.region,
+        commune: formData.commune,
         country: formData.country,
         description: formData.description,
         price: parseFloat(formData.price),
@@ -258,6 +372,13 @@ export const PropertyForm: React.FC = () => {
         area_sqm: formData.area_sqm ? parseInt(formData.area_sqm) : null,
         photos_urls: photoUrls,
         documents_urls: documentUrls,
+        owner_full_name: formData.owner_full_name,
+        owner_address: formData.owner_address,
+        owner_apartment_number: formData.owner_apartment_number || null,
+        owner_region: formData.owner_region,
+        owner_commune: formData.owner_commune,
+        marital_status: formData.marital_status,
+        property_regime: formData.property_regime || null,
       };
 
       if (isEditing) {
@@ -342,46 +463,77 @@ export const PropertyForm: React.FC = () => {
                 )}
               </div>
 
-              {/* Fila 2: Ciudad y País */}
+              {/* Fila 2: Departamento/Oficina/Casa N° */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Departamento / Oficina / Casa N° (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.apartment_number}
+                  onChange={(e) => setFormData({ ...formData, apartment_number: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Ej: Depto 501, Casa 15, Oficina 302"
+                />
+              </div>
+
+              {/* Fila 3: Región y Comuna */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Ciudad *
+                    Región *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    value={formData.region}
+                    onChange={(e) => handleRegionChange(e.target.value)}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      errors.city ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      errors.region ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
-                    placeholder="Ej: Santiago"
-                  />
-                  {errors.city && (
+                  >
+                    <option value="">Seleccionar región</option>
+                    {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
+                      <option key={key} value={key}>{region.name}</option>
+                    ))}
+                  </select>
+                  {errors.region && (
                     <p className="mt-1 text-sm text-red-600 flex items-center">
                       <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.city}
+                      {errors.region}
                     </p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    País *
+                    Comuna *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="Ej: Chile"
-                  />
+                    value={formData.commune}
+                    onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
+                    disabled={!formData.region}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      errors.commune ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    } ${!formData.region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  >
+                    <option value="">
+                      {formData.region ? 'Seleccionar comuna' : 'Primero selecciona una región'}
+                    </option>
+                    {formData.region && getAvailableCommunes(formData.region).map((commune) => (
+                      <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                  </select>
+                  {errors.commune && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.commune}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Fila 3: Precio y Gastos Comunes */}
+              {/* Fila 4: Precio y Gastos Comunes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -427,7 +579,7 @@ export const PropertyForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Fila 4: Dormitorios, Baños y Superficie */}
+              {/* Fila 5: Dormitorios, Baños y Superficie */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -476,7 +628,7 @@ export const PropertyForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Fila 5: Descripción */}
+              {/* Fila 6: Descripción */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Descripción
@@ -499,7 +651,7 @@ export const PropertyForm: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {/* Fila 6: Nombre Completo del Propietario */}
+              {/* Fila 1: Nombre Completo del Propietario */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Nombre Completo del Propietario *
@@ -522,59 +674,100 @@ export const PropertyForm: React.FC = () => {
                 )}
               </div>
 
-              {/* Fila 7: Domicilio del Propietario */}
+              {/* Fila 2: Dirección del Propietario */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Domicilio del Propietario
+                  Dirección del Propietario *
                 </label>
                 <input
                   type="text"
+                  required
                   value={formData.owner_address}
                   onChange={(e) => setFormData({ ...formData, owner_address: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                    errors.owner_address ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="Ej: Av. Providencia 2500, Las Condes, Santiago"
+                />
+                {errors.owner_address && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.owner_address}
+                  </p>
+                )}
+              </div>
+
+              {/* Fila 3: Departamento/Oficina/Casa N° del Propietario */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Departamento / Oficina / Casa N° del Propietario (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.owner_apartment_number}
+                  onChange={(e) => setFormData({ ...formData, owner_apartment_number: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Ej: Depto 1205, Casa 8, Oficina 45"
                 />
               </div>
 
-              {/* Fila 8: Email y Teléfono de Contacto */}
+              {/* Fila 4: Región y Comuna del Propietario */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email de Contacto *
+                    Región del Propietario *
                   </label>
-                  <input
-                    type="email"
+                  <select
                     required
-                    value={formData.owner_email}
-                    onChange={(e) => setFormData({ ...formData, owner_email: e.target.value })}
+                    value={formData.owner_region}
+                    onChange={(e) => handleRegionChange(e.target.value, true)}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      errors.owner_email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      errors.owner_region ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
-                    placeholder="propietario@email.com"
-                  />
-                  {errors.owner_email && (
+                  >
+                    <option value="">Seleccionar región</option>
+                    {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
+                      <option key={key} value={key}>{region.name}</option>
+                    ))}
+                  </select>
+                  {errors.owner_region && (
                     <p className="mt-1 text-sm text-red-600 flex items-center">
                       <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.owner_email}
+                      {errors.owner_region}
                     </p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Teléfono de Contacto
+                    Comuna del Propietario *
                   </label>
-                  <input
-                    type="tel"
-                    value={formData.owner_phone}
-                    onChange={(e) => setFormData({ ...formData, owner_phone: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="+56 9 1234 5678"
-                  />
+                  <select
+                    required
+                    value={formData.owner_commune}
+                    onChange={(e) => setFormData({ ...formData, owner_commune: e.target.value })}
+                    disabled={!formData.owner_region}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      errors.owner_commune ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    } ${!formData.owner_region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  >
+                    <option value="">
+                      {formData.owner_region ? 'Seleccionar comuna' : 'Primero selecciona una región'}
+                    </option>
+                    {formData.owner_region && getAvailableCommunes(formData.owner_region).map((commune) => (
+                      <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                  </select>
+                  {errors.owner_commune && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.owner_commune}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Fila 9: Estado Civil */}
+              {/* Fila 5: Estado Civil */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -602,7 +795,7 @@ export const PropertyForm: React.FC = () => {
                   )}
                 </div>
 
-                {/* Fila 10: Régimen Patrimonial (condicional) */}
+                {/* Régimen Patrimonial (condicional) */}
                 {formData.marital_status === 'casado' && (
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">

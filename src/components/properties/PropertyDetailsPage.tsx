@@ -163,7 +163,7 @@ export const PropertyDetailsPage: React.FC = () => {
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.address}</h1>
                   <div className="flex items-center text-gray-600">
                     <MapPin className="h-5 w-5 mr-1" />
-                    <span>{property.city}, {property.country}</span>
+                    <span>{property.commune}, {property.region}</span>
                   </div>
                 </div>
                 <div className="text-right">

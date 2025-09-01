@@ -182,7 +182,7 @@ export const PortfolioPage: React.FC = () => {
 
                 <div className="flex items-center text-sm text-gray-500 mb-2">
                   <MapPin className="h-4 w-4 mr-1" />
-                  <span>{property.city}, {property.country}</span>
+                  <span>{property.commune}, {property.region}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-3">

@@ -23,8 +23,9 @@ export interface Property {
   owner_id: string;
   listing_type: 'venta' | 'arriendo';
   address: string;
-  city: string;
-  country: string;
+  apartment_number: string | null;
+  region: string;
+  commune: string;
   description: string | null;
   price: number;
   common_expenses: number;
@@ -36,8 +37,9 @@ export interface Property {
   status: 'disponible' | 'vendida' | 'arrendada';
   owner_full_name: string;
   owner_address: string | null;
-  owner_email: string;
-  owner_phone: string | null;
+  owner_apartment_number: string | null;
+  owner_region: string;
+  owner_commune: string;
   marital_status: 'soltero' | 'casado' | 'divorciado' | 'viudo';
   property_regime: string | null;
   created_at: string;

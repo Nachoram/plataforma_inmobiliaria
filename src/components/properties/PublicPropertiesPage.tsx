@@ -48,7 +48,8 @@ export const PublicPropertiesPage: React.FC = () => {
     if (filters.search) {
       filtered = filtered.filter(property =>
         property.address.toLowerCase().includes(filters.search.toLowerCase()) ||
-        property.city.toLowerCase().includes(filters.search.toLowerCase()) ||
+        property.commune.toLowerCase().includes(filters.search.toLowerCase()) ||
+        property.region.toLowerCase().includes(filters.search.toLowerCase()) ||
         property.description?.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
@@ -61,7 +62,8 @@ export const PublicPropertiesPage: React.FC = () => {
     // City filter
     if (filters.city) {
       filtered = filtered.filter(property =>
-        property.city.toLowerCase().includes(filters.city.toLowerCase())
+        property.commune.toLowerCase().includes(filters.city.toLowerCase()) ||
+        property.region.toLowerCase().includes(filters.city.toLowerCase())
       );
     }
 
@@ -271,7 +273,7 @@ export const PublicPropertiesPage: React.FC = () => {
                   </h3>
                   <div className="flex items-center text-sm text-gray-500">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{property.city}, {property.country}</span>
+                    <span>{property.commune}, {property.region}</span>
                   </div>
                 </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building, Settings, ChevronDown, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus } from 'lucide-react';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -31,7 +31,6 @@ export const ApplicationsPage: React.FC = () => {
   const [sentApplications, setSentApplications] = useState<ApplicationWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithDetails | null>(null);
   const [messageType, setMessageType] = useState<'documents' | 'info'>('documents');
@@ -102,9 +101,9 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
-  // Función para manejar decisiones de postulación (integración con n8n)
-  const handleApplicationDecision = async (application: ApplicationWithDetails, decision: 'aprobada' | 'rechazada') => {
-    setUpdating(application.id);
+  // Función para aprobar postulación (integración con n8n)
+  const handleApproveApplication = async (application: ApplicationWithDetails) => {
+    setUpdating(`${application.id}-approve`);
     try {
       // Llamada al webhook de n8n
       const webhookUrl = 'https://tu-instancia.n8n.cloud/webhook/gestion-postulacion';
@@ -113,7 +112,7 @@ export const ApplicationsPage: React.FC = () => {
         applicationId: application.id,
         propertyId: application.property_id,
         applicantId: application.applicant_id,
-        decision: decision
+        decision: 'aprobada'
       };
 
       const response = await fetch(webhookUrl, {
@@ -131,21 +130,66 @@ export const ApplicationsPage: React.FC = () => {
       // Actualizar estado en la base de datos
       const { error } = await supabase
         .from('applications')
-        .update({ status: decision })
+        .update({ status: 'aprobada' })
         .eq('id', application.id);
 
       if (error) throw error;
 
       // Actualizar estado local
       setReceivedApplications(receivedApplications.map(app =>
-        app.id === application.id ? { ...app, status: decision } : app
+        app.id === application.id ? { ...app, status: 'aprobada' } : app
       ));
 
-      // Cerrar dropdown
-      setOpenDropdown(null);
     } catch (error) {
-      console.error('Error processing application decision:', error);
-      alert('Error al procesar la decisión. Por favor, intenta nuevamente.');
+      console.error('Error approving application:', error);
+      alert('Error al aprobar la postulación. Por favor, intenta nuevamente.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // Función para rechazar postulación (integración con n8n)
+  const handleRejectApplication = async (application: ApplicationWithDetails) => {
+    setUpdating(`${application.id}-reject`);
+    try {
+      // Llamada al webhook de n8n
+      const webhookUrl = 'https://tu-instancia.n8n.cloud/webhook/gestion-postulacion';
+      
+      const webhookPayload = {
+        applicationId: application.id,
+        propertyId: application.property_id,
+        applicantId: application.applicant_id,
+        decision: 'rechazada'
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Actualizar estado en la base de datos
+      const { error } = await supabase
+        .from('applications')
+        .update({ status: 'rechazada' })
+        .eq('id', application.id);
+
+      if (error) throw error;
+
+      // Actualizar estado local
+      setReceivedApplications(receivedApplications.map(app =>
+        app.id === application.id ? { ...app, status: 'rechazada' } : app
+      ));
+
+    } catch (error) {
+      console.error('Error rejecting application:', error);
+      alert('Error al rechazar la postulación. Por favor, intenta nuevamente.');
     } finally {
       setUpdating(null);
     }
@@ -153,6 +197,7 @@ export const ApplicationsPage: React.FC = () => {
 
   // Función para solicitar informe comercial (integración con n8n)
   const handleRequestCommercialReport = async (application: ApplicationWithDetails) => {
+    setUpdating(`${application.id}-report`);
     try {
       const webhookUrl = 'https://tu-instancia.n8n.cloud/webhook/solicitar-informe';
       
@@ -176,10 +221,11 @@ export const ApplicationsPage: React.FC = () => {
 
       // Mostrar notificación de éxito
       alert('Solicitud de informe enviada correctamente');
-      setOpenDropdown(null);
     } catch (error) {
       console.error('Error requesting commercial report:', error);
       alert('Error al solicitar el informe. Por favor, intenta nuevamente.');
+    } finally {
+      setUpdating(null);
     }
   };
 
@@ -195,7 +241,6 @@ export const ApplicationsPage: React.FC = () => {
     
     setMessageText(preloadedText);
     setShowMessageModal(true);
-    setOpenDropdown(null);
   };
 
   // Función para enviar mensaje
@@ -387,78 +432,72 @@ export const ApplicationsPage: React.FC = () => {
                   <span>Recibida el {formatDate(application.created_at)}</span>
                 </div>
 
+                {/* Panel de Acciones con Botones Individuales */}
                 {application.status === 'pendiente' && (
-                  <div className="relative">
+                  <div className="flex items-center space-x-2">
+                    {/* Acciones Secundarias */}
                     <button
-                      onClick={() => setOpenDropdown(openDropdown === application.id ? null : application.id)}
-                      disabled={updating === application.id}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-md active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      onClick={() => openMessageModal(application, 'info')}
+                      disabled={updating?.startsWith(application.id)}
+                      className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                      title="Solicitar Más Información"
                     >
-                      {updating === application.id ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>Procesando...</span>
-                        </>
+                      <MessageSquarePlus className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      onClick={() => openMessageModal(application, 'documents')}
+                      disabled={updating?.startsWith(application.id)}
+                      className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                      title="Solicitar Documentos Faltantes"
+                    >
+                      <FileStack className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleRequestCommercialReport(application)}
+                      disabled={updating?.startsWith(application.id)}
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                      title="Solicitar Informe Comercial"
+                    >
+                      {updating === `${application.id}-report` ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                       ) : (
-                        <>
-                          <Settings className="h-4 w-4" />
-                          <span>Gestionar</span>
-                          <ChevronDown className="h-4 w-4" />
-                        </>
+                        <FileText className="h-4 w-4" />
                       )}
                     </button>
 
-                    {/* Dropdown Menu */}
-                    {openDropdown === application.id && (
-                      <div className="absolute left-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
-                        <div className="py-2">
-                          {/* Decisiones de Postulación */}
-                          <button
-                            onClick={() => handleApplicationDecision(application, 'aprobada')}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 flex items-center space-x-3 transition-colors duration-200"
-                          >
-                            <CheckCircle2 className="h-5 w-5 text-green-600" />
-                            <span>Aprobar Postulación</span>
-                          </button>
-                          
-                          <button
-                            onClick={() => handleApplicationDecision(application, 'rechazada')}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center space-x-3 transition-colors duration-200"
-                          >
-                            <XCircle className="h-5 w-5 text-red-600" />
-                            <span>Rechazar Postulación</span>
-                          </button>
+                    {/* Separador Visual */}
+                    <div className="w-px h-6 bg-gray-300 mx-1"></div>
 
-                          {/* Separador */}
-                          <div className="border-t border-gray-100 my-2"></div>
+                    {/* Acciones Principales */}
+                    <button
+                      onClick={() => handleRejectApplication(application)}
+                      disabled={updating?.startsWith(application.id)}
+                      className="flex items-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 hover:shadow-sm active:bg-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      title="Rechazar Postulación"
+                    >
+                      {updating === `${application.id}-reject` ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                      ) : (
+                        <XCircle className="h-4 w-4" />
+                      )}
+                      <span className="text-sm font-medium">Rechazar</span>
+                    </button>
 
-                          {/* Acciones Adicionales */}
-                          <button
-                            onClick={() => handleRequestCommercialReport(application)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center space-x-3 transition-colors duration-200"
-                          >
-                            <FileText className="h-5 w-5 text-blue-600" />
-                            <span>Solicitar Informe Comercial</span>
-                          </button>
-                          
-                          <button
-                            onClick={() => openMessageModal(application, 'documents')}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 flex items-center space-x-3 transition-colors duration-200"
-                          >
-                            <FileStack className="h-5 w-5 text-yellow-600" />
-                            <span>Solicitar Documentos Faltantes</span>
-                          </button>
-                          
-                          <button
-                            onClick={() => openMessageModal(application, 'info')}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center space-x-3 transition-colors duration-200"
-                          >
-                            <MessageSquarePlus className="h-5 w-5 text-purple-600" />
-                            <span>Solicitar Más Información</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <button
+                      onClick={() => handleApproveApplication(application)}
+                      disabled={updating?.startsWith(application.id)}
+                      className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:shadow-sm active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      title="Aprobar Postulación"
+                    >
+                      {updating === `${application.id}-approve` ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                      <span className="text-sm font-medium">Aprobar</span>
+                    </button>
                   </div>
                 )}
               </div>

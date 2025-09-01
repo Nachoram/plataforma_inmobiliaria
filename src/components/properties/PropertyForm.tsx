@@ -121,6 +121,8 @@ export const PropertyForm: React.FC = () => {
     marital_status: '',
     property_regime: '',
     photos_urls: [] as string[],
+    availableDays: [] as string[],
+    availableTimeSlots: [] as string[],
     documents: {
       // Required documents
       tax_assessment: null as File | null,
@@ -379,6 +381,8 @@ export const PropertyForm: React.FC = () => {
         owner_commune: formData.owner_commune,
         marital_status: formData.marital_status,
         property_regime: formData.property_regime || null,
+        available_days: formData.availableDays,
+        available_time_slots: formData.availableTimeSlots,
       };
 
       if (isEditing) {
@@ -923,6 +927,109 @@ export const PropertyForm: React.FC = () => {
             </div>
           </div>
 
+          {/* Sección: Disponibilidad para Visitas */}
+          <div className="space-y-6">
+            <div className="border-b pb-2">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                <Calendar className="h-6 w-6 mr-2 text-blue-600" />
+                Disponibilidad para Visitas (Opcional)
+              </h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Selecciona los días y horarios en los que generalmente puedes mostrar la propiedad. 
+                Esto facilitará la coordinación con los interesados.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Días de la Semana */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Días Disponibles</h3>
+                <div className="space-y-3">
+                  {[
+                    { value: 'lunes', label: 'Lunes' },
+                    { value: 'martes', label: 'Martes' },
+                    { value: 'miercoles', label: 'Miércoles' },
+                    { value: 'jueves', label: 'Jueves' },
+                    { value: 'viernes', label: 'Viernes' },
+                    { value: 'sabado', label: 'Sábado' },
+                    { value: 'domingo', label: 'Domingo' }
+                  ].map((day) => (
+                    <label key={day.value} className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.availableDays.includes(day.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData(prev => ({
+                              ...prev,
+                              availableDays: [...prev.availableDays, day.value]
+                            }));
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              availableDays: prev.availableDays.filter(d => d !== day.value)
+                            }));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-gray-700 font-medium">{day.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bloques Horarios */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Horarios Disponibles</h3>
+                <div className="space-y-3">
+                  {[
+                    { value: 'morning', label: 'Mañana (9:00 - 12:00)' },
+                    { value: 'afternoon', label: 'Tarde (14:00 - 17:00)' },
+                    { value: 'evening', label: 'Tarde-Noche (17:00 - 20:00)' }
+                  ].map((timeSlot) => (
+                    <label key={timeSlot.value} className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.availableTimeSlots.includes(timeSlot.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData(prev => ({
+                              ...prev,
+                              availableTimeSlots: [...prev.availableTimeSlots, timeSlot.value]
+                            }));
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              availableTimeSlots: prev.availableTimeSlots.filter(t => t !== timeSlot.value)
+                            }));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-gray-700 font-medium">{timeSlot.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Información adicional */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                </div>
+                <div className="ml-3">
+                  <h4 className="text-sm font-medium text-blue-900">Información sobre disponibilidad</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Esta información es opcional y solo sirve como referencia. Los interesados podrán 
+                    solicitar visitas en cualquier momento y tú podrás coordinar directamente con ellos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           {/* Sección: Documentación Legal */}
           <div className="space-y-6">
             <div className="border-b pb-2">

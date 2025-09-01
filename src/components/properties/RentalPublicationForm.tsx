@@ -119,6 +119,8 @@ export const RentalPublicationForm: React.FC = () => {
     
     // Archivos
     photos_urls: [] as string[],
+    availableDays: [] as string[],
+    availableTimeSlots: [] as string[],
     documents: {
       // Documentos Requeridos
       ownership_certificate: null as File | null,

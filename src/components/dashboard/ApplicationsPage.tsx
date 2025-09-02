@@ -22,7 +22,7 @@ interface ApplicationWithDetails {
     contact_email: string | null;
     contact_phone: string | null;
   } | null;
-  applicants?: {
+  structured_applicant?: {
     full_name: string | null;
     profession: string | null;
     company: string | null;
@@ -70,14 +70,6 @@ export const ApplicationsPage: React.FC = () => {
             full_name,
             contact_email,
             contact_phone
-          ),
-          applicants(
-            full_name,
-            profession,
-            company,
-            monthly_income,
-            contact_email,
-            contact_phone
           )
         `)
         .eq('properties.owner_id', user?.id)
@@ -107,14 +99,6 @@ export const ApplicationsPage: React.FC = () => {
           ),
           profiles(
             full_name,
-            contact_email,
-            contact_phone
-          ),
-          applicants(
-            full_name,
-            profession,
-            company,
-            monthly_income,
             contact_email,
             contact_phone
           )
@@ -249,7 +233,7 @@ export const ApplicationsPage: React.FC = () => {
       
       const webhookPayload = {
         applicantId: application.applicant_id,
-        applicantName: application.applicants?.full_name || application.profiles?.full_name || 'No especificado',
+        applicantName: application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado',
         applicantRut: 'No disponible' // Se puede agregar este campo al perfil si es necesario
       };
 
@@ -282,8 +266,8 @@ export const ApplicationsPage: React.FC = () => {
     
     // Pre-cargar texto según el tipo
     const preloadedText = type === 'documents' 
-      ? `Estimado/a ${application.applicants?.full_name || application.profiles?.full_name || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
-      : `Estimado/a ${application.applicants?.full_name || application.profiles?.full_name || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
+      ? `Estimado/a ${application.structured_applicant?.full_name || application.profiles?.full_name || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
+      : `Estimado/a ${application.structured_applicant?.full_name || application.profiles?.full_name || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
     
     setMessageText(preloadedText);
     setShowMessageModal(true);
@@ -446,34 +430,34 @@ export const ApplicationsPage: React.FC = () => {
                 <div className="space-y-1 text-sm">
                   <div>
                     <span className="text-gray-500">Nombre: </span>
-                    <span className="font-medium">{application.applicants?.full_name || application.profiles?.full_name || 'No especificado'}</span>
+                    <span className="font-medium">{application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado'}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Email: </span>
-                    <span className="font-medium">{application.applicants?.contact_email || application.profiles?.contact_email || 'No especificado'}</span>
+                    <span className="font-medium">{application.structured_applicant?.contact_email || application.profiles?.contact_email || 'No especificado'}</span>
                   </div>
-                  {(application.applicants?.contact_phone || application.profiles?.contact_phone) && (
+                  {(application.structured_applicant?.contact_phone || application.profiles?.contact_phone) && (
                     <div>
                       <span className="text-gray-500">Teléfono: </span>
-                      <span className="font-medium">{application.applicants?.contact_phone || application.profiles?.contact_phone}</span>
+                      <span className="font-medium">{application.structured_applicant?.contact_phone || application.profiles?.contact_phone}</span>
                     </div>
                   )}
-                  {application.applicants?.profession && (
+                  {application.structured_applicant?.profession && (
                     <div>
                       <span className="text-gray-500">Profesión: </span>
-                      <span className="font-medium">{application.applicants.profession}</span>
+                      <span className="font-medium">{application.structured_applicant.profession}</span>
                     </div>
                   )}
-                  {application.applicants?.company && (
+                  {application.structured_applicant?.company && (
                     <div>
                       <span className="text-gray-500">Empresa: </span>
-                      <span className="font-medium">{application.applicants.company}</span>
+                      <span className="font-medium">{application.structured_applicant.company}</span>
                     </div>
                   )}
-                  {application.applicants?.monthly_income && application.applicants.monthly_income > 0 && (
+                  {application.structured_applicant?.monthly_income && application.structured_applicant.monthly_income > 0 && (
                     <div>
                       <span className="text-gray-500">Ingresos: </span>
-                      <span className="font-medium">{formatPrice(application.applicants.monthly_income)}</span>
+                      <span className="font-medium">{formatPrice(application.structured_applicant.monthly_income)}</span>
                     </div>
                   )}
                 </div>
@@ -714,7 +698,7 @@ export const ApplicationsPage: React.FC = () => {
                 <h3 className="font-semibold text-gray-900 mb-2">Postulación:</h3>
                 <p className="text-gray-700">{selectedApplication.properties.address}</p>
                 <p className="text-sm text-gray-600">
-                  Postulante: {selectedApplication.applicants?.full_name || 
+                  Postulante: {selectedApplication.structured_applicant?.full_name || 
                               selectedApplication.profiles?.full_name || 
                               'No especificado'}
                 </p>
@@ -734,7 +718,7 @@ export const ApplicationsPage: React.FC = () => {
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   Este mensaje será enviado al email del postulante: {
-                    selectedApplication.applicants?.contact_email || 
+                    selectedApplication.structured_applicant?.contact_email || 
                     selectedApplication.profiles?.contact_email
                   }
                 </p>

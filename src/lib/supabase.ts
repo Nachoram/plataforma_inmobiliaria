@@ -3,11 +3,18 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Evitar que la app se caiga si faltan variables en tiempo de ejecución
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.error(
+    'Missing Supabase environment variables. Define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+  );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Usar valores de respaldo para evitar crash y permitir que la UI cargue
+const resolvedSupabaseUrl = supabaseUrl || 'https://invalid.supabase.co';
+const resolvedSupabaseAnonKey = supabaseAnonKey || 'invalid-anon-key';
+
+export const supabase = createClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey);
 
 // Database types
 export interface Address {

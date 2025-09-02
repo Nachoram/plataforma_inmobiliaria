@@ -133,8 +133,9 @@ export const ApplicationsPage: React.FC = () => {
 
   // Función para aprobar postulación (integración con n8n)
   const handleApproveApplication = async (application: ApplicationWithDetails) => {
-    console.log('🚀 Iniciando aprobación de postulación:', application.id);
+    // Poner estado de carga para feedback visual
     setUpdating(`${application.id}-approve`);
+    console.log('🚀 Iniciando aprobación de postulación:', application.id);
     
     try {
       // 1. Actualizar estado en la base de datos primero
@@ -146,74 +147,90 @@ export const ApplicationsPage: React.FC = () => {
       if (error) throw error;
       console.log('✅ Base de datos actualizada correctamente');
 
-      // 2. Disparar webhook de automatización
-      const webhookPayload = {
-        application_id: application.id,
-        property_id: application.property_id,
-        applicant_id: application.applicant_id,
-        applicant_data: {
+      // 2. Configurar URL del webhook de n8n (producción)
+      const webhookURL = 'https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';
+
+      // 3. Construir el cuerpo de la solicitud (payload) según especificación
+      const requestBody = {
+        decision: 'approved',
+        applicationId: application.id,
+        propertyId: application.property_id,
+        propertyAddress: application.properties.address,
+        applicantId: application.applicant_id,
+        applicantName: application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado',
+        applicantEmail: application.structured_applicant?.contact_email || application.profiles?.contact_email || 'No especificado',
+        applicantPhone: application.structured_applicant?.contact_phone || application.profiles?.contact_phone || null,
+        applicantProfession: application.structured_applicant?.profession || null,
+        applicantCompany: application.structured_applicant?.company || null,
+        applicantIncome: application.structured_applicant?.monthly_income || null,
+        propertyCity: application.properties.city,
+        propertyPrice: application.properties.price,
+        propertyType: application.properties.listing_type,
+        applicationMessage: application.message,
+        timestamp: new Date().toISOString(),
+        // Datos adicionales para el workflow de n8n
+        metadata: {
           full_name: application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado',
           contact_email: application.structured_applicant?.contact_email || application.profiles?.contact_email || 'No especificado',
           contact_phone: application.structured_applicant?.contact_phone || application.profiles?.contact_phone || null,
           profession: application.structured_applicant?.profession || null,
           company: application.structured_applicant?.company || null,
-          monthly_income: application.structured_applicant?.monthly_income || null
-        },
-        property_data: {
+          monthly_income: application.structured_applicant?.monthly_income || null,
           address: application.properties.address,
           city: application.properties.city,
           price: application.properties.price,
           listing_type: application.properties.listing_type
-        },
-        timestamp: new Date().toISOString(),
-        action: 'approve_application'
+        }
       };
 
-      console.log('📤 Enviando payload al webhook:', webhookPayload);
+      console.log('📤 Enviando solicitud POST al webhook de n8n:', requestBody);
 
+      // 4. Realizar la solicitud POST al webhook con las cabeceras correctas
       try {
-        const webhookResponse = await fetch('https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb', {
+        const response = await fetch(webhookURL, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify(webhookPayload)
+          body: JSON.stringify(requestBody)
         });
 
-        console.log('📡 Respuesta del webhook - Status:', webhookResponse.status);
+        console.log('📡 Respuesta del webhook - Status:', response.status);
         
-        // Intentar leer la respuesta
-        let responseText = '';
-        try {
-          responseText = await webhookResponse.text();
-          console.log('📡 Respuesta del webhook - Body:', responseText);
-        } catch (readError) {
-          console.log('⚠️ No se pudo leer la respuesta del webhook');
+        // Verificar si la respuesta fue exitosa
+        if (!response.ok) {
+          throw new Error(`La respuesta del servidor no fue OK: ${response.status} ${response.statusText}`);
         }
 
-        if (!webhookResponse.ok) {
-          console.warn('⚠️ Webhook falló pero la postulación fue aprobada:', {
-            status: webhookResponse.status,
-            statusText: webhookResponse.statusText,
-            response: responseText
-          });
-        } else {
-          console.log('✅ Webhook ejecutado exitosamente');
+        // Intentar leer la respuesta JSON
+        try {
+          const result = await response.json();
+          console.log('✅ Webhook de n8n ejecutado con éxito:', result);
+        } catch (jsonError) {
+          // Si no es JSON válido, leer como texto
+          const textResult = await response.text();
+          console.log('✅ Webhook de n8n ejecutado con éxito (respuesta texto):', textResult);
         }
+
       } catch (webhookError) {
-        console.error('❌ Error en webhook (postulación aún aprobada):', webhookError);
+        console.error('❌ Error al enviar la solicitud al webhook de n8n:', webhookError);
+        // Mostrar notificación al usuario sobre el error del webhook
+        alert('La postulación fue aprobada en la base de datos, pero hubo un error al comunicarse con el sistema de automatización. Por favor, verifica manualmente.');
       }
 
-      // Actualizar estado local
+      // 5. Actualizar el estado de la UI para mostrar que la postulación fue aprobada
       setReceivedApplications(receivedApplications.map(app =>
         app.id === application.id ? { ...app, status: 'aprobada' } : app
       ));
 
+      console.log('✅ Proceso de aprobación completado exitosamente');
+
     } catch (error) {
       console.error('❌ Error aprobando postulación:', error);
-      alert('Error al aprobar la postulación. Por favor, intenta nuevamente.');
+      // Manejar el error y mostrar notificación al usuario
+      alert('Error al aprobar la postulación en la base de datos. Por favor, intenta nuevamente.');
     } finally {
+      // Quitar estado de carga
       setUpdating(null);
     }
   };

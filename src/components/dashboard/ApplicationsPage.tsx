@@ -147,8 +147,12 @@ export const ApplicationsPage: React.FC = () => {
       if (error) throw error;
       console.log('✅ Base de datos actualizada correctamente');
 
-      // 2. Configurar URL del webhook de n8n (producción)
-      const webhookURL = 'https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';
+      // 2. Configurar URL del webhook de n8n desde variable de entorno
+      const webhookURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+      
+      if (!webhookURL) {
+        throw new Error('VITE_RAILWAY_WEBHOOK_URL no está configurada en las variables de entorno');
+      }
 
       // 3. Construir el cuerpo de la solicitud (payload) según especificación
       const requestBody = {

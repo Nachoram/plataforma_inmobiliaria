@@ -146,7 +146,7 @@ export const ApplicationsPage: React.FC = () => {
 
       // 2. Disparar webhook de automatización
       try {
-        const webhookResponse = await fetch('https://primary-production-bafdc.up.railway.app/webhook/8e7e097d-4e60-402e-af5a-da22a76e0ea6', {
+        const webhookResponse = await fetch('https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

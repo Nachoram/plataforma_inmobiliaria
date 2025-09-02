@@ -135,6 +135,7 @@ export const ApplicationsPage: React.FC = () => {
   const handleApproveApplication = async (application: ApplicationWithDetails) => {
     setUpdating(`${application.id}-approve`);
     try {
+      // 1. Actualizar estado en la base de datos primero
       // Actualizar estado en la base de datos
       const { error } = await supabase
         .from('applications')
@@ -142,6 +143,46 @@ export const ApplicationsPage: React.FC = () => {
         .eq('id', application.id);
 
       if (error) throw error;
+
+      // 2. Disparar webhook de automatización
+      try {
+        const webhookResponse = await fetch('/api/webhooks/approve-application', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_WEBHOOK_SECRET || 'default-secret'}`
+          },
+          body: JSON.stringify({
+            application_id: application.id,
+            property_id: application.property_id,
+            applicant_id: application.applicant_id,
+            applicant_data: {
+              full_name: application.structured_applicant?.full_name || application.profiles?.full_name,
+              contact_email: application.structured_applicant?.contact_email || application.profiles?.contact_email,
+              contact_phone: application.structured_applicant?.contact_phone || application.profiles?.contact_phone,
+              profession: application.structured_applicant?.profession,
+              company: application.structured_applicant?.company,
+              monthly_income: application.structured_applicant?.monthly_income
+            },
+            property_data: {
+              address: application.properties.address,
+              city: application.properties.city,
+              price: application.properties.price,
+              listing_type: application.properties.listing_type
+            },
+            timestamp: new Date().toISOString(),
+            action: 'approve_application'
+          })
+        });
+
+        if (!webhookResponse.ok) {
+          console.warn('Webhook failed but application was approved:', webhookResponse.statusText);
+        } else {
+          console.log('Webhook triggered successfully');
+        }
+      } catch (webhookError) {
+        console.warn('Webhook error (application still approved):', webhookError);
+      }
 
       // Actualizar estado local
       setReceivedApplications(receivedApplications.map(app =>

@@ -135,28 +135,6 @@ export const ApplicationsPage: React.FC = () => {
   const handleApproveApplication = async (application: ApplicationWithDetails) => {
     setUpdating(`${application.id}-approve`);
     try {
-      // Llamada al webhook de n8n
-      const webhookUrl = 'https://tu-instancia.n8n.cloud/webhook/gestion-postulacion';
-      
-      const webhookPayload = {
-        applicationId: application.id,
-        propertyId: application.property_id,
-        applicantId: application.applicant_id,
-        decision: 'aprobada'
-      };
-
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
       // Actualizar estado en la base de datos
       const { error } = await supabase
         .from('applications')
@@ -182,28 +160,6 @@ export const ApplicationsPage: React.FC = () => {
   const handleRejectApplication = async (application: ApplicationWithDetails) => {
     setUpdating(`${application.id}-reject`);
     try {
-      // Llamada al webhook de n8n
-      const webhookUrl = 'https://tu-instancia.n8n.cloud/webhook/gestion-postulacion';
-      
-      const webhookPayload = {
-        applicationId: application.id,
-        propertyId: application.property_id,
-        applicantId: application.applicant_id,
-        decision: 'rechazada'
-      };
-
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
       // Actualizar estado en la base de datos
       const { error } = await supabase
         .from('applications')
@@ -229,26 +185,6 @@ export const ApplicationsPage: React.FC = () => {
   const handleRequestCommercialReport = async (application: ApplicationWithDetails) => {
     setUpdating(`${application.id}-report`);
     try {
-      const webhookUrl = 'https://tu-instancia.n8n.cloud/webhook/solicitar-informe';
-      
-      const webhookPayload = {
-        applicantId: application.applicant_id,
-        applicantName: application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado',
-        applicantRut: 'No disponible' // Se puede agregar este campo al perfil si es necesario
-      };
-
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
       // Mostrar notificación de éxito
       alert('Solicitud de informe enviada correctamente');
     } catch (error) {

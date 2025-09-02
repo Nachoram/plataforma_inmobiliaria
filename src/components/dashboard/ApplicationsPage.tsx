@@ -158,42 +158,75 @@ export const ApplicationsPage: React.FC = () => {
       // 4. Intentar enviar webhook solo si está configurado
       if (webhookURL) {
         try {
-          // Construir el cuerpo de la solicitud (payload) según especificación
-          const requestBody = {
+          // Construir el payload completo con toda la información necesaria
+          const webhookPayload = {
+            // Información básica de la decisión
+            action: 'application_approved',
             decision: 'approved',
-            applicationId: application.id,
-            propertyId: application.property_id,
-            propertyAddress: application.properties.address,
-            applicantId: application.applicant_id,
-            applicantName: application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado',
-            applicantEmail: application.structured_applicant?.contact_email || application.profiles?.contact_email || 'No especificado',
-            applicantPhone: application.structured_applicant?.contact_phone || application.profiles?.contact_phone || null,
-            applicantProfession: application.structured_applicant?.profession || null,
-            applicantCompany: application.structured_applicant?.company || null,
-            applicantIncome: application.structured_applicant?.monthly_income || null,
-            propertyCity: application.properties.city,
-            propertyPrice: application.properties.price,
-            propertyType: application.properties.listing_type,
-            applicationMessage: application.message,
-            timestamp: new Date().toISOString()
+            status: 'aprobada',
+            timestamp: new Date().toISOString(),
+            
+            // Información de la aplicación
+            application: {
+              id: application.id,
+              property_id: application.property_id,
+              applicant_id: application.applicant_id,
+              message: application.message,
+              created_at: application.created_at,
+              status: 'aprobada'
+            },
+            
+            // Información de la propiedad
+            property: {
+              id: application.property_id,
+              address: application.properties.address,
+              city: application.properties.city,
+              price: application.properties.price,
+              listing_type: application.properties.listing_type,
+              photos_urls: application.properties.photos_urls || []
+            },
+            
+            // Información del postulante
+            applicant: {
+              id: application.applicant_id,
+              full_name: application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado',
+              contact_email: application.structured_applicant?.contact_email || application.profiles?.contact_email || 'No especificado',
+              contact_phone: application.structured_applicant?.contact_phone || application.profiles?.contact_phone || null,
+              profession: application.structured_applicant?.profession || null,
+              company: application.structured_applicant?.company || null,
+              monthly_income: application.structured_applicant?.monthly_income || null
+            },
+            
+            // Información adicional para procesamiento
+            metadata: {
+              source: 'propiedades_app',
+              user_agent: navigator.userAgent,
+              url: window.location.href,
+              environment: import.meta.env.MODE || 'development'
+            }
           };
 
-          console.log('📤 Enviando solicitud POST al webhook de n8n:', requestBody);
+          console.log('📤 Enviando payload al webhook:', webhookPayload);
 
           // Realizar la solicitud POST al webhook con las cabeceras correctas
           const response = await fetch(webhookURL, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'User-Agent': 'PropiedadesApp/1.0'
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(webhookPayload)
           });
 
           console.log('📡 Respuesta del webhook - Status:', response.status);
+          console.log('📡 Respuesta del webhook - Headers:', Object.fromEntries(response.headers.entries()));
           
           // Verificar si la respuesta fue exitosa
           if (!response.ok) {
-            console.warn(`⚠️ Webhook falló: ${response.status} ${response.statusText}`);
+            const errorText = await response.text();
+            console.warn(`⚠️ Webhook falló: ${response.status} ${response.statusText}`, errorText);
+            throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
           } else {
             // Intentar leer la respuesta
             let result;
@@ -207,10 +240,13 @@ export const ApplicationsPage: React.FC = () => {
             }
           }
         } catch (webhookError) {
-          console.warn('⚠️ Error en webhook (continuando con aprobación):', webhookError);
+          console.error('❌ Error crítico en webhook:', webhookError);
+          // Mostrar error al usuario pero no revertir la aprobación
+          alert(`La postulación fue aprobada correctamente, pero hubo un problema al enviar la notificación: ${webhookError.message}`);
         }
       } else {
-        console.log('ℹ️ Webhook URL no configurada, saltando notificación externa');
+        console.warn('⚠️ VITE_RAILWAY_WEBHOOK_URL no está configurada en las variables de entorno');
+        alert('La postulación fue aprobada, pero no se pudo enviar la notificación porque la URL del webhook no está configurada.');
       }
 
       console.log('✅ Proceso de aprobación completado exitosamente');
@@ -218,8 +254,12 @@ export const ApplicationsPage: React.FC = () => {
     } catch (error) {
       console.error('❌ Error aprobando postulación:', error);
       
-      // Error en la base de datos
-      alert('Error al aprobar la postulación. Por favor, intenta nuevamente.');
+      // Revertir cambios en la UI si hubo error en la base de datos
+      setReceivedApplications(receivedApplications.map(app =>
+        app.id === application.id ? { ...app, status: 'pendiente' } : app
+      ));
+      
+      alert(`Error al aprobar la postulación: ${error.message}. Por favor, intenta nuevamente.`);
     } finally {
       // Quitar estado de carga
       setUpdating(null);

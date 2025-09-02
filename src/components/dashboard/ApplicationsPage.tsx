@@ -133,54 +133,76 @@ export const ApplicationsPage: React.FC = () => {
 
   // Función para aprobar postulación (integración con n8n)
   const handleApproveApplication = async (application: ApplicationWithDetails) => {
+    console.log('🚀 Iniciando aprobación de postulación:', application.id);
     setUpdating(`${application.id}-approve`);
+    
     try {
       // 1. Actualizar estado en la base de datos primero
-      // Actualizar estado en la base de datos
       const { error } = await supabase
         .from('applications')
         .update({ status: 'aprobada' })
         .eq('id', application.id);
 
       if (error) throw error;
+      console.log('✅ Base de datos actualizada correctamente');
 
       // 2. Disparar webhook de automatización
+      const webhookPayload = {
+        application_id: application.id,
+        property_id: application.property_id,
+        applicant_id: application.applicant_id,
+        applicant_data: {
+          full_name: application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado',
+          contact_email: application.structured_applicant?.contact_email || application.profiles?.contact_email || 'No especificado',
+          contact_phone: application.structured_applicant?.contact_phone || application.profiles?.contact_phone || null,
+          profession: application.structured_applicant?.profession || null,
+          company: application.structured_applicant?.company || null,
+          monthly_income: application.structured_applicant?.monthly_income || null
+        },
+        property_data: {
+          address: application.properties.address,
+          city: application.properties.city,
+          price: application.properties.price,
+          listing_type: application.properties.listing_type
+        },
+        timestamp: new Date().toISOString(),
+        action: 'approve_application'
+      };
+
+      console.log('📤 Enviando payload al webhook:', webhookPayload);
+
       try {
         const webhookResponse = await fetch('https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
           },
-          body: JSON.stringify({
-            application_id: application.id,
-            property_id: application.property_id,
-            applicant_id: application.applicant_id,
-            applicant_data: {
-              full_name: application.structured_applicant?.full_name || application.profiles?.full_name,
-              contact_email: application.structured_applicant?.contact_email || application.profiles?.contact_email,
-              contact_phone: application.structured_applicant?.contact_phone || application.profiles?.contact_phone,
-              profession: application.structured_applicant?.profession,
-              company: application.structured_applicant?.company,
-              monthly_income: application.structured_applicant?.monthly_income
-            },
-            property_data: {
-              address: application.properties.address,
-              city: application.properties.city,
-              price: application.properties.price,
-              listing_type: application.properties.listing_type
-            },
-            timestamp: new Date().toISOString(),
-            action: 'approve_application'
-          })
+          body: JSON.stringify(webhookPayload)
         });
 
+        console.log('📡 Respuesta del webhook - Status:', webhookResponse.status);
+        
+        // Intentar leer la respuesta
+        let responseText = '';
+        try {
+          responseText = await webhookResponse.text();
+          console.log('📡 Respuesta del webhook - Body:', responseText);
+        } catch (readError) {
+          console.log('⚠️ No se pudo leer la respuesta del webhook');
+        }
+
         if (!webhookResponse.ok) {
-          console.warn('Webhook failed but application was approved:', webhookResponse.statusText);
+          console.warn('⚠️ Webhook falló pero la postulación fue aprobada:', {
+            status: webhookResponse.status,
+            statusText: webhookResponse.statusText,
+            response: responseText
+          });
         } else {
-          console.log('Webhook triggered successfully');
+          console.log('✅ Webhook ejecutado exitosamente');
         }
       } catch (webhookError) {
-        console.warn('Webhook error (application still approved):', webhookError);
+        console.error('❌ Error en webhook (postulación aún aprobada):', webhookError);
       }
 
       // Actualizar estado local
@@ -189,7 +211,7 @@ export const ApplicationsPage: React.FC = () => {
       ));
 
     } catch (error) {
-      console.error('Error approving application:', error);
+      console.error('❌ Error aprobando postulación:', error);
       alert('Error al aprobar la postulación. Por favor, intenta nuevamente.');
     } finally {
       setUpdating(null);

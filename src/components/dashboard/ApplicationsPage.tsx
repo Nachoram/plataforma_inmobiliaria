@@ -209,7 +209,18 @@ export const ApplicationsPage: React.FC = () => {
           console.log('📤 Enviando payload al webhook:', webhookPayload);
 
           // Realizar la solicitud POST al webhook con las cabeceras correctas
-          const response = await fetch(webhookURL, {
+                
+                // Manejar diferentes tipos de errores HTTP
+                if (response.status === 404) {
+                  console.warn('⚠️ El endpoint del webhook no existe o no está disponible');
+                  alert('La postulación fue aprobada correctamente. Sin embargo, el servicio de notificaciones no está disponible en este momento.');
+                } else if (response.status >= 500) {
+                  console.warn('⚠️ Error del servidor en el webhook');
+                  alert('La postulación fue aprobada correctamente. Hubo un problema temporal con el servicio de notificaciones.');
+                } else {
+                  console.warn('⚠️ Error del webhook:', response.status, response.statusText);
+                  alert(`La postulación fue aprobada correctamente. Error en notificación: ${response.status}`);
+                }
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -223,9 +234,15 @@ export const ApplicationsPage: React.FC = () => {
           console.log('📡 Respuesta del webhook - Headers:', Object.fromEntries(response.headers.entries()));
           
           // Verificar si la respuesta fue exitosa
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.warn(`⚠️ Webhook falló: ${response.status} ${response.statusText}`, errorText);
+              console.error('❌ Error de conexión con webhook:', webhookError);
+              
+              // Manejar errores de red/conexión
+              if (webhookError.name === 'TypeError' && webhookError.message.includes('fetch')) {
+                console.warn('⚠️ No se pudo conectar con el servicio de notificaciones');
+                alert('La postulación fue aprobada correctamente. El servicio de notificaciones no está disponible en este momento.');
+              } else {
+                alert(`La postulación fue aprobada correctamente. Error en notificación: ${webhookError.message}`);
+              }
             throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
           } else {
             // Intentar leer la respuesta
@@ -237,7 +254,8 @@ export const ApplicationsPage: React.FC = () => {
               // Si no es JSON válido, leer como texto
               result = await response.text();
               console.log('✅ Webhook de n8n ejecutado con éxito (respuesta texto):', result);
-            }
+            // No mostrar alerta si no hay webhook configurado, es opcional
+            console.log('ℹ️ Webhook no configurado - funcionando sin notificaciones externas');
           }
         } catch (webhookError) {
           console.error('❌ Error crítico en webhook:', webhookError);

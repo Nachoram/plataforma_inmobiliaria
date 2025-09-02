@@ -10,15 +10,23 @@ interface ApplicationWithDetails {
   message: string | null;
   status: 'pendiente' | 'aprobada' | 'rechazada';
   created_at: string;
-  property: {
+  properties: {
     address: string;
     city: string;
     price: number;
     listing_type: string;
     photos_urls: string[];
   };
-  applicant?: {
+  profiles?: {
     full_name: string | null;
+    contact_email: string | null;
+    contact_phone: string | null;
+  } | null;
+  applicants?: {
+    full_name: string | null;
+    profession: string | null;
+    company: string | null;
+    monthly_income: number | null;
     contact_email: string | null;
     contact_phone: string | null;
   } | null;
@@ -47,8 +55,31 @@ export const ApplicationsPage: React.FC = () => {
   const fetchReceivedApplications = async () => {
     try {
       const { data, error } = await supabase
-        .from('applications_complete')
-        .select('*')
+        .from('applications')
+        .select(`
+          *,
+          properties!inner(
+            address,
+            city,
+            price,
+            listing_type,
+            photos_urls,
+            owner_id
+          ),
+          profiles(
+            full_name,
+            contact_email,
+            contact_phone
+          ),
+          applicants(
+            full_name,
+            profession,
+            company,
+            monthly_income,
+            contact_email,
+            contact_phone
+          )
+        `)
         .eq('properties.owner_id', user?.id)
         .order('created_at', { ascending: false });
 
@@ -64,8 +95,30 @@ export const ApplicationsPage: React.FC = () => {
   const fetchSentApplications = async () => {
     try {
       const { data, error } = await supabase
-        .from('applications_complete')
-        .select('*')
+        .from('applications')
+        .select(`
+          *,
+          properties(
+            address,
+            city,
+            price,
+            listing_type,
+            photos_urls
+          ),
+          profiles(
+            full_name,
+            contact_email,
+            contact_phone
+          ),
+          applicants(
+            full_name,
+            profession,
+            company,
+            monthly_income,
+            contact_email,
+            contact_phone
+          )
+        `)
         .eq('applicant_id', user?.id)
         .order('created_at', { ascending: false });
 
@@ -196,7 +249,7 @@ export const ApplicationsPage: React.FC = () => {
       
       const webhookPayload = {
         applicantId: application.applicant_id,
-        applicantName: application.applicant?.full_name || 'No especificado',
+        applicantName: application.applicants?.full_name || application.profiles?.full_name || 'No especificado',
         applicantRut: 'No disponible' // Se puede agregar este campo al perfil si es necesario
       };
 
@@ -229,8 +282,8 @@ export const ApplicationsPage: React.FC = () => {
     
     // Pre-cargar texto según el tipo
     const preloadedText = type === 'documents' 
-      ? `Estimado/a ${application.structured_applicant?.full_name || application.applicant?.full_name || application.applicant_full_name || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
-      : `Estimado/a ${application.structured_applicant?.full_name || application.applicant?.full_name || application.applicant_full_name || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
+      ? `Estimado/a ${application.applicants?.full_name || application.profiles?.full_name || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
+      : `Estimado/a ${application.applicants?.full_name || application.profiles?.full_name || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
     
     setMessageText(preloadedText);
     setShowMessageModal(true);
@@ -370,13 +423,13 @@ export const ApplicationsPage: React.FC = () => {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {application.property.address}
+                    {application.properties.address}
                   </h3>
                   <div className="flex items-center text-sm text-gray-500 mb-2">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{application.property.city}</span>
+                    <span>{application.properties.city}</span>
                     <span className="mx-2">•</span>
-                    <span>{formatPrice(application.property.price)}/mes</span>
+                    <span>{formatPrice(application.properties.price)}/mes</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -393,34 +446,34 @@ export const ApplicationsPage: React.FC = () => {
                 <div className="space-y-1 text-sm">
                   <div>
                     <span className="text-gray-500">Nombre: </span>
-                    <span className="font-medium">{application.applicant_name || 'No especificado'}</span>
+                    <span className="font-medium">{application.applicants?.full_name || application.profiles?.full_name || 'No especificado'}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Email: </span>
-                    <span className="font-medium">{application.applicant_email || 'No especificado'}</span>
+                    <span className="font-medium">{application.applicants?.contact_email || application.profiles?.contact_email || 'No especificado'}</span>
                   </div>
-                  {application.applicant_phone && (
+                  {(application.applicants?.contact_phone || application.profiles?.contact_phone) && (
                     <div>
                       <span className="text-gray-500">Teléfono: </span>
-                      <span className="font-medium">{application.applicant_phone}</span>
+                      <span className="font-medium">{application.applicants?.contact_phone || application.profiles?.contact_phone}</span>
                     </div>
                   )}
-                  {application.applicant_profession && (
+                  {application.applicants?.profession && (
                     <div>
                       <span className="text-gray-500">Profesión: </span>
-                      <span className="font-medium">{application.applicant_profession}</span>
+                      <span className="font-medium">{application.applicants.profession}</span>
                     </div>
                   )}
-                  {application.applicant_company && (
+                  {application.applicants?.company && (
                     <div>
                       <span className="text-gray-500">Empresa: </span>
-                      <span className="font-medium">{application.applicant_company}</span>
+                      <span className="font-medium">{application.applicants.company}</span>
                     </div>
                   )}
-                  {application.applicant_income && application.applicant_income > 0 && (
+                  {application.applicants?.monthly_income && application.applicants.monthly_income > 0 && (
                     <div>
                       <span className="text-gray-500">Ingresos: </span>
-                      <span className="font-medium">{formatPrice(application.applicant_income)}</span>
+                      <span className="font-medium">{formatPrice(application.applicants.monthly_income)}</span>
                     </div>
                   )}
                 </div>
@@ -537,13 +590,13 @@ export const ApplicationsPage: React.FC = () => {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {application.property.address}
+                    {application.properties.address}
                   </h3>
                   <div className="flex items-center text-sm text-gray-500 mb-2">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{application.property.city}</span>
+                    <span>{application.properties.city}</span>
                     <span className="mx-2">•</span>
-                    <span>{formatPrice(application.property.price)}/mes</span>
+                    <span>{formatPrice(application.properties.price)}/mes</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -557,10 +610,10 @@ export const ApplicationsPage: React.FC = () => {
               {/* Imagen de la propiedad */}
               <div className="flex items-start space-x-4 mb-4">
                 <div className="w-24 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                  {application.property.photos_urls.length > 0 ? (
+                  {application.properties.photos_urls && application.properties.photos_urls.length > 0 ? (
                     <img 
-                      src={application.property.photos_urls[0]} 
-                      alt={application.property.address}
+                      src={application.properties.photos_urls[0]} 
+                      alt={application.properties.address}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -573,7 +626,7 @@ export const ApplicationsPage: React.FC = () => {
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 mb-1">Precio de arriendo mensual</div>
                   <div className="text-lg font-bold text-emerald-600">
-                    {formatPrice(application.property_price)}
+                    {formatPrice(application.properties.price)}
                   </div>
                 </div>
               </div>
@@ -659,11 +712,10 @@ export const ApplicationsPage: React.FC = () => {
               {/* Información de la Postulación */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold text-gray-900 mb-2">Postulación:</h3>
-                <p className="text-gray-700">{selectedApplication.property.address}</p>
+                <p className="text-gray-700">{selectedApplication.properties.address}</p>
                 <p className="text-sm text-gray-600">
-                  Postulante: {selectedApplication.structured_applicant?.full_name || 
-                              selectedApplication.applicant?.full_name || 
-                              selectedApplication.applicant_name || 
+                  Postulante: {selectedApplication.applicants?.full_name || 
+                              selectedApplication.profiles?.full_name || 
                               'No especificado'}
                 </p>
               </div>
@@ -682,9 +734,8 @@ export const ApplicationsPage: React.FC = () => {
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   Este mensaje será enviado al email del postulante: {
-                    selectedApplication.structured_applicant?.contact_email || 
-                    selectedApplication.applicant?.contact_email || 
-                    selectedApplication.applicant_email
+                    selectedApplication.applicants?.contact_email || 
+                    selectedApplication.profiles?.contact_email
                   }
                 </p>
               </div>

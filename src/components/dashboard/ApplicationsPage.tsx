@@ -224,18 +224,8 @@ export const ApplicationsPage: React.FC = () => {
           
           // Verificar si la respuesta fue exitosa
           if (!response.ok) {
-            // Manejar diferentes tipos de errores HTTP
-            if (response.status === 404) {
-              console.warn('⚠️ El endpoint del webhook no existe o no está disponible');
-              alert('La postulación fue aprobada correctamente. Sin embargo, el servicio de notificaciones no está disponible en este momento.');
-            } else if (response.status >= 500) {
-              console.warn('⚠️ Error del servidor en el webhook');
-              alert('La postulación fue aprobada correctamente. Hubo un problema temporal con el servicio de notificaciones.');
-            } else {
-              console.warn('⚠️ Error del webhook:', response.status, response.statusText);
-              alert(`La postulación fue aprobada correctamente. Error en notificación: ${response.status}`);
-            }
-            throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
+            // Solo registrar el error sin interrumpir el proceso
+            console.warn(`⚠️ Webhook no disponible (${response.status}): El servicio de notificaciones externo no está activo`);
           } else {
             // Intentar leer la respuesta
             let result;
@@ -249,15 +239,8 @@ export const ApplicationsPage: React.FC = () => {
             }
           }
         } catch (webhookError) {
-          console.error('❌ Error de conexión con webhook:', webhookError);
-          
-          // Manejar errores de red/conexión
-          if (webhookError.name === 'TypeError' && webhookError.message.includes('fetch')) {
-            console.warn('⚠️ No se pudo conectar con el servicio de notificaciones');
-            alert('La postulación fue aprobada correctamente. El servicio de notificaciones no está disponible en este momento.');
-          } else {
-            alert(`La postulación fue aprobada correctamente. Error en notificación: ${webhookError.message}`);
-          }
+          // Solo registrar el error sin mostrar alertas al usuario
+          console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
         }
       } else {
         // No mostrar alerta si no hay webhook configurado, es opcional

@@ -45,7 +45,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                 }`}
               >
-                Propiedades
+                🏪 Marketplace
+              </Link>
+              <Link 
+                to="/properties" 
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  isActive('/properties') 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                }`}
+              >
+                📋 Listado
               </Link>
               {user && (
                 <>
@@ -57,17 +67,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                     }`}
                   >
-                    Mi Portafolio
-                  </Link>
-                  <Link 
-                    to="/applications" 
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive('/applications') 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
-                    }`}
-                  >
-                    Postulaciones
+                    🏠 Mi Portafolio
                   </Link>
                   <Link 
                     to="/offers" 
@@ -77,7 +77,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                     }`}
                   >
-                    Ofertas
+                    💰 Mis Ofertas
+                  </Link>
+                  <Link 
+                    to="/my-activity" 
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      isActive('/my-activity') 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    📊 Mi Actividad
                   </Link>
                   <Link 
                     to="/profile" 

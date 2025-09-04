@@ -1,22 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, DollarSign, Calendar, User, Building, ArrowLeft } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { MapPin, Bed, Bath, Square, DollarSign, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp } from 'lucide-react';
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { RentalApplicationForm } from './RentalApplicationForm';
-import { AdvancedOfferForm } from './AdvancedOfferForm';
-import { CommercialReportButton } from './CommercialReportButton';
-import { RequestVisitButton } from './RequestVisitButton';
 
 export const PropertyDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [property, setProperty] = useState<Property | null>(null);
   const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
-  const [showRentalApplicationForm, setShowRentalApplicationForm] = useState(false);
-  const [showAdvancedOfferForm, setShowAdvancedOfferForm] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -93,6 +89,65 @@ export const PropertyDetailsPage: React.FC = () => {
   const isOwner = user?.id === property.owner_id;
   const canInteract = user && !isOwner;
 
+  const handleQuickOffer = async () => {
+    if (!user || !property) return;
+    
+    setActionLoading(true);
+    
+    try {
+      const offerAmount = prompt('¿Cuánto quieres ofrecer por esta propiedad?');
+      if (!offerAmount) return;
+      
+      const message = prompt('Mensaje para el propietario (opcional):') || '';
+      
+      const { error } = await supabase
+        .from('offers')
+        .insert({
+          property_id: property.id,
+          buyer_id: user.id,
+          offer_amount: parseFloat(offerAmount),
+          message: message,
+          status: 'pendiente'
+        });
+
+      if (error) throw error;
+      
+      alert('¡Oferta enviada exitosamente!');
+    } catch (error: any) {
+      alert('Error enviando oferta: ' + error.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleQuickApplication = async () => {
+    if (!user || !property) return;
+    
+    setActionLoading(true);
+    
+    try {
+      const message = prompt('Cuéntale al propietario por qué te interesa esta propiedad:');
+      if (!message) return;
+      
+      const { error } = await supabase
+        .from('applications')
+        .insert({
+          property_id: property.id,
+          applicant_id: user.id,
+          message: message,
+          status: 'pendiente'
+        });
+
+      if (error) throw error;
+      
+      alert('¡Postulación enviada exitosamente!');
+    } catch (error: any) {
+      alert('Error enviando postulación: ' + error.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Back Button */}
@@ -111,7 +166,7 @@ export const PropertyDetailsPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Photo Gallery */}
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            {property.photos_urls.length > 0 ? (
+            {property.photos_urls && property.photos_urls.length > 0 ? (
               <div>
                 {/* Main Photo */}
                 <div className="h-96 relative">
@@ -121,15 +176,15 @@ export const PropertyDetailsPage: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
-                    {selectedPhoto + 1} / {property.photos_urls.length}
+                    {selectedPhoto + 1} / {property.photos_urls?.length || 0}
                   </div>
                 </div>
 
                 {/* Photo Thumbnails */}
-                {property.photos_urls.length > 1 && (
+                {property.photos_urls && property.photos_urls.length > 1 && (
                   <div className="p-4 border-t">
                     <div className="flex space-x-2 overflow-x-auto">
-                      {property.photos_urls.map((url, index) => (
+                      {property.photos_urls?.map((url, index) => (
                         <button
                           key={index}
                           onClick={() => setSelectedPhoto(index)}
@@ -163,7 +218,7 @@ export const PropertyDetailsPage: React.FC = () => {
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.address}</h1>
                   <div className="flex items-center text-gray-600">
                     <MapPin className="h-5 w-5 mr-1" />
-                    <span>{property.commune}, {property.region}</span>
+                    <span>{property.comuna}, {property.region}</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -171,7 +226,7 @@ export const PropertyDetailsPage: React.FC = () => {
                     {formatPrice(property.price)}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {property.listing_type === 'arriendo' ? 'por mes' : 'precio total'}
+                    {property.type === 'arriendo' ? 'por mes' : 'precio total'}
                   </div>
                 </div>
               </div>
@@ -188,10 +243,10 @@ export const PropertyDetailsPage: React.FC = () => {
                   <div className="text-lg font-semibold text-gray-900">{property.bathrooms}</div>
                   <div className="text-sm text-gray-500">Baños</div>
                 </div>
-                {property.area_sqm && (
+                {property.surface && (
                   <div className="text-center">
                     <Square className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                    <div className="text-lg font-semibold text-gray-900">{property.area_sqm}</div>
+                    <div className="text-lg font-semibold text-gray-900">{property.surface}</div>
                     <div className="text-sm text-gray-500">m²</div>
                   </div>
                 )}
@@ -255,41 +310,35 @@ export const PropertyDetailsPage: React.FC = () => {
               </h3>
               
               <div className="space-y-3">
-                {property.listing_type === 'arriendo' ? (
+                {property.type === 'arriendo' ? (
                   <button
-                    onClick={() => setShowRentalApplicationForm(true)}
-                    className="w-full bg-emerald-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                    onClick={handleQuickApplication}
+                    disabled={actionLoading}
+                    className="w-full bg-emerald-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
                   >
+                    <MessageSquare className="h-5 w-5 inline mr-2" />
                     Postular a Arriendo
                   </button>
                 ) : (
                   <button
-                    onClick={() => setShowAdvancedOfferForm(true)}
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    onClick={handleQuickOffer}
+                    disabled={actionLoading}
+                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
+                    <TrendingUp className="h-5 w-5 inline mr-2" />
                     Hacer Oferta de Compra
                   </button>
                 )}
                 
-                {/* Botón de Solicitar Visita */}
-                <RequestVisitButton 
-                  propertyId={property.id}
-                  propertyAddress={property.address}
-                />
+                <button
+                  onClick={() => alert('Funcionalidad de visitas disponible próximamente')}
+                  className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+                >
+                  📅 Solicitar Visita
+                </button>
               </div>
             </div>
           )}
-
-          {/* Commercial Report Button - Available for all users */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Información Adicional
-            </h3>
-            <CommercialReportButton 
-              propertyId={property.id}
-              propertyAddress={property.address}
-            />
-          </div>
 
           {!user && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
@@ -310,23 +359,6 @@ export const PropertyDetailsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Forms */}
-      {showRentalApplicationForm && property.listing_type === 'arriendo' && (
-        <RentalApplicationForm
-          propertyId={property.id}
-          propertyAddress={property.address}
-          onClose={() => setShowRentalApplicationForm(false)}
-        />
-      )}
-
-      {showAdvancedOfferForm && property.listing_type === 'venta' && (
-        <AdvancedOfferForm
-          propertyId={property.id}
-          propertyAddress={property.address}
-          askingPrice={property.price}
-          onClose={() => setShowAdvancedOfferForm(false)}
-        />
-      )}
     </div>
   );
 };

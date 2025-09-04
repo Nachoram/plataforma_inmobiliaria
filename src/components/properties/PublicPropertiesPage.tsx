@@ -29,7 +29,7 @@ export const PublicPropertiesPage: React.FC = () => {
       const { data, error } = await supabase
         .from('properties')
         .select('*')
-        .eq('status', 'disponible')
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -48,7 +48,7 @@ export const PublicPropertiesPage: React.FC = () => {
     if (filters.search) {
       filtered = filtered.filter(property =>
         property.address.toLowerCase().includes(filters.search.toLowerCase()) ||
-        property.commune.toLowerCase().includes(filters.search.toLowerCase()) ||
+        property.comuna.toLowerCase().includes(filters.search.toLowerCase()) ||
         property.region.toLowerCase().includes(filters.search.toLowerCase()) ||
         property.description?.toLowerCase().includes(filters.search.toLowerCase())
       );
@@ -56,13 +56,13 @@ export const PublicPropertiesPage: React.FC = () => {
 
     // Listing type filter
     if (filters.listingType) {
-      filtered = filtered.filter(property => property.listing_type === filters.listingType);
+      filtered = filtered.filter(property => property.type === filters.listingType);
     }
 
     // City filter
     if (filters.city) {
       filtered = filtered.filter(property =>
-        property.commune.toLowerCase().includes(filters.city.toLowerCase()) ||
+        property.comuna.toLowerCase().includes(filters.city.toLowerCase()) ||
         property.region.toLowerCase().includes(filters.city.toLowerCase())
       );
     }
@@ -241,7 +241,7 @@ export const PublicPropertiesPage: React.FC = () => {
             >
               {/* Property Image */}
               <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {property.photos_urls.length > 0 ? (
+                {property.photos_urls && property.photos_urls.length > 0 ? (
                   <img 
                     src={property.photos_urls[0]} 
                     alt={property.address}
@@ -256,11 +256,11 @@ export const PublicPropertiesPage: React.FC = () => {
                 {/* Listing Type Badge */}
                 <div className="absolute top-3 left-3">
                   <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    property.listing_type === 'venta' 
+                    property.type === 'venta' 
                       ? 'bg-blue-100 text-blue-800' 
                       : 'bg-emerald-100 text-emerald-800'
                   }`}>
-                    {property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1)}
+                    {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
                   </span>
                 </div>
               </div>
@@ -273,7 +273,7 @@ export const PublicPropertiesPage: React.FC = () => {
                   </h3>
                   <div className="flex items-center text-sm text-gray-500">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{property.commune}, {property.region}</span>
+                    <span>{property.comuna}, {property.region}</span>
                   </div>
                 </div>
 
@@ -293,10 +293,10 @@ export const PublicPropertiesPage: React.FC = () => {
                       <Bath className="h-4 w-4 mr-1" />
                       <span>{property.bathrooms}</span>
                     </div>
-                    {property.area_sqm && (
+                    {property.surface && (
                       <div className="flex items-center">
                         <Square className="h-4 w-4 mr-1" />
-                        <span>{property.area_sqm}m²</span>
+                        <span>{property.surface}m²</span>
                       </div>
                     )}
                   </div>

@@ -12,10 +12,10 @@ interface ApplicationWithDetails {
   created_at: string;
   properties: {
     address: string;
-    city: string;
+    comuna: string;
     price: number;
-    listing_type: string;
-    photos_urls: string[];
+    type: string;
+    photos_urls?: string[];
   };
   profiles?: {
     full_name: string | null;
@@ -60,9 +60,9 @@ export const ApplicationsPage: React.FC = () => {
           *,
           properties!inner(
             address,
-            city,
+            comuna,
             price,
-            listing_type,
+            type,
             photos_urls,
             owner_id
           ),
@@ -92,9 +92,9 @@ export const ApplicationsPage: React.FC = () => {
           *,
           properties(
             address,
-            city,
+            comuna,
             price,
-            listing_type,
+            type,
             photos_urls
           ),
           profiles(
@@ -180,9 +180,9 @@ export const ApplicationsPage: React.FC = () => {
             property: {
               id: application.property_id,
               address: application.properties.address,
-              city: application.properties.city,
+              comuna: application.properties.comuna,
               price: application.properties.price,
-              listing_type: application.properties.listing_type,
+              type: application.properties.type,
               photos_urls: application.properties.photos_urls || []
             },
             
@@ -455,7 +455,7 @@ export const ApplicationsPage: React.FC = () => {
                   </h3>
                   <div className="flex items-center text-sm text-gray-500 mb-2">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{application.properties.city}</span>
+                    <span>{application.properties.comuna}</span>
                     <span className="mx-2">•</span>
                     <span>{formatPrice(application.properties.price)}/mes</span>
                   </div>
@@ -622,7 +622,7 @@ export const ApplicationsPage: React.FC = () => {
                   </h3>
                   <div className="flex items-center text-sm text-gray-500 mb-2">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{application.properties.city}</span>
+                    <span>{application.properties.comuna}</span>
                     <span className="mx-2">•</span>
                     <span>{formatPrice(application.properties.price)}/mes</span>
                   </div>

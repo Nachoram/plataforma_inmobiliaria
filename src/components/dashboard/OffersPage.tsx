@@ -13,10 +13,10 @@ interface OfferWithDetails {
   created_at: string;
   property: {
     address: string;
-    city: string;
+    comuna: string;
     price: number;
-    listing_type: string;
-    photos_urls: string[];
+    type: string;
+    photos_urls?: string[];
   };
   buyer?: {
     full_name: string | null;
@@ -46,7 +46,7 @@ export const OffersPage: React.FC = () => {
         .from('offers')
         .select(`
           *,
-          property:properties!inner(address, city, price, listing_type, photos_urls),
+          property:properties!inner(address, comuna, price, type, photos_urls),
           buyer:profiles!offers_buyer_id_fkey(full_name, contact_email, contact_phone)
         `)
         .eq('properties.owner_id', user?.id)
@@ -67,7 +67,7 @@ export const OffersPage: React.FC = () => {
         .from('offers')
         .select(`
           *,
-          property:properties!inner(address, city, price, listing_type, photos_urls)
+          property:properties!inner(address, comuna, price, type, photos_urls)
         `)
         .eq('buyer_id', user?.id)
         .order('created_at', { ascending: false });

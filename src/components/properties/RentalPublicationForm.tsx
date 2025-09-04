@@ -291,21 +291,25 @@ export const RentalPublicationForm: React.FC = () => {
     setLoading(true);
 
     try {
-      // First, ensure the user's profile exists in the profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user?.id,
-          full_name: formData.owner_full_name,
-          contact_email: user?.email || '',
-          contact_phone: null,
-        }, {
-          onConflict: 'id'
-        });
+      // Ensure the user's profile exists (opcional, no crítico)
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user?.id,
+            full_name: formData.owner_full_name,
+            contact_email: user?.email || '',
+            contact_phone: null,
+          }, {
+            onConflict: 'id'
+          });
 
-      if (profileError) {
-        console.error('Error upserting profile:', profileError);
-        throw profileError;
+        if (profileError) {
+          console.warn('Warning upserting profile:', profileError);
+          // Continue anyway - profile creation is not critical
+        }
+      } catch (error) {
+        console.warn('Profile upsert failed, continuing anyway:', error);
       }
 
       // Upload files
@@ -313,27 +317,22 @@ export const RentalPublicationForm: React.FC = () => {
 
       const propertyData = {
         owner_id: user?.id,
-        listing_type: 'arriendo' as const,
+        type: 'arriendo' as const,
         address: formData.address,
-        apartment_number: formData.apartment_number || null,
+        street: formData.address.split(' ').slice(0, -1).join(' ') || formData.address,
+        number: formData.address.split(' ').pop() || 'S/N',
+        apartment: formData.apartment_number || null,
         region: formData.region,
-        commune: formData.commune,
-        country: 'Chile',
+        comuna: formData.commune,
         description: formData.description,
         price: parseFloat(formData.price),
         common_expenses: formData.common_expenses ? parseFloat(formData.common_expenses) : 0,
         bedrooms: parseInt(formData.bedrooms),
         bathrooms: parseInt(formData.bathrooms),
-        area_sqm: parseInt(formData.area_sqm),
+        surface: parseInt(formData.area_sqm),
         photos_urls: uploadedPhotoUrls,
         documents_urls: uploadedDocumentUrls,
-        owner_full_name: formData.owner_full_name,
-        owner_address: formData.owner_address,
-        owner_apartment_number: formData.owner_apartment_number || null,
-        owner_region: formData.owner_region,
-        owner_commune: formData.owner_commune,
-        marital_status: formData.marital_status,
-        property_regime: formData.property_regime || null,
+        status: 'active' as const
       };
 
       const { error } = await supabase

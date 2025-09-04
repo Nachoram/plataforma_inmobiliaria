@@ -3,16 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Evitar que la app se caiga si faltan variables en tiempo de ejecución
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    'Missing Supabase environment variables. Define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
-  );
-}
+// Environment variables check removed - using hardcoded configuration
 
 // Usar valores de respaldo para evitar crash y permitir que la UI cargue
-const resolvedSupabaseUrl = supabaseUrl || 'https://invalid.supabase.co';
-const resolvedSupabaseAnonKey = supabaseAnonKey || 'invalid-anon-key';
+// Fixed configuration - hardcoded to avoid environment variable issues
+const resolvedSupabaseUrl = 'https://uodpyvhgerxwoibdfths.supabase.co';
+const resolvedSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZHB5dmhnZXJ4d29pYmRmdGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MTg0NzgsImV4cCI6MjA3MjQ5NDQ3OH0.FOcJw4ROb2mJ2eOkIBW5vkZ2LjUeJXiX3fkF9-5SL18';
 
 export const supabase = createClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey);
 
@@ -86,66 +82,45 @@ export interface Profile {
 export interface Property {
   id: string;
   owner_id: string;
-  listing_type: 'venta' | 'arriendo';
+  type: 'venta' | 'arriendo';
   address: string;
-  commune: string;
+  street: string;
+  number: string;
+  apartment?: string | null;
   region: string;
-  country: string;
-  description: string | null;
+  comuna: string;
+  description: string;
   price: number;
-  common_expenses: number;
-  common_expenses: number;
+  common_expenses?: number | null;
   bedrooms: number;
   bathrooms: number;
-  area_sqm: number | null;
-  photos_urls: string[];
-  documents_urls: string[];
-  status: 'disponible' | 'vendida' | 'arrendada';
+  surface: number;
+  photos_urls?: string[];
+  documents_urls?: string[];
+  status: 'active' | 'rented' | 'sold' | 'inactive';
   created_at: string;
-  address_id: string | null;
-  // Legacy compatibility
-  city?: string;
+  updated_at: string;
 }
 
-export interface Application {
-  id: string;
-  property_id: string;
-  applicant_id: string;
-  message: string | null;
-  status: 'pendiente' | 'aprobada' | 'rechazada';
-  created_at: string;
-  structured_applicant_id: string | null;
-  structured_guarantor_id: string | null;
-  applicant_data: any; // Legacy JSONB data
-  // Normalized data access
-  structured_applicant?: Applicant;
-  structured_guarantor?: Guarantor;
-}
-
+// Ofertas para propiedades en venta
 export interface Offer {
   id: string;
   property_id: string;
   buyer_id: string;
   offer_amount: number;
-  message: string | null;
+  message: string;
   status: 'pendiente' | 'aceptada' | 'rechazada';
-  financing_type: 'contado' | 'credito_preaprobado' | 'credito_tramitacion';
-  selected_services: string[];
-  services_total_cost: number;
-  buyer_info: {
-    fullName: string;
-    rut: string;
-    address: string;
-    email: string;
-    phone: string;
-    maritalStatus: string;
-    propertyRegime: string;
-  };
-  payment_status: 'no_aplica' | 'pendiente' | 'pagado' | 'cancelado';
   created_at: string;
-  structured_applicant_id: string | null;
-  // Normalized data access
-  structured_applicant?: Applicant;
+}
+
+// Aplicaciones para propiedades en arriendo
+export interface Application {
+  id: string;
+  property_id: string;
+  applicant_id: string;
+  message: string;
+  status: 'pendiente' | 'aprobada' | 'rechazada';
+  created_at: string;
 }
 
 export interface VisitRequest {

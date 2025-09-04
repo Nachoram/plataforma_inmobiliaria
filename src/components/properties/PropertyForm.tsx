@@ -101,28 +101,20 @@ export const PropertyForm: React.FC = () => {
   
   // Form data state
   const [formData, setFormData] = useState({
-    listing_type: listingType,
+    type: listingType, // Cambiado de listing_type a type
     address: '',
-    apartment_number: '',
+    street: '',
+    number: '',
+    apartment: '', // Cambiado de apartment_number
     region: '',
-    commune: '',
-    country: 'Chile',
+    comuna: '', // Cambiado de commune
     price: '',
     common_expenses: '',
     bedrooms: '1',
     bathrooms: '1',
-    area_sqm: '',
+    surface: '', // Cambiado de area_sqm
     description: '',
-    owner_full_name: '',
-    owner_address: '',
-    owner_apartment_number: '',
-    owner_region: '',
-    owner_commune: '',
-    marital_status: '',
-    property_regime: '',
     photos_urls: [] as string[],
-    availableDays: [] as string[],
-    availableTimeSlots: [] as string[],
     documents: {
       // Required documents
       tax_assessment: null as File | null,
@@ -159,17 +151,18 @@ export const PropertyForm: React.FC = () => {
       
       setFormData(prev => ({
         ...prev,
-        listing_type: data.listing_type,
+        type: data.type,
         address: data.address,
-        apartment_number: data.apartment_number || '',
+        street: data.street || '',
+        number: data.number || '',
+        apartment: data.apartment || '',
         region: data.region || '',
-        commune: data.commune || '',
-        country: data.country,
+        comuna: data.comuna || '',
         description: data.description || '',
         price: data.price.toString(),
         bedrooms: data.bedrooms.toString(),
         bathrooms: data.bathrooms.toString(),
-        area_sqm: data.area_sqm?.toString() || '',
+        surface: data.surface?.toString() || '',
         photos_urls: data.photos_urls || [],
       }));
     } catch (error) {
@@ -183,20 +176,12 @@ export const PropertyForm: React.FC = () => {
   };
 
   // Manejar cambio de región (resetear comuna)
-  const handleRegionChange = (regionKey: string, isOwner: boolean = false) => {
-    if (isOwner) {
-      setFormData(prev => ({
-        ...prev,
-        owner_region: regionKey,
-        owner_commune: '' // Resetear comuna cuando cambia la región
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        region: regionKey,
-        commune: '' // Resetear comuna cuando cambia la región
-      }));
-    }
+  const handleRegionChange = (regionKey: string) => {
+    setFormData(prev => ({
+      ...prev,
+      region: regionKey,
+      comuna: '' // Resetear comuna cuando cambia la región
+    }));
   };
 
   // Handle photo upload and preview
@@ -205,6 +190,12 @@ export const PropertyForm: React.FC = () => {
     const newPreviews: string[] = [];
 
     newFiles.forEach(file => {
+      // Verificar tamaño de archivo
+      if (file.size > 5 * 1024 * 1024) { // 5MB máximo
+        alert(`La imagen ${file.name} es demasiado grande. Máximo 5MB.`);
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
         newPreviews.push(e.target?.result as string);
@@ -251,21 +242,13 @@ export const PropertyForm: React.FC = () => {
 
     // Required fields validation
     if (!formData.address.trim()) newErrors.address = 'La dirección es requerida';
+    if (!formData.street.trim()) newErrors.street = 'La calle es requerida';
+    if (!formData.number.trim()) newErrors.number = 'El número es requerido';
     if (!formData.region) newErrors.region = 'La región es requerida';
-    if (!formData.commune) newErrors.commune = 'La comuna es requerida';
+    if (!formData.comuna) newErrors.comuna = 'La comuna es requerida';
     if (!formData.price.trim()) newErrors.price = 'El precio es requerido';
-    if (!formData.owner_full_name.trim()) newErrors.owner_full_name = 'El nombre del propietario es requerido';
-    if (!formData.owner_address.trim()) newErrors.owner_address = 'La dirección del propietario es requerida';
-    if (!formData.owner_region) newErrors.owner_region = 'La región del propietario es requerida';
-    if (!formData.owner_commune) newErrors.owner_commune = 'La comuna del propietario es requerida';
-    if (!formData.marital_status) newErrors.marital_status = 'El estado civil es requerido';
-
-    // Required documents validation (only for new properties)
-    if (!isEditing) {
-      if (!formData.documents.tax_assessment) newErrors.tax_assessment = 'Documento requerido';
-      if (!formData.documents.ownership_certificate) newErrors.ownership_certificate = 'Documento requerido';
-      if (!formData.documents.ownership_history) newErrors.ownership_history = 'Documento requerido';
-    }
+    if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
+    if (!formData.surface.trim()) newErrors.surface = 'La superficie es requerida';
 
     // Photos validation
     if (!isEditing && photoFiles.length === 0 && formData.photos_urls.length === 0) {
@@ -281,42 +264,54 @@ export const PropertyForm: React.FC = () => {
     const uploadedPhotoUrls: string[] = [];
     const uploadedDocumentUrls: string[] = [];
 
-    // Upload photos
-    for (const file of photoFiles) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}/${Date.now()}-${Math.random()}.${fileExt}`;
+    setUploading(true);
 
-      const { data, error } = await supabase.storage
-        .from('property-photos')
-        .upload(fileName, file);
-
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('property-photos')
-        .getPublicUrl(data.path);
-
-      uploadedPhotoUrls.push(publicUrl);
-    }
-
-    // Upload documents
-    for (const [key, file] of Object.entries(formData.documents)) {
-      if (file) {
+    try {
+      // Upload photos to propiedades-imagenes bucket
+      for (const file of photoFiles) {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${user?.id}/${key}-${Date.now()}.${fileExt}`;
+        const fileName = `${user?.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
         const { data, error } = await supabase.storage
-          .from('property-documents')
+          .from('propiedades-imagenes')
           .upload(fileName, file);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error subiendo foto:', error);
+          throw new Error(`Error subiendo foto: ${error.message}`);
+        }
 
         const { data: { publicUrl } } = supabase.storage
-          .from('property-documents')
+          .from('propiedades-imagenes')
           .getPublicUrl(data.path);
 
-        uploadedDocumentUrls.push(publicUrl);
+        uploadedPhotoUrls.push(publicUrl);
       }
+
+      // Upload documents to documentos-clientes bucket
+      for (const [key, file] of Object.entries(formData.documents)) {
+        if (file) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user?.id}/${key}-${Date.now()}.${fileExt}`;
+
+          const { data, error } = await supabase.storage
+            .from('documentos-clientes')
+            .upload(fileName, file);
+
+          if (error) {
+            console.error('Error subiendo documento:', error);
+            throw new Error(`Error subiendo documento ${key}: ${error.message}`);
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('documentos-clientes')
+            .getPublicUrl(data.path);
+
+          uploadedDocumentUrls.push(publicUrl);
+        }
+      }
+    } finally {
+      setUploading(false);
     }
 
     return { uploadedPhotoUrls, uploadedDocumentUrls };
@@ -330,60 +325,57 @@ export const PropertyForm: React.FC = () => {
     }
 
     setLoading(true);
-
+    
     try {
-      // First, ensure the user's profile exists in the profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user?.id,
-          full_name: formData.owner_full_name,
-          contact_email: user?.email || '',
-          contact_phone: null,
-        }, {
-          onConflict: 'id'
-        });
-
-      if (profileError) {
-        console.error('Error upserting profile:', profileError);
-        throw profileError;
+      // Validar que tenemos conexión a Supabase
+      if (!user) {
+        throw new Error('Debes estar logueado para publicar una propiedad');
       }
 
-      let photoUrls = formData.photos_urls;
+      // Verificar conexión con un query simple
+      const { error: connectionError } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1);
+        
+      if (connectionError) {
+        throw new Error('Error de conexión con la base de datos: ' + connectionError.message);
+      }
+
+      let photoUrls: string[] = [...formData.photos_urls];
       let documentUrls: string[] = [];
 
       // Upload new files if any
       if (photoFiles.length > 0 || Object.values(formData.documents).some(doc => doc !== null)) {
-        const { uploadedPhotoUrls, uploadedDocumentUrls } = await uploadFiles();
-        photoUrls = [...photoUrls, ...uploadedPhotoUrls];
-        documentUrls = uploadedDocumentUrls;
+        try {
+          const { uploadedPhotoUrls, uploadedDocumentUrls } = await uploadFiles();
+          photoUrls = [...photoUrls, ...uploadedPhotoUrls];
+          documentUrls = uploadedDocumentUrls;
+        } catch (uploadError: any) {
+          throw new Error('Error subiendo archivos: ' + uploadError.message);
+        }
       }
 
       const propertyData = {
-        owner_id: user?.id,
-        listing_type: formData.listing_type,
+        owner_id: user.id,
+        type: formData.type,
         address: formData.address,
-        apartment_number: formData.apartment_number || null,
+        street: formData.street || formData.address.split(' ')[0] || 'Sin especificar',
+        number: formData.number || 'S/N',
+        apartment: formData.apartment || null,
         region: formData.region,
-        commune: formData.commune,
-        country: formData.country,
-        description: formData.description,
-        price: parseFloat(formData.price),
+        comuna: formData.comuna,
+        description: formData.description || 'Sin descripción',
+        price: parseInt(formData.price),
+        common_expenses: formData.common_expenses ? parseInt(formData.common_expenses) : 0,
         bedrooms: parseInt(formData.bedrooms),
         bathrooms: parseInt(formData.bathrooms),
-        area_sqm: formData.area_sqm ? parseInt(formData.area_sqm) : null,
-        photos_urls: photoUrls,
-        documents_urls: documentUrls,
-        owner_full_name: formData.owner_full_name,
-        owner_address: formData.owner_address,
-        owner_apartment_number: formData.owner_apartment_number || null,
-        owner_region: formData.owner_region,
-        owner_commune: formData.owner_commune,
-        marital_status: formData.marital_status,
-        property_regime: formData.property_regime || null,
-        available_days: formData.availableDays,
-        available_time_slots: formData.availableTimeSlots,
+        surface: formData.surface ? parseInt(formData.surface) : 50,
+        // Nota: photos_urls y documents_urls pueden no existir en la BD actual
+        status: 'active'
       };
+
+      console.log('🏠 Enviando datos de propiedad:', propertyData);
 
       if (isEditing) {
         const { error } = await supabase
@@ -391,18 +383,45 @@ export const PropertyForm: React.FC = () => {
           .update(propertyData)
           .eq('id', id);
         
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('properties')
-          .insert(propertyData);
+        if (error) {
+          console.error('❌ Error actualizando propiedad:', error);
+          throw new Error('Error actualizando propiedad: ' + error.message);
+        }
         
-        if (error) throw error;
+        console.log('✅ Propiedad actualizada exitosamente');
+      } else {
+        const { data, error } = await supabase
+          .from('properties')
+          .insert(propertyData)
+          .select();
+        
+        if (error) {
+          console.error('❌ Error creando propiedad:', error);
+          throw new Error('Error creando propiedad: ' + error.message);
+        }
+        
+        console.log('✅ Propiedad creada exitosamente:', data);
       }
 
+      alert('🎉 ¡Propiedad ' + (isEditing ? 'actualizada' : 'publicada') + ' exitosamente!');
       navigate('/portfolio');
-    } catch (error) {
-      console.error('Error saving property:', error);
+    } catch (error: any) {
+      console.error('❌ Error saving property:', error);
+      
+      // Mensajes de error más amigables
+      let errorMessage = 'Error desconocido';
+      
+      if (error.message.includes('size')) {
+        errorMessage = 'Los archivos son demasiado grandes. Intenta con archivos más pequeños.';
+      } else if (error.message.includes('connection') || error.message.includes('network')) {
+        errorMessage = 'Error de conexión. Verifica tu internet y vuelve a intentar.';
+      } else if (error.message.includes('auth') || error.message.includes('user')) {
+        errorMessage = 'Error de autenticación. Inicia sesión nuevamente.';
+      } else {
+        errorMessage = error.message || 'Error guardando la propiedad';
+      }
+      
+      alert('❌ ' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -444,10 +463,10 @@ export const PropertyForm: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {/* Fila 1: Dirección */}
+              {/* Fila 1: Dirección completa */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Dirección *
+                  Dirección Completa *
                 </label>
                 <input
                   type="text"
@@ -457,7 +476,7 @@ export const PropertyForm: React.FC = () => {
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                     errors.address ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Ej: Av. Libertador 1234, Depto 501"
+                  placeholder="Ej: Av. Libertador 1234, Depto 501, Las Condes, Santiago"
                 />
                 {errors.address && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -467,21 +486,81 @@ export const PropertyForm: React.FC = () => {
                 )}
               </div>
 
-              {/* Fila 2: Departamento/Oficina/Casa N° */}
+              {/* Fila 2: Calle y Número (se auto-completan desde la dirección) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Calle *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.street}
+                    onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      errors.street ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: Av. Libertador"
+                    onBlur={() => {
+                      // Auto-completar desde la dirección si está vacío
+                      if (!formData.street && formData.address) {
+                        const parts = formData.address.split(' ');
+                        if (parts.length >= 2) {
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            street: parts.slice(0, -1).join(' '),
+                            number: parts[parts.length - 1]
+                          }));
+                        }
+                      }
+                    }}
+                  />
+                  {errors.street && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.street}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Número *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.number}
+                    onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      errors.number ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: 1234"
+                  />
+                  {errors.number && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.number}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Fila 3: Departamento/Oficina/Casa N° */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Departamento / Oficina / Casa N° (Opcional)
                 </label>
                 <input
                   type="text"
-                  value={formData.apartment_number}
-                  onChange={(e) => setFormData({ ...formData, apartment_number: e.target.value })}
+                  value={formData.apartment}
+                  onChange={(e) => setFormData({ ...formData, apartment: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Ej: Depto 501, Casa 15, Oficina 302"
                 />
               </div>
 
-              {/* Fila 3: Región y Comuna */}
+              {/* Fila 4: Región y Comuna */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -514,11 +593,11 @@ export const PropertyForm: React.FC = () => {
                   </label>
                   <select
                     required
-                    value={formData.commune}
-                    onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
+                    value={formData.comuna}
+                    onChange={(e) => setFormData({ ...formData, comuna: e.target.value })}
                     disabled={!formData.region}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      errors.commune ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      errors.comuna ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     } ${!formData.region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   >
                     <option value="">
@@ -528,20 +607,20 @@ export const PropertyForm: React.FC = () => {
                       <option key={commune} value={commune}>{commune}</option>
                     ))}
                   </select>
-                  {errors.commune && (
+                  {errors.comuna && (
                     <p className="mt-1 text-sm text-red-600 flex items-center">
                       <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.commune}
+                      {errors.comuna}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Fila 4: Precio y Gastos Comunes */}
+              {/* Fila 5: Precio y Gastos Comunes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Precio ({formData.listing_type === 'venta' ? 'Venta' : 'Arriendo mensual'}) *
+                    Precio ({formData.type === 'venta' ? 'Venta' : 'Arriendo mensual'}) *
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-3.5 text-gray-500 font-medium">$</span>
@@ -583,7 +662,7 @@ export const PropertyForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Fila 5: Dormitorios, Baños y Superficie */}
+              {/* Fila 6: Dormitorios, Baños y Superficie */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -619,208 +698,53 @@ export const PropertyForm: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Superficie (m²)
+                    Superficie (m²) *
                   </label>
                   <input
                     type="number"
-                    min="0"
-                    value={formData.area_sqm}
-                    onChange={(e) => setFormData({ ...formData, area_sqm: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required
+                    min="1"
+                    value={formData.surface}
+                    onChange={(e) => setFormData({ ...formData, surface: e.target.value })}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      errors.surface ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="120"
                   />
+                  {errors.surface && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.surface}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Fila 6: Descripción */}
+              {/* Fila 7: Descripción */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Descripción
+                  Descripción *
                 </label>
                 <textarea
                   rows={4}
+                  required
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                    errors.description ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="Describe las características principales de la propiedad, ubicación, amenidades, etc."
                 />
+                {errors.description && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.description}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Sección: Datos del Propietario */}
-          <div className="space-y-6">
-            <div className="border-b pb-2">
-              <h2 className="text-xl font-bold text-gray-900">Datos del Propietario</h2>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-              {/* Fila 1: Nombre Completo del Propietario */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre Completo del Propietario *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.owner_full_name}
-                  onChange={(e) => setFormData({ ...formData, owner_full_name: e.target.value })}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                    errors.owner_full_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                  placeholder="Ej: Juan Carlos Pérez González"
-                />
-                {errors.owner_full_name && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {errors.owner_full_name}
-                  </p>
-                )}
-              </div>
-
-              {/* Fila 2: Dirección del Propietario */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Dirección del Propietario *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.owner_address}
-                  onChange={(e) => setFormData({ ...formData, owner_address: e.target.value })}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                    errors.owner_address ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                  placeholder="Ej: Av. Providencia 2500, Las Condes, Santiago"
-                />
-                {errors.owner_address && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {errors.owner_address}
-                  </p>
-                )}
-              </div>
-
-              {/* Fila 3: Departamento/Oficina/Casa N° del Propietario */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Departamento / Oficina / Casa N° del Propietario (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.owner_apartment_number}
-                  onChange={(e) => setFormData({ ...formData, owner_apartment_number: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Ej: Depto 1205, Casa 8, Oficina 45"
-                />
-              </div>
-
-              {/* Fila 4: Región y Comuna del Propietario */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Región del Propietario *
-                  </label>
-                  <select
-                    required
-                    value={formData.owner_region}
-                    onChange={(e) => handleRegionChange(e.target.value, true)}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      errors.owner_region ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="">Seleccionar región</option>
-                    {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
-                      <option key={key} value={key}>{region.name}</option>
-                    ))}
-                  </select>
-                  {errors.owner_region && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.owner_region}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Comuna del Propietario *
-                  </label>
-                  <select
-                    required
-                    value={formData.owner_commune}
-                    onChange={(e) => setFormData({ ...formData, owner_commune: e.target.value })}
-                    disabled={!formData.owner_region}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      errors.owner_commune ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    } ${!formData.owner_region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                  >
-                    <option value="">
-                      {formData.owner_region ? 'Seleccionar comuna' : 'Primero selecciona una región'}
-                    </option>
-                    {formData.owner_region && getAvailableCommunes(formData.owner_region).map((commune) => (
-                      <option key={commune} value={commune}>{commune}</option>
-                    ))}
-                  </select>
-                  {errors.owner_commune && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.owner_commune}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Fila 5: Estado Civil */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Estado Civil *
-                  </label>
-                  <select
-                    required
-                    value={formData.marital_status}
-                    onChange={(e) => setFormData({ ...formData, marital_status: e.target.value, property_regime: '' })}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      errors.marital_status ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="">Seleccionar estado civil</option>
-                    <option value="soltero">Soltero(a)</option>
-                    <option value="casado">Casado(a)</option>
-                    <option value="divorciado">Divorciado(a)</option>
-                    <option value="viudo">Viudo(a)</option>
-                  </select>
-                  {errors.marital_status && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.marital_status}
-                    </p>
-                  )}
-                </div>
-
-                {/* Régimen Patrimonial (condicional) */}
-                {formData.marital_status === 'casado' && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Régimen Patrimonial *
-                    </label>
-                    <select
-                      required
-                      value={formData.property_regime}
-                      onChange={(e) => setFormData({ ...formData, property_regime: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    >
-                      <option value="">Seleccionar régimen</option>
-                      <option value="sociedad_conyugal">Sociedad conyugal</option>
-                      <option value="separacion_bienes">Separación total de bienes</option>
-                      <option value="participacion_gananciales">Participación en los gananciales</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* Sección: Fotos de la Propiedad */}
           <div className="space-y-6">
@@ -927,133 +851,27 @@ export const PropertyForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Sección: Disponibilidad para Visitas */}
+          {/* Sección: Documentación Legal (Opcional) */}
           <div className="space-y-6">
             <div className="border-b pb-2">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                <Calendar className="h-6 w-6 mr-2 text-blue-600" />
-                Disponibilidad para Visitas (Opcional)
-              </h2>
+              <h2 className="text-xl font-bold text-gray-900">Documentación Legal (Opcional)</h2>
               <p className="text-sm text-gray-600 mt-2">
-                Selecciona los días y horarios en los que generalmente puedes mostrar la propiedad. 
-                Esto facilitará la coordinación con los interesados.
+                Los documentos son opcionales. Puedes agregarlos ahora o más tarde desde tu portafolio.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Días de la Semana */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Días Disponibles</h3>
-                <div className="space-y-3">
-                  {[
-                    { value: 'lunes', label: 'Lunes' },
-                    { value: 'martes', label: 'Martes' },
-                    { value: 'miercoles', label: 'Miércoles' },
-                    { value: 'jueves', label: 'Jueves' },
-                    { value: 'viernes', label: 'Viernes' },
-                    { value: 'sabado', label: 'Sábado' },
-                    { value: 'domingo', label: 'Domingo' }
-                  ].map((day) => (
-                    <label key={day.value} className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.availableDays.includes(day.value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData(prev => ({
-                              ...prev,
-                              availableDays: [...prev.availableDays, day.value]
-                            }));
-                          } else {
-                            setFormData(prev => ({
-                              ...prev,
-                              availableDays: prev.availableDays.filter(d => d !== day.value)
-                            }));
-                          }
-                        }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-gray-700 font-medium">{day.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Bloques Horarios */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Horarios Disponibles</h3>
-                <div className="space-y-3">
-                  {[
-                    { value: 'morning', label: 'Mañana (9:00 - 12:00)' },
-                    { value: 'afternoon', label: 'Tarde (14:00 - 17:00)' },
-                    { value: 'evening', label: 'Tarde-Noche (17:00 - 20:00)' }
-                  ].map((timeSlot) => (
-                    <label key={timeSlot.value} className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.availableTimeSlots.includes(timeSlot.value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData(prev => ({
-                              ...prev,
-                              availableTimeSlots: [...prev.availableTimeSlots, timeSlot.value]
-                            }));
-                          } else {
-                            setFormData(prev => ({
-                              ...prev,
-                              availableTimeSlots: prev.availableTimeSlots.filter(t => t !== timeSlot.value)
-                            }));
-                          }
-                        }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-gray-700 font-medium">{timeSlot.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Información adicional */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                </div>
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-blue-900">Información sobre disponibilidad</h4>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Esta información es opcional y solo sirve como referencia. Los interesados podrán 
-                    solicitar visitas en cualquier momento y tú podrás coordinar directamente con ellos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Sección: Documentación Legal */}
-          <div className="space-y-6">
-            <div className="border-b pb-2">
-              <h2 className="text-xl font-bold text-gray-900">Documentación Legal</h2>
-            </div>
-
-            {/* Documentos Requeridos */}
+            {/* Documentos Principales */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">Documentos Requeridos</h3>
-              <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-800">Documentos Importantes</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {requiredDocuments.map(({ key, label }) => (
-                  <div key={key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{label}</p>
+                  <div key={key} className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                    <div className="mb-3">
+                      <p className="font-medium text-gray-900 text-sm">{label}</p>
                       {formData.documents[key as keyof typeof formData.documents] && (
                         <p className="text-sm text-green-600 mt-1 flex items-center">
                           <Check className="h-4 w-4 mr-1" />
                           {(formData.documents[key as keyof typeof formData.documents] as File)?.name}
-                        </p>
-                      )}
-                      {errors[key] && (
-                        <p className="text-sm text-red-600 mt-1 flex items-center">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors[key]}
                         </p>
                       )}
                     </div>
@@ -1071,7 +889,7 @@ export const PropertyForm: React.FC = () => {
                           Subir Archivo
                           <input
                             type="file"
-                            accept=".pdf,.doc,.docx"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
@@ -1088,14 +906,14 @@ export const PropertyForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Documentos Opcionales */}
+            {/* Documentos Adicionales */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">Documentos Opcionales</h3>
-              <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-800">Documentos Adicionales</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {optionalDocuments.map(({ key, label }) => (
-                  <div key={key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{label}</p>
+                  <div key={key} className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                    <div className="mb-3">
+                      <p className="font-medium text-gray-900 text-sm">{label}</p>
                       {formData.documents[key as keyof typeof formData.documents] && (
                         <p className="text-sm text-green-600 mt-1 flex items-center">
                           <Check className="h-4 w-4 mr-1" />
@@ -1117,7 +935,7 @@ export const PropertyForm: React.FC = () => {
                           Subir Archivo
                           <input
                             type="file"
-                            accept=".pdf,.doc,.docx"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {

@@ -1,0 +1,458 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, Filter, MapPin, Bed, Bath, Square, DollarSign, Building, Heart, MessageSquare, TrendingUp, Eye } from 'lucide-react';
+import { supabase, Property } from '../../lib/supabase';
+import { OfferModal } from './OfferModal';
+import { ApplicationModal } from './ApplicationModal';
+import { useAuth } from '../../hooks/useAuth';
+
+export const MarketplacePage: React.FC = () => {
+  const { user } = useAuth();
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  
+  const [filters, setFilters] = useState({
+    search: '',
+    type: '',
+    comuna: '',
+    minPrice: '',
+    maxPrice: '',
+    bedrooms: '',
+    minSurface: '',
+    maxSurface: '',
+  });
+
+  useEffect(() => {
+    fetchProperties();
+    loadFavorites();
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [properties, filters]);
+
+  const fetchProperties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProperties(data || []);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFavorites = () => {
+    const saved = localStorage.getItem('favorites');
+    if (saved) {
+      setFavorites(JSON.parse(saved));
+    }
+  };
+
+  const toggleFavorite = (propertyId: string) => {
+    const newFavorites = favorites.includes(propertyId)
+      ? favorites.filter(id => id !== propertyId)
+      : [...favorites, propertyId];
+    
+    setFavorites(newFavorites);
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+  };
+
+  const applyFilters = () => {
+    let filtered = [...properties];
+
+    // Search filter
+    if (filters.search) {
+      filtered = filtered.filter(property =>
+        property.address.toLowerCase().includes(filters.search.toLowerCase()) ||
+        property.comuna.toLowerCase().includes(filters.search.toLowerCase()) ||
+        property.region.toLowerCase().includes(filters.search.toLowerCase()) ||
+        property.description?.toLowerCase().includes(filters.search.toLowerCase())
+      );
+    }
+
+    // Type filter
+    if (filters.type) {
+      filtered = filtered.filter(property => property.type === filters.type);
+    }
+
+    // Comuna filter
+    if (filters.comuna) {
+      filtered = filtered.filter(property =>
+        property.comuna.toLowerCase().includes(filters.comuna.toLowerCase())
+      );
+    }
+
+    // Price range filter
+    if (filters.minPrice) {
+      filtered = filtered.filter(property => property.price >= parseFloat(filters.minPrice));
+    }
+    if (filters.maxPrice) {
+      filtered = filtered.filter(property => property.price <= parseFloat(filters.maxPrice));
+    }
+
+    // Bedrooms filter
+    if (filters.bedrooms) {
+      filtered = filtered.filter(property => property.bedrooms >= parseInt(filters.bedrooms));
+    }
+
+    // Surface filter
+    if (filters.minSurface) {
+      filtered = filtered.filter(property => property.surface >= parseInt(filters.minSurface));
+    }
+    if (filters.maxSurface) {
+      filtered = filtered.filter(property => property.surface <= parseInt(filters.maxSurface));
+    }
+
+    setFilteredProperties(filtered);
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      type: '',
+      comuna: '',
+      minPrice: '',
+      maxPrice: '',
+      bedrooms: '',
+      minSurface: '',
+      maxSurface: '',
+    });
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP'
+    }).format(price);
+  };
+
+  const getUniqueValues = (field: keyof Property) => {
+    return [...new Set(properties.map(p => p[field] as string))].filter(Boolean);
+  };
+
+  const handleMakeOffer = (property: Property) => {
+    if (!user) {
+      alert('Debes iniciar sesión para hacer una oferta');
+      return;
+    }
+    setSelectedProperty(property);
+    setShowOfferModal(true);
+  };
+
+  const handleApply = (property: Property) => {
+    if (!user) {
+      alert('Debes iniciar sesión para postular');
+      return;
+    }
+    setSelectedProperty(property);
+    setShowApplicationModal(true);
+  };
+
+  const onOfferSuccess = () => {
+    setShowOfferModal(false);
+    setSelectedProperty(null);
+    // Opcional: refrescar propiedades
+  };
+
+  const onApplicationSuccess = () => {
+    setShowApplicationModal(false);
+    setSelectedProperty(null);
+    // Opcional: refrescar propiedades
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl shadow-lg text-white p-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">🏠 Marketplace Inmobiliario</h1>
+          <p className="text-xl text-blue-100 mb-6">
+            Encuentra, oferta y postula por propiedades en toda Chile
+          </p>
+          <div className="max-w-2xl mx-auto">
+            <div className="relative">
+              <Search className="absolute left-4 top-3 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                placeholder="Buscar por dirección, comuna o descripción..."
+                className="w-full pl-12 pr-4 py-3 text-gray-900 rounded-lg border-0 focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
+          <Building className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+          <p className="text-2xl font-bold text-gray-900">{properties.length}</p>
+          <p className="text-gray-600">Propiedades Disponibles</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
+          <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
+          <p className="text-2xl font-bold text-gray-900">{properties.filter(p => p.type === 'venta').length}</p>
+          <p className="text-gray-600">En Venta</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
+          <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
+          <p className="text-2xl font-bold text-gray-900">{properties.filter(p => p.type === 'arriendo').length}</p>
+          <p className="text-gray-600">En Arriendo</p>
+        </div>
+      </div>
+
+      {/* Advanced Filters */}
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+            <Filter className="h-5 w-5 mr-2" />
+            Filtros Avanzados
+          </h2>
+          <button
+            onClick={resetFilters}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <select
+            value={filters.type}
+            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Todos los tipos</option>
+            <option value="venta">Venta</option>
+            <option value="arriendo">Arriendo</option>
+          </select>
+
+          <select
+            value={filters.comuna}
+            onChange={(e) => setFilters({ ...filters, comuna: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Todas las comunas</option>
+            {getUniqueValues('comuna').map(comuna => (
+              <option key={comuna} value={comuna}>{comuna}</option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            placeholder="Precio mín"
+            value={filters.minPrice}
+            onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          />
+
+          <input
+            type="number"
+            placeholder="Precio máx"
+            value={filters.maxPrice}
+            onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          />
+
+          <select
+            value={filters.bedrooms}
+            onChange={(e) => setFilters({ ...filters, bedrooms: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Cualquier dormitorio</option>
+            {[1, 2, 3, 4, 5].map(num => (
+              <option key={num} value={num}>{num}+ dormitorios</option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            placeholder="Superficie mín"
+            value={filters.minSurface}
+            onChange={(e) => setFilters({ ...filters, minSurface: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            {filteredProperties.length} propiedades encontradas
+          </p>
+        </div>
+      </div>
+
+      {/* Properties Grid */}
+      {filteredProperties.length === 0 ? (
+        <div className="text-center py-12">
+          <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay propiedades disponibles</h3>
+          <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProperties.map((property) => (
+            <div key={property.id} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+              {/* Property Image */}
+              <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {property.photos_urls && property.photos_urls.length > 0 ? (
+                  <img 
+                    src={property.photos_urls[0]} 
+                    alt={property.address}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Building className="h-12 w-12 text-gray-400" />
+                  </div>
+                )}
+                
+                {/* Favorite Button */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleFavorite(property.id);
+                  }}
+                  className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+                >
+                  <Heart 
+                    className={`h-4 w-4 ${
+                      favorites.includes(property.id) 
+                        ? 'text-red-500 fill-current' 
+                        : 'text-gray-600'
+                    }`} 
+                  />
+                </button>
+
+                {/* Type Badge */}
+                <div className="absolute top-3 left-3">
+                  <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                    property.type === 'venta' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Property Info */}
+              <div className="p-4">
+                <div className="mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 mb-1">
+                    {property.address}
+                  </h3>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    <span>{property.comuna}, {property.region}</span>
+                  </div>
+                </div>
+
+                {property.description && (
+                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                    {property.description}
+                  </p>
+                )}
+
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                  <div className="flex space-x-4">
+                    <div className="flex items-center">
+                      <Bed className="h-4 w-4 mr-1" />
+                      <span>{property.bedrooms}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Bath className="h-4 w-4 mr-1" />
+                      <span>{property.bathrooms}</span>
+                    </div>
+                    {property.surface && (
+                      <div className="flex items-center">
+                        <Square className="h-4 w-4 mr-1" />
+                        <span>{property.surface}m²</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center text-lg font-bold text-gray-900">
+                    <DollarSign className="h-5 w-5 mr-1 text-green-600" />
+                    <span>{formatPrice(property.price)}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {property.type === 'venta' ? (
+                      <button
+                        onClick={() => handleMakeOffer(property)}
+                        className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                        <span>Ofertar</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleApply(property)}
+                        className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors text-sm"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        <span>Postular</span>
+                      </button>
+                    )}
+                    
+                    <Link
+                      to={`/property/${property.id}`}
+                      className="flex items-center justify-center space-x-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Ver detalles</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modals */}
+      {showOfferModal && selectedProperty && (
+        <OfferModal
+          property={selectedProperty}
+          onClose={() => setShowOfferModal(false)}
+          onSuccess={onOfferSuccess}
+        />
+      )}
+
+      {showApplicationModal && selectedProperty && (
+        <ApplicationModal
+          property={selectedProperty}
+          onClose={() => setShowApplicationModal(false)}
+          onSuccess={onApplicationSuccess}
+        />
+      )}
+    </div>
+  );
+};

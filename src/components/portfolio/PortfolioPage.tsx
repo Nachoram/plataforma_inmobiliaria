@@ -60,10 +60,21 @@ export const PortfolioPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'disponible': return 'bg-green-100 text-green-800';
-      case 'vendida': return 'bg-red-100 text-red-800';
-      case 'arrendada': return 'bg-yellow-100 text-yellow-800';
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'sold': return 'bg-red-100 text-red-800';
+      case 'rented': return 'bg-yellow-100 text-yellow-800';
+      case 'inactive': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'Disponible';
+      case 'sold': return 'Vendida';
+      case 'rented': return 'Arrendada';
+      case 'inactive': return 'Inactiva';
+      default: return status;
     }
   };
 
@@ -129,7 +140,7 @@ export const PortfolioPage: React.FC = () => {
             <div key={property.id} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow">
               {/* Property Image */}
               <div className="h-48 bg-gray-200 relative">
-                {property.photos_urls.length > 0 ? (
+                {property.photos_urls && property.photos_urls.length > 0 ? (
                   <img 
                     src={property.photos_urls[0]} 
                     alt={property.address}
@@ -144,14 +155,14 @@ export const PortfolioPage: React.FC = () => {
                 {/* Status Badge */}
                 <div className="absolute top-3 left-3">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
-                    {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
+                    {getStatusLabel(property.status)}
                   </span>
                 </div>
 
                 {/* Listing Type Badge */}
                 <div className="absolute top-3 right-3">
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                    {property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1)}
+                    {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
                   </span>
                 </div>
               </div>
@@ -182,7 +193,7 @@ export const PortfolioPage: React.FC = () => {
 
                 <div className="flex items-center text-sm text-gray-500 mb-2">
                   <MapPin className="h-4 w-4 mr-1" />
-                  <span>{property.commune}, {property.region}</span>
+                  <span>{property.comuna}, {property.region}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
@@ -195,10 +206,10 @@ export const PortfolioPage: React.FC = () => {
                       <Bath className="h-4 w-4 mr-1" />
                       <span>{property.bathrooms}</span>
                     </div>
-                    {property.area_sqm && (
+                    {property.surface && (
                       <div className="flex items-center">
                         <Square className="h-4 w-4 mr-1" />
-                        <span>{property.area_sqm}m²</span>
+                        <span>{property.surface}m²</span>
                       </div>
                     )}
                   </div>

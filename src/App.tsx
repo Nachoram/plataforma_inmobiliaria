@@ -11,6 +11,9 @@ import { RentalPublicationForm } from './components/properties/RentalPublication
 import { ApplicationsPage } from './components/dashboard/ApplicationsPage';
 import { OffersPage } from './components/dashboard/OffersPage';
 import { UserProfile } from './components/profile/UserProfile';
+import { MarketplacePage } from './components/marketplace/MarketplacePage';
+import { MyActivityPage } from './components/marketplace/MyActivityPage';
+import AdminSetup from './components/AdminSetup';
 
 function App() {
   return (
@@ -18,7 +21,9 @@ function App() {
       <Layout>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<PublicPropertiesPage />} />
+          <Route path="/" element={<MarketplacePage />} />
+          <Route path="/marketplace" element={<MarketplacePage />} />
+          <Route path="/properties" element={<PublicPropertiesPage />} />
           <Route path="/property/:id" element={<PropertyDetailsPage />} />
           <Route path="/auth" element={<AuthPage />} />
           
@@ -72,6 +77,14 @@ function App() {
             } 
           />
           <Route 
+            path="/my-activity" 
+            element={
+              <ProtectedRoute>
+                <MyActivityPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/profile" 
             element={
               <ProtectedRoute>
@@ -79,6 +92,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route path="/admin-setup" element={<AdminSetup />} />
         </Routes>
       </Layout>
     </Router>

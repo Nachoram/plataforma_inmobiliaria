@@ -221,15 +221,13 @@ export const RentalPublicationForm: React.FC = () => {
     if (!formData.owner_commune) newErrors.owner_commune = 'La comuna del propietario es requerida';
     if (!formData.marital_status) newErrors.marital_status = 'El estado civil es requerido';
 
-    // Required documents validation
-    if (!formData.documents.ownership_certificate) newErrors.ownership_certificate = 'Documento requerido';
-    if (!formData.documents.tax_assessment) newErrors.tax_assessment = 'Documento requerido';
-    if (!formData.documents.owner_id_copy) newErrors.owner_id_copy = 'Documento requerido';
-
-    // Photos validation
-    if (photoFiles.length === 0 && formData.photos_urls.length === 0) {
-      newErrors.photos = 'Debe subir al menos una foto de la propiedad';
-    }
+    // Photos and documents are now OPTIONAL - no validation required
+    // if (photoFiles.length === 0 && formData.photos_urls.length === 0) {
+    //   newErrors.photos = 'Debe subir al menos una foto de la propiedad';
+    // }
+    // if (!formData.documents.ownership_certificate) newErrors.ownership_certificate = 'Documento requerido';
+    // if (!formData.documents.tax_assessment) newErrors.tax_assessment = 'Documento requerido';
+    // if (!formData.documents.owner_id_copy) newErrors.owner_id_copy = 'Documento requerido';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -312,8 +310,20 @@ export const RentalPublicationForm: React.FC = () => {
         console.warn('Profile upsert failed, continuing anyway:', error);
       }
 
-      // Upload files
-      const { uploadedPhotoUrls, uploadedDocumentUrls } = await uploadFiles();
+      // Upload files only if they exist (optional)
+      let uploadedPhotoUrls: string[] = [];
+      let uploadedDocumentUrls: string[] = [];
+      
+      if (photoFiles.length > 0 || Object.values(formData.documents).some(doc => doc !== null)) {
+        try {
+          const { uploadedPhotoUrls: photos, uploadedDocumentUrls: docs } = await uploadFiles();
+          uploadedPhotoUrls = photos;
+          uploadedDocumentUrls = docs;
+        } catch (error) {
+          console.warn('File upload failed, continuing without files:', error);
+          // Continue without files - they are optional
+        }
+      }
 
       const propertyData = {
         owner_id: user?.id,
@@ -341,6 +351,7 @@ export const RentalPublicationForm: React.FC = () => {
       
       if (error) throw error;
 
+      alert('Propiedad publicada exitosamente!');
       navigate('/portfolio');
     } catch (error) {
       console.error('Error saving rental property:', error);
@@ -782,12 +793,12 @@ export const RentalPublicationForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Sección 3: Fotos de la Propiedad */}
+          {/* Sección 3: Fotos de la Propiedad (Opcional) */}
           <div className="space-y-6">
             <div className="border-b pb-2">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
                 <Image className="h-6 w-6 mr-2 text-emerald-600" />
-                Fotos de la Propiedad
+                Fotos de la Propiedad <span className="text-sm font-normal text-gray-500 ml-2">(Opcional)</span>
               </h2>
             </div>
 
@@ -872,23 +883,23 @@ export const RentalPublicationForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Sección 4: Documentación Legal para Arriendo */}
+          {/* Sección 4: Documentación Legal para Arriendo (Opcional) */}
           <div className="space-y-6">
             <div className="border-b pb-2">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
                 <FileText className="h-6 w-6 mr-2 text-emerald-600" />
-                Documentación Legal para Arriendo
+                Documentación Legal para Arriendo <span className="text-sm font-normal text-gray-500 ml-2">(Opcional)</span>
               </h2>
             </div>
 
             {/* Documentos Requeridos */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">Documentos Requeridos (Obligatorios)</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Documentos (Opcionales)</h3>
               <div className="space-y-3">
                 {requiredDocuments.map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{label}</p>
+                      <p className="font-medium text-gray-900">{label} <span className="text-sm text-gray-500">(Opcional)</span></p>
                       {formData.documents[key as keyof typeof formData.documents] && (
                         <p className="text-sm text-green-600 mt-1 flex items-center">
                           <Check className="h-4 w-4 mr-1" />
@@ -896,7 +907,7 @@ export const RentalPublicationForm: React.FC = () => {
                         </p>
                       )}
                       {errors[key] && (
-                        <p className="text-sm text-red-600 mt-1 flex items-center">
+                        <p className="mt-1 text-sm text-red-600 flex items-center">
                           <AlertCircle className="h-4 w-4 mr-1" />
                           {errors[key]}
                         </p>

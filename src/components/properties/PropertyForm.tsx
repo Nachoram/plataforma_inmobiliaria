@@ -273,7 +273,7 @@ export const PropertyForm: React.FC = () => {
         const fileName = `${user?.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
         const { data, error } = await supabase.storage
-          .from('propiedades-imagenes')
+          .from('images')
           .upload(fileName, file);
 
         if (error) {
@@ -282,7 +282,7 @@ export const PropertyForm: React.FC = () => {
         }
 
         const { data: { publicUrl } } = supabase.storage
-          .from('propiedades-imagenes')
+          .from('images')
           .getPublicUrl(data.path);
 
         uploadedPhotoUrls.push(publicUrl);
@@ -294,18 +294,18 @@ export const PropertyForm: React.FC = () => {
           const fileExt = file.name.split('.').pop();
           const fileName = `${user?.id}/${key}-${Date.now()}.${fileExt}`;
 
-          const { data, error } = await supabase.storage
-            .from('documentos-clientes')
-            .upload(fileName, file);
+                  const { data, error } = await supabase.storage
+          .from('files')
+          .upload(fileName, file);
 
           if (error) {
             console.error('Error subiendo documento:', error);
             throw new Error(`Error subiendo documento ${key}: ${error.message}`);
           }
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('documentos-clientes')
-            .getPublicUrl(data.path);
+                  const { data: { publicUrl } } = supabase.storage
+          .from('files')
+          .getPublicUrl(data.path);
 
           uploadedDocumentUrls.push(publicUrl);
         }

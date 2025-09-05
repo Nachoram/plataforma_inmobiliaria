@@ -457,13 +457,33 @@ BEGIN
   INSERT INTO public.profiles (
     id,
     first_name,
+    paternal_last_name,
+    maternal_last_name,
+    rut,
     email,
+    phone,
+    profession,
+    marital_status,
+    address_street,
+    address_number,
+    address_commune,
+    address_region,
     created_at
   )
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'first_name', 'Usuario'),
+    COALESCE(NEW.raw_user_meta_data->>'paternal_last_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'maternal_last_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'rut', ''),
     NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+    COALESCE(NEW.raw_user_meta_data->>'profession', ''),
+    COALESCE(NEW.raw_user_meta_data->>'marital_status', 'soltero'),
+    COALESCE(NEW.raw_user_meta_data->>'address_street', ''),
+    COALESCE(NEW.raw_user_meta_data->>'address_number', ''),
+    COALESCE(NEW.raw_user_meta_data->>'address_commune', ''),
+    COALESCE(NEW.raw_user_meta_data->>'address_region', ''),
     NEW.created_at
   );
   RETURN NEW;

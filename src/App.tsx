@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import DemoPage from './components/DemoPage';
@@ -16,6 +15,7 @@ import { UserProfile } from './components/profile/UserProfile';
 import { MarketplacePage } from './components/marketplace/MarketplacePage';
 import { MyActivityPage } from './components/marketplace/MyActivityPage';
 import AdminSetup from './components/AdminSetup';
+import EnvTest from './components/EnvTest';
 
 function App() {
   return (
@@ -24,6 +24,9 @@ function App() {
         <Routes>
           {/* Demo Route - Nueva implementación */}
           <Route path="/demo" element={<DemoPage />} />
+
+          {/* Environment Variables Test Route */}
+          <Route path="/env-test" element={<Layout><EnvTest /></Layout>} />
           
           {/* Rutas existentes */}
           <Route path="/" element={<Layout><MarketplacePage /></Layout>} />

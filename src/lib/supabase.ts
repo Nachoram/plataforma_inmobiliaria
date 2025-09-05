@@ -1,9 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Configuración del proyecto Supabase - Plataforma Inmobiliaria
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://phnkervuiijqmapgswkc.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNzQ2MjUsImV4cCI6MjA3MjY1MDYyNX0.va6jOCJN6MnbHSbbDFJaO2rN3oCSVQlaYaPkPmXS2w';
+// 1. Obtener las variables de entorno
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Añade logs detallados para depurar
+console.log('🔧 Supabase URL:', supabaseUrl);
+console.log('🔑 Supabase Anon Key Loaded:', !!supabaseAnonKey);
+console.log('📋 Environment Variables Debug:');
+console.log('- SUPABASE_URL:', import.meta.env.SUPABASE_URL);
+console.log('- VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+console.log('- VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+console.log('- All env vars with VITE_:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
+console.log('🌍 Current environment mode:', import.meta.env.MODE);
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Este error es más claro y detendrá la ejecución si faltan las claves.
+  throw new Error("Supabase URL or Anon Key is missing. Check your .env file.");
+}
+
+// 3. Crear y exportar el cliente de Supabase
+// Esta es la única exportación del archivo.
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Database types - Nuevo esquema normalizado

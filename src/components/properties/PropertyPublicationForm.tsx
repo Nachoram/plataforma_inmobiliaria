@@ -13,6 +13,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   onCancel
 }) => {
   const [formData, setFormData] = useState({
+    // Información de la propiedad
     listing_type: 'venta' as 'venta' | 'arriendo',
     address_street: '',
     address_number: '',
@@ -25,6 +26,15 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
     bathrooms: '',
     surface_m2: '',
     description: '',
+    // Datos del propietario
+    owner_first_name: '',
+    owner_paternal_last_name: '',
+    owner_maternal_last_name: '',
+    owner_address_street: '',
+    owner_address_number: '',
+    owner_address_department: '',
+    owner_address_commune: '',
+    owner_address_region: '',
   });
 
   const [images, setImages] = useState<File[]>([]);
@@ -40,22 +50,60 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   ];
 
   useEffect(() => {
-    if (property) {
-      setFormData({
-        listing_type: property.listing_type,
-        address_street: property.address_street,
-        address_number: property.address_number,
-        address_department: property.address_department || '',
-        address_commune: property.address_commune,
-        address_region: property.address_region,
-        price_clp: property.price_clp.toString(),
-        common_expenses_clp: property.common_expenses_clp?.toString() || '',
-        bedrooms: property.bedrooms.toString(),
-        bathrooms: property.bathrooms.toString(),
-        surface_m2: property.surface_m2.toString(),
-        description: property.description,
-      });
-    }
+    const loadPropertyData = async () => {
+      if (property) {
+        // Cargar datos de la propiedad
+        const propertyFormData = {
+          listing_type: property.listing_type,
+          address_street: property.address_street,
+          address_number: property.address_number,
+          address_department: property.address_department || '',
+          address_commune: property.address_commune,
+          address_region: property.address_region,
+          price_clp: property.price_clp.toString(),
+          common_expenses_clp: property.common_expenses_clp?.toString() || '',
+          bedrooms: property.bedrooms.toString(),
+          bathrooms: property.bathrooms.toString(),
+          surface_m2: property.surface_m2.toString(),
+          description: property.description,
+          // Campos del propietario (se llenarán con datos del perfil del owner)
+          owner_first_name: '',
+          owner_paternal_last_name: '',
+          owner_maternal_last_name: '',
+          owner_address_street: '',
+          owner_address_number: '',
+          owner_address_department: '',
+          owner_address_commune: '',
+          owner_address_region: '',
+        };
+
+        // Cargar datos del propietario si existe
+        try {
+          const { data: ownerProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', property.owner_id)
+            .single();
+
+          if (ownerProfile) {
+            propertyFormData.owner_first_name = ownerProfile.first_name || '';
+            propertyFormData.owner_paternal_last_name = ownerProfile.paternal_last_name || '';
+            propertyFormData.owner_maternal_last_name = ownerProfile.maternal_last_name || '';
+            propertyFormData.owner_address_street = ownerProfile.address_street || '';
+            propertyFormData.owner_address_number = ownerProfile.address_number || '';
+            propertyFormData.owner_address_department = ownerProfile.address_department || '';
+            propertyFormData.owner_address_commune = ownerProfile.address_commune || '';
+            propertyFormData.owner_address_region = ownerProfile.address_region || '';
+          }
+        } catch (error) {
+          console.error('Error cargando datos del propietario:', error);
+        }
+
+        setFormData(propertyFormData);
+      }
+    };
+
+    loadPropertyData();
   }, [property]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -85,7 +133,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
       const fileExt = image.name.split('.').pop();
       const fileName = `${propertyId}/${Date.now()}.${fileExt}`;
       
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('property-images')
         .upload(fileName, image);
       
@@ -126,7 +174,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
       const fileExt = document.name.split('.').pop();
       const fileName = `${user.data.user.id}/${propertyId}/${Date.now()}.${fileExt}`;
       
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('user-documents')
         .upload(fileName, document);
       
@@ -167,6 +215,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         throw new Error('Usuario no autenticado');
       }
 
+      // Objeto para la tabla 'properties'
       const propertyData = {
         owner_id: user.data.user.id,
         listing_type: formData.listing_type,
@@ -181,6 +230,18 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         bathrooms: parseInt(formData.bathrooms),
         surface_m2: parseInt(formData.surface_m2),
         description: formData.description,
+      };
+
+      // Objeto para actualizar el perfil del propietario
+      const ownerData = {
+        first_name: formData.owner_first_name,
+        paternal_last_name: formData.owner_paternal_last_name,
+        maternal_last_name: formData.owner_maternal_last_name,
+        address_street: formData.owner_address_street,
+        address_number: formData.owner_address_number,
+        address_department: formData.owner_address_department || null,
+        address_commune: formData.owner_address_commune,
+        address_region: formData.owner_address_region,
       };
 
       let propertyId: string;
@@ -216,6 +277,19 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
       // Subir documentos si hay
       if (documents.length > 0) {
         await uploadDocuments(propertyId);
+      }
+
+      // Actualizar perfil del propietario con la información proporcionada
+      const { error: ownerError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.data.user.id,
+          ...ownerData
+        });
+
+      if (ownerError) {
+        console.error('Error actualizando perfil del propietario:', ownerError);
+        // No lanzamos error aquí para no interrumpir el flujo si ya se guardó la propiedad
       }
 
       onSuccess?.();
@@ -257,13 +331,14 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         </div>
 
         {/* Dirección */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Calle *
+            <label htmlFor="address_street" className="block text-sm font-medium text-gray-700 mb-2">
+              Calle
             </label>
             <input
               type="text"
+              id="address_street"
               name="address_street"
               value={formData.address_street}
               onChange={handleInputChange}
@@ -271,12 +346,14 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
               required
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Número *
+            <label htmlFor="address_number" className="block text-sm font-medium text-gray-700 mb-2">
+              Número
             </label>
             <input
               type="text"
+              id="address_number"
               name="address_number"
               value={formData.address_number}
               onChange={handleInputChange}
@@ -284,50 +361,52 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
               required
             />
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Departamento
+            <label htmlFor="address_department" className="block text-sm font-medium text-gray-700 mb-2">
+              Departamento / Oficina (Opcional)
             </label>
             <input
               type="text"
+              id="address_department"
               name="address_department"
               value={formData.address_department}
               onChange={handleInputChange}
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Comuna *
-            </label>
-            <input
-              type="text"
-              name="address_commune"
-              value={formData.address_commune}
-              onChange={handleInputChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Región *
-            </label>
-            <select
-              name="address_region"
-              value={formData.address_region}
-              onChange={handleInputChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="">Seleccionar región</option>
-              {regions.map(region => (
-                <option key={region} value={region}>{region}</option>
-              ))}
-            </select>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Comuna *
+              </label>
+              <input
+                type="text"
+                name="address_commune"
+                value={formData.address_commune}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Región *
+              </label>
+              <select
+                name="address_region"
+                value={formData.address_region}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="">Seleccionar región</option>
+                {regions.map(region => (
+                  <option key={region} value={region}>{region}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -431,6 +510,129 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
+        </div>
+
+        {/* Datos del Propietario */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Datos del Propietario</h3>
+
+          <div className="space-y-4">
+            {/* Campo para Nombres del Propietario */}
+            <div>
+              <label htmlFor="owner_first_name" className="block text-sm font-medium text-gray-700 mb-2">
+                Nombres del Propietario
+              </label>
+              <input
+                type="text"
+                id="owner_first_name"
+                name="owner_first_name"
+                value={formData.owner_first_name}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            {/* Campo para Apellido Paterno */}
+            <div>
+              <label htmlFor="owner_paternal_last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                Apellido Paterno
+              </label>
+              <input
+                type="text"
+                id="owner_paternal_last_name"
+                name="owner_paternal_last_name"
+                value={formData.owner_paternal_last_name}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            {/* Campo para Apellido Materno */}
+            <div>
+              <label htmlFor="owner_maternal_last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                Apellido Materno
+              </label>
+              <input
+                type="text"
+                id="owner_maternal_last_name"
+                name="owner_maternal_last_name"
+                value={formData.owner_maternal_last_name}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            {/* Dirección del Propietario */}
+            <div className="space-y-4">
+              <h4 className="text-md font-medium text-gray-700">Dirección del Propietario</h4>
+
+              <div>
+                <label htmlFor="owner_address_street" className="block text-sm font-medium text-gray-700 mb-2">
+                  Calle del Propietario
+                </label>
+                <input
+                  type="text"
+                  id="owner_address_street"
+                  name="owner_address_street"
+                  value={formData.owner_address_street}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="owner_address_number" className="block text-sm font-medium text-gray-700 mb-2">
+                  Número del Propietario
+                </label>
+                <input
+                  type="text"
+                  id="owner_address_number"
+                  name="owner_address_number"
+                  value={formData.owner_address_number}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Comuna del Propietario *
+                  </label>
+                  <input
+                    type="text"
+                    name="owner_address_commune"
+                    value={formData.owner_address_commune}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Región del Propietario *
+                  </label>
+                  <select
+                    name="owner_address_region"
+                    value={formData.owner_address_region}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Seleccionar región</option>
+                    {regions.map(region => (
+                      <option key={region} value={region}>{region}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Imágenes */}

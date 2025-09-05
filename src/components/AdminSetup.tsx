@@ -15,7 +15,8 @@ export const AdminSetup: React.FC = () => {
       setResults(prev => [...prev, `✅ Buckets existentes: ${existingBuckets?.map(b => b.name).join(', ') || 'ninguno'}`]);
       
       // Crear bucket para imágenes
-      const { data: imgBucket, error: imgError } = await supabase.storage.createBucket('propiedades-imagenes', {
+      const { data: imgBucket, error: imgError } = await supabase.storage.createBucket('
+        propiedades-imagenes', {
         public: true,
         fileSizeLimit: 52428800, // 50MB
         allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']

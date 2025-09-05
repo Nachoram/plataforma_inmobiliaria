@@ -41,7 +41,7 @@ In your Supabase dashboard:
 
 1. **Authentication → URL Configuration**
    - Site URL: `https://your-domain.com` (production)
-   - Redirect URLs: `http://localhost:3000/**` (development)
+   - Redirect URLs: `http://localhost:5174/` (development)
 
 2. **Authentication → Providers → Email**
    - Enable Email provider
@@ -51,8 +51,7 @@ In your Supabase dashboard:
 
 ```env
 VITE_SUPABASE_URL=https://phnkervuiijqmapgswkc.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI_NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE_NTcwNzQ2MjUsImV4cCI6MjA3MjY1MDYyNX0.va6jOCJN6MnbHSbbDFJaO2rN_3oCSVQlaYaPkPmXS2w3
-```
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNzQ2MjUsImV4cCI6MjA3MjY1MDYyNX0.va6jOCJN6MnbHSbbDFJaO2rN_3oCSVQlaYaPkPmXS2w
 
 ## React Forms
 

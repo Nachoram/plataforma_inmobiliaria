@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './hooks/useAuth';
+import DemoPage from './components/DemoPage';
 import { Layout } from './components/Layout';
 import { AuthPage } from './components/auth/AuthPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -17,22 +19,25 @@ import AdminSetup from './components/AdminSetup';
 
 function App() {
   return (
-    <Router>
-      <Layout>
+    <AuthProvider>
+      <Router>
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<MarketplacePage />} />
-          <Route path="/marketplace" element={<MarketplacePage />} />
-          <Route path="/properties" element={<PublicPropertiesPage />} />
-          <Route path="/property/:id" element={<PropertyDetailsPage />} />
-          <Route path="/auth" element={<AuthPage />} />
+          {/* Demo Route - Nueva implementación */}
+          <Route path="/demo" element={<DemoPage />} />
+          
+          {/* Rutas existentes */}
+          <Route path="/" element={<Layout><MarketplacePage /></Layout>} />
+          <Route path="/marketplace" element={<Layout><MarketplacePage /></Layout>} />
+          <Route path="/properties" element={<Layout><PublicPropertiesPage /></Layout>} />
+          <Route path="/property/:id" element={<Layout><PropertyDetailsPage /></Layout>} />
+          <Route path="/auth" element={<Layout><AuthPage /></Layout>} />
           
           {/* Protected Routes */}
           <Route 
             path="/portfolio" 
             element={
               <ProtectedRoute>
-                <PortfolioPage />
+                <Layout><PortfolioPage /></Layout>
               </ProtectedRoute>
             } 
           />
@@ -40,7 +45,7 @@ function App() {
             path="/property/new" 
             element={
               <ProtectedRoute>
-                <PropertyForm />
+                <Layout><PropertyForm /></Layout>
               </ProtectedRoute>
             } 
           />
@@ -48,7 +53,7 @@ function App() {
             path="/property/new/rental" 
             element={
               <ProtectedRoute>
-                <RentalPublicationForm />
+                <Layout><RentalPublicationForm /></Layout>
               </ProtectedRoute>
             } 
           />
@@ -56,7 +61,7 @@ function App() {
             path="/property/edit/:id" 
             element={
               <ProtectedRoute>
-                <PropertyForm />
+                <Layout><PropertyForm /></Layout>
               </ProtectedRoute>
             } 
           />
@@ -64,7 +69,7 @@ function App() {
             path="/applications" 
             element={
               <ProtectedRoute>
-                <ApplicationsPage />
+                <Layout><ApplicationsPage /></Layout>
               </ProtectedRoute>
             } 
           />
@@ -72,7 +77,7 @@ function App() {
             path="/offers" 
             element={
               <ProtectedRoute>
-                <OffersPage />
+                <Layout><OffersPage /></Layout>
               </ProtectedRoute>
             } 
           />
@@ -80,7 +85,7 @@ function App() {
             path="/my-activity" 
             element={
               <ProtectedRoute>
-                <MyActivityPage />
+                <Layout><MyActivityPage /></Layout>
               </ProtectedRoute>
             } 
           />
@@ -88,14 +93,14 @@ function App() {
             path="/profile" 
             element={
               <ProtectedRoute>
-                <UserProfile />
+                <Layout><UserProfile /></Layout>
               </ProtectedRoute>
             } 
           />
-          <Route path="/admin-setup" element={<AdminSetup />} />
+          <Route path="/admin-setup" element={<Layout><AdminSetup /></Layout>} />
         </Routes>
-      </Layout>
-    </Router>
+      </Router>
+    </AuthProvider>
   );
 }
 

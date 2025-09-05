@@ -1,40 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<{ error: any }>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error && error.message?.includes('Invalid Refresh Token: Refresh Token Not Found')) {
-          // Clear invalid session data
-          await supabase.auth.signOut();
-          setUser(null);
-        } else {
-          setUser(session?.user ?? null);
-        }
-      } catch (error: any) {
-        if (error.message?.includes('Invalid Refresh Token: Refresh Token Not Found')) {
-          // Clear invalid session data
-          await supabase.auth.signOut();
-          setUser(null);
-        } else {
-          console.error('Error getting session:', error);
-          setUser(null);
-        }
-      }
+    // Obtener sesión inicial
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
       setLoading(false);
     };
 
-    getSession();
+    getInitialSession();
 
-    // Listen for auth changes
+    // Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null);
@@ -42,69 +46,41 @@ export const useAuth = () => {
       }
     );
 
-    return () => subscription?.unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const { data, error } = await supabase.auth.signUp({
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-        }
-      }
     });
-
-    if (data.user && !error) {
-      // Create profile
-      await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          full_name: fullName,
-          contact_email: email,
-        });
-    }
-
-    return { data, error };
+    return { error };
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (data.user && !error) {
-      // Check if profile exists, create one if it doesn't
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single();
-      
-      if (!profile) {
-        // Create profile if it doesn't exist
-        await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            full_name: data.user.user_metadata?.full_name || '',
-            contact_email: data.user.email || email,
-          });
-      }
-    }
-    
-    return { data, error };
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    return { error };
   };
 
   const signOut = async () => {
-    return await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    return { error };
   };
 
-  return {
+  const value = {
     user,
     loading,
-    signUp,
     signIn,
+    signUp,
     signOut,
   };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };

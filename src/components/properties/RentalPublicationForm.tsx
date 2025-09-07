@@ -47,8 +47,9 @@ export const RentalPublicationForm: React.FC = () => {
   // Form data state
   const [formData, setFormData] = useState({
     // Información de la Propiedad
-    address: '',
-    apartment_number: '',
+    address_street: '',
+    address_number: '',
+    address_department: '',
     region: '',
     commune: '',
     price: '',
@@ -57,16 +58,18 @@ export const RentalPublicationForm: React.FC = () => {
     bathrooms: '1',
     area_sqm: '',
     description: '',
-    
+
     // Datos del Propietario
-    owner_full_name: '',
-    owner_address: '',
-    owner_apartment_number: '',
+    owner_first_name: '',
+    owner_paternal_last_name: '',
+    owner_maternal_last_name: '',
+    owner_address_street: '',
+    owner_address_number: '',
     owner_region: '',
     owner_commune: '',
     marital_status: '',
     property_regime: '',
-    
+
     // Archivos
     photos_urls: [] as string[],
     availableDays: [] as string[],
@@ -159,18 +162,22 @@ export const RentalPublicationForm: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     // Required fields validation
-    if (!formData.address.trim()) newErrors.address = 'La dirección es requerida';
+    if (!formData.address_street.trim()) newErrors.address_street = 'La calle es requerida';
+    if (!formData.address_number.trim()) newErrors.address_number = 'El número es requerido';
     if (!formData.region) newErrors.region = 'La región es requerida';
     if (!formData.commune) newErrors.commune = 'La comuna es requerida';
     if (!formData.price.trim()) newErrors.price = 'El precio de arriendo es requerido';
     if (!formData.area_sqm.trim()) newErrors.area_sqm = 'La superficie es requerida';
     if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
-    if (!formData.owner_full_name.trim()) newErrors.owner_full_name = 'El nombre del propietario es requerido';
-    if (!formData.owner_address.trim()) newErrors.owner_address = 'La dirección del propietario es requerida';
+    if (!formData.owner_first_name.trim()) newErrors.owner_first_name = 'El nombre del propietario es requerido';
+    if (!formData.owner_paternal_last_name.trim()) newErrors.owner_paternal_last_name = 'El apellido paterno del propietario es requerido';
+    if (!formData.owner_maternal_last_name.trim()) newErrors.owner_maternal_last_name = 'El apellido materno del propietario es requerido';
+    if (!formData.owner_address_street.trim()) newErrors.owner_address_street = 'La calle del propietario es requerida';
+    if (!formData.owner_address_number.trim()) newErrors.owner_address_number = 'El número del propietario es requerido';
     if (!formData.owner_region) newErrors.owner_region = 'La región del propietario es requerida';
     if (!formData.owner_commune) newErrors.owner_commune = 'La comuna del propietario es requerida';
     if (!formData.marital_status) newErrors.marital_status = 'El estado civil es requerido';
-    
+
     // Validate property_regime if married
     if (formData.marital_status === 'casado' && !formData.property_regime) {
       newErrors.property_regime = 'El régimen patrimonial es requerido para personas casadas';
@@ -183,48 +190,62 @@ export const RentalPublicationForm: React.FC = () => {
 
   // Upload files to Supabase Storage
   const uploadFiles = async () => {
-    const uploadedPhotoUrls: string[] = [];
-    const uploadedDocumentUrls: string[] = [];
-
-    // Upload photos to images bucket
+    // Upload photos to images bucket and create property_images records
     for (const file of photoFiles) {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
-        .from('images')
+        .from('property-images')
         .upload(fileName, file);
 
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('images')
+        .from('property-images')
         .getPublicUrl(data.path);
 
-      uploadedPhotoUrls.push(publicUrl);
+      // Insert record in property_images table
+      const { error: dbError } = await supabase
+        .from('property_images')
+        .insert({
+          property_id: 'temp', // This will be updated after property creation
+          image_url: publicUrl,
+          storage_path: data.path,
+          created_at: new Date().toISOString()
+        });
+
+      if (dbError) throw dbError;
     }
 
-    // Upload documents to files bucket
+    // Upload documents to files bucket and create documents records
     for (const [key, file] of Object.entries(formData.documents)) {
       if (file) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${user?.id}/${key}-${Date.now()}.${fileExt}`;
 
         const { data, error } = await supabase.storage
-          .from('files')
+          .from('user-documents')
           .upload(fileName, file);
 
         if (error) throw error;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('files')
-          .getPublicUrl(data.path);
+        // Insert record in documents table
+        const { error: dbError } = await supabase
+          .from('documents')
+          .insert({
+            uploader_id: user?.id,
+            related_entity_id: 'temp', // This will be updated after property creation
+            related_entity_type: 'property_legal',
+            document_type: key,
+            storage_path: data.path,
+            file_name: file.name,
+            created_at: new Date().toISOString()
+          });
 
-        uploadedDocumentUrls.push(publicUrl);
+        if (dbError) throw dbError;
       }
     }
-
-    return { uploadedPhotoUrls, uploadedDocumentUrls };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -249,9 +270,18 @@ export const RentalPublicationForm: React.FC = () => {
           .from('profiles')
           .upsert({
             id: user.id,
-            full_name: formData.owner_full_name,
-            contact_email: user.email || '',
-            contact_phone: null,
+            first_name: formData.owner_first_name,
+            paternal_last_name: formData.owner_paternal_last_name,
+            maternal_last_name: formData.owner_maternal_last_name,
+            email: user.email || '',
+            phone: null,
+            address_street: formData.owner_address_street,
+            address_number: formData.owner_address_number,
+            address_commune: formData.owner_commune,
+            address_region: formData.owner_region,
+            profession: null,
+            marital_status: formData.marital_status,
+            property_regime: formData.marital_status === 'casado' ? formData.property_regime : null,
           }, {
             onConflict: 'id'
           });
@@ -265,15 +295,10 @@ export const RentalPublicationForm: React.FC = () => {
       }
 
       // Upload files only if they exist (optional)
-      let uploadedPhotoUrls: string[] = [];
-      let uploadedDocumentUrls: string[] = [];
-      
       if (photoFiles.length > 0 || Object.values(formData.documents).some(doc => doc !== null)) {
         setUploading(true);
         try {
-          const { uploadedPhotoUrls: photos, uploadedDocumentUrls: docs } = await uploadFiles();
-          uploadedPhotoUrls = photos;
-          uploadedDocumentUrls = docs;
+          await uploadFiles();
         } catch (error) {
           console.warn('File upload failed, continuing without files:', error);
           // Continue without files - they are optional
@@ -295,29 +320,54 @@ export const RentalPublicationForm: React.FC = () => {
 
       const propertyData = {
         owner_id: user.id,
-        type: 'arriendo' as const,
-        address: formData.address,
-        street: formData.address.split(' ').slice(0, -1).join(' ') || formData.address,
-        number: formData.address.split(' ').pop() || 'S/N',
-        apartment: formData.apartment_number || null,
-        region: formData.region,
-        comuna: formData.commune,
-        description: formData.description,
-        price: price,
-        common_expenses: commonExpenses,
+        listing_type: 'arriendo' as const,
+        status: 'activa' as const,
+        address_street: formData.address_street,
+        address_number: formData.address_number,
+        address_department: formData.address_department || null,
+        address_commune: formData.commune,
+        address_region: formData.region,
+        price_clp: price,
+        common_expenses_clp: commonExpenses,
         bedrooms: bedrooms,
         bathrooms: bathrooms,
-        surface: areaSqm,
-        photos_urls: uploadedPhotoUrls,
-        documents_urls: uploadedDocumentUrls,
-        status: 'active' as const
+        surface_m2: areaSqm,
+        description: formData.description,
+        created_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
+      const { data: propertyResult, error } = await supabase
         .from('properties')
-        .insert(propertyData);
-      
+        .insert(propertyData)
+        .select()
+        .single();
+
       if (error) throw error;
+
+      // Update property_id references in images and documents
+      if (propertyResult?.id) {
+        // Update property_images with correct property_id
+        if (photoFiles.length > 0) {
+          const { error: imageUpdateError } = await supabase
+            .from('property_images')
+            .update({ property_id: propertyResult.id })
+            .eq('property_id', 'temp')
+            .eq('created_at', new Date().toISOString().split('T')[0]); // Match by date for safety
+
+          if (imageUpdateError) console.warn('Warning: Could not update property images:', imageUpdateError);
+        }
+
+        // Update documents with correct property_id
+        if (Object.values(formData.documents).some(doc => doc !== null)) {
+          const { error: docUpdateError } = await supabase
+            .from('documents')
+            .update({ related_entity_id: propertyResult.id })
+            .eq('related_entity_id', 'temp')
+            .eq('created_at', new Date().toISOString().split('T')[0]); // Match by date for safety
+
+          if (docUpdateError) console.warn('Warning: Could not update property documents:', docUpdateError);
+        }
+      }
 
       alert('Propiedad publicada exitosamente!');
       navigate('/portfolio');
@@ -365,38 +415,61 @@ export const RentalPublicationForm: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {/* Dirección */}
+              {/* Calle */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Dirección *
+                  Calle *
                 </label>
                 <input
                   type="text"
                   required
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  value={formData.address_street}
+                  onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                    errors.address ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    errors.address_street ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Ej: Av. Libertador 1234"
+                  placeholder="Ej: Av. Libertador"
                 />
-                {errors.address && (
+                {errors.address_street && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
                     <AlertCircle className="h-4 w-4 mr-1" />
-                    {errors.address}
+                    {errors.address_street}
                   </p>
                 )}
               </div>
 
-              {/* Número de Departamento */}
+              {/* Número */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Número de Departamento (opcional)
+                  Número *
                 </label>
                 <input
                   type="text"
-                  value={formData.apartment_number}
-                  onChange={(e) => setFormData({ ...formData, apartment_number: e.target.value })}
+                  required
+                  value={formData.address_number}
+                  onChange={(e) => setFormData({ ...formData, address_number: e.target.value })}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    errors.address_number ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 1234"
+                />
+                {errors.address_number && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.address_number}
+                  </p>
+                )}
+              </div>
+
+              {/* Departamento (Opcional) */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Departamento / Oficina (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.address_department}
+                  onChange={(e) => setFormData({ ...formData, address_department: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   placeholder="Ej: 45A"
                 />
@@ -596,65 +669,121 @@ export const RentalPublicationForm: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {/* Nombre Completo del Propietario */}
+              {/* Nombres del Propietario */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre Completo del Propietario *
+                  Nombres del Propietario *
                 </label>
                 <input
                   type="text"
                   required
-                  value={formData.owner_full_name}
-                  onChange={(e) => setFormData({ ...formData, owner_full_name: e.target.value })}
+                  value={formData.owner_first_name}
+                  onChange={(e) => setFormData({ ...formData, owner_first_name: e.target.value })}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                    errors.owner_full_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    errors.owner_first_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Ej: Juan Carlos Pérez González"
+                  placeholder="Ej: Juan Carlos"
                 />
-                {errors.owner_full_name && (
+                {errors.owner_first_name && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
                     <AlertCircle className="h-4 w-4 mr-1" />
-                    {errors.owner_full_name}
+                    {errors.owner_first_name}
                   </p>
                 )}
               </div>
 
-              {/* Dirección del Propietario */}
+              {/* Apellido Paterno */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Dirección del Propietario *
+                  Apellido Paterno *
                 </label>
                 <input
                   type="text"
                   required
-                  value={formData.owner_address}
-                  onChange={(e) => setFormData({ ...formData, owner_address: e.target.value })}
+                  value={formData.owner_paternal_last_name}
+                  onChange={(e) => setFormData({ ...formData, owner_paternal_last_name: e.target.value })}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                    errors.owner_address ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    errors.owner_paternal_last_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Ej: Av. Providencia 2500"
+                  placeholder="Ej: Pérez"
                 />
-                {errors.owner_address && (
+                {errors.owner_paternal_last_name && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
                     <AlertCircle className="h-4 w-4 mr-1" />
-                    {errors.owner_address}
+                    {errors.owner_paternal_last_name}
                   </p>
                 )}
               </div>
 
-              {/* Número de Departamento del Propietario */}
+              {/* Apellido Materno */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Número de Departamento del Propietario (opcional)
+                  Apellido Materno *
                 </label>
                 <input
                   type="text"
-                  value={formData.owner_apartment_number}
-                  onChange={(e) => setFormData({ ...formData, owner_apartment_number: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                  placeholder="Ej: 45A"
+                  required
+                  value={formData.owner_maternal_last_name}
+                  onChange={(e) => setFormData({ ...formData, owner_maternal_last_name: e.target.value })}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    errors.owner_maternal_last_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: González"
                 />
+                {errors.owner_maternal_last_name && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.owner_maternal_last_name}
+                  </p>
+                )}
               </div>
+
+              {/* Calle del Propietario */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Calle del Propietario *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.owner_address_street}
+                  onChange={(e) => setFormData({ ...formData, owner_address_street: e.target.value })}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    errors.owner_address_street ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: Av. Providencia"
+                />
+                {errors.owner_address_street && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.owner_address_street}
+                  </p>
+                )}
+              </div>
+
+              {/* Número del Propietario */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Número del Propietario *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.owner_address_number}
+                  onChange={(e) => setFormData({ ...formData, owner_address_number: e.target.value })}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    errors.owner_address_number ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 2500"
+                />
+                {errors.owner_address_number && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.owner_address_number}
+                  </p>
+                )}
+              </div>
+
 
               {/* Región y Comuna del Propietario */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

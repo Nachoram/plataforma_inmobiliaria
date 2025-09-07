@@ -15,6 +15,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
     email: '',
     password: '',
     confirmPassword: '',
+    firstName: '',
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +50,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
           throw new Error('La contraseña debe tener al menos 6 caracteres');
         }
 
-        const { error } = await signUp(formData.email, formData.password);
+        const userMetadata = {
+          full_name: formData.firstName,
+        };
+
+        const { error } = await signUp(formData.email, formData.password, userMetadata);
         if (error) throw error;
         
         setMessage('¡Registro exitoso! Revisa tu email para confirmar tu cuenta.');
@@ -102,6 +107,23 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
             required
           />
         </div>
+
+        {!isLogin && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre *
+            </label>
+            <input
+              type="text"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              placeholder="Tu nombre"
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">

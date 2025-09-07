@@ -162,7 +162,7 @@ export const PortfolioPage: React.FC = () => {
                 {/* Listing Type Badge */}
                 <div className="absolute top-3 right-3">
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                    {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
+                    {property.type?.charAt(0).toUpperCase() + property.type?.slice(1) || 'Tipo no especificado'}
                   </span>
                 </div>
               </div>
@@ -171,7 +171,7 @@ export const PortfolioPage: React.FC = () => {
               <div className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
-                    {property.address}
+                    {property.address || 'Dirección no especificada'}
                   </h3>
                   <div className="flex space-x-2 ml-2">
                     <Link
@@ -193,7 +193,7 @@ export const PortfolioPage: React.FC = () => {
 
                 <div className="flex items-center text-sm text-gray-500 mb-2">
                   <MapPin className="h-4 w-4 mr-1" />
-                  <span>{property.comuna}, {property.region}</span>
+                  <span>{property.comuna || 'Comuna no especificada'}, {property.region || 'Región no especificada'}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-3">

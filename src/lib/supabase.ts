@@ -182,10 +182,13 @@ export const validateRUT = (rut: string): boolean => {
 };
 
 // Funciones de autenticación
-export const signUp = async (email: string, password: string) => {
+export const signUp = async (email: string, password: string, userMetadata?: any) => {
   return await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: userMetadata || {}
+    }
   });
 };
 

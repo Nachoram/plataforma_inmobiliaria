@@ -46,7 +46,7 @@ export interface Profile {
 export interface Property {
   id: string;
   owner_id: string;
-  status: 'activa' | 'arrendada' | 'vendida' | 'pausada';
+  status: 'activa' | 'disponible' | 'arrendada' | 'vendida' | 'pausada';
   listing_type: 'venta' | 'arriendo';
   address_street: string;
   address_number: string;
@@ -60,6 +60,10 @@ export interface Property {
   surface_m2: number;
   description: string;
   created_at: string;
+  // Campos opcionales agregados en migraciones recientes
+  updated_at?: string;
+  is_visible?: boolean;
+  is_featured?: boolean;
 }
 
 export interface Guarantor {

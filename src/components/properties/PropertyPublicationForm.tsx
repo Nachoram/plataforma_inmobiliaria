@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, Property, formatPriceCLP } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 interface PropertyPublicationFormProps {
   property?: Property;
@@ -12,6 +13,13 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   onSuccess,
   onCancel
 }) => {
+  const { user, loading: authLoading } = useAuth();
+
+  // Estado para el perfil del propietario
+  const [ownerProfile, setOwnerProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileComplete, setProfileComplete] = useState(false);
+
   const [formData, setFormData] = useState({
     // Información de la propiedad
     listing_type: 'venta' as 'venta' | 'arriendo',
@@ -26,15 +34,6 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
     bathrooms: '',
     surface_m2: '',
     description: '',
-    // Datos del propietario
-    owner_first_name: '',
-    owner_paternal_last_name: '',
-    owner_maternal_last_name: '',
-    owner_address_street: '',
-    owner_address_number: '',
-    owner_address_department: '',
-    owner_address_commune: '',
-    owner_address_region: '',
   });
 
   const [images, setImages] = useState<File[]>([]);
@@ -49,62 +48,97 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
     'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes'
   ];
 
+  // Función para verificar si el perfil está completo
+  const checkProfileComplete = (profile: any) => {
+    return profile &&
+           profile.first_name &&
+           profile.paternal_last_name &&
+           profile.rut;
+  };
+
+  // Función para verificar si existe una propiedad en la dirección especificada
+  const checkAddressExists = async (street: string, number: string, department: string | null) => {
+    try {
+      let query = supabase
+        .from('properties')
+        .select('id')
+        .eq('address_street', street)
+        .eq('address_number', number);
+
+      if (department && department.trim() !== '') {
+        query = query.eq('address_department', department);
+      } else {
+        query = query.or('address_department.is.null,address_department.eq.' + '');
+      }
+
+      const { data, error } = await query.limit(1);
+
+      if (error) {
+        console.error('Error verificando dirección:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Error en verificación de dirección:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
-    const loadPropertyData = async () => {
-      if (property) {
-        // Cargar datos de la propiedad
-        const propertyFormData = {
-          listing_type: property.listing_type,
-          address_street: property.address_street,
-          address_number: property.address_number,
-          address_department: property.address_department || '',
-          address_commune: property.address_commune,
-          address_region: property.address_region,
-          price_clp: property.price_clp.toString(),
-          common_expenses_clp: property.common_expenses_clp?.toString() || '',
-          bedrooms: property.bedrooms.toString(),
-          bathrooms: property.bathrooms.toString(),
-          surface_m2: property.surface_m2.toString(),
-          description: property.description,
-          // Campos del propietario (se llenarán con datos del perfil del owner)
-          owner_first_name: '',
-          owner_paternal_last_name: '',
-          owner_maternal_last_name: '',
-          owner_address_street: '',
-          owner_address_number: '',
-          owner_address_department: '',
-          owner_address_commune: '',
-          owner_address_region: '',
-        };
+    const loadData = async () => {
+      if (!user) {
+        setProfileLoading(false);
+        return;
+      }
 
-        // Cargar datos del propietario si existe
-        try {
-          const { data: ownerProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', property.owner_id)
-            .single();
+      try {
+        // Cargar perfil del usuario actual
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-          if (ownerProfile) {
-            propertyFormData.owner_first_name = ownerProfile.first_name || '';
-            propertyFormData.owner_paternal_last_name = ownerProfile.paternal_last_name || '';
-            propertyFormData.owner_maternal_last_name = ownerProfile.maternal_last_name || '';
-            propertyFormData.owner_address_street = ownerProfile.address_street || '';
-            propertyFormData.owner_address_number = ownerProfile.address_number || '';
-            propertyFormData.owner_address_department = ownerProfile.address_department || '';
-            propertyFormData.owner_address_commune = ownerProfile.address_commune || '';
-            propertyFormData.owner_address_region = ownerProfile.address_region || '';
-          }
-        } catch (error) {
-          console.error('Error cargando datos del propietario:', error);
+        if (profileError) {
+          console.error('Error cargando perfil:', profileError);
+          setOwnerProfile(null);
+          setProfileComplete(false);
+        } else {
+          setOwnerProfile(userProfile);
+          setProfileComplete(checkProfileComplete(userProfile));
         }
 
-        setFormData(propertyFormData);
+        // Si estamos editando una propiedad existente, cargar sus datos
+        if (property) {
+          const propertyFormData = {
+            listing_type: property.listing_type,
+            address_street: property.address_street,
+            address_number: property.address_number,
+            address_department: property.address_department || '',
+            address_commune: property.address_commune,
+            address_region: property.address_region,
+            price_clp: property.price_clp.toString(),
+            common_expenses_clp: property.common_expenses_clp?.toString() || '',
+            bedrooms: property.bedrooms.toString(),
+            bathrooms: property.bathrooms.toString(),
+            surface_m2: property.surface_m2.toString(),
+            description: property.description,
+          };
+
+          setFormData(propertyFormData);
+        }
+      } catch (error) {
+        console.error('Error en carga inicial:', error);
+        setOwnerProfile(null);
+        setProfileComplete(false);
+      } finally {
+        setProfileLoading(false);
       }
     };
 
-    loadPropertyData();
-  }, [property]);
+    loadData();
+  }, [user, property]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -165,42 +199,41 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   };
 
   const uploadDocuments = async (propertyId: string) => {
-    const user = await supabase.auth.getUser();
-    if (!user.data.user) throw new Error('Usuario no autenticado');
-    
+    if (!user) throw new Error('Usuario no autenticado');
+
     const uploadedDocuments = [];
-    
+
     for (const document of documents) {
       const fileExt = document.name.split('.').pop();
-      const fileName = `${user.data.user.id}/${propertyId}/${Date.now()}.${fileExt}`;
-      
+      const fileName = `${user.id}/${propertyId}/${Date.now()}.${fileExt}`;
+
       const { error } = await supabase.storage
         .from('user-documents')
         .upload(fileName, document);
-      
+
       if (error) {
         throw new Error(`Error subiendo documento: ${error.message}`);
       }
-      
+
       // Guardar referencia en la base de datos
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
-          uploader_id: user.data.user.id,
+          uploader_id: user.id,
           related_entity_id: propertyId,
           related_entity_type: 'property_legal',
           document_type: document.name,
           storage_path: fileName,
           file_name: document.name
         });
-      
+
       if (dbError) {
         throw new Error(`Error guardando documento: ${dbError.message}`);
       }
-      
+
       uploadedDocuments.push(fileName);
     }
-    
+
     return uploadedDocuments;
   };
 
@@ -210,14 +243,40 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
     setError(null);
 
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
-        throw new Error('Usuario no autenticado');
+      // Verificar que el usuario esté autenticado
+      if (!user) {
+        throw new Error('Usuario no autenticado. Por favor, inicia sesión para continuar.');
+      }
+
+      if (authLoading) {
+        throw new Error('Cargando información del usuario. Por favor, espera un momento.');
+      }
+
+      // Validar campos requeridos
+      if (!formData.address_street || !formData.address_number || !formData.address_commune || !formData.address_region) {
+        throw new Error('Por favor, completa todos los campos de dirección requeridos.');
+      }
+
+      if (!formData.price_clp || !formData.bedrooms || !formData.bathrooms || !formData.surface_m2 || !formData.description) {
+        throw new Error('Por favor, completa todos los campos obligatorios de la propiedad.');
+      }
+
+      // Verificar si ya existe una propiedad en esta dirección (solo para nuevas propiedades)
+      if (!property) {
+        const addressExists = await checkAddressExists(
+          formData.address_street.trim(),
+          formData.address_number.trim(),
+          formData.address_department?.trim() || null
+        );
+
+        if (addressExists) {
+          throw new Error('Ya existe una propiedad publicada en esta dirección. Por favor, verifica la dirección o contacta al propietario si es tu propiedad.');
+        }
       }
 
       // Objeto para la tabla 'properties'
       const propertyData = {
-        owner_id: user.data.user.id,
+        owner_id: user.id,
         listing_type: formData.listing_type,
         address_street: formData.address_street,
         address_number: formData.address_number,
@@ -283,7 +342,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
       const { error: ownerError } = await supabase
         .from('profiles')
         .upsert({
-          id: user.data.user.id,
+          id: user.id,
           ...ownerData
         });
 
@@ -294,11 +353,87 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
 
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      console.error('Error al publicar propiedad:', err);
+      let errorMessage = 'Error desconocido al publicar la propiedad';
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  // Si está cargando la autenticación o el perfil, mostrar loading
+  if (authLoading || profileLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              {authLoading ? 'Verificando autenticación...' : 'Cargando tu perfil...'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Si el perfil no está completo, mostrar mensaje de advertencia
+  if (!profileComplete) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+        <div className="text-center py-12">
+          <div className="text-amber-500 mb-4">
+            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Perfil Incompleto</h2>
+          <p className="text-gray-600 mb-6">
+            Para publicar una propiedad, primero debes completar tu perfil con tu nombre y RUT.
+            Esta información es necesaria para verificar tu identidad como propietario.
+          </p>
+          <button
+            onClick={() => window.location.href = '/profile'}
+            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Completar Mi Perfil
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay usuario autenticado, mostrar mensaje
+  if (!user) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+        <div className="text-center py-12">
+          <div className="text-red-500 mb-4">
+            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Usuario no autenticado</h2>
+          <p className="text-gray-600 mb-6">
+            Debes iniciar sesión para publicar una propiedad.
+          </p>
+          <button
+            onClick={() => window.location.href = '/auth'}
+            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Ir a Iniciar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
@@ -308,11 +443,16 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
 
       {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className={`space-y-6 ${!user ? 'opacity-50 pointer-events-none' : ''}`}>
         {/* Tipo de Listado */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -512,9 +652,62 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           />
         </div>
 
-        {/* Datos del Propietario */}
+        {/* Información del Propietario Actual - Solo Lectura */}
+        {ownerProfile && (
+          <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-6">
+            <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Información del Propietario Actual
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-4 rounded-md border">
+                <p className="text-sm text-gray-600">Nombre Completo</p>
+                <p className="font-medium text-gray-900">
+                  {ownerProfile.first_name || 'No especificado'} {ownerProfile.paternal_last_name || ''} {ownerProfile.maternal_last_name || ''}
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-md border">
+                <p className="text-sm text-gray-600">RUT</p>
+                <p className="font-medium text-gray-900">{ownerProfile.rut || 'No especificado'}</p>
+              </div>
+
+              <div className="bg-white p-4 rounded-md border">
+                <p className="text-sm text-gray-600">Email</p>
+                <p className="font-medium text-gray-900">{ownerProfile.email || 'No especificado'}</p>
+              </div>
+
+              <div className="bg-white p-4 rounded-md border">
+                <p className="text-sm text-gray-600">Teléfono</p>
+                <p className="font-medium text-gray-900">{ownerProfile.phone || 'No especificado'}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-100 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>Nota:</strong> Esta es la información registrada en tu perfil. Si necesitas actualizar estos datos,
+                puedes hacerlo desde la sección de <a href="/profile" className="underline hover:text-blue-600">Mi Perfil</a>.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Actualizar Información del Propietario */}
         <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Datos del Propietario</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Actualizar Información del Propietario (Opcional)
+          </h3>
+
+          <p className="text-sm text-gray-600 mb-4">
+            Si deseas actualizar tu información personal mientras publicas esta propiedad, puedes hacerlo aquí.
+            De lo contrario, deja estos campos vacíos.
+          </p>
 
           <div className="space-y-4">
             {/* Campo para Nombres del Propietario */}
@@ -529,7 +722,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
                 value={formData.owner_first_name}
                 onChange={handleInputChange}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
+                placeholder="Deja vacío para mantener tu información actual"
               />
             </div>
 
@@ -545,7 +738,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
                 value={formData.owner_paternal_last_name}
                 onChange={handleInputChange}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
+                placeholder="Deja vacío para mantener tu información actual"
               />
             </div>
 
@@ -561,7 +754,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
                 value={formData.owner_maternal_last_name}
                 onChange={handleInputChange}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
+                placeholder="Deja vacío para mantener tu información actual"
               />
             </div>
 
@@ -580,7 +773,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
                   value={formData.owner_address_street}
                   onChange={handleInputChange}
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
+                  placeholder="Deja vacío para mantener tu información actual"
                 />
               </div>
 
@@ -595,14 +788,14 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
                   value={formData.owner_address_number}
                   onChange={handleInputChange}
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
+                  placeholder="Deja vacío para mantener tu información actual"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Comuna del Propietario *
+                    Comuna del Propietario
                   </label>
                   <input
                     type="text"
@@ -610,21 +803,20 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
                     value={formData.owner_address_commune}
                     onChange={handleInputChange}
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
+                    placeholder="Deja vacío para mantener tu información actual"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Región del Propietario *
+                    Región del Propietario
                   </label>
                   <select
                     name="owner_address_region"
                     value={formData.owner_address_region}
                     onChange={handleInputChange}
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
                   >
-                    <option value="">Seleccionar región</option>
+                    <option value="">Seleccionar región (mantener actual)</option>
                     {regions.map(region => (
                       <option key={region} value={region}>{region}</option>
                     ))}
@@ -675,17 +867,18 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             <button
               type="button"
               onClick={onCancel}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+              disabled={loading}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
           )}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !user || authLoading}
             className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Guardando...' : (property ? 'Actualizar' : 'Publicar')}
+            {loading ? 'Publicando...' : (property ? 'Actualizar Propiedad' : 'Publicar Propiedad')}
           </button>
         </div>
       </form>

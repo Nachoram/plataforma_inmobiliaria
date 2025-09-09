@@ -64,6 +64,16 @@ export interface Property {
   updated_at?: string;
   is_visible?: boolean;
   is_featured?: boolean;
+
+  // Campos adicionales para compatibilidad con el frontend
+  // Estos campos pueden venir de la base de datos o ser calculados
+  address?: string; // Campo calculado o alias
+  comuna?: string; // Alias para address_commune
+  region?: string; // Alias para address_region
+  type?: 'venta' | 'arriendo'; // Alias para listing_type
+  price?: number; // Alias para price_clp
+  surface?: number; // Alias para surface_m2
+  photos_urls?: string[] | null; // URLs de fotos de la propiedad
 }
 
 export interface Guarantor {

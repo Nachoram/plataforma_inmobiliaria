@@ -5,7 +5,7 @@ import { MapPin, Bed, Bath, Square, DollarSign, Building, Heart, TrendingUp, Mes
 interface Property {
   id: string;
   owner_id: string;
-  status: 'activa' | 'inactiva' | 'vendida' | 'alquilada';
+  status: 'disponible' | 'inactiva' | 'vendida' | 'alquilada' | 'pausada' | 'activa';
   listing_type: 'venta' | 'arriendo';
   address_street: string;
   address_number: string;

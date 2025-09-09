@@ -372,7 +372,7 @@ export const PropertyForm: React.FC = () => {
         bathrooms: parseInt(formData.bathrooms),
         surface: formData.surface ? parseInt(formData.surface) : 50,
         // Nota: photos_urls y documents_urls pueden no existir en la BD actual
-        status: 'active'
+        status: 'disponible'
       };
 
       console.log('🏠 Enviando datos de propiedad:', propertyData);

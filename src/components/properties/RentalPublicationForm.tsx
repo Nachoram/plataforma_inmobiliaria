@@ -321,7 +321,7 @@ export const RentalPublicationForm: React.FC = () => {
       const propertyData = {
         owner_id: user.id,
         listing_type: 'arriendo' as const,
-        status: 'activa' as const,
+        status: 'disponible' as const,
         address_street: formData.address_street,
         address_number: formData.address_number,
         address_department: formData.address_department || null,

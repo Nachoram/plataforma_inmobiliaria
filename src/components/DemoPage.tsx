@@ -27,7 +27,7 @@ const DemoPage: React.FC = () => {
   const sampleProperty = {
     id: 'sample-property-id',
     owner_id: 'sample-owner-id',
-    status: 'activa' as const,
+    status: 'disponible' as const,
     listing_type: 'arriendo' as const,
     address_street: 'Av. Providencia',
     address_number: '1234',

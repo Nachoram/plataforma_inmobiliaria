@@ -29,7 +29,7 @@ export const PublicPropertiesPage: React.FC = () => {
       const { data, error } = await supabase
         .from('properties')
         .select('*')
-        .eq('status', 'active')
+        .eq('status', 'disponible')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

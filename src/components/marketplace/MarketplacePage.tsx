@@ -36,18 +36,53 @@ export const MarketplacePage: React.FC = () => {
     applyFilters();
   }, [properties, filters]);
 
+  // Función para validar propiedades con datos mínimos requeridos
+  const isValidProperty = (property: any): boolean => {
+    return (
+      property &&
+      typeof property === 'object' &&
+      property.id &&
+      typeof property.id === 'string' &&
+      property.owner_id &&
+      typeof property.owner_id === 'string'
+    );
+  };
+
   const fetchProperties = async () => {
     try {
       const { data, error } = await supabase
         .from('properties')
         .select('*')
-        .eq('status', 'active')
+        .eq('status', 'disponible')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProperties(data || []);
+
+      // Filtrar propiedades inválidas y agregar valores por defecto para campos opcionales
+      const validProperties = (data || [])
+        .filter(isValidProperty)
+        .map(property => ({
+          ...property,
+          // Asegurar valores por defecto para campos opcionales
+          address: property.address || property.address_street || 'Dirección no disponible',
+          comuna: property.comuna || property.address_commune || 'Comuna no disponible',
+          region: property.region || property.address_region || 'Región no disponible',
+          type: property.type || property.listing_type || 'venta', // valor por defecto
+          price: typeof property.price === 'number' ? property.price :
+                 typeof property.price_clp === 'number' ? property.price_clp : null,
+          bedrooms: typeof property.bedrooms === 'number' ? property.bedrooms : null,
+          bathrooms: typeof property.bathrooms === 'number' ? property.bathrooms : null,
+          surface: typeof property.surface === 'number' ? property.surface :
+                   typeof property.surface_m2 === 'number' ? property.surface_m2 : null,
+          photos_urls: Array.isArray(property.photos_urls) ? property.photos_urls : [],
+          description: property.description || null,
+        }));
+
+      console.log(`📊 Fetched ${validProperties.length} valid properties out of ${(data || []).length} total`);
+      setProperties(validProperties);
     } catch (error) {
       console.error('Error fetching properties:', error);
+      setProperties([]); // Asegurar que properties sea un array vacío en caso de error
     } finally {
       setLoading(false);
     }
@@ -72,47 +107,69 @@ export const MarketplacePage: React.FC = () => {
   const applyFilters = () => {
     let filtered = [...properties];
 
-    // Search filter
+    // Search filter - Safe access with null checks
     if (filters.search) {
-      filtered = filtered.filter(property =>
-        property.address.toLowerCase().includes(filters.search.toLowerCase()) ||
-        property.comuna.toLowerCase().includes(filters.search.toLowerCase()) ||
-        property.region.toLowerCase().includes(filters.search.toLowerCase()) ||
-        property.description?.toLowerCase().includes(filters.search.toLowerCase())
-      );
+      const searchTerm = filters.search.toLowerCase();
+      filtered = filtered.filter(property => {
+        const address = property.address || '';
+        const comuna = property.comuna || '';
+        const region = property.region || '';
+        const description = property.description || '';
+
+        return address.toLowerCase().includes(searchTerm) ||
+               comuna.toLowerCase().includes(searchTerm) ||
+               region.toLowerCase().includes(searchTerm) ||
+               description.toLowerCase().includes(searchTerm);
+      });
     }
 
-    // Type filter
+    // Type filter - Safe access
     if (filters.type) {
-      filtered = filtered.filter(property => property.type === filters.type);
+      filtered = filtered.filter(property => property.type && property.type === filters.type);
     }
 
-    // Comuna filter
+    // Comuna filter - Safe access
     if (filters.comuna) {
+      const comunaFilter = filters.comuna.toLowerCase();
       filtered = filtered.filter(property =>
-        property.comuna.toLowerCase().includes(filters.comuna.toLowerCase())
+        property.comuna && property.comuna.toLowerCase().includes(comunaFilter)
       );
     }
 
-    // Price range filter
+    // Price range filter - Safe access with number validation
     if (filters.minPrice) {
-      filtered = filtered.filter(property => property.price >= parseFloat(filters.minPrice));
+      const minPrice = parseFloat(filters.minPrice);
+      filtered = filtered.filter(property =>
+        typeof property.price === 'number' && property.price >= minPrice
+      );
     }
     if (filters.maxPrice) {
-      filtered = filtered.filter(property => property.price <= parseFloat(filters.maxPrice));
+      const maxPrice = parseFloat(filters.maxPrice);
+      filtered = filtered.filter(property =>
+        typeof property.price === 'number' && property.price <= maxPrice
+      );
     }
 
-    // Bedrooms filter
+    // Bedrooms filter - Safe access with number validation
     if (filters.bedrooms) {
-      filtered = filtered.filter(property => property.bedrooms >= parseInt(filters.bedrooms));
+      const minBedrooms = parseInt(filters.bedrooms);
+      filtered = filtered.filter(property =>
+        typeof property.bedrooms === 'number' && property.bedrooms >= minBedrooms
+      );
     }
 
-    // Surface filter
+    // Surface filter - Safe access with number validation
     if (filters.minSurface) {
-      filtered = filtered.filter(property => property.surface >= parseInt(filters.minSurface));
+      const minSurface = parseInt(filters.minSurface);
+      filtered = filtered.filter(property =>
+        typeof property.surface === 'number' && property.surface >= minSurface
+      );
     }
     if (filters.maxSurface) {
-      filtered = filtered.filter(property => property.surface <= parseInt(filters.maxSurface));
+      const maxSurface = parseInt(filters.maxSurface);
+      filtered = filtered.filter(property =>
+        typeof property.surface === 'number' && property.surface <= maxSurface
+      );
     }
 
     setFilteredProperties(filtered);
@@ -131,7 +188,10 @@ export const MarketplacePage: React.FC = () => {
     });
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | undefined | null) => {
+    if (typeof price !== 'number' || isNaN(price)) {
+      return 'Precio no disponible';
+    }
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
       currency: 'CLP'
@@ -139,7 +199,11 @@ export const MarketplacePage: React.FC = () => {
   };
 
   const getUniqueValues = (field: keyof Property) => {
-    return [...new Set(properties.map(p => p[field] as string))].filter(Boolean);
+    return [...new Set(
+      properties
+        .map(p => p[field] as string)
+        .filter(value => value && typeof value === 'string' && value.trim() !== '')
+    )];
   };
 
   const handleMakeOffer = (property: Property) => {
@@ -316,10 +380,10 @@ export const MarketplacePage: React.FC = () => {
             <div key={property.id} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
               {/* Property Image */}
               <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {property.photos_urls && property.photos_urls.length > 0 ? (
-                  <img 
-                    src={property.photos_urls[0]} 
-                    alt={property.address}
+                {property.photos_urls && Array.isArray(property.photos_urls) && property.photos_urls.length > 0 ? (
+                  <img
+                    src={property.photos_urls[0]}
+                    alt={property.address || 'Propiedad'}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
@@ -348,11 +412,14 @@ export const MarketplacePage: React.FC = () => {
                 {/* Type Badge */}
                 <div className="absolute top-3 left-3">
                   <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    property.type === 'venta' 
-                      ? 'bg-blue-100 text-blue-800' 
+                    property.type === 'venta'
+                      ? 'bg-blue-100 text-blue-800'
                       : 'bg-emerald-100 text-emerald-800'
                   }`}>
-                    {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
+                    {property.type
+                      ? property.type.charAt(0).toUpperCase() + property.type.slice(1)
+                      : 'Tipo desconocido'
+                    }
                   </span>
                 </div>
               </div>
@@ -361,11 +428,11 @@ export const MarketplacePage: React.FC = () => {
               <div className="p-4">
                 <div className="mb-2">
                   <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 mb-1">
-                    {property.address}
+                    {property.address || 'Dirección no disponible'}
                   </h3>
                   <div className="flex items-center text-sm text-gray-500">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{property.comuna}, {property.region}</span>
+                    <span>{property.comuna || 'Comuna no disponible'}, {property.region || 'Región no disponible'}</span>
                   </div>
                 </div>
 
@@ -379,13 +446,13 @@ export const MarketplacePage: React.FC = () => {
                   <div className="flex space-x-4">
                     <div className="flex items-center">
                       <Bed className="h-4 w-4 mr-1" />
-                      <span>{property.bedrooms}</span>
+                      <span>{typeof property.bedrooms === 'number' ? property.bedrooms : 'N/A'}</span>
                     </div>
                     <div className="flex items-center">
                       <Bath className="h-4 w-4 mr-1" />
-                      <span>{property.bathrooms}</span>
+                      <span>{typeof property.bathrooms === 'number' ? property.bathrooms : 'N/A'}</span>
                     </div>
-                    {property.surface && (
+                    {typeof property.surface === 'number' && property.surface > 0 && (
                       <div className="flex items-center">
                         <Square className="h-4 w-4 mr-1" />
                         <span>{property.surface}m²</span>
@@ -412,13 +479,21 @@ export const MarketplacePage: React.FC = () => {
                         <TrendingUp className="h-4 w-4" />
                         <span>Ofertar</span>
                       </button>
-                    ) : (
+                    ) : property.type === 'arriendo' ? (
                       <button
                         onClick={() => handleApply(property)}
                         className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors text-sm"
                       >
                         <MessageSquare className="h-4 w-4" />
                         <span>Postular</span>
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="flex items-center justify-center space-x-2 bg-gray-400 text-white px-4 py-2 rounded-lg font-medium text-sm cursor-not-allowed"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        <span>Tipo desconocido</span>
                       </button>
                     )}
                     

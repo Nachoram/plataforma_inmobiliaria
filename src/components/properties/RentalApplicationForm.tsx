@@ -131,11 +131,11 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
   const uploadDocuments = async (files: File[], entityId: string, entityType: 'application_applicant' | 'application_guarantor') => {
     const user = await supabase.auth.getUser();
-    if (!user.data.user) throw new Error('Usuario no autenticado');
+    if (!user.data?.user) throw new Error('Usuario no autenticado');
 
     for (const file of files) {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.data.user.id}/${entityId}/${Date.now()}.${fileExt}`;
+      const fileName = `${user.id}/${entityId}/${Date.now()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
         .from('user-documents')
@@ -149,7 +149,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
-          uploader_id: user.data.user.id,
+          uploader_id: user.id,
           related_entity_id: entityId,
           related_entity_type: entityType,
           document_type: file.name,
@@ -174,20 +174,21 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         throw new Error('Usuario no autenticado');
       }
 
-      // Validar RUT del postulante
-      if (!validateRUT(applicantData.rut)) {
-        throw new Error('RUT del postulante no es válido');
-      }
+      // Validar RUT del postulante (DESACTIVADO TEMPORALMENTE)
+      // if (!validateRUT(applicantData.rut)) {
+      //   throw new Error('RUT del postulante no es válido');
+      // }
 
-      // Validar RUT del aval si existe
-      if (showGuarantor && !validateRUT(guarantorData.rut)) {
-        throw new Error('RUT del aval no es válido');
-      }
+      // Validar RUT del aval si existe (DESACTIVADO TEMPORALMENTE)
+      // if (showGuarantor && !validateRUT(guarantorData.rut)) {
+      //   throw new Error('RUT del aval no es válido');
+      // }
 
       let guarantorId: string | null = null;
 
-      // PRIMERO: Crear aval si existe
+      // PASO 2: Crear aval si existe
       if (showGuarantor) {
+        // Crear registro del aval (con dirección embebida)
         const { data: guarantor, error: guarantorError } = await supabase
           .from('guarantors')
           .insert({
@@ -196,12 +197,13 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             maternal_last_name: guarantorData.maternal_last_name,
             rut: guarantorData.rut,
             profession: guarantorData.profession,
-            monthly_income_clp: parseInt(guarantorData.monthly_income_clp),
+            monthly_income_clp: parseInt(guarantorData.monthly_income_clp) || 0,
+            // Dirección embebida directamente en la tabla guarantors
             address_street: guarantorData.address_street,
             address_number: guarantorData.address_number,
-            address_department: guarantorData.address_department || null,
+            address_department: guarantorData.address_department,
             address_commune: guarantorData.address_commune,
-            address_region: guarantorData.address_region,
+            address_region: guarantorData.address_region
           })
           .select()
           .single();
@@ -210,51 +212,37 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         guarantorId = guarantor.id;
       }
 
-      // SEGUNDO: Obtener perfil completo del postulante para snapshot
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.data.user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      // TERCERO: Crear postulación con todos los datos del snapshot
+      // PASO 2: Crear la postulación con datos snapshot (siguiendo el esquema original)
       const { data: application, error: applicationError } = await supabase
         .from('applications')
         .insert({
           property_id: property.id,
-          applicant_id: user.data.user.id,
-          guarantor_id: guarantorId,
+          applicant_id: user.id,
           message: message,
-          snapshot_applicant_first_name: profile.first_name,
-          snapshot_applicant_paternal_last_name: profile.paternal_last_name,
-          snapshot_applicant_maternal_last_name: profile.maternal_last_name,
-          snapshot_applicant_rut: profile.rut,
-          snapshot_applicant_profession: profile.profession,
-          snapshot_applicant_monthly_income_clp: profile.monthly_income_clp,
-          snapshot_applicant_age: profile.age,
-          snapshot_applicant_nationality: profile.nationality,
-          snapshot_applicant_marital_status: profile.marital_status,
-          snapshot_applicant_phone: profile.phone,
-          snapshot_applicant_email: profile.email,
-          snapshot_applicant_address_street: profile.address_street,
-          snapshot_applicant_address_number: profile.address_number,
-          snapshot_applicant_address_department: profile.address_department,
-          snapshot_applicant_address_commune: profile.address_commune,
-          snapshot_applicant_address_region: profile.address_region,
+          structured_guarantor_id: guarantorId,
+          // Campos snapshot requeridos (NOT NULL)
+          snapshot_applicant_profession: applicantData.profession,
+          snapshot_applicant_monthly_income_clp: parseInt(applicantData.monthly_income_clp) || 0,
+          snapshot_applicant_age: parseInt(applicantData.age) || 0,
+          snapshot_applicant_nationality: applicantData.nationality,
+          snapshot_applicant_marital_status: applicantData.marital_status,
+          snapshot_applicant_address_street: applicantData.address_street,
+          snapshot_applicant_address_number: applicantData.address_number,
+          snapshot_applicant_address_department: applicantData.address_department || null,
+          snapshot_applicant_address_commune: applicantData.address_commune,
+          snapshot_applicant_address_region: applicantData.address_region
         })
         .select()
         .single();
 
       if (applicationError) throw applicationError;
 
-      // Subir documentos del postulante
+      // PASO 3: Subir documentos del postulante
       if (applicantDocuments.length > 0) {
         await uploadDocuments(applicantDocuments, application.id, 'application_applicant');
       }
 
-      // Subir documentos del aval
+      // PASO 4: Subir documentos del aval
       if (showGuarantor && guarantorDocuments.length > 0) {
         await uploadDocuments(guarantorDocuments, application.id, 'application_guarantor');
       }

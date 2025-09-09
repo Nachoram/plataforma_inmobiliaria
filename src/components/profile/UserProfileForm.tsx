@@ -122,11 +122,11 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
 
   const uploadDocuments = async () => {
     const user = await supabase.auth.getUser();
-    if (!user.data.user) throw new Error('Usuario no autenticado');
+    if (!user.data?.user) throw new Error('Usuario no autenticado');
     
     for (const file of newDocuments) {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.data.user.id}/profile/${Date.now()}.${fileExt}`;
+      const fileName = `${user.id}/profile/${Date.now()}.${fileExt}`;
       
       const { data, error } = await supabase.storage
         .from('user-documents')
@@ -140,8 +140,8 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
-          uploader_id: user.data.user.id,
-          related_entity_id: user.data.user.id,
+          uploader_id: user.id,
+          related_entity_id: user.id,
           related_entity_type: 'application_applicant', // Usamos este tipo para documentos de perfil
           document_type: file.name,
           storage_path: fileName,
@@ -228,7 +228,7 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
       const { error } = await supabase
         .from('profiles')
         .upsert({
-          id: user.data.user.id,
+          id: user.id,
           ...profileData
         });
 

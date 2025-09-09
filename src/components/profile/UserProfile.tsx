@@ -226,9 +226,9 @@ export const UserProfile: React.FC = () => {
   const fetchUserProfile = async () => {
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('id', user?.id)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -419,9 +419,9 @@ export const UserProfile: React.FC = () => {
       };
 
       const { error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .upsert(profileData, {
-          onConflict: 'user_id'
+          onConflict: 'id'
         });
       
       if (error) throw error;

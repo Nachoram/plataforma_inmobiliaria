@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 // 1. Obtener las variables de entorno
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// SOLUCIÓN TEMPORAL: Variables hardcodeadas hasta resolver el problema con .env
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://phnkervuiijqmapgswkc.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNzQ2MjUsImV4cCI6MjA3MjY1MDYyNX0.va6jOCJN6MnbHSbbDFJaO2rN_3oCSVQlaYaPkPmXS2w";
 
 // Añade logs detallados para depurar
 console.log('🔧 Supabase URL:', supabaseUrl);

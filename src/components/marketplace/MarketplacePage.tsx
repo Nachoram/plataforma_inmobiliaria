@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search, Filter, MapPin, Bed, Bath, Square, DollarSign, Building, Heart, MessageSquare, TrendingUp, Eye } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { OfferModal } from './OfferModal';
-import { ApplicationModal } from './ApplicationModal';
+import RentalApplicationForm from '../properties/RentalApplicationForm';
 import { useAuth } from '../../hooks/useAuth';
 
 export const MarketplacePage: React.FC = () => {
@@ -12,7 +12,7 @@ export const MarketplacePage: React.FC = () => {
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOfferModal, setShowOfferModal] = useState(false);
-  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   
@@ -221,7 +221,7 @@ export const MarketplacePage: React.FC = () => {
       return;
     }
     setSelectedProperty(property);
-    setShowApplicationModal(true);
+    setShowApplicationForm(true);
   };
 
   const onOfferSuccess = () => {
@@ -231,7 +231,7 @@ export const MarketplacePage: React.FC = () => {
   };
 
   const onApplicationSuccess = () => {
-    setShowApplicationModal(false);
+    setShowApplicationForm(false);
     setSelectedProperty(null);
     // Opcional: refrescar propiedades
   };
@@ -521,12 +521,16 @@ export const MarketplacePage: React.FC = () => {
         />
       )}
 
-      {showApplicationModal && selectedProperty && (
-        <ApplicationModal
-          property={selectedProperty}
-          onClose={() => setShowApplicationModal(false)}
-          onSuccess={onApplicationSuccess}
-        />
+      {showApplicationForm && selectedProperty && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <RentalApplicationForm
+              property={selectedProperty}
+              onSuccess={onApplicationSuccess}
+              onCancel={() => setShowApplicationForm(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

@@ -26,7 +26,7 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
       newErrors.offer_amount = 'El monto de la oferta es requerido';
     } else if (parseFloat(formData.offer_amount) <= 0) {
       newErrors.offer_amount = 'El monto debe ser mayor a 0';
-    } else if (parseFloat(formData.offer_amount) > property.price * 1.5) {
+    } else if (parseFloat(formData.offer_amount) > property.price_clp * 1.5) {
       newErrors.offer_amount = 'El monto parece muy alto comparado con el precio de lista';
     }
 
@@ -122,8 +122,8 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
   };
 
   const calculatePercentage = () => {
-    if (!formData.offer_amount || !property.price) return null;
-    const percentage = (parseFloat(formData.offer_amount) / property.price) * 100;
+    if (!formData.offer_amount || !property.price_clp) return null;
+    const percentage = (parseFloat(formData.offer_amount) / property.price_clp) * 100;
     return percentage.toFixed(1);
   };
 
@@ -148,11 +148,11 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
 
         {/* Property Info */}
         <div className="p-6 bg-gray-50 border-b">
-          <h3 className="font-medium text-gray-900 mb-1">{property.address}</h3>
-          <p className="text-sm text-gray-600 mb-2">{property.comuna}, {property.region}</p>
+          <h3 className="font-medium text-gray-900 mb-1">{property.address_street} {property.address_number}</h3>
+          <p className="text-sm text-gray-600 mb-2">{property.address_commune}, {property.address_region}</p>
           <div className="flex items-center text-lg font-bold text-gray-900">
             <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-            <span>Precio: {formatPrice(property.price)}</span>
+            <span>Precio: {formatPrice(property.price_clp)}</span>
           </div>
         </div>
 

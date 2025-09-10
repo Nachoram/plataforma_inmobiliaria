@@ -208,8 +208,47 @@ export const SupabaseDiagnostic: React.FC = () => {
       }
     }, 2500);
 
-    // Test 6: Storage
-    const storageIndex = 5;
+    // Test 6: Order Query Test
+    const orderIndex = 5;
+    addResult({
+      test: 'Prueba de Ordenamiento',
+      status: 'pending',
+      message: 'Verificando sintaxis de ordenamiento...'
+    });
+
+    setTimeout(async () => {
+      try {
+        // Test the exact same query that might be causing issues
+        const { data, error } = await supabase
+          .from('offers')
+          .select('id, created_at')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          updateResult(orderIndex, {
+            status: 'error',
+            message: '❌ Error en query de ordenamiento',
+            details: `Error: ${error.message}\nCódigo: ${error.code}\nDetalles: ${error.details || 'Sin detalles'}`
+          });
+        } else {
+          updateResult(orderIndex, {
+            status: 'success',
+            message: '✅ Query de ordenamiento funcionando',
+            details: `Query ejecutada correctamente. Registros encontrados: ${data?.length || 0}`
+          });
+        }
+      } catch (error: any) {
+        updateResult(orderIndex, {
+          status: 'error',
+          message: '❌ Error al ejecutar query de ordenamiento',
+          details: error.message
+        });
+      }
+    }, 3000);
+
+    // Test 7: Storage
+    const storageIndex = 6;
     addResult({
       test: 'Sistema de Storage',
       status: 'pending',
@@ -240,12 +279,12 @@ export const SupabaseDiagnostic: React.FC = () => {
           details: error.message
         });
       }
-    }, 3000);
+    }, 3500);
 
     // Finalizar diagnóstico
     setTimeout(() => {
       setRunning(false);
-    }, 3500);
+    }, 4000);
   };
 
   const getStatusIcon = (status: string) => {

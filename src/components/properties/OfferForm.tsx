@@ -39,7 +39,7 @@ export const OfferForm: React.FC<OfferFormProps> = ({
         .from('offers')
         .insert({
           property_id: propertyId,
-          buyer_id: user.id,
+          offerer_id: user.id,
           offer_amount: parseFloat(offerAmount),
           message: message.trim() || null,
         });

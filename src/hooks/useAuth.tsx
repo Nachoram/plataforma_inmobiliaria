@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { useAuthSession } from './useAuthSession';
@@ -43,8 +43,17 @@ const authLogger = {
 
 // Hook separado para manejo de errores de autenticación
 export const useAuthErrorHandler = () => {
-  const [error, setError] = useState<AuthErrorState | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const [error, setErrorState] = useState<AuthErrorState | null>(null);
+  const [retryCount, setRetryCountState] = useState(0);
+
+  // Memoizar setters para evitar recreación en cada render
+  const setError = useCallback((error: AuthErrorState | null) => {
+    setErrorState(error);
+  }, []);
+
+  const setRetryCount = useCallback((count: number | ((prev: number) => number)) => {
+    setRetryCountState(count);
+  }, []);
 
   const getAuthErrorType = (error: AuthError | Error): AuthErrorType => {
     const message = error.message?.toLowerCase() || '';
@@ -62,7 +71,7 @@ export const useAuthErrorHandler = () => {
     return AuthErrorType.UNKNOWN_ERROR;
   };
 
-  const handleAuthError = (error: AuthError | Error, context: string) => {
+  const handleAuthError = useCallback((error: AuthError | Error, context: string) => {
     const errorType = getAuthErrorType(error);
     const errorState: AuthErrorState = {
       type: errorType,
@@ -73,12 +82,12 @@ export const useAuthErrorHandler = () => {
 
     authLogger.error(`${context}: ${error.message}`, error);
     setError(errorState);
-  };
+  }, [retryCount, setError]);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
     setRetryCount(0);
-  };
+  }, [setError, setRetryCount]);
 
   return {
     error,
@@ -103,7 +112,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Usar hooks separados para responsabilidades específicas
-  const { user, loading, setUser, refreshSession, getInitialSession } = useAuthSession();
+  const { user, loading, setUser, setLoading, refreshSession, getInitialSession } = useAuthSession();
   const { error, retryCount, handleAuthError, clearError, setRetryCount } = useAuthErrorHandler();
 
   // Función para reintentar
@@ -113,7 +122,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev: number) => prev + 1);
     authLogger.info(`Retrying operation (attempt ${retryCount + 1}/3)`);
 
     // Esperar antes de reintentar

@@ -4,8 +4,17 @@ import { supabase } from '../lib/supabase';
 
 // Hook separado para manejo de sesión de autenticación
 export const useAuthSession = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUserState] = useState<User | null>(null);
+  const [loading, setLoadingState] = useState(true);
+
+  // Memoizar setters para evitar recreación en cada render
+  const setUser = useCallback((user: User | null) => {
+    setUserState(user);
+  }, []);
+
+  const setLoading = useCallback((loading: boolean) => {
+    setLoadingState(loading);
+  }, []);
 
   // Función para refrescar sesión con manejo mejorado de errores
   const refreshSession = useCallback(async (): Promise<void> => {

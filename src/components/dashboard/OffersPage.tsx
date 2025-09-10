@@ -6,16 +6,16 @@ import { useAuth } from '../../hooks/useAuth';
 interface OfferWithDetails {
   id: string;
   property_id: string;
-  buyer_id: string;
+  offerer_id: string;
   offer_amount: number;
   message: string | null;
   status: 'pendiente' | 'aceptada' | 'rechazada';
   created_at: string;
   property: {
-    address: string;
-    comuna: string;
-    price: number;
-    type: string;
+    address_street: string;
+    address_commune: string;
+    price_clp: number;
+    listing_type: string;
     photos_urls?: string[];
   };
   buyer?: {
@@ -46,10 +46,10 @@ export const OffersPage: React.FC = () => {
         .from('offers')
         .select(`
           *,
-          property:properties!inner(address, comuna, price, type, photos_urls),
-          buyer:profiles!offers_buyer_id_fkey(full_name, contact_email, contact_phone)
+          property:properties!inner(address_street, address_commune, price_clp, listing_type, photos_urls),
+          buyer:profiles!offers_offerer_id_fkey(full_name, contact_email, contact_phone)
         `)
-        .eq('properties.owner_id', user?.id)
+        .eq('property.owner_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -67,9 +67,9 @@ export const OffersPage: React.FC = () => {
         .from('offers')
         .select(`
           *,
-          property:properties!inner(address, comuna, price, type, photos_urls)
+          property:properties!inner(address_street, address_commune, price_clp, listing_type, photos_urls)
         `)
-        .eq('buyer_id', user?.id)
+        .eq('offerer_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -205,7 +205,7 @@ export const OffersPage: React.FC = () => {
         </div>
       ) : (
         receivedOffers.map((offer) => {
-          const offerPercentage = calculateOfferPercentage(offer.offer_amount, offer.property.price);
+          const offerPercentage = calculateOfferPercentage(offer.offer_amount, offer.property.price_clp);
           const isGoodOffer = parseFloat(offerPercentage) >= 95;
           const isReasonableOffer = parseFloat(offerPercentage) >= 85;
 
@@ -215,11 +215,11 @@ export const OffersPage: React.FC = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {offer.property.address}
+                      {offer.property.address_street}
                     </h3>
                     <div className="flex items-center text-sm text-gray-500 mb-2">
                       <MapPin className="h-4 w-4 mr-1" />
-                      <span>{offer.property.city}</span>
+                      <span>{offer.property.address_commune}</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -234,7 +234,7 @@ export const OffersPage: React.FC = () => {
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h4 className="font-medium text-gray-900 mb-2">Precio de Venta</h4>
                     <div className="text-lg font-bold text-gray-900">
-                      {formatPrice(offer.property.price)}
+                      {formatPrice(offer.property.price_clp)}
                     </div>
                   </div>
                   <div className={`p-4 rounded-lg ${
@@ -333,7 +333,7 @@ export const OffersPage: React.FC = () => {
         </div>
       ) : (
         sentOffers.map((offer) => {
-          const offerPercentage = calculateOfferPercentage(offer.offer_amount, offer.property.price);
+          const offerPercentage = calculateOfferPercentage(offer.offer_amount, offer.property.price_clp);
 
           return (
             <div key={offer.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -341,11 +341,11 @@ export const OffersPage: React.FC = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {offer.property.address}
+                      {offer.property.address_street}
                     </h3>
                     <div className="flex items-center text-sm text-gray-500 mb-2">
                       <MapPin className="h-4 w-4 mr-1" />
-                      <span>{offer.property.city}</span>
+                      <span>{offer.property.address_commune}</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -360,9 +360,9 @@ export const OffersPage: React.FC = () => {
                 <div className="flex items-start space-x-4 mb-4">
                   <div className="w-24 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                     {offer.property.photos_urls.length > 0 ? (
-                      <img 
-                        src={offer.property.photos_urls[0]} 
-                        alt={offer.property.address}
+                      <img
+                        src={offer.property.photos_urls[0]}
+                        alt={offer.property.address_street}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -377,7 +377,7 @@ export const OffersPage: React.FC = () => {
                       <div>
                         <div className="text-sm text-gray-500">Precio de venta</div>
                         <div className="text-lg font-bold text-gray-900">
-                          {formatPrice(offer.property.price)}
+                          {formatPrice(offer.property.price_clp)}
                         </div>
                       </div>
                       <div>

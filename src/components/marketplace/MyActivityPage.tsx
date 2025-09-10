@@ -12,11 +12,11 @@ interface OfferWithProperty {
   status: 'pendiente' | 'aceptada' | 'rechazada';
   created_at: string;
   properties: {
-    address: string;
-    comuna: string;
-    region: string;
-    price: number;
-    type: string;
+    address_street: string;
+    address_commune: string;
+    address_region: string;
+    price_clp: number;
+    listing_type: string;
     photos_urls?: string[];
   };
 }
@@ -28,11 +28,11 @@ interface ApplicationWithProperty {
   status: 'pendiente' | 'aprobada' | 'rechazada';
   created_at: string;
   properties: {
-    address: string;
-    comuna: string;
-    region: string;
-    price: number;
-    type: string;
+    address_street: string;
+    address_commune: string;
+    address_region: string;
+    price_clp: number;
+    listing_type: string;
     photos_urls?: string[];
   };
 }
@@ -58,9 +58,9 @@ export const MyActivityPage: React.FC = () => {
         .from('offers')
         .select(`
           *,
-          properties (address, comuna, region, price, type, photos_urls)
+          properties (address_street, address_commune, address_region, price_clp, listing_type, photos_urls)
         `)
-        .eq('buyer_id', user?.id)
+        .eq('offerer_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (offersError) throw offersError;
@@ -70,7 +70,7 @@ export const MyActivityPage: React.FC = () => {
         .from('applications')
         .select(`
           *,
-          properties (address, comuna, region, price, type, photos_urls)
+          properties (address_street, address_commune, address_region, price_clp, listing_type, photos_urls)
         `)
         .eq('applicant_id', user?.id)
         .order('created_at', { ascending: false });
@@ -200,16 +200,16 @@ export const MyActivityPage: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900 mb-1">
-                          {offer.properties.address}
+                          {offer.properties.address_street}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
-                          {offer.properties.comuna}, {offer.properties.region}
+                          {offer.properties.address_commune}, {offer.properties.address_region}
                         </p>
                         
                         <div className="flex items-center space-x-4 mb-3">
                           <div className="flex items-center text-sm">
                             <DollarSign className="h-4 w-4 mr-1 text-green-600" />
-                            <span>Precio: {formatPrice(offer.properties.price)}</span>
+                            <span>Precio: {formatPrice(offer.properties.price_clp)}</span>
                           </div>
                           <div className="flex items-center text-sm">
                             <TrendingUp className="h-4 w-4 mr-1 text-blue-600" />
@@ -267,15 +267,15 @@ export const MyActivityPage: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900 mb-1">
-                          {application.properties.address}
+                          {application.properties.address_street}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
-                          {application.properties.comuna}, {application.properties.region}
+                          {application.properties.address_commune}, {application.properties.address_region}
                         </p>
                         
                         <div className="flex items-center text-sm mb-3">
                           <DollarSign className="h-4 w-4 mr-1 text-emerald-600" />
-                          <span>Arriendo: {formatPrice(application.properties.price)}/mes</span>
+                          <span>Arriendo: {formatPrice(application.properties.price_clp)}/mes</span>
                         </div>
 
                         <p className="text-sm text-gray-700 mb-2">

@@ -11,10 +11,10 @@ interface ApplicationWithDetails {
   status: 'pendiente' | 'aprobada' | 'rechazada';
   created_at: string;
   properties: {
-    address: string;
-    comuna: string;
-    price: number;
-    type: string;
+    address_street: string;
+    address_commune: string;
+    price_clp: number;
+    listing_type: string;
     photos_urls?: string[];
   };
   profiles?: {
@@ -59,10 +59,10 @@ export const ApplicationsPage: React.FC = () => {
         .select(`
           *,
           properties!inner(
-            address,
-            comuna,
-            price,
-            type,
+            address_street,
+            address_commune,
+            price_clp,
+            listing_type,
             photos_urls,
             owner_id
           ),
@@ -91,10 +91,10 @@ export const ApplicationsPage: React.FC = () => {
         .select(`
           *,
           properties(
-            address,
-            comuna,
-            price,
-            type,
+            address_street,
+            address_commune,
+            price_clp,
+            listing_type,
             photos_urls
           ),
           profiles(
@@ -179,10 +179,10 @@ export const ApplicationsPage: React.FC = () => {
             // Información de la propiedad
             property: {
               id: application.property_id,
-              address: application.properties.address,
-              comuna: application.properties.comuna,
-              price: application.properties.price,
-              type: application.properties.type,
+              address_street: application.properties.address_street,
+              address_commune: application.properties.address_commune,
+              price: application.properties.price_clp,
+              listing_type: application.properties.listing_type,
               photos_urls: application.properties.photos_urls || []
             },
             
@@ -451,13 +451,13 @@ export const ApplicationsPage: React.FC = () => {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {application.properties.address}
+                    {application.properties.address_street}
                   </h3>
                   <div className="flex items-center text-sm text-gray-500 mb-2">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{application.properties.comuna}</span>
+                    <span>{application.properties.address_commune}</span>
                     <span className="mx-2">•</span>
-                    <span>{formatPrice(application.properties.price)}/mes</span>
+                    <span>{formatPrice(application.properties.price_clp)}/mes</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -618,13 +618,13 @@ export const ApplicationsPage: React.FC = () => {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {application.properties.address}
+                    {application.properties.address_street}
                   </h3>
                   <div className="flex items-center text-sm text-gray-500 mb-2">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{application.properties.comuna}</span>
+                    <span>{application.properties.address_commune}</span>
                     <span className="mx-2">•</span>
-                    <span>{formatPrice(application.properties.price)}/mes</span>
+                    <span>{formatPrice(application.properties.price_clp)}/mes</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -641,7 +641,7 @@ export const ApplicationsPage: React.FC = () => {
                   {application.properties.photos_urls && application.properties.photos_urls.length > 0 ? (
                     <img 
                       src={application.properties.photos_urls[0]} 
-                      alt={application.properties.address}
+                      alt={application.properties.address_street}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -654,7 +654,7 @@ export const ApplicationsPage: React.FC = () => {
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 mb-1">Precio de arriendo mensual</div>
                   <div className="text-lg font-bold text-emerald-600">
-                    {formatPrice(application.properties.price)}
+                    {formatPrice(application.properties.price_clp)}
                   </div>
                 </div>
               </div>
@@ -740,7 +740,7 @@ export const ApplicationsPage: React.FC = () => {
               {/* Información de la Postulación */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold text-gray-900 mb-2">Postulación:</h3>
-                <p className="text-gray-700">{selectedApplication.properties.address}</p>
+                <p className="text-gray-700">{selectedApplication.properties.address_street} {selectedApplication.properties.address_number}</p>
                 <p className="text-sm text-gray-600">
                   Postulante: {selectedApplication.structured_applicant?.full_name || 
                               selectedApplication.profiles?.full_name || 

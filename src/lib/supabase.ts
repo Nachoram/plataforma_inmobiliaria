@@ -35,9 +35,21 @@ const validateEnvironmentVariables = () => {
 
 validateEnvironmentVariables();
 
-// 3. Crear y exportar el cliente de Supabase
+// 3. Crear y exportar el cliente de Supabase con configuración específica
 // Esta es la única exportación del archivo.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'plataforma-inmobiliaria'
+    }
+  }
+});
+
+// 4. Cliente de Supabase inicializado y listo para uso
+// La validación de entorno se realiza en main.tsx antes de cualquier inicialización
 
 // Database types - Nuevo esquema normalizado
 export interface Profile {

@@ -117,7 +117,7 @@ export const PropertyDetailsPage: React.FC = () => {
         .from('offers')
         .insert({
           property_id: property.id,
-          buyer_id: user.id,
+          offerer_id: user.id,
           offer_amount: parseFloat(offerAmount),
           message: message,
           status: 'pendiente'
@@ -228,15 +228,15 @@ export const PropertyDetailsPage: React.FC = () => {
             <div className="mb-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.address}</h1>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.address_street} {property.address_number}</h1>
                   <div className="flex items-center text-gray-600">
                     <MapPin className="h-5 w-5 mr-1" />
-                    <span>{property.comuna}, {property.region}</span>
+                    <span>{property.address_commune}, {property.address_region}</span>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold text-gray-900">
-                    {formatPrice(property.price)}
+                    {formatPrice(property.price_clp)}
                   </div>
                   <div className="text-sm text-gray-500">
                     {property.type === 'arriendo' ? 'por mes' : 'precio total'}
@@ -256,10 +256,10 @@ export const PropertyDetailsPage: React.FC = () => {
                   <div className="text-lg font-semibold text-gray-900">{property.bathrooms}</div>
                   <div className="text-sm text-gray-500">Baños</div>
                 </div>
-                {property.surface && (
+                {property.surface_m2 && (
                   <div className="text-center">
                     <Square className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                    <div className="text-lg font-semibold text-gray-900">{property.surface}</div>
+                    <div className="text-lg font-semibold text-gray-900">{property.surface_m2}</div>
                     <div className="text-sm text-gray-500">m²</div>
                   </div>
                 )}

@@ -112,7 +112,7 @@ export const PropertyForm: React.FC = () => {
     common_expenses: '',
     bedrooms: '1',
     bathrooms: '1',
-    surface: '', // Cambiado de area_sqm
+    surface_m2: '', // Surface in square meters
     description: '',
     photos_urls: [] as string[],
     documents: {
@@ -156,13 +156,13 @@ export const PropertyForm: React.FC = () => {
         street: data.street || '',
         number: data.number || '',
         apartment: data.apartment || '',
-        region: data.region || '',
-        comuna: data.comuna || '',
+        region: data.address_region || '',
+        comuna: data.address_commune || '',
         description: data.description || '',
         price: data.price.toString(),
         bedrooms: data.bedrooms.toString(),
         bathrooms: data.bathrooms.toString(),
-        surface: data.surface?.toString() || '',
+        surface_m2: data.surface_m2?.toString() || '',
         photos_urls: data.photos_urls || [],
       }));
     } catch (error) {
@@ -248,7 +248,7 @@ export const PropertyForm: React.FC = () => {
     if (!formData.comuna) newErrors.comuna = 'La comuna es requerida';
     if (!formData.price.trim()) newErrors.price = 'El precio es requerido';
     if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
-    if (!formData.surface.trim()) newErrors.surface = 'La superficie es requerida';
+    if (!formData.surface_m2.trim()) newErrors.surface_m2 = 'La superficie es requerida';
 
     // Photos validation
     if (!isEditing && photoFiles.length === 0 && formData.photos_urls.length === 0) {
@@ -363,14 +363,14 @@ export const PropertyForm: React.FC = () => {
         street: formData.street || formData.address.split(' ')[0] || 'Sin especificar',
         number: formData.number || 'S/N',
         apartment: formData.apartment || null,
-        region: formData.region,
-        comuna: formData.comuna,
+        address_region: formData.region,
+        address_commune: formData.comuna,
         description: formData.description || 'Sin descripción',
         price: parseInt(formData.price),
         common_expenses: formData.common_expenses ? parseInt(formData.common_expenses) : 0,
         bedrooms: parseInt(formData.bedrooms),
         bathrooms: parseInt(formData.bathrooms),
-        surface: formData.surface ? parseInt(formData.surface) : 50,
+        surface_m2: formData.surface_m2 ? parseInt(formData.surface_m2) : 50,
         // Nota: photos_urls y documents_urls pueden no existir en la BD actual
         status: 'disponible'
       };
@@ -704,17 +704,17 @@ export const PropertyForm: React.FC = () => {
                     type="number"
                     required
                     min="1"
-                    value={formData.surface}
-                    onChange={(e) => setFormData({ ...formData, surface: e.target.value })}
+                    value={formData.surface_m2}
+                    onChange={(e) => setFormData({ ...formData, surface_m2: e.target.value })}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      errors.surface ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      errors.surface_m2 ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
                     placeholder="120"
                   />
-                  {errors.surface && (
+                  {errors.surface_m2 && (
                     <p className="mt-1 text-sm text-red-600 flex items-center">
                       <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.surface}
+                      {errors.surface_m2}
                     </p>
                   )}
                 </div>

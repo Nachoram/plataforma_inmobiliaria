@@ -258,7 +258,7 @@ export const PortfolioPage: React.FC = () => {
               <div className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
-                    {property.address || 'Dirección no especificada'}
+                    {property.address_street || 'Dirección no especificada'}
                   </h3>
                   <div className="flex space-x-2 ml-2">
                     <Link
@@ -280,7 +280,7 @@ export const PortfolioPage: React.FC = () => {
 
                 <div className="flex items-center text-sm text-gray-500 mb-2">
                   <MapPin className="h-4 w-4 mr-1" />
-                  <span>{property.comuna || 'Comuna no especificada'}, {property.region || 'Región no especificada'}</span>
+                  <span>{property.address_commune || 'Comuna no especificada'}, {property.address_region || 'Región no especificada'}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
@@ -293,10 +293,10 @@ export const PortfolioPage: React.FC = () => {
                       <Bath className="h-4 w-4 mr-1" />
                       <span>{property.bathrooms}</span>
                     </div>
-                    {property.surface && (
+                    {property.surface_m2 && (
                       <div className="flex items-center">
                         <Square className="h-4 w-4 mr-1" />
-                        <span>{property.surface}m²</span>
+                        <span>{property.surface_m2}m²</span>
                       </div>
                     )}
                   </div>
@@ -305,7 +305,7 @@ export const PortfolioPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-lg font-bold text-gray-900">
                     <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-                    <span>{formatPrice(property.price)}</span>
+                    <span>{formatPrice(property.price_clp)}</span>
                   </div>
                   <Link
                     to={`/property/${property.id}`}

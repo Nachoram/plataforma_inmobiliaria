@@ -4,11 +4,18 @@ import { MapPin, Bed, Bath, Square, DollarSign, Calendar, User, Building, ArrowL
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
+interface PropertyWithImages extends Property {
+  property_images?: Array<{
+    image_url: string;
+    storage_path: string;
+  }>;
+}
+
 export const PropertyDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [property, setProperty] = useState<Property | null>(null);
+  const [property, setProperty] = useState<PropertyWithImages | null>(null);
   const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
@@ -22,10 +29,16 @@ export const PropertyDetailsPage: React.FC = () => {
 
   const fetchPropertyDetails = async () => {
     try {
-      // Fetch property
+      // Fetch property with images
       const { data: propertyData, error: propertyError } = await supabase
         .from('properties')
-        .select('*')
+        .select(`
+          *,
+          property_images (
+            image_url,
+            storage_path
+          )
+        `)
         .eq('id', id)
         .single();
 
@@ -166,25 +179,25 @@ export const PropertyDetailsPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Photo Gallery */}
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            {property.photos_urls && property.photos_urls.length > 0 ? (
+            {property.property_images && property.property_images.length > 0 ? (
               <div>
                 {/* Main Photo */}
                 <div className="h-96 relative">
-                  <img 
-                    src={property.photos_urls[selectedPhoto]} 
-                    alt={`${property.address} - Foto ${selectedPhoto + 1}`}
+                  <img
+                    src={property.property_images[selectedPhoto].image_url}
+                    alt={`${property.address_street || ''} ${property.address_number || ''} - Foto ${selectedPhoto + 1}`}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
-                    {selectedPhoto + 1} / {property.photos_urls?.length || 0}
+                    {selectedPhoto + 1} / {property.property_images?.length || 0}
                   </div>
                 </div>
 
                 {/* Photo Thumbnails */}
-                {property.photos_urls && property.photos_urls.length > 1 && (
+                {property.property_images && property.property_images.length > 1 && (
                   <div className="p-4 border-t">
                     <div className="flex space-x-2 overflow-x-auto">
-                      {property.photos_urls?.map((url, index) => (
+                      {property.property_images?.map((image, index) => (
                         <button
                           key={index}
                           onClick={() => setSelectedPhoto(index)}
@@ -192,8 +205,8 @@ export const PropertyDetailsPage: React.FC = () => {
                             selectedPhoto === index ? 'border-blue-500' : 'border-gray-200'
                           }`}
                         >
-                          <img 
-                            src={url} 
+                          <img
+                            src={image.image_url}
                             alt={`Miniatura ${index + 1}`}
                             className="w-full h-full object-cover"
                           />

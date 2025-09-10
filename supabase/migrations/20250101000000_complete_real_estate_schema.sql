@@ -31,7 +31,7 @@
 -- Create custom types for better data integrity
 CREATE TYPE marital_status_enum AS ENUM ('soltero', 'casado', 'divorciado', 'viudo');
 CREATE TYPE property_regime_enum AS ENUM ('sociedad conyugal', 'separación de bienes', 'participación en los gananciales');
-CREATE TYPE property_status_enum AS ENUM ('activa', 'arrendada', 'vendida', 'pausada');
+CREATE TYPE property_status_enum AS ENUM ('disponible', 'activa', 'arrendada', 'vendida', 'pausada');
 CREATE TYPE listing_type_enum AS ENUM ('venta', 'arriendo');
 CREATE TYPE application_status_enum AS ENUM ('pendiente', 'aprobada', 'rechazada', 'info_solicitada');
 CREATE TYPE offer_status_enum AS ENUM ('pendiente', 'aceptada', 'rechazada');
@@ -39,6 +39,18 @@ CREATE TYPE document_entity_type_enum AS ENUM ('property_legal', 'application_ap
 
 -- Enable UUID extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- =====================================================
+-- STEP 1.5: UPDATE EXISTING DATA FOR ENUM CHANGES
+-- =====================================================
+
+-- Update existing properties with 'activa' status to 'disponible'
+UPDATE properties SET status = 'disponible' WHERE status = 'activa';
+
+-- Update any snapshot data that might reference the old status
+UPDATE applications SET
+  snapshot_applicant_profession = snapshot_applicant_profession
+WHERE snapshot_applicant_profession IS NOT NULL;
 
 -- =====================================================
 -- STEP 2: CREATE PROFILES TABLE
@@ -70,7 +82,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS properties (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   owner_id uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  status property_status_enum DEFAULT 'activa',
+  status property_status_enum DEFAULT 'disponible',
   listing_type listing_type_enum NOT NULL,
   address_street text NOT NULL,
   address_number varchar(10) NOT NULL,

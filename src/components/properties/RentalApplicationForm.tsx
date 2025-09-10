@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, Property, formatPriceCLP, validateRUT, formatRUT } from '../../lib/supabase';
-import CustomButton from '../CustomButton';
+import { X, Send } from 'lucide-react';
+import { supabase, Property, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, VALIDATION_RULES } from '../../lib/supabase';
+import CustomButton from '../common/CustomButton';
 
 interface RentalApplicationFormProps {
   property: Property;
@@ -56,18 +57,28 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   const [applicantDocuments, setApplicantDocuments] = useState<File[]>([]);
   const [guarantorDocuments, setGuarantorDocuments] = useState<File[]>([]);
 
-  // Regiones de Chile
-  const regions = [
-    'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
-    'Valparaíso', 'Metropolitana', 'O\'Higgins', 'Maule', 'Ñuble',
-    'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes'
-  ];
+  // Estados para validación en tiempo real
+  const [rutValidation, setRutValidation] = useState<{
+    applicant: { isValid: boolean | null; message: string };
+    guarantor: { isValid: boolean | null; message: string };
+  }>({
+    applicant: { isValid: null, message: '' },
+    guarantor: { isValid: null, message: '' }
+  });
+
+  // Usar constantes compartidas
+  const regions = CHILE_REGIONS;
 
   // Precarga de datos del perfil del usuario
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error('Error getting user:', userError);
+          setError('Error de autenticación. Por favor, inicia sesión nuevamente.');
+          return;
+        }
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
@@ -122,27 +133,96 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     const value = e.target.value;
     const formattedRUT = formatRUT(value);
 
+    // Validación en tiempo real del RUT
+    const cleanRUT = formattedRUT.replace(/[.-]/g, '');
+    let validationResult = { isValid: null as boolean | null, message: '' };
+
+    if (cleanRUT.length === 0) {
+      validationResult = { isValid: null, message: '' };
+    } else if (cleanRUT.length < 8) {
+      validationResult = { isValid: false, message: 'RUT muy corto' };
+    } else if (cleanRUT.length > 9) {
+      validationResult = { isValid: false, message: 'RUT muy largo' };
+    } else if (!validateRUT(cleanRUT)) {
+      validationResult = { isValid: false, message: 'RUT inválido' };
+    } else {
+      validationResult = { isValid: true, message: 'RUT válido ✓' };
+    }
+
+    // Actualizar estado del RUT y validación
     if (type === 'applicant') {
       setApplicantData(prev => ({ ...prev, rut: formattedRUT }));
+      setRutValidation(prev => ({
+        ...prev,
+        applicant: validationResult
+      }));
     } else {
       setGuarantorData(prev => ({ ...prev, rut: formattedRUT }));
+      setRutValidation(prev => ({
+        ...prev,
+        guarantor: validationResult
+      }));
     }
   };
 
   const uploadDocuments = async (files: File[], entityId: string, entityType: 'application_applicant' | 'application_guarantor') => {
-    const user = await supabase.auth.getUser();
-    if (!user.data?.user) throw new Error('Usuario no autenticado');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Usuario no autenticado o sesión expirada');
+    }
+
+    // Validar que el usuario tenga permisos para subir documentos
+    // Según las políticas RLS, solo el propietario puede subir documentos de su propiedad
+    if (entityType === 'application_applicant') {
+      // Verificar que la aplicación pertenece al usuario actual
+      const { data: application, error: appError } = await supabase
+        .from('applications')
+        .select('applicant_id')
+        .eq('id', entityId)
+        .single();
+
+      if (appError) {
+        throw new Error(`Error verificando permisos: ${appError.message}`);
+      }
+
+      if (application.applicant_id !== user.id) {
+        throw new Error('No tienes permisos para subir documentos en esta aplicación');
+      }
+    }
+
+    const uploadedDocuments = [];
 
     for (const file of files) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${entityId}/${Date.now()}.${fileExt}`;
+      // Validar tipo de archivo
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error(`Tipo de archivo no permitido: ${file.type}. Solo se permiten PDF, DOC y DOCX.`);
+      }
+
+      // Validar tamaño del archivo (máximo según constantes compartidas)
+      const maxSize = FILE_SIZE_LIMITS.DOCUMENT_MAX_SIZE;
+      if (file.size > maxSize) {
+        throw new Error(`Archivo demasiado grande: ${file.name}. Tamaño máximo: 50MB.`);
+      }
+
+      // const fileExt = file.name.split('.').pop(); // Not used in current sanitized filename approach
+      // Estructura de carpetas según políticas RLS: {user_id}/{entity_type}/{entity_id}/{timestamp}-{filename}
+      const timestamp = Date.now();
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = `${user.id}/${entityType}/${entityId}/${timestamp}-${sanitizedFileName}`;
+
+      console.log(`📤 Subiendo documento: ${fileName}`);
 
       const { data, error } = await supabase.storage
         .from('user-documents')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (error) {
-        throw new Error(`Error subiendo documento: ${error.message}`);
+        console.error('Error subiendo a storage:', error);
+        throw new Error(`Error subiendo documento ${file.name}: ${error.message}`);
       }
 
       // Guardar referencia en la base de datos
@@ -152,15 +232,31 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           uploader_id: user.id,
           related_entity_id: entityId,
           related_entity_type: entityType,
-          document_type: file.name,
-          storage_path: fileName,
-          file_name: file.name
+          document_type: file.type,
+          storage_path: data.path,
+          file_name: sanitizedFileName
         });
 
       if (dbError) {
-        throw new Error(`Error guardando documento: ${dbError.message}`);
+        console.error('Error guardando en BD:', dbError);
+        // Intentar eliminar el archivo del storage si falló la inserción en BD
+        try {
+          await supabase.storage
+            .from('user-documents')
+            .remove([data.path]);
+        } catch (cleanupError) {
+          console.error('Error limpiando archivo del storage:', cleanupError);
+        }
+        throw new Error(`Error guardando referencia del documento: ${dbError.message}`);
       }
+
+      uploadedDocuments.push({
+        fileName: sanitizedFileName,
+        storagePath: data.path
+      });
     }
+
+    return uploadedDocuments;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -169,20 +265,23 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     setError(null);
 
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        throw new Error('Error de autenticación: ' + userError.message);
+      }
+      if (!user) {
         throw new Error('Usuario no autenticado');
       }
 
-      // Validar RUT del postulante (DESACTIVADO TEMPORALMENTE)
-      // if (!validateRUT(applicantData.rut)) {
-      //   throw new Error('RUT del postulante no es válido');
-      // }
+      // Validar RUT del postulante
+      if (!validateRUT(applicantData.rut)) {
+        throw new Error('RUT del postulante no es válido');
+      }
 
-      // Validar RUT del aval si existe (DESACTIVADO TEMPORALMENTE)
-      // if (showGuarantor && !validateRUT(guarantorData.rut)) {
-      //   throw new Error('RUT del aval no es válido');
-      // }
+      // Validar RUT del aval si existe
+      if (showGuarantor && !validateRUT(guarantorData.rut)) {
+        throw new Error('RUT del aval no es válido');
+      }
 
       let guarantorId: string | null = null;
 
@@ -219,7 +318,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           property_id: property.id,
           applicant_id: user.id,
           message: message,
-          structured_guarantor_id: guarantorId,
+          guarantor_id: guarantorId,
           // Campos snapshot requeridos (NOT NULL)
           snapshot_applicant_profession: applicantData.profession,
           snapshot_applicant_monthly_income_clp: parseInt(applicantData.monthly_income_clp) || 0,
@@ -351,10 +450,27 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   type="text"
                   value={applicantData.rut}
                   onChange={(e) => handleRUTChange(e, 'applicant')}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    rutValidation.applicant.isValid === true
+                      ? 'border-green-500 bg-green-50'
+                      : rutValidation.applicant.isValid === false
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-300'
+                  }`}
                   placeholder="12.345.678-9"
                   required
                 />
+                {rutValidation.applicant.message && (
+                  <p className={`text-sm mt-1 ${
+                    rutValidation.applicant.isValid === true
+                      ? 'text-green-600'
+                      : rutValidation.applicant.isValid === false
+                      ? 'text-red-600'
+                      : 'text-gray-500'
+                  }`}>
+                    {rutValidation.applicant.message}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -398,10 +514,11 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
-                  <option value="soltero">Soltero</option>
-                  <option value="casado">Casado</option>
-                  <option value="divorciado">Divorciado</option>
-                  <option value="viudo">Viudo</option>
+                  {MARITAL_STATUS_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -608,10 +725,27 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                     type="text"
                     value={guarantorData.rut}
                     onChange={(e) => handleRUTChange(e, 'guarantor')}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                      rutValidation.guarantor.isValid === true
+                        ? 'border-green-500 bg-green-50'
+                        : rutValidation.guarantor.isValid === false
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300'
+                    }`}
                     placeholder="12.345.678-9"
                     required={showGuarantor}
                   />
+                  {rutValidation.guarantor.message && (
+                    <p className={`text-sm mt-1 ${
+                      rutValidation.guarantor.isValid === true
+                        ? 'text-green-600'
+                        : rutValidation.guarantor.isValid === false
+                        ? 'text-red-600'
+                        : 'text-gray-500'
+                    }`}>
+                      {rutValidation.guarantor.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -774,7 +908,8 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             onClick={onCancel}
             size="lg"
           >
-            ❌ Cancelar
+            <X className="h-4 w-4 mr-2" />
+            Cancelar
           </CustomButton>
         )}
 
@@ -782,10 +917,11 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           type="submit"
           variant="success"
           loading={loading}
-          loadingText="🚀 Enviando postulación..."
+          loadingText="Enviando postulación..."
           size="lg"
         >
-          ✅ Enviar Postulación
+          <Send className="h-4 w-4 mr-2" />
+          Enviar Postulación
         </CustomButton>
       </div>
     </form>

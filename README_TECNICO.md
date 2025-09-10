@@ -101,7 +101,7 @@ CREATE TABLE profiles (
 CREATE TABLE properties (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  status property_status_enum NOT NULL DEFAULT 'activa',
+  status property_status_enum NOT NULL DEFAULT 'disponible',
   listing_type listing_type_enum NOT NULL,
   address_street text NOT NULL,
   address_number text NOT NULL,
@@ -114,7 +114,10 @@ CREATE TABLE properties (
   bathrooms integer NOT NULL,
   surface_m2 numeric NOT NULL,
   description text NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone,
+  is_visible boolean DEFAULT true,
+  is_featured boolean DEFAULT false
 );
 ```
 
@@ -155,7 +158,7 @@ CREATE TABLE applications (
 ```sql
 CREATE TYPE marital_status_enum AS ENUM ('soltero', 'casado', 'divorciado', 'viudo');
 CREATE TYPE property_regime_enum AS ENUM ('sociedad conyugal', 'separación de bienes', 'participación en los gananciales');
-CREATE TYPE property_status_enum AS ENUM ('activa', 'arrendada', 'vendida', 'pausada');
+CREATE TYPE property_status_enum AS ENUM ('disponible', 'arrendada', 'vendida', 'pausada', 'activa');
 CREATE TYPE listing_type_enum AS ENUM ('venta', 'arriendo');
 CREATE TYPE application_status_enum AS ENUM ('pendiente', 'aprobada', 'rechazada', 'info_solicitada');
 CREATE TYPE offer_status_enum AS ENUM ('pendiente', 'aceptada', 'rechazada');
@@ -210,10 +213,10 @@ WITH CHECK (auth.uid() = id);
 
 #### **Properties Policies**
 ```sql
--- Anyone can view active properties
-CREATE POLICY "Anyone can view active properties"
+-- Anyone can view available properties
+CREATE POLICY "Anyone can view available properties"
 ON properties FOR SELECT
-USING (status = 'activa');
+USING (status = 'disponible');
 
 -- Users can view own properties
 CREATE POLICY "Users can view own properties"

@@ -3,10 +3,18 @@ import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, MapPin, Bed, Bath, Square, DollarSign, Building } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import CustomButton from '../common/CustomButton';
+
+interface PropertyWithImages extends Property {
+  property_images?: Array<{
+    image_url: string;
+    storage_path: string;
+  }>;
+}
 
 export const PortfolioPage: React.FC = () => {
   const { user } = useAuth();
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<PropertyWithImages[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,23 +24,53 @@ export const PortfolioPage: React.FC = () => {
   }, [user]);
 
   const fetchProperties = async () => {
+    // Verify user is authenticated before making any database queries
+    if (!user || !user.id) {
+      console.warn('User not authenticated, cannot fetch properties');
+      setProperties([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('properties')
-        .select('*')
-        .eq('owner_id', user?.id)
+        .select(`
+          *,
+          property_images (
+            image_url,
+            storage_path
+          )
+        `)
+        .eq('owner_id', user.id) // Use user.id directly since we verified it exists
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProperties(data || []);
+      if (error) {
+        // Handle RLS policy violations specifically
+        if (error.message.includes('permission denied') || error.message.includes('RLS')) {
+          console.error('RLS Policy violation: User does not have permission to view properties');
+          setProperties([]);
+        } else {
+          throw error;
+        }
+      } else {
+        setProperties(data || []);
+      }
     } catch (error) {
       console.error('Error fetching properties:', error);
+      setProperties([]); // Clear properties on error to prevent stale data
     } finally {
       setLoading(false);
     }
   };
 
   const deleteProperty = async (id: string) => {
+    // Verify user is authenticated
+    if (!user || !user.id) {
+      console.error('User not authenticated, cannot delete property');
+      return;
+    }
+
     if (!confirm('¿Estás seguro de que quieres eliminar esta propiedad?')) {
       return;
     }
@@ -41,13 +79,24 @@ export const PortfolioPage: React.FC = () => {
       const { error } = await supabase
         .from('properties')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user.id); // Additional RLS check - ensure user owns the property
 
-      if (error) throw error;
-      
-      setProperties(properties.filter(p => p.id !== id));
+      if (error) {
+        // Handle RLS policy violations
+        if (error.message.includes('permission denied') || error.message.includes('RLS')) {
+          console.error('RLS Policy violation: User does not have permission to delete this property');
+          alert('No tienes permisos para eliminar esta propiedad');
+        } else {
+          throw error;
+        }
+      } else {
+        // Update local state only if deletion was successful
+        setProperties(properties.filter(p => p.id !== id));
+      }
     } catch (error) {
       console.error('Error deleting property:', error);
+      alert('Error al eliminar la propiedad. Por favor, intenta nuevamente.');
     }
   };
 
@@ -78,10 +127,48 @@ export const PortfolioPage: React.FC = () => {
     }
   };
 
+  // Check authentication before showing any content
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="text-center">
+          <svg
+            className="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            Acceso Restringido
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Necesitas iniciar sesión para ver tu portafolio de propiedades.
+          </p>
+          <div className="mt-6">
+            <CustomButton
+              onClick={() => window.location.href = '/auth'}
+              variant="primary"
+            >
+              Ir a Iniciar Sesión
+            </CustomButton>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+        <p className="text-gray-600 mt-4">Cargando tus propiedades...</p>
       </div>
     );
   }
@@ -140,10 +227,10 @@ export const PortfolioPage: React.FC = () => {
             <div key={property.id} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow">
               {/* Property Image */}
               <div className="h-48 bg-gray-200 relative">
-                {property.photos_urls && property.photos_urls.length > 0 ? (
-                  <img 
-                    src={property.photos_urls[0]} 
-                    alt={property.address}
+                {property.property_images && property.property_images.length > 0 ? (
+                  <img
+                    src={property.property_images[0].image_url}
+                    alt={`${property.address_street || ''} ${property.address_number || ''}`}
                     className="w-full h-full object-cover"
                   />
                 ) : (

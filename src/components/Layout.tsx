@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, LogOut, Building, Mail, DollarSign, UserCircle } from 'lucide-react';
+import { Home, User, LogOut, Building, Mail, DollarSign, UserCircle, ShoppingBag, List, BarChart3 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface LayoutProps {
@@ -37,67 +37,73 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* Navigation */}
             <nav className="hidden md:flex space-x-1">
-              <Link 
-                to="/" 
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  isActive('/') 
-                    ? 'bg-blue-100 text-blue-700' 
+              <Link
+                to="/"
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                  isActive('/')
+                    ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                 }`}
               >
-                🏪 Marketplace
+                <ShoppingBag className="h-4 w-4" />
+                <span>Marketplace</span>
               </Link>
-              <Link 
-                to="/properties" 
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  isActive('/properties') 
-                    ? 'bg-blue-100 text-blue-700' 
+              <Link
+                to="/properties"
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                  isActive('/properties')
+                    ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                 }`}
               >
-                📋 Listado
+                <List className="h-4 w-4" />
+                <span>Listado</span>
               </Link>
               {user && (
                 <>
-                  <Link 
-                    to="/portfolio" 
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive('/portfolio') 
-                        ? 'bg-blue-100 text-blue-700' 
+                  <Link
+                    to="/portfolio"
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                      isActive('/portfolio')
+                        ? 'bg-blue-100 text-blue-700'
                         : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                     }`}
                   >
-                    🏠 Mi Portafolio
+                    <Home className="h-4 w-4" />
+                    <span>Mi Portafolio</span>
                   </Link>
-                  <Link 
-                    to="/offers" 
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive('/offers') 
-                        ? 'bg-blue-100 text-blue-700' 
+                  <Link
+                    to="/offers"
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                      isActive('/offers')
+                        ? 'bg-blue-100 text-blue-700'
                         : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                     }`}
                   >
-                    💰 Mis Ofertas
+                    <DollarSign className="h-4 w-4" />
+                    <span>Mis Ofertas</span>
                   </Link>
-                  <Link 
-                    to="/my-activity" 
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive('/my-activity') 
-                        ? 'bg-blue-100 text-blue-700' 
+                  <Link
+                    to="/my-activity"
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                      isActive('/my-activity')
+                        ? 'bg-blue-100 text-blue-700'
                         : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                     }`}
                   >
-                    📊 Mi Actividad
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Mi Actividad</span>
                   </Link>
-                  <Link 
-                    to="/profile" 
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive('/profile') 
-                        ? 'bg-blue-100 text-blue-700' 
+                  <Link
+                    to="/profile"
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                      isActive('/profile')
+                        ? 'bg-blue-100 text-blue-700'
                         : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                     }`}
                   >
-                    Mi Perfil
+                    <UserCircle className="h-4 w-4" />
+                    <span>Mi Perfil</span>
                   </Link>
                 </>
               )}

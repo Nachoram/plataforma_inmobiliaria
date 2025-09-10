@@ -17,6 +17,8 @@ import { MyActivityPage } from './marketplace/MyActivityPage';
 import AdminSetup from './AdminSetup';
 import EnvTest from './EnvTest';
 import DemoPage from './DemoPage';
+import SupabaseConnectionTest from './SupabaseConnectionTest';
+import SupabaseDiagnostic from './SupabaseDiagnostic';
 
 export const AppContent: React.FC = () => {
   const { loading } = useAuth();
@@ -47,6 +49,12 @@ export const AppContent: React.FC = () => {
 
       {/* Environment Variables Test Route */}
       <Route path="/env-test" element={<Layout><EnvTest /></Layout>} />
+
+      {/* Supabase Connection Test Route */}
+      <Route path="/supabase-test" element={<Layout><SupabaseConnectionTest /></Layout>} />
+
+      {/* Supabase Diagnostic Route */}
+      <Route path="/supabase-diagnostic" element={<Layout><SupabaseDiagnostic /></Layout>} />
 
       {/* Rutas existentes */}
       <Route path="/" element={<Layout><MarketplacePage /></Layout>} />

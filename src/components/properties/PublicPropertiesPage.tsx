@@ -29,13 +29,24 @@ export const PublicPropertiesPage: React.FC = () => {
       const { data, error } = await supabase
         .from('properties')
         .select('*')
-        .eq('status', 'disponible')
+        .eq('status', 'activa')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProperties(data || []);
+      if (error) {
+        // Handle RLS policy violations specifically
+        if (error.message.includes('permission denied') || error.message.includes('RLS')) {
+          console.error('RLS Policy violation: Cannot access public properties');
+          setProperties([]);
+        } else {
+          throw error;
+        }
+      } else {
+        setProperties(data || []);
+      }
     } catch (error) {
       console.error('Error fetching properties:', error);
+      setProperties([]); // Clear properties on error
+      // Could show user-friendly error message here
     } finally {
       setLoading(false);
     }
@@ -46,33 +57,34 @@ export const PublicPropertiesPage: React.FC = () => {
 
     // Search filter
     if (filters.search) {
-      filtered = filtered.filter(property =>
-        property.address.toLowerCase().includes(filters.search.toLowerCase()) ||
-        property.comuna.toLowerCase().includes(filters.search.toLowerCase()) ||
-        property.region.toLowerCase().includes(filters.search.toLowerCase()) ||
-        property.description?.toLowerCase().includes(filters.search.toLowerCase())
-      );
+      filtered = filtered.filter(property => {
+        const fullAddress = `${property.address_street || ''} ${property.address_number || ''}${property.address_department ? `, ${property.address_department}` : ''}`.toLowerCase();
+        return fullAddress.includes(filters.search.toLowerCase()) ||
+               (property.address_commune || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+               (property.address_region || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+               (property.description || '').toLowerCase().includes(filters.search.toLowerCase());
+      });
     }
 
     // Listing type filter
     if (filters.listingType) {
-      filtered = filtered.filter(property => property.type === filters.listingType);
+      filtered = filtered.filter(property => property.listing_type === filters.listingType);
     }
 
     // City filter
     if (filters.city) {
       filtered = filtered.filter(property =>
-        property.comuna.toLowerCase().includes(filters.city.toLowerCase()) ||
-        property.region.toLowerCase().includes(filters.city.toLowerCase())
+        (property.address_commune || '').toLowerCase().includes(filters.city.toLowerCase()) ||
+        (property.address_region || '').toLowerCase().includes(filters.city.toLowerCase())
       );
     }
 
     // Price range filter
     if (filters.minPrice) {
-      filtered = filtered.filter(property => property.price >= parseFloat(filters.minPrice));
+      filtered = filtered.filter(property => (property.price_clp || 0) >= parseFloat(filters.minPrice));
     }
     if (filters.maxPrice) {
-      filtered = filtered.filter(property => property.price <= parseFloat(filters.maxPrice));
+      filtered = filtered.filter(property => (property.price_clp || 0) <= parseFloat(filters.maxPrice));
     }
 
     // Bedrooms filter
@@ -102,7 +114,7 @@ export const PublicPropertiesPage: React.FC = () => {
   };
 
   const getUniqueValues = (field: keyof Property) => {
-    return [...new Set(properties.map(p => p[field] as string))].filter(Boolean);
+    return [...new Set(properties.map(p => p[field] as string).filter(value => value && value.trim() !== ''))];
   };
 
   if (loading) {
@@ -233,7 +245,14 @@ export const PublicPropertiesPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProperties.map((property) => (
+          {filteredProperties.map((property) => {
+            // Validación básica de datos requeridos
+            if (!property || !property.id) {
+              console.warn('Property missing required data:', property);
+              return null;
+            }
+
+            return (
             <Link
               key={property.id}
               to={`/property/${property.id}`}
@@ -242,9 +261,9 @@ export const PublicPropertiesPage: React.FC = () => {
               {/* Property Image */}
               <div className="h-48 bg-gray-200 relative overflow-hidden">
                 {property.photos_urls && property.photos_urls.length > 0 ? (
-                  <img 
-                    src={property.photos_urls[0]} 
-                    alt={property.address}
+                  <img
+                    src={property.photos_urls[0]}
+                    alt={`${property.address_street || ''} ${property.address_number || ''}`}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
@@ -256,11 +275,15 @@ export const PublicPropertiesPage: React.FC = () => {
                 {/* Listing Type Badge */}
                 <div className="absolute top-3 left-3">
                   <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    property.type === 'venta' 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-emerald-100 text-emerald-800'
+                    property.listing_type === 'venta'
+                      ? 'bg-blue-100 text-blue-800'
+                      : property.listing_type === 'arriendo'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
+                    {property.listing_type && typeof property.listing_type === 'string'
+                      ? property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1)
+                      : 'Tipo desconocido'}
                   </span>
                 </div>
               </div>
@@ -269,11 +292,11 @@ export const PublicPropertiesPage: React.FC = () => {
               <div className="p-4">
                 <div className="mb-2">
                   <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 mb-1">
-                    {property.address}
+                    {`${property.address_street || ''} ${property.address_number || ''}${property.address_department ? `, ${property.address_department}` : ''}`}
                   </h3>
                   <div className="flex items-center text-sm text-gray-500">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{property.comuna}, {property.region}</span>
+                    <span>{property.address_commune || ''}, {property.address_region || ''}</span>
                   </div>
                 </div>
 
@@ -293,10 +316,10 @@ export const PublicPropertiesPage: React.FC = () => {
                       <Bath className="h-4 w-4 mr-1" />
                       <span>{property.bathrooms}</span>
                     </div>
-                    {property.surface && (
+                    {property.surface_m2 && (
                       <div className="flex items-center">
                         <Square className="h-4 w-4 mr-1" />
-                        <span>{property.surface}m²</span>
+                        <span>{property.surface_m2}m²</span>
                       </div>
                     )}
                   </div>
@@ -305,7 +328,7 @@ export const PublicPropertiesPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-lg font-bold text-gray-900">
                     <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-                    <span>{formatPrice(property.price)}</span>
+                    <span>{formatPrice(property.price_clp || 0)}</span>
                   </div>
                   <span className="text-blue-600 font-medium text-sm hover:text-blue-800">
                     Ver detalles →
@@ -313,7 +336,8 @@ export const PublicPropertiesPage: React.FC = () => {
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

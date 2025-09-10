@@ -5,9 +5,8 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  define: {
-    'process.env': process.env
-  },
+  // Vite maneja automáticamente las variables de entorno que comienzan con VITE_
+  // No es necesario definir process.env manualmente
   build: {
     outDir: 'dist'
   },

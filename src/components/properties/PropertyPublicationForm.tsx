@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, Property, formatPriceCLP } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
+import { supabase, Property, formatPriceCLP, CHILE_REGIONS, LISTING_TYPE_OPTIONS, FILE_SIZE_LIMITS } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import CustomButton from '../common/CustomButton';
 
 interface PropertyPublicationFormProps {
   property?: Property;
@@ -13,6 +15,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   onSuccess,
   onCancel
 }) => {
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
   // Estado para el perfil del propietario
@@ -41,12 +44,8 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Regiones de Chile
-  const regions = [
-    'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
-    'Valparaíso', 'Metropolitana', 'O\'Higgins', 'Maule', 'Ñuble',
-    'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes'
-  ];
+  // Usar constantes compartidas
+  const regions = CHILE_REGIONS;
 
   // Función para verificar si el perfil está completo
   const checkProfileComplete = (profile: any) => {
@@ -56,29 +55,54 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
            profile.rut;
   };
 
-  // Función para verificar si existe una propiedad en la dirección especificada
+  // Función optimizada para verificar si existe una propiedad en la dirección especificada
+  // Solo se ejecuta cuando es realmente necesario para evitar consultas innecesarias
   const checkAddressExists = async (street: string, number: string, department: string | null) => {
     try {
-      let query = supabase
+      // Solo verificar si la dirección parece sospechosa (múltiples propiedades en misma dirección)
+      const normalizedStreet = street.trim().toLowerCase();
+      const normalizedNumber = number.trim();
+
+      // Primero hacer una consulta más amplia para ver si hay muchas propiedades en esta calle
+      const { count: streetCount, error: countError } = await supabase
         .from('properties')
-        .select('id')
-        .eq('address_street', street)
-        .eq('address_number', number);
+        .select('*', { count: 'exact', head: true })
+        .eq('address_street', normalizedStreet)
+        .eq('address_number', normalizedNumber);
 
-      if (department && department.trim() !== '') {
-        query = query.eq('address_department', department);
-      } else {
-        query = query.or('address_department.is.null,address_department.eq.' + '');
-      }
-
-      const { data, error } = await query.limit(1);
-
-      if (error) {
-        console.error('Error verificando dirección:', error);
+      if (countError) {
+        console.error('Error verificando dirección:', countError);
         return false;
       }
 
-      return data && data.length > 0;
+      // Si hay más de 3 propiedades en la misma dirección, es sospechoso
+      if (streetCount && streetCount > 3) {
+        console.warn(`⚠️ Dirección sospechosa: ${streetCount} propiedades en ${normalizedStreet} ${normalizedNumber}`);
+
+        // Verificar específicamente con departamento si está presente
+        let query = supabase
+          .from('properties')
+          .select('id, owner_id')
+          .eq('address_street', normalizedStreet)
+          .eq('address_number', normalizedNumber);
+
+        if (department && department.trim() !== '') {
+          query = query.eq('address_department', department.trim());
+        } else {
+          query = query.or('address_department.is.null,address_department.eq.' + '');
+        }
+
+        const { data, error } = await query.limit(1);
+
+        if (error) {
+          console.error('Error verificando dirección específica:', error);
+          return false;
+        }
+
+        return data && data.length > 0;
+      }
+
+      return false; // No hay suficientes propiedades para ser preocupante
     } catch (error) {
       console.error('Error en verificación de dirección:', error);
       return false;
@@ -161,58 +185,139 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   };
 
   const uploadImages = async (propertyId: string) => {
+    // Verificar que el usuario sea el propietario de la propiedad
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
+      .select('owner_id')
+      .eq('id', propertyId)
+      .single();
+
+    if (propertyError) {
+      throw new Error(`Error verificando propiedad: ${propertyError.message}`);
+    }
+
+    if (property.owner_id !== user?.id) {
+      throw new Error('No tienes permisos para subir imágenes en esta propiedad');
+    }
+
     const uploadedImages = [];
-    
+
     for (const image of images) {
-      const fileExt = image.name.split('.').pop();
-      const fileName = `${propertyId}/${Date.now()}.${fileExt}`;
-      
-      const { error } = await supabase.storage
-        .from('property-images')
-        .upload(fileName, image);
-      
-      if (error) {
-        throw new Error(`Error subiendo imagen: ${error.message}`);
+      // Validar tipo de archivo
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(image.type)) {
+        throw new Error(`Tipo de imagen no permitido: ${image.type}. Solo se permiten JPG, PNG, WebP y GIF.`);
       }
-      
+
+      // Validar tamaño del archivo (máximo según constantes compartidas)
+      const maxSize = FILE_SIZE_LIMITS.IMAGE_MAX_SIZE;
+      if (image.size > maxSize) {
+        throw new Error(`Imagen demasiado grande: ${image.name}. Tamaño máximo: 10MB.`);
+      }
+
+      const fileExt = image.name.split('.').pop() || 'jpg';
+      // Estructura de carpetas según políticas RLS: {property_id}/{timestamp}-{index}.{ext}
+      const timestamp = Date.now();
+      const index = uploadedImages.length;
+      const fileName = `${propertyId}/${timestamp}-${index}.${fileExt}`;
+
+      console.log(`📤 Subiendo imagen: ${fileName}`);
+
+      const { data, error } = await supabase.storage
+        .from('property-images')
+        .upload(fileName, image, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Error subiendo imagen:', error);
+        throw new Error(`Error subiendo imagen ${image.name}: ${error.message}`);
+      }
+
       const { data: { publicUrl } } = supabase.storage
         .from('property-images')
-        .getPublicUrl(fileName);
-      
+        .getPublicUrl(data.path);
+
       // Guardar referencia en la base de datos
       const { error: dbError } = await supabase
         .from('property_images')
         .insert({
           property_id: propertyId,
           image_url: publicUrl,
-          storage_path: fileName
+          storage_path: data.path
         });
-      
+
       if (dbError) {
-        throw new Error(`Error guardando imagen: ${dbError.message}`);
+        console.error('Error guardando imagen en BD:', dbError);
+        // Intentar eliminar la imagen del storage si falló la inserción en BD
+        try {
+          await supabase.storage
+            .from('property-images')
+            .remove([data.path]);
+        } catch (cleanupError) {
+          console.error('Error limpiando imagen del storage:', cleanupError);
+        }
+        throw new Error(`Error guardando referencia de imagen: ${dbError.message}`);
       }
-      
+
       uploadedImages.push(publicUrl);
     }
-    
+
     return uploadedImages;
   };
 
   const uploadDocuments = async (propertyId: string) => {
     if (!user) throw new Error('Usuario no autenticado');
 
+    // Verificar que el usuario sea el propietario de la propiedad
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
+      .select('owner_id')
+      .eq('id', propertyId)
+      .single();
+
+    if (propertyError) {
+      throw new Error(`Error verificando propiedad: ${propertyError.message}`);
+    }
+
+    if (property.owner_id !== user.id) {
+      throw new Error('No tienes permisos para subir documentos en esta propiedad');
+    }
+
     const uploadedDocuments = [];
 
     for (const document of documents) {
-      const fileExt = document.name.split('.').pop();
-      const fileName = `${user.id}/${propertyId}/${Date.now()}.${fileExt}`;
+      // Validar tipo de archivo
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(document.type)) {
+        throw new Error(`Tipo de archivo no permitido: ${document.type}. Solo se permiten PDF, DOC y DOCX.`);
+      }
 
-      const { error } = await supabase.storage
+      // Validar tamaño del archivo (máximo según constantes compartidas)
+      const maxSize = FILE_SIZE_LIMITS.DOCUMENT_MAX_SIZE;
+      if (document.size > maxSize) {
+        throw new Error(`Documento demasiado grande: ${document.name}. Tamaño máximo: 50MB.`);
+      }
+
+      // const fileExt = document.name.split('.').pop(); // Not used in current sanitized filename approach
+      // Estructura de carpetas según políticas RLS: {user_id}/{entity_type}/{entity_id}/{timestamp}-{filename}
+      const timestamp = Date.now();
+      const sanitizedFileName = document.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = `${user.id}/property_legal/${propertyId}/${timestamp}-${sanitizedFileName}`;
+
+      console.log(`📤 Subiendo documento: ${fileName}`);
+
+      const { data, error } = await supabase.storage
         .from('user-documents')
-        .upload(fileName, document);
+        .upload(fileName, document, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (error) {
-        throw new Error(`Error subiendo documento: ${error.message}`);
+        console.error('Error subiendo documento:', error);
+        throw new Error(`Error subiendo documento ${document.name}: ${error.message}`);
       }
 
       // Guardar referencia en la base de datos
@@ -222,16 +327,28 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           uploader_id: user.id,
           related_entity_id: propertyId,
           related_entity_type: 'property_legal',
-          document_type: document.name,
-          storage_path: fileName,
-          file_name: document.name
+          document_type: document.type,
+          storage_path: data.path,
+          file_name: sanitizedFileName
         });
 
       if (dbError) {
-        throw new Error(`Error guardando documento: ${dbError.message}`);
+        console.error('Error guardando documento en BD:', dbError);
+        // Intentar eliminar el documento del storage si falló la inserción en BD
+        try {
+          await supabase.storage
+            .from('user-documents')
+            .remove([data.path]);
+        } catch (cleanupError) {
+          console.error('Error limpiando documento del storage:', cleanupError);
+        }
+        throw new Error(`Error guardando referencia del documento: ${dbError.message}`);
       }
 
-      uploadedDocuments.push(fileName);
+      uploadedDocuments.push({
+        fileName: sanitizedFileName,
+        storagePath: data.path
+      });
     }
 
     return uploadedDocuments;
@@ -291,18 +408,6 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         description: formData.description,
       };
 
-      // Objeto para actualizar el perfil del propietario
-      const ownerData = {
-        first_name: formData.owner_first_name,
-        paternal_last_name: formData.owner_paternal_last_name,
-        maternal_last_name: formData.owner_maternal_last_name,
-        address_street: formData.owner_address_street,
-        address_number: formData.owner_address_number,
-        address_department: formData.owner_address_department || null,
-        address_commune: formData.owner_address_commune,
-        address_region: formData.owner_address_region,
-      };
-
       let propertyId: string;
 
       if (property) {
@@ -313,7 +418,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           .eq('id', property.id)
           .select()
           .single();
-        
+
         if (error) throw error;
         propertyId = data.id;
       } else {
@@ -323,7 +428,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           .insert(propertyData)
           .select()
           .single();
-        
+
         if (error) throw error;
         propertyId = data.id;
       }
@@ -336,19 +441,6 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
       // Subir documentos si hay
       if (documents.length > 0) {
         await uploadDocuments(propertyId);
-      }
-
-      // Actualizar perfil del propietario con la información proporcionada
-      const { error: ownerError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          ...ownerData
-        });
-
-      if (ownerError) {
-        console.error('Error actualizando perfil del propietario:', ownerError);
-        // No lanzamos error aquí para no interrumpir el flujo si ya se guardó la propiedad
       }
 
       onSuccess?.();
@@ -400,7 +492,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             Esta información es necesaria para verificar tu identidad como propietario.
           </p>
           <button
-            onClick={() => window.location.href = '/profile'}
+            onClick={() => navigate('/profile')}
             className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             Completar Mi Perfil
@@ -425,7 +517,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             Debes iniciar sesión para publicar una propiedad.
           </p>
           <button
-            onClick={() => window.location.href = '/auth'}
+            onClick={() => navigate('/auth')}
             className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Ir a Iniciar Sesión
@@ -465,8 +557,11 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           >
-            <option value="venta">Venta</option>
-            <option value="arriendo">Arriendo</option>
+            {LISTING_TYPE_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -695,137 +790,6 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           </div>
         )}
 
-        {/* Actualizar Información del Propietario */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Actualizar Información del Propietario (Opcional)
-          </h3>
-
-          <p className="text-sm text-gray-600 mb-4">
-            Si deseas actualizar tu información personal mientras publicas esta propiedad, puedes hacerlo aquí.
-            De lo contrario, deja estos campos vacíos.
-          </p>
-
-          <div className="space-y-4">
-            {/* Campo para Nombres del Propietario */}
-            <div>
-              <label htmlFor="owner_first_name" className="block text-sm font-medium text-gray-700 mb-2">
-                Nombres del Propietario
-              </label>
-              <input
-                type="text"
-                id="owner_first_name"
-                name="owner_first_name"
-                value={formData.owner_first_name}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Deja vacío para mantener tu información actual"
-              />
-            </div>
-
-            {/* Campo para Apellido Paterno */}
-            <div>
-              <label htmlFor="owner_paternal_last_name" className="block text-sm font-medium text-gray-700 mb-2">
-                Apellido Paterno
-              </label>
-              <input
-                type="text"
-                id="owner_paternal_last_name"
-                name="owner_paternal_last_name"
-                value={formData.owner_paternal_last_name}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Deja vacío para mantener tu información actual"
-              />
-            </div>
-
-            {/* Campo para Apellido Materno */}
-            <div>
-              <label htmlFor="owner_maternal_last_name" className="block text-sm font-medium text-gray-700 mb-2">
-                Apellido Materno
-              </label>
-              <input
-                type="text"
-                id="owner_maternal_last_name"
-                name="owner_maternal_last_name"
-                value={formData.owner_maternal_last_name}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Deja vacío para mantener tu información actual"
-              />
-            </div>
-
-            {/* Dirección del Propietario */}
-            <div className="space-y-4">
-              <h4 className="text-md font-medium text-gray-700">Dirección del Propietario</h4>
-
-              <div>
-                <label htmlFor="owner_address_street" className="block text-sm font-medium text-gray-700 mb-2">
-                  Calle del Propietario
-                </label>
-                <input
-                  type="text"
-                  id="owner_address_street"
-                  name="owner_address_street"
-                  value={formData.owner_address_street}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Deja vacío para mantener tu información actual"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="owner_address_number" className="block text-sm font-medium text-gray-700 mb-2">
-                  Número del Propietario
-                </label>
-                <input
-                  type="text"
-                  id="owner_address_number"
-                  name="owner_address_number"
-                  value={formData.owner_address_number}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Deja vacío para mantener tu información actual"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Comuna del Propietario
-                  </label>
-                  <input
-                    type="text"
-                    name="owner_address_commune"
-                    value={formData.owner_address_commune}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Deja vacío para mantener tu información actual"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Región del Propietario
-                  </label>
-                  <select
-                    name="owner_address_region"
-                    value={formData.owner_address_region}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccionar región (mantener actual)</option>
-                    {regions.map(region => (
-                      <option key={region} value={region}>{region}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Imágenes */}
         <div>
@@ -864,22 +828,24 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         {/* Botones */}
         <div className="flex justify-end space-x-4">
           {onCancel && (
-            <button
+            <CustomButton
               type="button"
+              variant="outline"
               onClick={onCancel}
               disabled={loading}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
-            </button>
+            </CustomButton>
           )}
-          <button
+          <CustomButton
             type="submit"
+            variant="primary"
             disabled={loading || !user || authLoading}
-            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={loading}
+            loadingText="Publicando..."
           >
-            {loading ? 'Publicando...' : (property ? 'Actualizar Propiedad' : 'Publicar Propiedad')}
-          </button>
+            {property ? 'Actualizar Propiedad' : 'Publicar Propiedad'}
+          </CustomButton>
         </div>
       </form>
     </div>

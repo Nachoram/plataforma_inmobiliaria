@@ -1,32 +1,24 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, DollarSign, Building, Heart, TrendingUp, MessageSquare, Eye } from 'lucide-react';
+import { Property as SupabaseProperty, formatPriceCLP, isValidPrice } from '../lib/supabase';
+import CustomButton from './common/CustomButton';
 
-interface Property {
-  id: string;
-  owner_id: string;
-  status: 'disponible' | 'inactiva' | 'vendida' | 'alquilada' | 'pausada' | 'activa';
-  listing_type: 'venta' | 'arriendo';
-  address_street: string;
-  address_number: string;
-  address_department?: string;
-  address_commune: string;
-  address_region: string;
-  price_clp: number;
-  common_expenses_clp?: number;
-  bedrooms: number;
-  bathrooms: number;
-  surface_m2: number;
-  description?: string;
-  photos_urls?: string[];
-  created_at: string;
+// Usar la interfaz Property de supabase.ts para consistencia
+type Property = SupabaseProperty;
+
+interface PropertyWithImages extends SupabaseProperty {
+  property_images?: Array<{
+    image_url: string;
+    storage_path: string;
+  }>;
 }
 
 interface PropertyCardProps {
-  property: Property;
+  property: PropertyWithImages;
   showActions?: boolean;
-  onMakeOffer?: (property: Property) => void;
-  onApply?: (property: Property) => void;
+  onMakeOffer?: (property: PropertyWithImages) => void;
+  onApply?: (property: PropertyWithImages) => void;
   onToggleFavorite?: (propertyId: string) => void;
   isFavorite?: boolean;
 }
@@ -39,12 +31,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   onToggleFavorite,
   isFavorite = false
 }) => {
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP'
-    }).format(price);
-  };
 
   const handleMakeOffer = () => {
     onMakeOffer?.(property);
@@ -63,10 +49,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     <div className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
       {/* Property Image */}
       <div className="h-48 bg-gray-200 relative overflow-hidden">
-        {property.photos_urls && property.photos_urls.length > 0 ? (
+        {property.property_images && property.property_images.length > 0 ? (
           <img
-            src={property.photos_urls[0]}
-            alt={`${property.address_street} ${property.address_number}`}
+            src={property.property_images[0].image_url}
+            alt={`${property.address_street || ''} ${property.address_number || ''}`}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
           />
         ) : (
@@ -80,6 +66,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           <button
             onClick={handleToggleFavorite}
             className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+            aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+            aria-pressed={isFavorite}
           >
             <Heart
               className={`h-4 w-4 ${
@@ -87,6 +75,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                   ? 'text-red-500 fill-current'
                   : 'text-gray-600'
               }`}
+              aria-hidden="true"
             />
           </button>
         )}
@@ -134,7 +123,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
             <div className="flex items-center">
               <Square className="h-4 w-4 mr-1" />
-              <span>{property.surface_m2}m²</span>
+              <span>{property.surface_m2 ?? 0}m²</span>
             </div>
           </div>
         </div>
@@ -142,11 +131,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center text-lg font-bold text-gray-900">
             <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-            <span>{formatPrice(property.price)}</span>
+            <span>{formatPriceCLP(isValidPrice(property.price_clp) ? property.price_clp : 0)}</span>
           </div>
-          {property.common_expenses_clp && property.common_expenses_clp > 0 && (
+          {isValidPrice(property.common_expenses_clp) && property.common_expenses_clp > 0 && (
             <div className="text-sm text-gray-500">
-              + {formatPrice(property.common_expenses_clp)} gastos comunes
+              + {formatPriceCLP(property.common_expenses_clp)} gastos comunes
             </div>
           )}
         </div>
@@ -156,29 +145,36 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               {property.listing_type === 'venta' ? (
-                <button
+                <CustomButton
                   onClick={handleMakeOffer}
-                  className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
+                  variant="primary"
+                  size="sm"
+                  className="w-full"
                 >
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Ofertar</span>
-                </button>
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Ofertar
+                </CustomButton>
               ) : (
-                <button
+                <CustomButton
                   onClick={handleApply}
-                  className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors text-sm"
+                  variant="primary"
+                  size="sm"
+                  className="w-full"
                 >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Postular</span>
-                </button>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Postular
+                </CustomButton>
               )}
 
-              <Link
-                to={`/property/${property.id}`}
-                className="flex items-center justify-center space-x-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm"
-              >
-                <Eye className="h-4 w-4" />
-                <span>Ver detalles</span>
+              <Link to={`/property/${property.id}`} className="w-full">
+                <CustomButton
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ver detalles
+                </CustomButton>
               </Link>
             </div>
           </div>

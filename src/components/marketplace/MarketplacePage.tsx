@@ -52,37 +52,42 @@ export const MarketplacePage: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('properties')
-        .select('*')
-        .eq('status', 'disponible')
+        .select(`
+          *,
+          property_images (
+            image_url,
+            storage_path
+          )
+        `)
+        .eq('status', 'activa')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        // Handle RLS policy violations specifically
+        if (error.message.includes('permission denied') || error.message.includes('RLS')) {
+          console.error('RLS Policy violation: Cannot access public properties');
+          // For marketplace, this shouldn't happen with public properties, but log it
+        } else {
+          throw error;
+        }
+      }
 
-      // Filtrar propiedades inválidas y agregar valores por defecto para campos opcionales
+      // Filtrar propiedades inválidas - usar campos correctos de la BD
       const validProperties = (data || [])
         .filter(isValidProperty)
         .map(property => ({
           ...property,
-          // Asegurar valores por defecto para campos opcionales
-          address: property.address || property.address_street || 'Dirección no disponible',
-          comuna: property.comuna || property.address_commune || 'Comuna no disponible',
-          region: property.region || property.address_region || 'Región no disponible',
-          type: property.type || property.listing_type || 'venta', // valor por defecto
-          price: typeof property.price === 'number' ? property.price :
-                 typeof property.price_clp === 'number' ? property.price_clp : null,
-          bedrooms: typeof property.bedrooms === 'number' ? property.bedrooms : null,
-          bathrooms: typeof property.bathrooms === 'number' ? property.bathrooms : null,
-          surface: typeof property.surface === 'number' ? property.surface :
-                   typeof property.surface_m2 === 'number' ? property.surface_m2 : null,
-          photos_urls: Array.isArray(property.photos_urls) ? property.photos_urls : [],
-          description: property.description || null,
+          // Usar nombres de campos correctos de la BD (sin crear aliases inconsistentes)
+          // address_street, address_commune, address_region, listing_type, price_clp, surface_m2
+          // Los campos opcionales ya vienen con valores por defecto de la BD
         }));
 
       console.log(`📊 Fetched ${validProperties.length} valid properties out of ${(data || []).length} total`);
-      setProperties(validProperties);
+      setProperties(validProperties || []);
     } catch (error) {
       console.error('Error fetching properties:', error);
       setProperties([]); // Asegurar que properties sea un array vacío en caso de error
+      // Could show user-friendly error message here
     } finally {
       setLoading(false);
     }
@@ -111,9 +116,9 @@ export const MarketplacePage: React.FC = () => {
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       filtered = filtered.filter(property => {
-        const address = property.address || '';
-        const comuna = property.comuna || '';
-        const region = property.region || '';
+        const address = property.address_street || '';
+        const comuna = property.address_commune || '';
+        const region = property.address_region || '';
         const description = property.description || '';
 
         return address.toLowerCase().includes(searchTerm) ||
@@ -125,14 +130,14 @@ export const MarketplacePage: React.FC = () => {
 
     // Type filter - Safe access
     if (filters.type) {
-      filtered = filtered.filter(property => property.type && property.type === filters.type);
+      filtered = filtered.filter(property => property.listing_type && property.listing_type === filters.type);
     }
 
     // Comuna filter - Safe access
     if (filters.comuna) {
       const comunaFilter = filters.comuna.toLowerCase();
       filtered = filtered.filter(property =>
-        property.comuna && property.comuna.toLowerCase().includes(comunaFilter)
+        property.address_commune && property.address_commune.toLowerCase().includes(comunaFilter)
       );
     }
 
@@ -140,13 +145,13 @@ export const MarketplacePage: React.FC = () => {
     if (filters.minPrice) {
       const minPrice = parseFloat(filters.minPrice);
       filtered = filtered.filter(property =>
-        typeof property.price === 'number' && property.price >= minPrice
+        typeof property.price_clp === 'number' && property.price_clp >= minPrice
       );
     }
     if (filters.maxPrice) {
       const maxPrice = parseFloat(filters.maxPrice);
       filtered = filtered.filter(property =>
-        typeof property.price === 'number' && property.price <= maxPrice
+        typeof property.price_clp === 'number' && property.price_clp <= maxPrice
       );
     }
 
@@ -162,13 +167,13 @@ export const MarketplacePage: React.FC = () => {
     if (filters.minSurface) {
       const minSurface = parseInt(filters.minSurface);
       filtered = filtered.filter(property =>
-        typeof property.surface === 'number' && property.surface >= minSurface
+        typeof property.surface_m2 === 'number' && property.surface_m2 >= minSurface
       );
     }
     if (filters.maxSurface) {
       const maxSurface = parseInt(filters.maxSurface);
       filtered = filtered.filter(property =>
-        typeof property.surface === 'number' && property.surface <= maxSurface
+        typeof property.surface_m2 === 'number' && property.surface_m2 <= maxSurface
       );
     }
 
@@ -207,8 +212,10 @@ export const MarketplacePage: React.FC = () => {
   };
 
   const handleMakeOffer = (property: Property) => {
-    if (!user) {
+    if (!user || !user.id) {
       alert('Debes iniciar sesión para hacer una oferta');
+      // Optionally redirect to login page
+      // window.location.href = '/auth';
       return;
     }
     setSelectedProperty(property);
@@ -216,8 +223,10 @@ export const MarketplacePage: React.FC = () => {
   };
 
   const handleApply = (property: Property) => {
-    if (!user) {
-      alert('Debes iniciar sesión para postular');
+    if (!user || !user.id) {
+      alert('Debes iniciar sesión para postular a esta propiedad');
+      // Optionally redirect to login page
+      // window.location.href = '/auth';
       return;
     }
     setSelectedProperty(property);
@@ -277,12 +286,12 @@ export const MarketplacePage: React.FC = () => {
         </div>
         <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
           <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{properties.filter(p => p.type === 'venta').length}</p>
+          <p className="text-2xl font-bold text-gray-900">{properties.filter(p => p.listing_type === 'venta').length}</p>
           <p className="text-gray-600">En Venta</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
           <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{properties.filter(p => p.type === 'arriendo').length}</p>
+          <p className="text-2xl font-bold text-gray-900">{properties.filter(p => p.listing_type === 'arriendo').length}</p>
           <p className="text-gray-600">En Arriendo</p>
         </div>
       </div>
@@ -380,10 +389,10 @@ export const MarketplacePage: React.FC = () => {
             <div key={property.id} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
               {/* Property Image */}
               <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {property.photos_urls && Array.isArray(property.photos_urls) && property.photos_urls.length > 0 ? (
+                {property.property_images && Array.isArray(property.property_images) && property.property_images.length > 0 ? (
                   <img
-                    src={property.photos_urls[0]}
-                    alt={property.address || 'Propiedad'}
+                    src={property.property_images[0].image_url}
+                    alt={`${property.address_street || 'Propiedad'} ${property.address_number || ''}`}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
@@ -412,12 +421,12 @@ export const MarketplacePage: React.FC = () => {
                 {/* Type Badge */}
                 <div className="absolute top-3 left-3">
                   <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    property.type === 'venta'
+                    property.listing_type === 'venta'
                       ? 'bg-blue-100 text-blue-800'
                       : 'bg-emerald-100 text-emerald-800'
                   }`}>
-                    {property.type
-                      ? property.type.charAt(0).toUpperCase() + property.type.slice(1)
+                    {property.listing_type
+                      ? property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1)
                       : 'Tipo desconocido'
                     }
                   </span>
@@ -428,11 +437,11 @@ export const MarketplacePage: React.FC = () => {
               <div className="p-4">
                 <div className="mb-2">
                   <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 mb-1">
-                    {property.address || 'Dirección no disponible'}
+                    {property.address_street ? `${property.address_street} ${property.address_number || ''}` : 'Dirección no disponible'}
                   </h3>
                   <div className="flex items-center text-sm text-gray-500">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{property.comuna || 'Comuna no disponible'}, {property.region || 'Región no disponible'}</span>
+                    <span>{property.address_commune || 'Comuna no disponible'}, {property.address_region || 'Región no disponible'}</span>
                   </div>
                 </div>
 
@@ -452,10 +461,10 @@ export const MarketplacePage: React.FC = () => {
                       <Bath className="h-4 w-4 mr-1" />
                       <span>{typeof property.bathrooms === 'number' ? property.bathrooms : 'N/A'}</span>
                     </div>
-                    {typeof property.surface === 'number' && property.surface > 0 && (
+                    {typeof property.surface_m2 === 'number' && property.surface_m2 > 0 && (
                       <div className="flex items-center">
                         <Square className="h-4 w-4 mr-1" />
-                        <span>{property.surface}m²</span>
+                        <span>{property.surface_m2}m²</span>
                       </div>
                     )}
                   </div>
@@ -464,14 +473,14 @@ export const MarketplacePage: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center text-lg font-bold text-gray-900">
                     <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-                    <span>{formatPrice(property.price)}</span>
+                    <span>{formatPrice(property.price_clp)}</span>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
-                    {property.type === 'venta' ? (
+                    {property.listing_type === 'venta' ? (
                       <button
                         onClick={() => handleMakeOffer(property)}
                         className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
@@ -479,7 +488,7 @@ export const MarketplacePage: React.FC = () => {
                         <TrendingUp className="h-4 w-4" />
                         <span>Ofertar</span>
                       </button>
-                    ) : property.type === 'arriendo' ? (
+                    ) : property.listing_type === 'arriendo' ? (
                       <button
                         onClick={() => handleApply(property)}
                         className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors text-sm"

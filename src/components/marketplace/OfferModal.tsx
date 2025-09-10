@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, DollarSign, MessageSquare, Loader2, TrendingUp } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import CustomButton from '../common/CustomButton';
 
 interface OfferModalProps {
   property: Property;
@@ -41,8 +42,14 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm() || !user) return;
+
+    // Verify user is authenticated
+    if (!user || !user.id) {
+      alert('Usuario no autenticado. Por favor, inicia sesión para continuar.');
+      return;
+    }
+
+    if (!validateForm()) return;
 
     setLoading(true);
 
@@ -52,7 +59,7 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
         .from('offers')
         .select('id')
         .eq('property_id', property.id)
-        .eq('buyer_id', user.id)
+        .eq('offerer_id', user.id)
         .single();
 
       if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
@@ -70,20 +77,38 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
         .from('offers')
         .insert({
           property_id: property.id,
-          buyer_id: user.id,
+          offerer_id: user.id,
           offer_amount: parseFloat(formData.offer_amount),
           message: formData.message.trim(),
           status: 'pendiente'
         })
         .select();
 
-      if (error) throw error;
+      if (error) {
+        // Handle RLS policy violations specifically
+        if (error.message.includes('permission denied') || error.message.includes('RLS')) {
+          console.error('RLS Policy violation: User does not have permission to create offers');
+          alert('No tienes permisos para enviar ofertas. Verifica tu cuenta.');
+        } else {
+          throw error;
+        }
+      }
 
       alert('¡Oferta enviada exitosamente! El propietario la revisará pronto.');
       onSuccess();
     } catch (error: any) {
       console.error('Error sending offer:', error);
-      alert('Error enviando la oferta: ' + error.message);
+      let errorMessage = 'Error enviando la oferta';
+
+      if (error.message.includes('permission denied')) {
+        errorMessage = 'No tienes permisos para enviar ofertas';
+      } else if (error.message.includes('duplicate key')) {
+        errorMessage = 'Ya has enviado una oferta para esta propiedad';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -201,30 +226,23 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
 
           {/* Buttons */}
           <div className="flex justify-end space-x-3 mt-6">
-            <button
+            <CustomButton
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancelar
-            </button>
-            <button
+            </CustomButton>
+            <CustomButton
               type="submit"
+              variant="primary"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+              loading={loading}
+              loadingText="Enviando..."
+              icon={TrendingUp}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Enviar Oferta
-                </>
-              )}
-            </button>
+              Enviar Oferta
+            </CustomButton>
           </div>
         </form>
       </div>

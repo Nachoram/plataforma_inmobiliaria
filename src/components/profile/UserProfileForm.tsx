@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, Profile, Document, validateRUT, formatRUT } from '../../lib/supabase';
+import CustomButton from '../common/CustomButton';
 
 interface UserProfileFormProps {
   onSuccess?: () => void;
@@ -47,7 +48,10 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
 
   const loadProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        throw new Error('Error de autenticación: ' + userError.message);
+      }
       if (!user) {
         throw new Error('Usuario no autenticado');
       }
@@ -121,8 +125,9 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
   };
 
   const uploadDocuments = async () => {
-    const user = await supabase.auth.getUser();
-    if (!user.data?.user) throw new Error('Usuario no autenticado');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw new Error('Error de autenticación: ' + userError.message);
+    if (!user) throw new Error('Usuario no autenticado');
     
     for (const file of newDocuments) {
       const fileExt = file.name.split('.').pop();
@@ -198,8 +203,11 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
     setError(null);
 
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        throw new Error('Error de autenticación: ' + userError.message);
+      }
+      if (!user) {
         throw new Error('Usuario no autenticado');
       }
 
@@ -558,21 +566,23 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
         {/* Botones */}
         <div className="flex justify-end space-x-4">
           {onCancel && (
-            <button
+            <CustomButton
               type="button"
+              variant="outline"
               onClick={onCancel}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:border-transparent"
             >
               Cancelar
-            </button>
+            </CustomButton>
           )}
-          <button
+          <CustomButton
             type="submit"
+            variant="primary"
             disabled={saving}
-            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={saving}
+            loadingText="Guardando..."
           >
-            {saving ? 'Guardando...' : 'Guardar Perfil'}
-          </button>
+            Guardar Perfil
+          </CustomButton>
         </div>
       </form>
     </div>

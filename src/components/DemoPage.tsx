@@ -5,7 +5,7 @@ import PropertyPublicationForm from './properties/PropertyPublicationForm';
 import RentalApplicationForm from './properties/RentalApplicationForm';
 import UserProfileForm from './profile/UserProfileForm';
 import PropertyCard from './PropertyCard';
-import CustomButton from './CustomButton';
+import CustomButton from './common/CustomButton';
 
 const DemoPage: React.FC = () => {
   const { user, loading } = useAuth();

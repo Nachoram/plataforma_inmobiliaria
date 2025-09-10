@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import CustomButton from './common/CustomButton';
 
 export const AdminSetup: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -67,8 +68,12 @@ export const AdminSetup: React.FC = () => {
       }
       
       // Test de autenticación
-      const { data: user } = await supabase.auth.getUser();
-      setResults(prev => [...prev, `👤 Usuario: ${user?.user?.email || 'No autenticado'}`]);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        setResults(prev => [...prev, `❌ Error de autenticación: ${userError.message}`]);
+      } else {
+        setResults(prev => [...prev, `👤 Usuario: ${user?.email || 'No autenticado'}`]);
+      }
       
       // Test de storage
       const { data: buckets } = await supabase.storage.listBuckets();
@@ -88,21 +93,26 @@ export const AdminSetup: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-6">🔧 Configuración del Sistema</h1>
           
           <div className="space-y-4">
-            <button
+            <CustomButton
               onClick={testConnection}
+              variant="primary"
               disabled={loading}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              loading={loading}
+              loadingText="Probando..."
+              className="mr-4"
             >
-              {loading ? 'Probando...' : '🔍 Probar Conexión'}
-            </button>
-            
-            <button
+              🔍 Probar Conexión
+            </CustomButton>
+
+            <CustomButton
               onClick={createStorageBuckets}
+              variant="success"
               disabled={loading}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50"
+              loading={loading}
+              loadingText="Configurando..."
             >
-              {loading ? 'Configurando...' : '🗂️ Crear Buckets de Storage'}
-            </button>
+              🗂️ Crear Buckets de Storage
+            </CustomButton>
           </div>
           
           {results.length > 0 && (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send } from 'lucide-react';
-import { supabase, Property, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, VALIDATION_RULES } from '../../lib/supabase';
+import { supabase, Property, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, VALIDATION_RULES, validateRUT } from '../../lib/supabase';
 import CustomButton from '../common/CustomButton';
 
 interface RentalApplicationFormProps {

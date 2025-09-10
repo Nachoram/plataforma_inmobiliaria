@@ -42,6 +42,21 @@ export const OffersPage: React.FC = () => {
   // Función para obtener ofertas recibidas (como propietario)
   const fetchReceivedOffers = async () => {
     try {
+      // First, get properties owned by the user
+      const { data: userProperties, error: propertiesError } = await supabase
+        .from('properties')
+        .select('id')
+        .eq('owner_id', user?.id);
+
+      if (propertiesError) throw propertiesError;
+
+      if (!userProperties || userProperties.length === 0) {
+        return [];
+      }
+
+      const propertyIds = userProperties.map(p => p.id);
+
+      // Then get offers for those properties
       const { data, error } = await supabase
         .from('offers')
         .select(`
@@ -49,7 +64,7 @@ export const OffersPage: React.FC = () => {
           property:properties!inner(address_street, address_commune, price_clp, listing_type, photos_urls),
           buyer:profiles!offers_offerer_id_fkey(full_name, contact_email, contact_phone)
         `)
-        .eq('property.owner_id', user?.id)
+        .in('property_id', propertyIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

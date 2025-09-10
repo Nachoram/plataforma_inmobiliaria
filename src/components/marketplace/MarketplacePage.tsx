@@ -59,7 +59,7 @@ export const MarketplacePage: React.FC = () => {
             storage_path
           )
         `)
-        .eq('status', 'activa')
+        .eq('status', 'disponible')
         .order('created_at', { ascending: false });
 
       if (error) {

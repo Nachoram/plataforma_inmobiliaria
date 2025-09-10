@@ -189,7 +189,7 @@ export const RentalPublicationForm: React.FC = () => {
   };
 
   // Upload files to Supabase Storage
-  const uploadFiles = async () => {
+  const uploadFiles = async (tempPropertyId: string) => {
     // Upload photos to images bucket and create property_images records
     for (const file of photoFiles) {
       const fileExt = file.name.split('.').pop();
@@ -209,7 +209,7 @@ export const RentalPublicationForm: React.FC = () => {
       const { error: dbError } = await supabase
         .from('property_images')
         .insert({
-          property_id: 'temp', // This will be updated after property creation
+          property_id: tempPropertyId, // Use temporary UUID
           image_url: publicUrl,
           storage_path: data.path,
           created_at: new Date().toISOString()
@@ -235,7 +235,7 @@ export const RentalPublicationForm: React.FC = () => {
           .from('documents')
           .insert({
             uploader_id: user?.id,
-            related_entity_id: 'temp', // This will be updated after property creation
+            related_entity_id: tempPropertyId, // Use temporary UUID
             related_entity_type: 'property_legal',
             document_type: key,
             storage_path: data.path,
@@ -250,7 +250,7 @@ export const RentalPublicationForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -262,6 +262,9 @@ export const RentalPublicationForm: React.FC = () => {
     }
 
     setLoading(true);
+
+    // Generate a temporary UUID for this transaction
+    const tempPropertyId = crypto.randomUUID();
 
     try {
       // Ensure the user's profile exists (opcional, no crítico)
@@ -298,7 +301,7 @@ export const RentalPublicationForm: React.FC = () => {
       if (photoFiles.length > 0 || Object.values(formData.documents).some(doc => doc !== null)) {
         setUploading(true);
         try {
-          await uploadFiles();
+          await uploadFiles(tempPropertyId);
         } catch (error) {
           console.warn('File upload failed, continuing without files:', error);
           // Continue without files - they are optional
@@ -351,8 +354,7 @@ export const RentalPublicationForm: React.FC = () => {
           const { error: imageUpdateError } = await supabase
             .from('property_images')
             .update({ property_id: propertyResult.id })
-            .eq('property_id', 'temp')
-            .eq('created_at', new Date().toISOString().split('T')[0]); // Match by date for safety
+            .eq('property_id', tempPropertyId);
 
           if (imageUpdateError) console.warn('Warning: Could not update property images:', imageUpdateError);
         }
@@ -362,8 +364,7 @@ export const RentalPublicationForm: React.FC = () => {
           const { error: docUpdateError } = await supabase
             .from('documents')
             .update({ related_entity_id: propertyResult.id })
-            .eq('related_entity_id', 'temp')
-            .eq('created_at', new Date().toISOString().split('T')[0]); // Match by date for safety
+            .eq('related_entity_id', tempPropertyId);
 
           if (docUpdateError) console.warn('Warning: Could not update property documents:', docUpdateError);
         }

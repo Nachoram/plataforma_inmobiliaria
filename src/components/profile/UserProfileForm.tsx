@@ -57,33 +57,58 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
       }
 
       // Cargar perfil
+      // Usamos .maybeSingle() porque puede haber casos en que el trigger de creación de perfil falle.
+      // Si el perfil es null, el usuario será guiado a completarlo.
+      // Ver DEBUG_REGISTRATION_README.md para más detalles sobre cómo depurar el trigger.
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         throw profileError;
       }
 
-      setProfile(profileData);
-      setFormData({
-        first_name: profileData.first_name || '',
-        paternal_last_name: profileData.paternal_last_name || '',
-        maternal_last_name: profileData.maternal_last_name || '',
-        rut: profileData.rut || '',
-        email: profileData.email || '',
-        phone: profileData.phone || '',
-        profession: profileData.profession || '',
-        marital_status: profileData.marital_status || 'soltero',
-        property_regime: profileData.property_regime || '',
-        address_street: profileData.address_street || '',
-        address_number: profileData.address_number || '',
-        address_department: profileData.address_department || '',
-        address_commune: profileData.address_commune || '',
-        address_region: profileData.address_region || '',
-      });
+      // Si no existe perfil, inicializar con valores por defecto
+      if (!profileData) {
+        console.warn('⚠️ Perfil no encontrado para usuario autenticado. Posible problema con trigger de creación de perfil.');
+        setProfile(null);
+        setFormData({
+          first_name: '',
+          paternal_last_name: '',
+          maternal_last_name: '',
+          rut: '',
+          email: user.email || '',
+          phone: '',
+          profession: '',
+          marital_status: 'soltero',
+          property_regime: '',
+          address_street: '',
+          address_number: '',
+          address_department: '',
+          address_commune: '',
+          address_region: '',
+        });
+      } else {
+        setProfile(profileData);
+        setFormData({
+          first_name: profileData.first_name || '',
+          paternal_last_name: profileData.paternal_last_name || '',
+          maternal_last_name: profileData.maternal_last_name || '',
+          rut: profileData.rut || '',
+          email: profileData.email || user.email || '',
+          phone: profileData.phone || '',
+          profession: profileData.profession || '',
+          marital_status: profileData.marital_status || 'soltero',
+          property_regime: profileData.property_regime || '',
+          address_street: profileData.address_street || '',
+          address_number: profileData.address_number || '',
+          address_department: profileData.address_department || '',
+          address_commune: profileData.address_commune || '',
+          address_region: profileData.address_region || '',
+        });
+      }
 
       // Cargar documentos
       const { data: documentsData, error: documentsError } = await supabase
@@ -277,6 +302,22 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
       {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
+        </div>
+      )}
+
+      {!profile && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <h3 className="font-semibold text-blue-800">Perfil Incompleto</h3>
+              <p className="text-sm text-blue-700">
+                Tu perfil no está completamente configurado. Completa la información a continuación para tener acceso completo a todas las funcionalidades.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

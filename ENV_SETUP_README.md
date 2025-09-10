@@ -22,6 +22,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 |----------|-------------|-----------|
 | `VITE_SUPABASE_URL` | URL de tu proyecto Supabase | ✅ Sí |
 | `VITE_SUPABASE_ANON_KEY` | Clave anónima de Supabase | ✅ Sí |
+| `VITE_RAILWAY_WEBHOOK_URL` | URL del webhook de n8n para notificaciones | ❌ No |
 
 ### 3. Verificación
 

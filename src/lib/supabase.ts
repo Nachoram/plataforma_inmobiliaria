@@ -221,7 +221,7 @@ export const isValidPrice = (price: unknown): boolean => {
 };
 
 // Custom hooks for consistent state management
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 export const useAsyncOperation = () => {
   const [loading, setLoading] = useState(false);
@@ -419,20 +419,16 @@ export const validateEmail = (email: string): boolean => {
   return isValidEmail(email);
 };
 
+// Validar RUT chileno
 export const validateRUT = (rut: string): boolean => {
   const cleanRut = rut.replace(/[.-]/g, '');
   const rutNumber = cleanRut.slice(0, -1);
   const dv = cleanRut.slice(-1).toUpperCase();
 
-  if (!/^\d+$/.test(rutNumber) || rutNumber.length < VALIDATION_RULES.RUT_MIN_LENGTH) {
+  if (!/^\d+$/.test(rutNumber) || rutNumber.length < 7) {
     return false;
   }
 
-  if (cleanRut.length > VALIDATION_RULES.RUT_MAX_LENGTH) {
-    return false;
-  }
-
-  // Algoritmo de validación de RUT chileno
   let sum = 0;
   let multiplier = 2;
 
@@ -564,29 +560,6 @@ export const formatRUT = (rut: string): string => {
   return `${formattedNumber}-${dv}`;
 };
 
-export const validateRUT = (rut: string): boolean => {
-  const cleanRut = rut.replace(/[.-]/g, '');
-  const rutNumber = cleanRut.slice(0, -1);
-  const dv = cleanRut.slice(-1).toUpperCase();
-  
-  if (!/^\d+$/.test(rutNumber) || rutNumber.length < 7) {
-    return false;
-  }
-  
-  // Algoritmo de validación de RUT chileno
-  let sum = 0;
-  let multiplier = 2;
-  
-  for (let i = rutNumber.length - 1; i >= 0; i--) {
-    sum += parseInt(rutNumber[i]) * multiplier;
-    multiplier = multiplier === 7 ? 2 : multiplier + 1;
-  }
-  
-  const remainder = sum % 11;
-  const calculatedDV = remainder === 0 ? '0' : remainder === 1 ? 'K' : (11 - remainder).toString();
-  
-  return dv === calculatedDV;
-};
 
 // Funciones de autenticación
 export const signUp = async (email: string, password: string, userMetadata?: any) => {

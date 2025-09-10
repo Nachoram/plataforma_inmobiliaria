@@ -36,11 +36,18 @@
 
 1. **Ve a Authentication → URL Configuration**:
    - **Site URL**: `https://tu-proyecto.vercel.app` (tu dominio de producción)
-   - **Redirect URLs**: Agrega `http://localhost:3000/**`
+   - **Redirect URLs**: Agrega `http://localhost:5173/**` (Vite usa puerto 5173 por defecto)
 
 2. **Ve a Authentication → Providers**:
    - Asegúrate de que **Email** esté habilitado
-   - **DESACTIVA** "Confirm email" para desarrollo
+   - **DESACTIVA** "Confirm email" para desarrollo (opcional)
+   - **Habilita** "Secure email change enabled" para producción
+
+3. **Variables de Entorno Adicionales** (opcional para notificaciones):
+   ```env
+   # Para integración con n8n/webhooks
+   VITE_RAILWAY_WEBHOOK_URL=https://tu-webhook-n8n.com/webhook/real-estate-events
+   ```
 
 ### **3. Probar la Aplicación**
 
@@ -98,41 +105,50 @@
 - ✅ Estado civil y régimen patrimonial
 
 ### **3. Publicación de Propiedades**
-- ✅ Formulario completo de propiedades
-- ✅ Carga múltiple de imágenes
-- ✅ Carga de documentos legales
-- ✅ Formateo de precios en CLP
-- ✅ Validación de datos
+- ✅ Formulario completo de propiedades (venta/arriendo)
+- ✅ Carga múltiple de imágenes con preview
+- ✅ Carga de documentos legales con validación
+- ✅ Formateo automático de precios en CLP
+- ✅ Validación completa de datos y direcciones chilenas
+- ✅ Edición de propiedades existentes
 
-### **4. Postulaciones de Arriendo**
-- ✅ Formulario multi-paso (4 pasos)
-- ✅ Información del postulante
-- ✅ Información del aval (opcional)
-- ✅ Preservación de datos snapshot
-- ✅ Carga de documentos
+### **4. Gestión Avanzada de Postulaciones**
+- ✅ Formulario multi-paso mejorado (4 pasos)
+- ✅ Información completa del postulante con RUT
+- ✅ Información del aval con validación independiente
+- ✅ Preservación de datos snapshot para auditoría
+- ✅ Carga de documentos con tipos específicos
+- ✅ **Sistema bidireccional**: ver postulaciones recibidas y enviadas
+- ✅ **Integración con n8n** para notificaciones automáticas
+- ✅ **Modal de mensajes** para comunicación con postulantes
+- ✅ **Solicitud de informes comerciales** automáticos
 
-### **5. Base de Datos**
-- ✅ 8 tablas normalizadas
-- ✅ Row Level Security (RLS)
-- ✅ Triggers automáticos
-- ✅ Políticas de seguridad
-- ✅ Storage buckets configurados
+### **5. Sistema Completo de Gestión**
+- ✅ **Base de datos avanzada**: 8+ tablas normalizadas con relaciones complejas
+- ✅ **Row Level Security (RLS)**: Políticas de seguridad granular por tabla
+- ✅ **Triggers automáticos**: Creación de perfiles y timestamps
+- ✅ **Storage buckets**: Configuración automática de `propiedades-imagenes` y `documentos-clientes`
+- ✅ **Sistema de ofertas**: Gestión completa de ofertas de compra
+- ✅ **Configuración administrativa**: Herramientas para setup del sistema
+- ✅ **Arquitectura de providers**: Inicialización robusta y escalable
 
 ## 🔧 Características Técnicas
 
 ### **Frontend**
-- **React 18** con TypeScript
-- **Tailwind CSS** para estilos
-- **Vite** como bundler
-- **React Router** para navegación
-- **Hooks personalizados** para autenticación
+- **React 18.3.1** con TypeScript 5.5.3
+- **Tailwind CSS 3.4.1** para estilos modernos
+- **Vite 5.4.2** como bundler optimizado
+- **React Router DOM 7.8.2** para navegación avanzada
+- **Lucide React 0.344.0** para iconografía
+- **Arquitectura de providers** con estado de carga global
 
-### **Backend**
-- **Supabase** como Backend-as-a-Service
-- **PostgreSQL** como base de datos
-- **Row Level Security** para seguridad
-- **Storage** para archivos
-- **Auth** para autenticación
+### **Backend & Integraciones**
+- **Supabase 2.57.2** como Backend-as-a-Service
+- **PostgreSQL** con Row Level Security avanzado
+- **Supabase Storage** con buckets organizados
+- **Supabase Auth** con configuración completa
+- **Integración n8n** para webhooks y notificaciones
+- **Edge Functions** para lógica serverless
 
 ### **Validaciones**
 - ✅ Validación de RUT chileno
@@ -168,12 +184,15 @@
 4. **Optimizar imágenes**: Implementar compresión automática
 5. **Agregar tests**: Unitarios y de integración
 
-### **Funcionalidades Adicionales**
-1. **Sistema de notificaciones**: Para ofertas y postulaciones
-2. **Chat en tiempo real**: Entre propietarios y postulantes
+### **Funcionalidades Adicionales Planificadas**
+1. **Sistema de notificaciones push**: Tiempo real con WebSockets
+2. **Chat integrado**: Entre propietarios y postulantes (ya parcialmente implementado con modales)
 3. **Sistema de calificaciones**: Para usuarios y propiedades
-4. **Integración con mapas**: Para ubicación de propiedades
-5. **Sistema de pagos**: Para reservas y depósitos
+4. **Integración con mapas**: Google Maps para ubicación de propiedades
+5. **Sistema de pagos**: Para reservas, depósitos y comisiones
+6. **Dashboard administrativo**: Métricas y gestión de usuarios
+7. **API pública**: Para integraciones de terceros
+8. **Aplicación móvil**: React Native o PWA
 
 ## 🎉 ¡Implementación Completada!
 

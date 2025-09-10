@@ -49,11 +49,12 @@
 ### **Capas de Arquitectura**
 
 #### **1. Frontend Layer**
-- **React 18** con hooks y context
-- **TypeScript** para type safety
-- **Tailwind CSS** para styling
-- **Vite** para build y dev server
-- **React Router** para navegación
+- **React 18.3.1** con hooks y context avanzado
+- **TypeScript 5.5.3** para type safety completo
+- **Tailwind CSS 3.4.1** para styling moderno
+- **Vite 5.4.2** para build y dev server optimizado
+- **React Router DOM 7.8.2** para navegación avanzada
+- **Lucide React 0.344.0** para iconografía moderna
 
 #### **2. Backend Layer**
 - **Supabase** como BaaS
@@ -229,6 +230,54 @@ ON properties FOR ALL
 USING (auth.uid() = owner_id);
 ```
 
+### **Arquitectura de Providers**
+
+#### **AppProviders Component**
+```typescript
+// src/components/AppProviders.tsx
+export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
+  );
+};
+```
+
+#### **AppContent con Estado de Carga**
+```typescript
+// src/components/AppContent.tsx
+export const AppContent: React.FC = () => {
+  const { loading, user } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+          <p className="text-gray-600 mt-4">Inicializando aplicación...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      {/* Rutas de la aplicación */}
+    </Routes>
+  );
+};
+```
+
+**Beneficios:**
+- ✅ **Inicialización secuencial** de providers
+- ✅ **Estado de carga global** que previene errores de contexto
+- ✅ **Separación clara** de responsabilidades
+- ✅ **Escalabilidad** para agregar nuevos providers
+- ✅ **Debugging mejorado** con estados de carga visibles
+
 ### **Hooks de Autenticación**
 
 #### **useAuth Hook**
@@ -355,6 +404,102 @@ export const getCurrentUser = async () => {
 };
 ```
 
+### **Integración con Webhooks Externos**
+
+#### **Configuración de n8n Webhooks**
+```typescript
+// Configuración de variables de entorno
+VITE_RAILWAY_WEBHOOK_URL=https://your-n8n-webhook-url.com/webhook/real-estate-events
+```
+
+#### **Estructura de Payload para n8n**
+```typescript
+interface WebhookPayload {
+  // Información básica del evento
+  action: 'application_approved' | 'application_rejected' | 'offer_received';
+  decision: 'approved' | 'rejected';
+  status: 'aprobada' | 'rechazada';
+  timestamp: string;
+
+  // Información de la aplicación/oferta
+  application?: {
+    id: string;
+    property_id: string;
+    applicant_id: string;
+    message: string;
+    created_at: string;
+  };
+
+  // Información de la propiedad
+  property?: {
+    id: string;
+    address: string;
+    comuna: string;
+    price: number;
+    type: string;
+    photos_urls: string[];
+  };
+
+  // Información del usuario
+  applicant?: {
+    id: string;
+    full_name: string;
+    contact_email: string;
+    contact_phone: string;
+    profession: string;
+    monthly_income: number;
+  };
+
+  // Metadata adicional
+  metadata: {
+    source: 'propiedades_app';
+    user_agent: string;
+    url: string;
+    environment: 'development' | 'production';
+  };
+}
+```
+
+#### **Manejo de Respuestas de Webhook**
+```typescript
+const sendWebhookNotification = async (payload: WebhookPayload): Promise<void> => {
+  const webhookURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+
+  if (!webhookURL) {
+    console.log('ℹ️ Webhook no configurado - funcionando sin notificaciones externas');
+    return;
+  }
+
+  try {
+    const response = await fetch(webhookURL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'PropiedadesApp/1.0'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.warn(`⚠️ Webhook no disponible (${response.status})`);
+    } else {
+      const result = await response.json();
+      console.log('✅ Webhook ejecutado con éxito:', result);
+    }
+  } catch (error) {
+    console.warn('⚠️ Servicio de notificaciones no disponible:', error.message);
+  }
+};
+```
+
+**Casos de Uso:**
+- 📧 **Notificaciones por email** automáticas
+- 📱 **SMS a postulantes** cuando se aprueba/rechaza
+- 📊 **Actualización de CRMs** externos
+- 📈 **Analytics y tracking** de conversiones
+- 🤖 **Procesos automatizados** de validación
+
 ### **Edge Functions**
 
 #### **approve-application**
@@ -365,22 +510,56 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 serve(async (req) => {
   const { applicationId, status } = await req.json();
 
+  // Configuración del cliente Supabase con service role key para operaciones administrativas
   const supabaseClient = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', // Service role para bypass RLS
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
   );
 
   const { data, error } = await supabaseClient
     .from('applications')
-    .update({ status })
-    .eq('id', applicationId);
+    .update({
+      status,
+      approved_at: status === 'aprobada' ? new Date().toISOString() : null
+    })
+    .eq('id', applicationId)
+    .select(`
+      *,
+      properties(title, address),
+      profiles(full_name, contact_email)
+    `);
+
+  // Integración opcional con sistemas externos (n8n, etc.)
+  if (!error && status === 'aprobada') {
+    // Lógica adicional para notificaciones, etc.
+  }
 
   return new Response(
     JSON.stringify({ data, error }),
-    { headers: { "Content-Type": "application/json" } }
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
+    }
   );
 });
 ```
+
+**Características:**
+- ✅ **Service Role Key** para operaciones administrativas
+- ✅ **Bypass RLS** cuando es necesario
+- ✅ **Timestamps automáticos** para auditoría
+- ✅ **CORS configurado** para integración frontend
+- ✅ **Integración preparada** para webhooks externos
 
 ---
 

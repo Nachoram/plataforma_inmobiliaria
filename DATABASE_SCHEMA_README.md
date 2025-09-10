@@ -2,20 +2,21 @@
 
 ## Overview
 
-This document describes the complete database schema and React forms for a real estate platform built with Supabase, following Third Normal Form (3NF) principles and Chilean real estate requirements.
+This document describes the complete database schema and React forms for a comprehensive real estate platform built with Supabase, following Third Normal Form (3NF) principles and Chilean real estate requirements.
 
 ## Database Schema
 
-### Tables Created
+### Tables Created (8+ Tables)
 
 1. **profiles** - Extended user profiles linked to Supabase Auth
-2. **properties** - Central property listings with detailed information
+2. **properties** - Central property listings with detailed information (venta/arriendo)
 3. **guarantors** - Guarantor/co-signer information for rental applications
 4. **applications** - Rental applications with snapshot data preservation
-5. **offers** - Purchase offers for properties
+5. **offers** - Purchase offers for properties with status tracking
 6. **documents** - Centralized document management system
-7. **property_images** - Property image management
+7. **property_images** - Property image management with storage integration
 8. **user_favorites** - Many-to-many relationship for user favorites
+9. **Additional tables** - Supporting tables for enums and relationships
 
 ### Key Features
 
@@ -25,6 +26,10 @@ This document describes the complete database schema and React forms for a real 
 - **Comprehensive RLS**: Row Level Security policies for all tables
 - **Storage Integration**: Supabase Storage buckets for images and documents
 - **Automatic Profile Creation**: Trigger creates user profiles on signup
+- **Webhook Integration**: Support for external notifications (n8n, etc.)
+- **Advanced Status Tracking**: Complete workflow for applications and offers
+- **Multi-tenant Architecture**: Ready for future scalability
+- **Audit Trail**: Timestamps and status changes tracking
 
 ## Installation & Setup
 

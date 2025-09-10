@@ -5,8 +5,9 @@
 [![React](https://img.shields.io/badge/React-18.3.1-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-blue.svg)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-2.57.2-green.svg)](https://supabase.com/)
-[![Vite](https://img.shields.io/badge/Vite-5.4.8-yellow.svg)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5.4.2-yellow.svg)](https://vitejs.dev/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.1-blue.svg)](https://tailwindcss.com/)
+[![React Router](https://img.shields.io/badge/React_Router-7.8.2-orange.svg)](https://reactrouter.com/)
 
 ---
 
@@ -57,10 +58,17 @@ Esta es una **plataforma inmobiliaria completa** diseñada para facilitar la ges
 
 ### 🔐 **Sistema de Seguridad**
 - 🔒 **Autenticación robusta con Supabase Auth**
-- 🛡️ **Row Level Security (RLS)**
+- 🛡️ **Row Level Security (RLS) avanzado**
 - 🔐 **Validación de RUT chileno**
 - 📋 **Encriptación de datos sensibles**
 - 🚫 **Protección contra accesos no autorizados**
+- 🔧 **Arquitectura de providers mejorada**
+
+### 📡 **Sistema de Notificaciones**
+- 📧 **Integración con n8n** para webhooks
+- 📱 **Notificaciones automáticas** de postulaciones
+- 💰 **Alertas de ofertas** recibidas
+- 📊 **Informes comerciales** automáticos
 
 ---
 
@@ -70,9 +78,9 @@ Esta es una **plataforma inmobiliaria completa** diseñada para facilitar la ges
 - ⚛️ **React 18.3.1** - Framework principal
 - 🔷 **TypeScript 5.5.3** - Tipado estático
 - 🎨 **Tailwind CSS 3.4.1** - Framework CSS
-- ⚡ **Vite 5.4.8** - Build tool y dev server
+- ⚡ **Vite 5.4.2** - Build tool y dev server
 - 🧭 **React Router DOM 7.8.2** - Routing
-- 🎯 **Lucide React** - Iconos
+- 🎯 **Lucide React 0.344.0** - Iconos modernos
 
 ### **Backend & Base de Datos**
 - 🗄️ **Supabase** - Backend-as-a-Service
@@ -163,9 +171,10 @@ plataforma_inmobiliaria/
 
 ### **📊 Dashboard Components**
 - **`<PortfolioPage />`** - Portafolio personal del usuario
-- **`<ApplicationsPage />`** - Gestión de postulaciones
-- **`<OffersPage />`** - Gestión de ofertas
+- **`<ApplicationsPage />`** - Gestión avanzada de postulaciones (recibidas/enviadas)
+- **`<OffersPage />`** - Gestión completa de ofertas de compra
 - **`<MyActivityPage />`** - Actividad personal
+- **`<AdminSetup />`** - Configuración del sistema y buckets de storage
 
 ### **🔐 Authentication Components**
 - **`<AuthPage />`** - Página de login/registro
@@ -226,21 +235,28 @@ Para información detallada sobre aspectos específicos:
 ## 🎯 **Próximos Pasos**
 
 ### **🚀 Funcionalidades Implementadas**
-- ✅ Sistema de autenticación completo
-- ✅ Gestión de perfiles de usuario
-- ✅ Publicación de propiedades
-- ✅ Sistema de postulaciones
-- ✅ Gestión de documentos
-- ✅ Interfaz responsive
-- ✅ Base de datos normalizada
+- ✅ Sistema de autenticación completo con arquitectura de providers
+- ✅ Gestión avanzada de perfiles de usuario
+- ✅ Publicación completa de propiedades (venta/arriendo)
+- ✅ Sistema de postulaciones con gestión bidireccional
+- ✅ Gestión completa de ofertas de compra
+- ✅ Sistema de notificaciones con integración n8n
+- ✅ Gestión de documentos y archivos
+- ✅ Configuración automática de storage buckets
+- ✅ Interfaz responsive y moderna
+- ✅ Base de datos normalizada con RLS avanzado
 
 ### **📋 Próximas Funcionalidades**
-- [ ] 🔔 **Notificaciones en tiempo real**
-- [ ] 📱 **Aplicación móvil nativa**
-- [ ] 🤖 **Chat integrado**
-- [ ] 📊 **Dashboard administrativo**
-- [ ] 🗺️ **Mapa interactivo**
-- [ ] 📈 **Analytics y reportes**
+- [ ] 🔔 **Notificaciones push en tiempo real**
+- [ ] 📱 **Aplicación móvil nativa (React Native)**
+- [ ] 🤖 **Chat integrado entre propietarios y postulantes**
+- [ ] 📊 **Dashboard administrativo avanzado**
+- [ ] 🗺️ **Mapa interactivo con geolocalización**
+- [ ] 📈 **Analytics y reportes de rendimiento**
+- [ ] 🎯 **Sistema de calificaciones y reseñas**
+- [ ] 💳 **Integración de pagos para depósitos**
+- [ ] 📅 **Sistema de visitas programadas**
+- [ ] 🔍 **Búsqueda avanzada con filtros geográficos**
 
 ---
 

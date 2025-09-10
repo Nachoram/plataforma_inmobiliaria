@@ -18,7 +18,168 @@
 
 ## 🚨 **Problemas Comunes**
 
-### **1. Error: "Supabase URL or Anon Key is missing"**
+### **1. Error: "useAuth must be used within an AuthProvider"**
+
+#### **Síntomas:**
+- Error en consola: `useAuth must be used within an AuthProvider`
+- Componentes no renderizan correctamente
+- Pantalla en blanco o componentes faltantes
+- Errores de contexto en componentes autenticados
+
+#### **Causas:**
+- **Arquitectura de providers desordenada**
+- **Condición de carrera** entre inicialización de AuthProvider y renderizado
+- **Componentes renderizados** antes de que AuthProvider esté listo
+
+#### **Soluciones:**
+
+**a) Verificar estructura de AppProviders:**
+```typescript
+// src/components/AppProviders.tsx debe existir y ser correcto
+export const AppProviders: React.FC = ({ children }) => {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
+  );
+};
+```
+
+**b) Verificar AppContent con estado de carga:**
+```typescript
+// src/components/AppContent.tsx debe manejar loading state
+export const AppContent: React.FC = () => {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <div>Cargando...</div>; // O componente de loading
+  }
+
+  return <Routes>...</Routes>;
+};
+```
+
+**c) Verificar orden en main.tsx:**
+```typescript
+// src/main.tsx debe usar AppProviders
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <AppProviders />
+  </React.StrictMode>
+);
+```
+
+### **2. Error: "Webhook no disponible" o "Servicio de notificaciones no disponible"**
+
+#### **Síntomas:**
+- Notificaciones no se envían al aprobar/rechazar postulaciones
+- Mensajes de advertencia en consola sobre webhook
+- Aplicación funciona pero sin notificaciones externas
+- Logs muestran "⚠️ Webhook no disponible" o "⚠️ Servicio de notificaciones no disponible"
+
+#### **Causas:**
+- **Variable de entorno faltante**: `VITE_RAILWAY_WEBHOOK_URL` no configurada
+- **URL del webhook incorrecta**: Endpoint de n8n no accesible
+- **Configuración de CORS**: El servidor n8n no permite requests desde el frontend
+- **Formato de payload incorrecto**: Estructura de datos no compatible con n8n
+
+#### **Soluciones:**
+
+**a) Verificar variable de entorno:**
+```bash
+# Verificar que existe la variable
+echo $VITE_RAILWAY_WEBHOOK_URL
+
+# O verificar en .env
+cat .env | grep VITE_RAILWAY_WEBHOOK_URL
+```
+
+**b) Verificar formato de la URL:**
+```bash
+# URL correcta debe ser similar a:
+VITE_RAILWAY_WEBHOOK_URL=https://tu-n8n-instance.com/webhook/real-estate-events
+```
+
+**c) Probar conectividad del webhook:**
+```bash
+# Probar con curl
+curl -X POST https://tu-n8n-instance.com/webhook/real-estate-events \
+  -H "Content-Type: application/json" \
+  -d '{"test": "connection"}'
+```
+
+**d) Verificar payload structure:**
+```typescript
+// El payload debe coincidir con lo esperado por n8n
+const testPayload = {
+  action: 'test_connection',
+  timestamp: new Date().toISOString(),
+  source: 'propiedades_app'
+};
+```
+
+**e) Configuración opcional (no bloqueante):**
+```typescript
+// Si no hay webhook configurado, la app funciona sin notificaciones
+console.log('ℹ️ Webhook no configurado - funcionando sin notificaciones externas');
+```
+
+### **3. Error: "Supabase URL or Anon Key is missing"**
+
+#### **Síntomas:**
+- Aplicación no carga completamente
+- Error en consola: `Supabase URL or Anon Key is missing. Check your .env file.`
+- Variables de entorno no se cargan correctamente
+- Errores de contexto en componentes autenticados
+
+#### **Causas:**
+- **Arquitectura de providers desordenada**
+- **Condición de carrera** entre inicialización de AuthProvider y renderizado
+- **Componentes renderizados** antes de que AuthProvider esté listo
+
+#### **Soluciones:**
+
+**a) Verificar estructura de AppProviders:**
+```typescript
+// src/components/AppProviders.tsx debe existir y ser correcto
+export const AppProviders: React.FC = ({ children }) => {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
+  );
+};
+```
+
+**b) Verificar AppContent con estado de carga:**
+```typescript
+// src/components/AppContent.tsx debe manejar loading state
+export const AppContent: React.FC = () => {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <div>Cargando...</div>; // O componente de loading
+  }
+
+  return <Routes>...</Routes>;
+};
+```
+
+**c) Verificar orden en main.tsx:**
+```typescript
+// src/main.tsx debe usar AppProviders
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <AppProviders />
+  </React.StrictMode>
+);
+```
+
+#### **2. Error: "Supabase URL or Anon Key is missing"**
 
 #### **Síntomas:**
 - Aplicación no carga

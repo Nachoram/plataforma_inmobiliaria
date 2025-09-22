@@ -169,7 +169,7 @@ export const AdvancedOfferForm: React.FC<AdvancedOfferFormProps> = ({
         .insert({
           property_id: propertyId,
           offerer_id: user.id,
-          offer_amount: parseFloat(offerData.offerAmount),
+          offer_amount_clp: parseFloat(offerData.offerAmount),
           message: offerData.message.trim() || null,
           financing_type: offerData.financingType,
           selected_services: offerData.selectedServices,

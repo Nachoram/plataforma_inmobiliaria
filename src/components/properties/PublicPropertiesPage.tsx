@@ -28,8 +28,11 @@ export const PublicPropertiesPage: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('properties')
-        .select('*')
-        .eq('status', 'activa')
+        .select(`
+          *,
+          property_images(image_url)
+        `)
+        .eq('status', 'disponible')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -260,9 +263,9 @@ export const PublicPropertiesPage: React.FC = () => {
             >
               {/* Property Image */}
               <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {property.photos_urls && property.photos_urls.length > 0 ? (
+                {property.property_images && property.property_images.length > 0 ? (
                   <img
-                    src={property.photos_urls[0]}
+                    src={property.property_images[0].image_url}
                     alt={`${property.address_street || ''} ${property.address_number || ''}`}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />

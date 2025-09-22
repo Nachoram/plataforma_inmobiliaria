@@ -84,7 +84,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             .from('profiles')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
           if (profile) {
             setApplicantData(prev => ({
@@ -283,65 +283,214 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         throw new Error('RUT del aval no es válido');
       }
 
-      let guarantorId: string | null = null;
+      // PASO 1: Asegurar que existe el profile del usuario (requerido por FK)
+      console.log('🔍 DEBUG: Verificando/creando profile del usuario...');
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            first_name: applicantData.first_name,
+            paternal_last_name: applicantData.paternal_last_name,
+            maternal_last_name: applicantData.maternal_last_name,
+            email: user.email || '',
+            rut: applicantData.rut,
+            phone: applicantData.phone || null,
+            address_street: applicantData.address_street,
+            address_number: applicantData.address_number,
+            address_commune: applicantData.address_commune,
+            address_region: applicantData.address_region,
+            profession: applicantData.profession,
+            marital_status: applicantData.marital_status,
+          }, {
+            onConflict: 'id'
+          });
 
-      // PASO 2: Crear aval si existe
-      if (showGuarantor) {
-        // Crear registro del aval (con dirección embebida)
-        const { data: guarantor, error: guarantorError } = await supabase
-          .from('guarantors')
-          .insert({
-            first_name: guarantorData.first_name,
-            paternal_last_name: guarantorData.paternal_last_name,
-            maternal_last_name: guarantorData.maternal_last_name,
-            rut: guarantorData.rut,
-            profession: guarantorData.profession,
-            monthly_income_clp: parseInt(guarantorData.monthly_income_clp) || 0,
-            // Dirección embebida directamente en la tabla guarantors
-            address_street: guarantorData.address_street,
-            address_number: guarantorData.address_number,
-            address_department: guarantorData.address_department,
-            address_commune: guarantorData.address_commune,
-            address_region: guarantorData.address_region
-          })
-          .select()
-          .single();
-
-        if (guarantorError) throw guarantorError;
-        guarantorId = guarantor.id;
+        if (profileError) {
+          console.log('❌ DEBUG: Error creando profile:', profileError);
+          throw new Error(`Error preparando perfil de usuario: ${profileError.message}`);
+        }
+        console.log('✅ DEBUG: Profile del usuario asegurado');
+      } catch (error) {
+        console.log('💥 DEBUG: Error en upsert de profile:', error);
+        throw error;
       }
 
-      // PASO 2: Crear la postulación con datos snapshot (siguiendo el esquema original)
-      const { data: application, error: applicationError } = await supabase
-        .from('applications')
-        .insert({
-          property_id: property.id,
-          applicant_id: user.id,
-          message: message,
-          guarantor_id: guarantorId,
-          // Campos snapshot requeridos (NOT NULL)
-          snapshot_applicant_profession: applicantData.profession,
-          snapshot_applicant_monthly_income_clp: parseInt(applicantData.monthly_income_clp) || 0,
-          snapshot_applicant_age: parseInt(applicantData.age) || 0,
-          snapshot_applicant_nationality: applicantData.nationality,
-          snapshot_applicant_marital_status: applicantData.marital_status,
-          snapshot_applicant_address_street: applicantData.address_street,
-          snapshot_applicant_address_number: applicantData.address_number,
-          snapshot_applicant_address_department: applicantData.address_department || null,
-          snapshot_applicant_address_commune: applicantData.address_commune,
-          snapshot_applicant_address_region: applicantData.address_region
-        })
-        .select()
-        .single();
+      let guarantorId: string | null = null;
 
-      if (applicationError) throw applicationError;
+      // PASO 2: Crear o encontrar aval si existe
+      if (showGuarantor) {
+        // Primero verificar si ya existe un guarantor con este RUT
+        const { data: existingGuarantor, error: fetchError } = await supabase
+          .from('guarantors')
+          .select('id')
+          .eq('rut', guarantorData.rut)
+          .maybeSingle();
 
-      // PASO 3: Subir documentos del postulante
+        if (fetchError) {
+          throw new Error(`Error verificando aval existente: ${fetchError.message}`);
+        }
+
+        if (existingGuarantor) {
+          // Si ya existe, usar el ID existente
+          guarantorId = existingGuarantor.id;
+          console.log('Usando guarantor existente con RUT:', guarantorData.rut);
+        } else {
+          // Si no existe, crear nuevo registro del aval
+          const { data: guarantor, error: guarantorError } = await supabase
+            .from('guarantors')
+            .insert([{
+              first_name: guarantorData.first_name,
+              paternal_last_name: guarantorData.paternal_last_name,
+              maternal_last_name: guarantorData.maternal_last_name,
+              rut: guarantorData.rut,
+              profession: guarantorData.profession,
+              monthly_income_clp: parseInt(guarantorData.monthly_income_clp) || 0,
+              // Dirección embebida directamente en la tabla guarantors
+              address_street: guarantorData.address_street,
+              address_number: guarantorData.address_number,
+              address_department: guarantorData.address_department,
+              address_commune: guarantorData.address_commune,
+              address_region: guarantorData.address_region
+            }])
+            .select()
+            .single();
+
+          if (guarantorError) {
+            // Si aún hay error de conflicto, intentar buscar el registro nuevamente
+            if (guarantorError.code === '23505' || guarantorError.message.includes('duplicate')) {
+              const { data: retryGuarantor, error: retryError } = await supabase
+                .from('guarantors')
+                .select('id')
+                .eq('rut', guarantorData.rut)
+                .single();
+              
+              if (retryError) {
+                throw new Error(`Error crítico con aval: ${guarantorError.message}`);
+              }
+              
+              guarantorId = retryGuarantor.id;
+              console.log('Guarantor creado por otro proceso, usando ID:', guarantorId);
+            } else {
+              throw new Error(`Error creando aval: ${guarantorError.message}`);
+            }
+          } else {
+            guarantorId = guarantor?.id || null;
+            console.log('Nuevo guarantor creado con ID:', guarantorId);
+          }
+        }
+      }
+
+      // PASO 3: Crear postulación usando UPSERT (solución robusta para 409)
+      let application;
+      
+      console.log('🔍 DEBUG: Iniciando proceso de postulación');
+      console.log('🔍 DEBUG: property.id =', property.id);
+      console.log('🔍 DEBUG: user.id =', user.id);
+
+      // Preparar datos de la application
+      const applicationData = {
+        property_id: property.id,
+        applicant_id: user.id,
+        message: message,
+        guarantor_id: guarantorId,
+        // Campos snapshot requeridos (NOT NULL)
+        snapshot_applicant_profession: applicantData.profession,
+        snapshot_applicant_monthly_income_clp: parseInt(applicantData.monthly_income_clp) || 0,
+        snapshot_applicant_age: parseInt(applicantData.age) || 0,
+        snapshot_applicant_nationality: applicantData.nationality,
+        snapshot_applicant_marital_status: applicantData.marital_status,
+        snapshot_applicant_address_street: applicantData.address_street,
+        snapshot_applicant_address_number: applicantData.address_number,
+        snapshot_applicant_address_department: applicantData.address_department || null,
+        snapshot_applicant_address_commune: applicantData.address_commune,
+        snapshot_applicant_address_region: applicantData.address_region
+      };
+
+      console.log('🔍 DEBUG: Datos preparados para application:', applicationData);
+
+      try {
+        // ESTRATEGIA 1: UPSERT directo (maneja conflictos automáticamente)
+        console.log('🔍 DEBUG: Intentando UPSERT...');
+        
+        // Nota: UPSERT no funciona porque no hay constraint UNIQUE en property_id+applicant_id
+        // Vamos directo a la estrategia manual que SÍ funciona
+        console.log('🔍 DEBUG: Saltando UPSERT (no hay constraint), usando estrategia manual...');
+        
+        let upsertApplication = null;
+        let upsertError = { message: 'Usando estrategia manual por falta de constraint' };
+
+        if (upsertError) {
+          console.log('❌ DEBUG: UPSERT falló:', upsertError);
+          
+          // Si UPSERT falla, intentar estrategia manual
+          console.log('🔍 DEBUG: Intentando estrategia manual...');
+          
+          // Verificar si existe
+          const { data: existingApplication, error: fetchError } = await supabase
+            .from('applications')
+            .select('id, created_at')
+            .eq('property_id', property.id)
+            .eq('applicant_id', user.id)
+            .maybeSingle();
+
+          console.log('🔍 DEBUG: Resultado verificación existente:', { existingApplication, fetchError });
+
+          if (fetchError) {
+            console.log('❌ DEBUG: Error en verificación:', fetchError);
+            throw new Error(`Error verificando postulación existente: ${fetchError.message}`);
+          }
+
+          if (existingApplication) {
+            // Ya existe - mostrar mensaje informativo
+            console.log('⚠️ DEBUG: Application ya existe:', existingApplication.id);
+            throw new Error(
+              `Ya has postulado a esta propiedad el ${new Date(existingApplication.created_at).toLocaleDateString()}. ` +
+              'Solo se permite una postulación por propiedad. ' +
+              'Si deseas actualizar tu información, contacta al propietario directamente.'
+            );
+          } else {
+            // No existe - intentar INSERT directo
+            console.log('🔍 DEBUG: No existe, intentando INSERT directo...');
+            
+            const { data: newApplication, error: insertError } = await supabase
+              .from('applications')
+              .insert([applicationData])
+              .select()
+              .single();
+
+            if (insertError) {
+              console.log('❌ DEBUG: INSERT directo falló:', insertError);
+              
+              if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('conflict')) {
+                throw new Error(
+                  'Conflicto detectado: otro proceso creó una postulación simultáneamente. ' +
+                  'Por favor, recarga la página y verifica si tu postulación se creó correctamente.'
+                );
+              } else {
+                throw new Error(`Error creando postulación: ${insertError.message}`);
+              }
+            }
+
+            application = newApplication;
+            console.log('✅ DEBUG: Application creada con INSERT directo:', application.id);
+          }
+        } else {
+          application = upsertApplication;
+          console.log('✅ DEBUG: Application procesada con UPSERT:', application.id);
+        }
+
+      } catch (error) {
+        console.log('💥 DEBUG: Error capturado en try/catch:', error);
+        throw error;
+      }
+
+      // PASO 4: Subir documentos del postulante
       if (applicantDocuments.length > 0) {
         await uploadDocuments(applicantDocuments, application.id, 'application_applicant');
       }
 
-      // PASO 4: Subir documentos del aval
+      // PASO 5: Subir documentos del aval
       if (showGuarantor && guarantorDocuments.length > 0) {
         await uploadDocuments(guarantorDocuments, application.id, 'application_guarantor');
       }

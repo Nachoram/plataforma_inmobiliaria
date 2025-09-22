@@ -61,7 +61,13 @@ export const OffersPage: React.FC = () => {
         .from('offers')
         .select(`
           *,
-          property:properties!inner(address_street, address_commune, price_clp, listing_type, photos_urls),
+          property:properties!inner(
+            address_street, 
+            address_commune, 
+            price_clp, 
+            listing_type,
+            property_images(image_url)
+          ),
           buyer:profiles!offers_offerer_id_fkey(full_name, contact_email, contact_phone)
         `)
         .in('property_id', propertyIds)
@@ -82,7 +88,13 @@ export const OffersPage: React.FC = () => {
         .from('offers')
         .select(`
           *,
-          property:properties!inner(address_street, address_commune, price_clp, listing_type, photos_urls)
+          property:properties!inner(
+            address_street, 
+            address_commune, 
+            price_clp, 
+            listing_type,
+            property_images(image_url)
+          )
         `)
         .eq('offerer_id', user?.id)
         .order('created_at', { ascending: false });

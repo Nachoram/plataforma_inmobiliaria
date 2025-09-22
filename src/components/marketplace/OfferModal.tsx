@@ -78,7 +78,7 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
         .insert({
           property_id: property.id,
           offerer_id: user.id,
-          offer_amount: parseFloat(formData.offer_amount),
+          offer_amount_clp: parseFloat(formData.offer_amount),
           message: formData.message.trim(),
           status: 'pendiente'
         })

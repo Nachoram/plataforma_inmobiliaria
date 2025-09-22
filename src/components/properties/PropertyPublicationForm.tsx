@@ -122,7 +122,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (profileError) {
           console.error('Error cargando perfil:', profileError);

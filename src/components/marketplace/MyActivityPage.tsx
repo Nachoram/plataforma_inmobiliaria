@@ -17,7 +17,7 @@ interface OfferWithProperty {
     address_region: string;
     price_clp: number;
     listing_type: string;
-    photos_urls?: string[];
+    property_images: { image_url: string }[];
   };
 }
 
@@ -33,7 +33,7 @@ interface ApplicationWithProperty {
     address_region: string;
     price_clp: number;
     listing_type: string;
-    photos_urls?: string[];
+    property_images: { image_url: string }[];
   };
 }
 
@@ -58,7 +58,7 @@ export const MyActivityPage: React.FC = () => {
         .from('offers')
         .select(`
           *,
-          properties (address_street, address_commune, address_region, price_clp, listing_type, photos_urls)
+          properties (address_street, address_commune, address_region, price_clp, listing_type, property_images(image_url))
         `)
         .eq('offerer_id', user?.id)
         .order('created_at', { ascending: false });
@@ -70,7 +70,7 @@ export const MyActivityPage: React.FC = () => {
         .from('applications')
         .select(`
           *,
-          properties (address_street, address_commune, address_region, price_clp, listing_type, photos_urls)
+          properties (address_street, address_commune, address_region, price_clp, listing_type, property_images(image_url))
         `)
         .eq('applicant_id', user?.id)
         .order('created_at', { ascending: false });

@@ -7,20 +7,6 @@
 [![Supabase](https://img.shields.io/badge/Supabase-2.57.2-green.svg)](https://supabase.com/)
 [![Vite](https://img.shields.io/badge/Vite-5.4.2-yellow.svg)](https://vitejs.dev/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.1-blue.svg)](https://tailwindcss.com/)
-[![React Router](https://img.shields.io/badge/React_Router-7.8.2-orange.svg)](https://reactrouter.com/)
-
----
-
-## 📋 **Índice**
-- [🎯 Descripción General](#-descripción-general)
-- [✨ Características Principales](#-características-principales)
-- [🛠️ Tecnologías Utilizadas](#️-tecnologías-utilizadas)
-- [🚀 Instalación Rápida](#-instalación-rápida)
-- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
-- [🎨 Componentes Principales](#-componentes-principales)
-- [🔧 Scripts Disponibles](#-scripts-disponibles)
-- [📚 Documentación Adicional](#-documentación-adicional)
-- [🎯 Próximos Pasos](#-próximos-pasos)
 
 ---
 
@@ -28,72 +14,31 @@
 
 Esta es una **plataforma inmobiliaria completa** diseñada para facilitar la gestión integral de propiedades en Chile. La aplicación permite a propietarios publicar propiedades para venta o arriendo, mientras que los interesados pueden explorar listados, hacer ofertas y postular a propiedades en arriendo.
 
-### 🎯 **Objetivos Principales**
-- ✅ **Gestión completa de propiedades** (venta y arriendo)
-- ✅ **Sistema de postulaciones con garantes**
-- ✅ **Gestión de documentos legales**
-- ✅ **Sistema de ofertas competitivo**
-- ✅ **Interfaz moderna y responsiva**
-- ✅ **Seguridad avanzada con RLS**
-- ✅ **Integración completa con Supabase**
+### ✨ **Características Principales**
 
----
-
-## ✨ **Características Principales**
-
-### 🏠 **Para Propietarios**
+#### 🏠 **Para Propietarios**
 - 📝 **Publicación de propiedades** (venta/arriendo)
 - 📊 **Gestión de portafolio personal**
-- 📋 **Revisión de postulaciones**
-- 💰 **Gestión de ofertas recibidas**
+- 📋 **Revisión de postulaciones bidireccional**
+- 💰 **Gestión completa de ofertas de compra**
 - 📄 **Subida de documentos legales**
-- 🖼️ **Gestión de imágenes de propiedades**
+- 🖼️ **Gestión de imágenes con preview**
+- 📲 **Notificaciones automáticas via webhooks**
 
-### 🏢 **Para Postulantes**
+#### 🏢 **Para Postulantes**
 - 🔍 **Búsqueda avanzada de propiedades**
 - 📝 **Sistema de postulaciones con garante**
 - 💰 **Envío de ofertas de compra**
 - ⭐ **Sistema de favoritos**
 - 📱 **Interfaz mobile-friendly**
+- 📊 **Seguimiento de postulaciones enviadas**
 
-### 🔐 **Sistema de Seguridad**
+#### 🔐 **Sistema de Seguridad**
 - 🔒 **Autenticación robusta con Supabase Auth**
 - 🛡️ **Row Level Security (RLS) avanzado**
 - 🔐 **Validación de RUT chileno**
 - 📋 **Encriptación de datos sensibles**
-- 🚫 **Protección contra accesos no autorizados**
-- 🔧 **Arquitectura de providers mejorada**
-
-### 📡 **Sistema de Notificaciones**
-- 📧 **Integración con n8n** para webhooks
-- 📱 **Notificaciones automáticas** de postulaciones
-- 💰 **Alertas de ofertas** recibidas
-- 📊 **Informes comerciales** automáticos
-
----
-
-## 🛠️ **Tecnologías Utilizadas**
-
-### **Frontend**
-- ⚛️ **React 18.3.1** - Framework principal
-- 🔷 **TypeScript 5.5.3** - Tipado estático
-- 🎨 **Tailwind CSS 3.4.1** - Framework CSS
-- ⚡ **Vite 5.4.2** - Build tool y dev server
-- 🧭 **React Router DOM 7.8.2** - Routing
-- 🎯 **Lucide React 0.344.0** - Iconos modernos
-
-### **Backend & Base de Datos**
-- 🗄️ **Supabase** - Backend-as-a-Service
-- 🔐 **Supabase Auth** - Autenticación
-- 📊 **PostgreSQL** - Base de datos
-- 🗃️ **Supabase Storage** - Almacenamiento de archivos
-- 🛡️ **Row Level Security** - Seguridad a nivel fila
-
-### **Herramientas de Desarrollo**
-- 📝 **ESLint** - Linting
-- 🎯 **TypeScript** - Compilación
-- 📦 **npm** - Gestión de dependencias
-- 🐙 **Git** - Control de versiones
+- 🚫 **Arquitectura de providers mejorada**
 
 ---
 
@@ -120,15 +65,14 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 ### **3. Configurar Base de Datos**
 1. Ve a [Supabase Dashboard](https://supabase.com/dashboard)
-2. Ejecuta la migración SQL en el SQL Editor
-3. Archivo: `supabase/migrations/20250101000000_complete_real_estate_schema.sql`
+2. Ejecuta la migración: `supabase/migrations/20250101000000_complete_real_estate_schema.sql`
+3. Verifica que se crearon 8+ tablas y 2 buckets de storage
 
 ### **4. Iniciar Desarrollo**
 ```bash
 npm run dev
+# Acceder a: http://localhost:5173
 ```
-
-**Acceder a:** `http://localhost:5173`
 
 ---
 
@@ -138,53 +82,88 @@ npm run dev
 plataforma_inmobiliaria/
 ├── 📁 src/
 │   ├── 📁 components/
-│   │   ├── 📁 auth/           # Formularios de autenticación
-│   │   ├── 📁 dashboard/      # Paneles de gestión
-│   │   ├── 📁 marketplace/    # Marketplace principal
+│   │   ├── 📁 auth/           # Sistema de autenticación
+│   │   ├── 📁 dashboard/      # Paneles de gestión avanzada
+│   │   ├── 📁 marketplace/    # Marketplace con filtros
 │   │   ├── 📁 portfolio/      # Gestión de portafolio
-│   │   ├── 📁 profile/        # Perfiles de usuario
-│   │   └── 📁 properties/     # Gestión de propiedades
-│   ├── 📁 hooks/              # Custom hooks
+│   │   ├── 📁 profile/        # Perfiles completos
+│   │   └── 📁 properties/     # Gestión completa de propiedades
+│   ├── 📁 hooks/              # Custom hooks avanzados
 │   ├── 📁 lib/                # Configuraciones y utilidades
-│   └── 📄 App.tsx             # Aplicación principal
+│   └── 📄 App.tsx             # Aplicación con providers
 ├── 📁 supabase/
-│   └── 📁 migrations/         # Migraciones de base de datos
-├── 📄 package.json            # Dependencias
-├── 📄 vite.config.ts          # Configuración Vite
-└── 📄 .env                    # Variables de entorno
+│   ├── 📁 migrations/         # Migraciones de BD
+│   └── 📁 functions/          # Edge functions
+├── 📄 package.json            # Dependencias actualizadas
+└── 📄 vite.config.ts          # Configuración optimizada
 ```
 
 ---
 
-## 🎨 **Componentes Principales**
+## 🛠️ **Stack Tecnológico**
 
-### **📱 Layout Components**
-- **`<Layout />`** - Layout principal con navegación
-- **`<ProtectedRoute />`** - Protección de rutas autenticadas
-- **`<AuthProvider />`** - Proveedor de contexto de autenticación
+### **Frontend**
+- ⚛️ **React 18.3.1** - Framework principal con hooks avanzados
+- 🔷 **TypeScript 5.5.3** - Tipado estático completo
+- 🎨 **Tailwind CSS 3.4.1** - Framework CSS moderno
+- ⚡ **Vite 5.4.2** - Build tool optimizado
+- 🧭 **React Router DOM 7.8.2** - Routing avanzado
+- 🎯 **Lucide React 0.344.0** - Iconografía moderna
 
-### **🏠 Property Components**
-- **`<PropertyForm />`** - Formulario de publicación de propiedades
-- **`<PropertyDetailsPage />`** - Página de detalles de propiedad
-- **`<PublicPropertiesPage />`** - Listado público de propiedades
-- **`<RentalPublicationForm />`** - Formulario específico para arriendos
+### **Backend & Base de Datos**
+- 🗄️ **Supabase** - Backend-as-a-Service completo
+- 🔐 **Supabase Auth** - Autenticación robusta
+- 📊 **PostgreSQL** - Base de datos normalizada (3NF)
+- 🗃️ **Supabase Storage** - Almacenamiento de archivos
+- 🛡️ **Row Level Security** - Seguridad granular
+- ⚡ **Edge Functions** - Lógica serverless
 
-### **📊 Dashboard Components**
-- **`<PortfolioPage />`** - Portafolio personal del usuario
-- **`<ApplicationsPage />`** - Gestión avanzada de postulaciones (recibidas/enviadas)
-- **`<OffersPage />`** - Gestión completa de ofertas de compra
-- **`<MyActivityPage />`** - Actividad personal
-- **`<AdminSetup />`** - Configuración del sistema y buckets de storage
+---
 
-### **🔐 Authentication Components**
-- **`<AuthPage />`** - Página de login/registro
-- **`<AuthForm />`** - Formulario de autenticación
-- **`<UserProfile />`** - Perfil de usuario
+## 📚 **Documentación Completa**
 
-### **🛒 Marketplace Components**
-- **`<MarketplacePage />`** - Página principal del marketplace
-- **`<ApplicationModal />`** - Modal de postulación
-- **`<OfferModal />`** - Modal de ofertas
+La documentación está organizada en archivos especializados:
+
+### 🚀 **Configuración e Instalación**
+- 📄 **[README-INSTALACION.md](README-INSTALACION.md)** - Guía completa de setup
+- 📄 **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones y fixes de BD
+
+### 🏗️ **Arquitectura y Desarrollo**
+- 📄 **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura técnica
+- 📄 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos y mejores prácticas
+- 📄 **[README-API.md](README-API.md)** - APIs, webhooks y edge functions
+
+### 🔐 **Seguridad y Despliegue**
+- 📄 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - RLS, auth y permisos
+- 📄 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Producción y optimización
+
+### 🐛 **Debugging y Contribución**
+- 📄 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Resolución de problemas
+- 📄 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Testing y desarrollo
+
+---
+
+## ✅ **Estado del Proyecto**
+
+### **🚀 Funcionalidades Completadas**
+- ✅ **Sistema de autenticación completo** con arquitectura robusta
+- ✅ **Base de datos normalizada** con 8+ tablas y RLS avanzado
+- ✅ **Gestión completa de propiedades** (venta/arriendo)
+- ✅ **Sistema bidireccional de postulaciones** con garantes
+- ✅ **Gestión completa de ofertas de compra**
+- ✅ **Sistema de notificaciones** con integración n8n
+- ✅ **Gestión de documentos y archivos**
+- ✅ **Interfaz responsive moderna**
+- ✅ **Configuración automática de storage**
+- ✅ **Arquitectura escalable de providers**
+
+### **📋 Funcionalidades en Desarrollo**
+- [ ] 🔔 **Notificaciones push en tiempo real**
+- [ ] 📱 **Aplicación móvil nativa**
+- [ ] 🤖 **Chat integrado entre usuarios**
+- [ ] 🗺️ **Mapa interactivo con geolocalización**
+- [ ] 📈 **Analytics y reportes avanzados**
+- [ ] 💳 **Integración de pagos**
 
 ---
 
@@ -192,89 +171,44 @@ plataforma_inmobiliaria/
 
 ```bash
 # Desarrollo
-npm run dev          # Inicia servidor de desarrollo
-npm run build        # Construye para producción
+npm run dev          # Servidor de desarrollo
+npm run build        # Build para producción
 npm run preview      # Vista previa de build
 
 # Calidad de código
-npm run lint         # Ejecuta ESLint
+npm run lint         # Ejecutar ESLint
+npm run type-check   # Verificar tipos TypeScript
 
-# Supabase (requiere CLI)
-npx supabase start   # Inicia Supabase local
-npx supabase db push # Aplica migraciones
+# Testing
+npm run test         # Ejecutar tests
+npm run test:ui      # Vitest UI
+npm run test:coverage # Cobertura de tests
+
+# Base de datos
+supabase start       # Supabase local
+supabase db push     # Aplicar migraciones
 ```
 
 ---
 
-## 📚 **Documentación Adicional**
+## 🎯 **Enlaces Rápidos**
 
-Para información detallada sobre aspectos específicos:
-
-### **📊 Base de Datos**
-- 📄 **[DATABASE_SCHEMA_README.md](DATABASE_SCHEMA_README.md)** - Esquema completo de BD
-- 📄 **[IMPLEMENTACION_GUIA.md](IMPLEMENTACION_GUIA.md)** - Guía de implementación
-- 📄 **[DEBUG_REGISTRATION_README.md](DEBUG_REGISTRATION_README.md)** - Debugging de registro
-
-### **🗂️ Archivos SQL de Debug**
-- 📄 `debug_registration_step1.sql` - Primer paso del registro
-- 📄 `debug_registration_step2.sql` - Segundo paso
-- 📄 `debug_registration_step3.sql` - Tercer paso
-- 📄 `debug_registration_step4.sql` - Cuarto paso
-- 📄 `debug_registration_step5_success.sql` - Caso exitoso
-- 📄 `debug_registration_step5_failure.sql` - Caso de error
-- 📄 `debug_registration_rollback.sql` - Rollback
-
-### **⚙️ Configuración**
-- 📄 `src/lib/supabase.ts` - Configuración de Supabase
-- 📄 `vite.config.ts` - Configuración de Vite
-- 📄 `tailwind.config.js` - Configuración de Tailwind
-- 📄 `.env` - Variables de entorno
+- 🌐 **[Demo en Vivo](https://tu-demo.vercel.app)** - Ver la aplicación funcionando
+- 📊 **[Dashboard Supabase](https://app.supabase.com)** - Panel de control de BD
+- 📖 **[Documentación Supabase](https://supabase.com/docs)** - Referencia oficial
+- 🐛 **[Issues](https://github.com/tu-repo/issues)** - Reportar problemas
+- 💬 **[Discusiones](https://github.com/tu-repo/discussions)** - Comunidad
 
 ---
 
-## 🎯 **Próximos Pasos**
+## 🤝 **Contribuir**
 
-### **🚀 Funcionalidades Implementadas**
-- ✅ Sistema de autenticación completo con arquitectura de providers
-- ✅ Gestión avanzada de perfiles de usuario
-- ✅ Publicación completa de propiedades (venta/arriendo)
-- ✅ Sistema de postulaciones con gestión bidireccional
-- ✅ Gestión completa de ofertas de compra
-- ✅ Sistema de notificaciones con integración n8n
-- ✅ Gestión de documentos y archivos
-- ✅ Configuración automática de storage buckets
-- ✅ Interfaz responsive y moderna
-- ✅ Base de datos normalizada con RLS avanzado
+¡Las contribuciones son bienvenidas! Por favor lee **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** para conocer:
 
-### **📋 Próximas Funcionalidades**
-- [ ] 🔔 **Notificaciones push en tiempo real**
-- [ ] 📱 **Aplicación móvil nativa (React Native)**
-- [ ] 🤖 **Chat integrado entre propietarios y postulantes**
-- [ ] 📊 **Dashboard administrativo avanzado**
-- [ ] 🗺️ **Mapa interactivo con geolocalización**
-- [ ] 📈 **Analytics y reportes de rendimiento**
-- [ ] 🎯 **Sistema de calificaciones y reseñas**
-- [ ] 💳 **Integración de pagos para depósitos**
-- [ ] 📅 **Sistema de visitas programadas**
-- [ ] 🔍 **Búsqueda avanzada con filtros geográficos**
-
----
-
-## 🤝 **Contribución**
-
-### **Proceso de Contribución**
-1. 🍴 **Fork** el proyecto
-2. 🌿 **Crear rama** para tu feature
-3. 💻 **Desarrollar** la funcionalidad
-4. 📝 **Escribir tests** si es necesario
-5. 🔍 **Revisar linting** y tipos
-6. 📤 **Pull Request** con descripción detallada
-
-### **Estándares de Código**
-- ✅ **Commits** descriptivos en español
-- 📋 **Issues** bien documentados
-- 🔍 **Code review** obligatorio
-- 📚 **Documentación** actualizada
+- 📋 Proceso de contribución
+- 🧪 Estándares de testing
+- 📝 Convenciones de código
+- 🔍 Code review guidelines
 
 ---
 
@@ -284,12 +218,14 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ---
 
-## 🎯 **Soporte y Contacto**
+## 🆘 **Soporte**
 
-Para soporte técnico o consultas sobre desarrollo:
+¿Necesitas ayuda? Consulta la documentación:
 
-- 💬 **Issues:** GitHub Issues
-- 📖 **Documentación:** Wiki del proyecto
+1. 🚀 **Instalación**: [README-INSTALACION.md](README-INSTALACION.md)
+2. 🐛 **Problemas**: [README-DEBUGGING.md](README-DEBUGGING.md)
+3. 🏗️ **Arquitectura**: [README-ARQUITECTURA.md](README-ARQUITECTURA.md)
+4. 💬 **Issues**: [GitHub Issues](https://github.com/tu-repo/issues)
 
 ---
 

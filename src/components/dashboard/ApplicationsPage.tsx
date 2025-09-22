@@ -15,7 +15,7 @@ interface ApplicationWithDetails {
     address_commune: string;
     price_clp: number;
     listing_type: string;
-    photos_urls?: string[];
+    property_images: { image_url: string }[];
   };
   profiles?: {
     full_name: string | null;
@@ -63,8 +63,8 @@ export const ApplicationsPage: React.FC = () => {
             address_commune,
             price_clp,
             listing_type,
-            photos_urls,
-            owner_id
+            owner_id,
+            property_images(image_url)
           ),
           profiles(
             full_name,
@@ -95,7 +95,7 @@ export const ApplicationsPage: React.FC = () => {
             address_commune,
             price_clp,
             listing_type,
-            photos_urls
+            property_images(image_url)
           ),
           profiles(
             full_name,
@@ -183,7 +183,7 @@ export const ApplicationsPage: React.FC = () => {
               address_commune: application.properties.address_commune,
               price: application.properties.price_clp,
               listing_type: application.properties.listing_type,
-              photos_urls: application.properties.photos_urls || []
+              photos_urls: application.properties.property_images?.map(img => img.image_url) || []
             },
             
             // Información del postulante
@@ -638,9 +638,9 @@ export const ApplicationsPage: React.FC = () => {
               {/* Imagen de la propiedad */}
               <div className="flex items-start space-x-4 mb-4">
                 <div className="w-24 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                  {application.properties.photos_urls && application.properties.photos_urls.length > 0 ? (
+                  {application.properties.property_images && application.properties.property_images.length > 0 ? (
                     <img 
-                      src={application.properties.photos_urls[0]} 
+                      src={application.properties.property_images[0].image_url} 
                       alt={application.properties.address_street}
                       className="w-full h-full object-cover"
                     />

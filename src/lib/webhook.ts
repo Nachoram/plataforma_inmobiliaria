@@ -1,7 +1,7 @@
 // Webhook client for external integrations (n8n, etc.)
 interface WebhookPayload {
   // Información básica del evento
-  action: 'application_approved' | 'application_rejected' | 'offer_received' | 'offer_accepted' | 'offer_rejected' | 'property_published';
+  action: 'application_received' | 'application_approved' | 'application_rejected' | 'offer_received' | 'offer_accepted' | 'offer_rejected' | 'property_published';
   decision?: 'approved' | 'rejected' | 'accepted';
   status: string;
   timestamp: string;
@@ -120,7 +120,7 @@ class WebhookClient {
   }
 
   async sendApplicationEvent(
-    action: 'approved' | 'rejected',
+    action: 'received' | 'approved' | 'rejected',
     application: any,
     property: any,
     applicant: any,
@@ -128,8 +128,8 @@ class WebhookClient {
   ): Promise<void> {
     const payload: WebhookPayload = {
       action: `application_${action}` as any,
-      decision: action,
-      status: action === 'approved' ? 'aprobada' : 'rechazada',
+      decision: action === 'received' ? undefined : action,
+      status: action === 'approved' ? 'aprobada' : action === 'rejected' ? 'rechazada' : 'pendiente',
       timestamp: new Date().toISOString(),
 
       application: {
@@ -138,7 +138,7 @@ class WebhookClient {
         applicant_id: application.applicant_id,
         message: application.message,
         created_at: application.created_at,
-        status: action === 'approved' ? 'aprobada' : 'rechazada',
+        status: action === 'approved' ? 'aprobada' : action === 'rejected' ? 'rechazada' : 'pendiente',
         snapshot_data: {
           profession: application.snapshot_applicant_profession || applicant.profession || 'No especificado',
           monthly_income_clp: application.snapshot_applicant_monthly_income_clp || applicant.monthly_income || 0,

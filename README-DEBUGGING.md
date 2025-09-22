@@ -167,6 +167,27 @@ console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
 console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
 ```
 
+**Paso 5: Obtener credenciales correctas de Supabase:**
+1. Ve a [https://supabase.com/dashboard/projects](https://supabase.com/dashboard/projects)
+2. Selecciona tu proyecto
+3. Ve a **Settings** > **API**
+4. Copia los valores exactos:
+   - **Project URL** (para VITE_SUPABASE_URL)
+   - **anon public** key (para VITE_SUPABASE_ANON_KEY)
+
+**Paso 6: Verificar formato del archivo .env:**
+```env
+# Formato correcto (IMPORTANTE: sin espacios alrededor del =)
+VITE_SUPABASE_URL="https://tu-proyecto-id.supabase.co"
+VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+# ❌ Formato incorrecto (con espacios)
+VITE_SUPABASE_URL = "https://tu-proyecto-id.supabase.co"
+
+# ❌ Formato incorrecto (sin comillas dobles)
+VITE_SUPABASE_URL=https://tu-proyecto-id.supabase.co
+```
+
 ---
 
 ### **4. Error: "relation 'public.profiles' does not exist"**
@@ -1268,4 +1289,22 @@ export const rollbackSystem = new RollbackSystem();
 
 ---
 
-**🆘 Para problemas específicos de migraciones y errores de base de datos, consulta [README-MIGRACIONES.md](README-MIGRACIONES.md)**
+## 📚 **Documentación Relacionada**
+
+### **🏗️ Arquitectura y Desarrollo**
+- 🏗️ **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura del sistema y base de datos
+- 💻 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos prácticos y mejores prácticas
+- 👥 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Guías de contribución y estándares
+
+### **🛠️ Configuración y Seguridad**
+- 🚀 **[README-INSTALACION.md](README-INSTALACION.md)** - Instalación y configuración inicial
+- 🔐 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - Seguridad, RLS y autenticación
+- 📖 **[README-API.md](README-API.md)** - APIs, webhooks y Edge Functions
+
+### **🗄️ Base de Datos y Producción**
+- 🗄️ **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones y fixes de base de datos
+- 🚀 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Despliegue y producción
+
+---
+
+**✅ Con estas herramientas de debugging, puedes resolver cualquier problema en tu plataforma inmobiliaria.**

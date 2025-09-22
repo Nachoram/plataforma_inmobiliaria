@@ -1714,10 +1714,28 @@ jobs:
 
 ---
 
+## 📚 **Documentación Relacionada**
+
+### **🏗️ Arquitectura y Desarrollo**
+- 🏗️ **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura del sistema y base de datos
+- 💻 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos prácticos y mejores prácticas
+- 📖 **[README-API.md](README-API.md)** - APIs, webhooks y Edge Functions
+
+### **🛠️ Configuración y Seguridad**
+- 🚀 **[README-INSTALACION.md](README-INSTALACION.md)** - Instalación y configuración inicial
+- 🔐 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - Seguridad, RLS y autenticación
+- 🗄️ **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones y fixes de base de datos
+
+### **🚀 Producción y Debugging**
+- 🚀 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Despliegue y producción
+- 🐛 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Debugging y troubleshooting
+
+---
+
 **🎉 ¡Gracias por contribuir a la plataforma inmobiliaria!**
 
 **📧 Para preguntas específicas:** [crear issue](https://github.com/tu-repo/issues/new)
 
 **💬 Para discusiones:** [GitHub Discussions](https://github.com/tu-repo/discussions)
 
-**📖 Documentación completa:** [Ver todos los READMEs](./)**
+**✅ Con estas guías de contribución, puedes participar activamente en el desarrollo de la plataforma.**

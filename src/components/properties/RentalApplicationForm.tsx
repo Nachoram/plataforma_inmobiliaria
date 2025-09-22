@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, User, AlertCircle, ExternalLink } from 'lucide-react';
 import { supabase, Property, Profile, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, VALIDATION_RULES, validateRUT, getCurrentProfile } from '../../lib/supabase';
+import { webhookClient } from '../../lib/webhook';
 import CustomButton from '../common/CustomButton';
 
 interface RentalApplicationFormProps {
@@ -501,6 +502,63 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       // PASO 5: Subir documentos del aval
       if (showGuarantor && guarantorDocuments.length > 0) {
         await uploadDocuments(guarantorDocuments, application.id, 'application_guarantor');
+      }
+
+      // PASO 6: Enviar webhook de notificación de nueva postulación
+      console.log('🌐 Enviando webhook de nueva postulación...');
+      try {
+        // Obtener datos completos para el webhook
+        const { data: propertyData, error: propertyError } = await supabase
+          .from('properties')
+          .select(`
+            *,
+            property_images (*)
+          `)
+          .eq('id', property.id)
+          .single();
+
+        if (propertyError) {
+          console.warn('⚠️ Error obteniendo datos de propiedad para webhook:', propertyError.message);
+        } else {
+          // Obtener datos del propietario
+          const { data: propertyOwner, error: ownerError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', propertyData.owner_id)
+            .single();
+
+          if (ownerError) {
+            console.warn('⚠️ Error obteniendo datos del propietario para webhook:', ownerError.message);
+          } else {
+            // Obtener datos del postulante (usuario actual)
+            const { data: applicantProfile, error: applicantError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+
+            if (applicantError) {
+              console.warn('⚠️ Error obteniendo datos del postulante para webhook:', applicantError.message);
+            } else {
+              // Enviar webhook usando el webhookClient
+              await webhookClient.sendApplicationEvent(
+                'received', // Nueva postulación recibida
+                {
+                  ...application,
+                  status: 'pendiente' // Asegurar que el status sea correcto
+                },
+                propertyData,
+                applicantProfile,
+                propertyOwner
+              );
+              console.log('✅ Webhook de nueva postulación enviado exitosamente');
+            }
+          }
+        }
+      } catch (webhookError) {
+        // El webhookClient maneja los errores internamente y no los propaga
+        // Solo registrar el error sin interrumpir el proceso
+        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
       }
 
       onSuccess?.();

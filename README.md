@@ -122,24 +122,24 @@ plataforma_inmobiliaria/
 
 ## 📚 **Documentación Completa**
 
-La documentación está organizada en archivos especializados:
+La documentación está organizada en archivos especializados para facilitar la navegación:
 
 ### 🚀 **Configuración e Instalación**
-- 📄 **[README-INSTALACION.md](README-INSTALACION.md)** - Guía completa de setup
-- 📄 **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones y fixes de BD
+- 📄 **[README-INSTALACION.md](README-INSTALACION.md)** - Guía completa de setup y configuración inicial
+- 📄 **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones, fixes de BD y scripts de mantenimiento
 
 ### 🏗️ **Arquitectura y Desarrollo**
-- 📄 **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura técnica
-- 📄 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos y mejores prácticas
-- 📄 **[README-API.md](README-API.md)** - APIs, webhooks y edge functions
+- 📄 **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura técnica del sistema y base de datos
+- 📄 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos prácticos, hooks avanzados y mejores prácticas
+- 📄 **[README-API.md](README-API.md)** - APIs, webhooks, Edge Functions e integraciones externas
 
 ### 🔐 **Seguridad y Despliegue**
-- 📄 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - RLS, auth y permisos
-- 📄 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Producción y optimización
+- 📄 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - RLS, autenticación, permisos y políticas de seguridad
+- 📄 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Producción, optimización, CI/CD y monitoreo
 
 ### 🐛 **Debugging y Contribución**
-- 📄 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Resolución de problemas
-- 📄 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Testing y desarrollo
+- 📄 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Herramientas de debugging, troubleshooting y resolución de problemas
+- 📄 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Guías de contribución, testing, code review y estándares
 
 ---
 

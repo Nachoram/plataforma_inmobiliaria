@@ -225,10 +225,43 @@ VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-clave-anonima
 ```
 
+### **Configuración de Supabase**
+
+#### **Obtener Credenciales de Supabase**
+1. Ve a [https://supabase.com/dashboard/projects](https://supabase.com/dashboard/projects)
+2. Selecciona tu proyecto
+3. Ve a **Settings** > **API**
+4. Copia los siguientes valores:
+   - **Project URL** (para VITE_SUPABASE_URL)
+   - **anon public** key (para VITE_SUPABASE_ANON_KEY)
+
+#### **Ejemplo de Configuración**
+```env
+# Ejemplo real de configuración
+VITE_SUPABASE_URL="https://abcdefghijklmnop.supabase.co"
+VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNDU2Nzg5MCwiZXhwIjoxOTUwMTQzODkwfQ.ejemplo-de-clave-anonima"
+```
+
+#### **Verificación de Configuración**
+Una vez configurado correctamente, deberías ver en la consola:
+```
+✅ Configuración de entorno validada correctamente
+🌐 Supabase URL: https://tu-proyecto.supabase.co
+🔑 Clave anónima: Presente ✓
+```
+
+#### **Notas Importantes de Configuración**
+- ⚠️ Las variables **DEBEN** comenzar con `VITE_` para que Vite las reconozca
+- ⚠️ No incluyas espacios alrededor del signo `=`
+- ⚠️ No uses comillas simples, solo comillas dobles
+- ⚠️ El archivo `.env` debe estar en la raíz del proyecto
+- ⚠️ **NUNCA** subas el archivo `.env` a Git (ya está en .gitignore)
+- ⚠️ **MUY IMPORTANTE**: Después de crear o modificar el archivo `.env`, debes reiniciar el servidor de desarrollo
+
 ### **Variables Opcionales**
 ```env
-# 📧 Notificaciones (opcional)
-VITE_RAILWAY_WEBHOOK_URL=https://tu-webhook-n8n.com
+# 📧 Webhooks y Notificaciones (opcional)
+VITE_RAILWAY_WEBHOOK_URL=https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb
 
 # 🐛 Desarrollo (opcional)
 VITE_DEBUG_MODE=true
@@ -237,6 +270,49 @@ VITE_ENABLE_LOGGER=true
 # 📊 Analytics (opcional)
 VITE_GOOGLE_ANALYTICS_ID=G-XXXXXXXXXX
 VITE_SENTRY_DSN=https://tu-sentry-dsn
+```
+
+### **Configuración de Webhooks**
+
+#### **Estado Actual del Webhook**
+- ✅ **URL Configurada**: `VITE_RAILWAY_WEBHOOK_URL` está configurada
+- ⚠️ **Modo Prueba**: El webhook está en modo test en n8n
+- 🔄 **Activación**: Para producción, activar el workflow en n8n
+
+#### **Eventos Soportados**
+- `application_received` - Nueva postulación
+- `application_approved` - Postulación aprobada
+- `application_rejected` - Postulación rechazada
+- `offer_received` - Nueva oferta
+- `offer_accepted` - Oferta aceptada
+- `offer_rejected` - Oferta rechazada
+
+#### **Test de Webhook**
+```typescript
+// Test en consola del navegador
+import { webhookClient } from './src/lib/webhook';
+
+// Verificar configuración
+console.log('Webhook URL:', import.meta.env.VITE_RAILWAY_WEBHOOK_URL);
+
+// Test de conectividad (opcional)
+const testWebhook = async () => {
+  try {
+    await webhookClient.send({
+      action: 'test',
+      status: 'test',
+      timestamp: new Date().toISOString(),
+      property: { id: 'test' },
+      property_owner: { id: 'test' },
+      metadata: { source: 'test' }
+    });
+    console.log('✅ Webhook test successful');
+  } catch (error) {
+    console.log('⚠️ Webhook test failed (expected in test mode):', error.message);
+  }
+};
+
+testWebhook();
 ```
 
 ### **Configuración por Entorno**
@@ -370,6 +446,23 @@ cat .env
 npm run dev
 ```
 
+**Pasos Detallados:**
+1. **Crear archivo .env** en la raíz del proyecto (mismo nivel que `package.json`)
+2. **Obtener credenciales** de Supabase Dashboard > Settings > API
+3. **Configurar variables** con el formato correcto:
+   ```env
+   VITE_SUPABASE_URL="https://tu-proyecto-id.supabase.co"
+   VITE_SUPABASE_ANON_KEY="tu-clave-anonima-aqui"
+   ```
+4. **Reiniciar servidor** completamente (Ctrl + C, luego `npm run dev`)
+
+**Verificaciones Adicionales:**
+- ✅ El archivo se llama exactamente `.env` (con punto)
+- ✅ Está en la raíz del proyecto
+- ✅ Las variables comienzan con `VITE_`
+- ✅ No hay espacios alrededor del `=`
+- ✅ Se usan comillas dobles, no simples
+
 ### **Error: "relation 'public.profiles' does not exist"**
 
 **Causa:** Migración de base de datos no ejecutada
@@ -473,4 +566,17 @@ SELECT * FROM storage.policies WHERE bucket_id = 'property-images';
 
 ---
 
-**✅ Una vez completada la instalación, consulta [README-DESARROLLO.md](README-DESARROLLO.md) para comenzar a desarrollar.**
+---
+
+## 🎯 **Próximos Pasos**
+
+Una vez completada la instalación:
+
+1. 🏗️ **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Entender la arquitectura del sistema
+2. 💻 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Comenzar a desarrollar
+3. 📖 **[README-API.md](README-API.md)** - Conocer las APIs disponibles
+4. 🔐 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - Configurar seguridad
+
+---
+
+**✅ ¡Instalación completada! Ya puedes comenzar a desarrollar tu plataforma inmobiliaria.**

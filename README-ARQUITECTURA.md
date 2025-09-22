@@ -873,4 +873,22 @@ src/
 
 ---
 
-**📖 Para más detalles sobre desarrollo, consulta [README-DESARROLLO.md](README-DESARROLLO.md)**
+## 📚 **Documentación Relacionada**
+
+### **🔧 Desarrollo y APIs**
+- 📖 **[README-API.md](README-API.md)** - APIs, webhooks y Edge Functions
+- 💻 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos prácticos y mejores prácticas
+- 👥 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Guías de contribución y estándares
+
+### **🛠️ Configuración y Seguridad**
+- 🚀 **[README-INSTALACION.md](README-INSTALACION.md)** - Instalación y configuración inicial
+- 🔐 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - Seguridad, RLS y autenticación
+- 🗄️ **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones y fixes de base de datos
+
+### **🚀 Producción y Debugging**
+- 🚀 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Despliegue y producción
+- 🐛 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Debugging y troubleshooting
+
+---
+
+**✅ Con esta arquitectura, tienes una base sólida para desarrollar y escalar tu plataforma inmobiliaria.**

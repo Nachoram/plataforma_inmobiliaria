@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, DollarSign, MessageSquare, Loader2, TrendingUp } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { webhookClient } from '../../lib/webhook';
 import CustomButton from '../common/CustomButton';
 
 interface OfferModalProps {
@@ -92,6 +93,63 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
         } else {
           throw error;
         }
+      }
+
+      // Enviar webhook de notificación de nueva oferta
+      console.log('🌐 Enviando webhook de nueva oferta...');
+      try {
+        // Obtener datos completos para el webhook
+        const { data: propertyData, error: propertyError } = await supabase
+          .from('properties')
+          .select(`
+            *,
+            property_images (*)
+          `)
+          .eq('id', property.id)
+          .single();
+
+        if (propertyError) {
+          console.warn('⚠️ Error obteniendo datos de propiedad para webhook:', propertyError.message);
+        } else {
+          // Obtener datos del propietario
+          const { data: propertyOwner, error: ownerError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', propertyData.owner_id)
+            .single();
+
+          if (ownerError) {
+            console.warn('⚠️ Error obteniendo datos del propietario para webhook:', ownerError.message);
+          } else {
+            // Obtener datos del oferente (usuario actual)
+            const { data: offererProfile, error: offererError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+
+            if (offererError) {
+              console.warn('⚠️ Error obteniendo datos del oferente para webhook:', offererError.message);
+            } else {
+              // Enviar webhook usando el webhookClient
+              await webhookClient.sendOfferEvent(
+                'received', // Nueva oferta recibida
+                {
+                  ...data[0],
+                  amount_clp: parseFloat(formData.offer_amount)
+                },
+                propertyData,
+                offererProfile,
+                propertyOwner
+              );
+              console.log('✅ Webhook de nueva oferta enviado exitosamente');
+            }
+          }
+        }
+      } catch (webhookError) {
+        // El webhookClient maneja los errores internamente y no los propaga
+        // Solo registrar el error sin interrumpir el proceso
+        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
       }
 
       alert('¡Oferta enviada exitosamente! El propietario la revisará pronto.');

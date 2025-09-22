@@ -2146,6 +2146,22 @@ AND indexname IN ('idx_properties_status_location', 'idx_applications_status_cre
 
 ---
 
-**⚡ Para continuar con el desarrollo, consulta [README-CONTRIBUCION.md](README-CONTRIBUCION.md)**
+## 📚 **Documentación Relacionada**
 
-**🔙 Para configuración inicial, revisa [README-INSTALACION.md](README-INSTALACION.md)**
+### **🏗️ Arquitectura y Desarrollo**
+- 🏗️ **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura del sistema y base de datos
+- 💻 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos prácticos y mejores prácticas
+- 👥 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Guías de contribución y estándares
+
+### **🛠️ Configuración y Seguridad**
+- 🚀 **[README-INSTALACION.md](README-INSTALACION.md)** - Instalación y configuración inicial
+- 🔐 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - Seguridad, RLS y autenticación
+- 📖 **[README-API.md](README-API.md)** - APIs, webhooks y Edge Functions
+
+### **🚀 Producción y Debugging**
+- 🚀 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Despliegue y producción
+- 🐛 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Debugging y troubleshooting
+
+---
+
+**✅ Con estas migraciones y fixes, tu base de datos está optimizada y funcionando correctamente.**

@@ -551,12 +551,41 @@ export const getDocumentUrl = async (documentPath: string) => {
 
 ## 📧 **Sistema de Webhooks**
 
-### **Configuración de n8n**
+### **Configuración de Webhooks**
 
 #### **Variables de Entorno**
 ```env
-# Webhook URL para n8n
-VITE_RAILWAY_WEBHOOK_URL=https://tu-n8n-instance.railway.app/webhook/real-estate-events
+# Webhook URL para n8n/Railway
+VITE_RAILWAY_WEBHOOK_URL=https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb
+```
+
+#### **Estado del Webhook**
+- ✅ **Configurado**: La URL del webhook está correctamente configurada
+- ⚠️ **Modo Prueba**: El webhook está en modo test en n8n
+- 🔄 **Activación**: Para producción, activar el workflow en n8n
+
+### **Tipos de Eventos Soportados**
+
+#### **Eventos de Postulaciones**
+```typescript
+// Postulaciones
+'application_received'  // Nueva postulación
+'application_approved'  // Postulación aprobada
+'application_rejected'  // Postulación rechazada
+```
+
+#### **Eventos de Ofertas**
+```typescript
+// Ofertas
+'offer_received'        // Nueva oferta
+'offer_accepted'        // Oferta aceptada
+'offer_rejected'        // Oferta rechazada
+```
+
+#### **Eventos de Propiedades**
+```typescript
+// Propiedades
+'property_published'    // Nueva propiedad publicada
 ```
 
 #### **Payload Structure**
@@ -564,7 +593,7 @@ VITE_RAILWAY_WEBHOOK_URL=https://tu-n8n-instance.railway.app/webhook/real-estate
 // Estructura de datos enviada a n8n
 interface WebhookPayload {
   // Información básica del evento
-  action: 'application_approved' | 'application_rejected' | 'offer_received' | 'offer_accepted' | 'offer_rejected' | 'property_published';
+  action: 'application_received' | 'application_approved' | 'application_rejected' | 'offer_received' | 'offer_accepted' | 'offer_rejected' | 'property_published';
   decision?: 'approved' | 'rejected' | 'accepted';
   status: string;
   timestamp: string;
@@ -688,7 +717,7 @@ class WebhookClient {
   }
 
   async sendApplicationEvent(
-    action: 'approved' | 'rejected',
+    action: 'received' | 'approved' | 'rejected',
     application: any,
     property: any,
     applicant: any,
@@ -696,8 +725,8 @@ class WebhookClient {
   ): Promise<void> {
     const payload: WebhookPayload = {
       action: `application_${action}` as any,
-      decision: action,
-      status: action === 'approved' ? 'aprobada' : 'rechazada',
+      decision: action === 'received' ? undefined : action,
+      status: action === 'approved' ? 'aprobada' : action === 'rejected' ? 'rechazada' : 'pendiente',
       timestamp: new Date().toISOString(),
 
       application: {
@@ -1954,4 +1983,22 @@ describe('Properties API Integration Tests', () => {
 
 ---
 
-**📖 Para información sobre seguridad y políticas RLS, consulta [README-SEGURIDAD.md](README-SEGURIDAD.md)**
+## 📚 **Documentación Relacionada**
+
+### **🏗️ Arquitectura y Desarrollo**
+- 🏗️ **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura del sistema y base de datos
+- 💻 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos prácticos y mejores prácticas
+- 👥 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Guías de contribución y estándares
+
+### **🛠️ Configuración y Seguridad**
+- 🚀 **[README-INSTALACION.md](README-INSTALACION.md)** - Instalación y configuración inicial
+- 🔐 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - Seguridad, RLS y autenticación
+- 🗄️ **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones y fixes de base de datos
+
+### **🚀 Producción y Debugging**
+- 🚀 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Despliegue y producción
+- 🐛 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Debugging y troubleshooting
+
+---
+
+**✅ Con esta documentación de APIs, puedes integrar completamente tu plataforma inmobiliaria.**

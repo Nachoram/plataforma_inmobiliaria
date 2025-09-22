@@ -1720,4 +1720,229 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
 
 ---
 
-**📖 Para más ejemplos de código, consulta las secciones específicas de cada README temático.**
+## 🔗 **Integración de Webhooks**
+
+### **Uso de Webhooks en Componentes**
+
+#### **Envío de Webhook en Postulaciones**
+```typescript
+// src/components/properties/RentalApplicationForm.tsx
+import { webhookClient } from '../../lib/webhook';
+
+const handleSubmit = async (formData: ApplicationFormData) => {
+  try {
+    // 1. Crear postulación en base de datos
+    const application = await createApplication(formData);
+    
+    // 2. Obtener datos completos para webhook
+    const property = await getProperty(application.property_id);
+    const applicant = await getCurrentProfile();
+    const propertyOwner = await getProfile(property.owner_id);
+    
+    // 3. Enviar webhook de nueva postulación
+    await webhookClient.sendApplicationEvent(
+      'received',
+      application,
+      property,
+      applicant,
+      propertyOwner
+    );
+    
+    // 4. Ejecutar callback de éxito
+    onSuccess?.(application);
+    
+    toast({
+      title: 'Postulación enviada',
+      description: 'Tu postulación ha sido enviada exitosamente.',
+    });
+  } catch (error) {
+    console.error('Error submitting application:', error);
+    toast({
+      title: 'Error',
+      description: 'No se pudo enviar la postulación.',
+      variant: 'destructive',
+    });
+  }
+};
+```
+
+#### **Envío de Webhook en Ofertas**
+```typescript
+// src/components/marketplace/OfferModal.tsx
+import { webhookClient } from '../../lib/webhook';
+
+const handleSubmitOffer = async (offerData: OfferFormData) => {
+  try {
+    // 1. Crear oferta en base de datos
+    const offer = await createOffer(offerData);
+    
+    // 2. Obtener datos completos para webhook
+    const property = await getProperty(offer.property_id);
+    const offerer = await getCurrentProfile();
+    const propertyOwner = await getProfile(property.owner_id);
+    
+    // 3. Enviar webhook de nueva oferta
+    await webhookClient.sendOfferEvent(
+      'received',
+      offer,
+      property,
+      offerer,
+      propertyOwner
+    );
+    
+    // 4. Mostrar mensaje de éxito
+    toast({
+      title: 'Oferta enviada',
+      description: 'Tu oferta ha sido enviada al propietario.',
+    });
+    
+    onSuccess?.(offer);
+  } catch (error) {
+    console.error('Error submitting offer:', error);
+    toast({
+      title: 'Error',
+      description: 'No se pudo enviar la oferta.',
+      variant: 'destructive',
+    });
+  }
+};
+```
+
+#### **Manejo de Respuestas de Postulaciones**
+```typescript
+// src/components/dashboard/ApplicationsPage.tsx
+import { webhookClient } from '../../lib/webhook';
+
+const handleApproveApplication = async (applicationId: string) => {
+  try {
+    // 1. Actualizar estado en base de datos
+    const updatedApplication = await updateApplicationStatus(applicationId, 'aprobada');
+    
+    // 2. Obtener datos completos para webhook
+    const property = await getProperty(updatedApplication.property_id);
+    const applicant = await getProfile(updatedApplication.applicant_id);
+    const propertyOwner = await getProfile(property.owner_id);
+    
+    // 3. Enviar webhook de aprobación
+    await webhookClient.sendApplicationEvent(
+      'approved',
+      updatedApplication,
+      property,
+      applicant,
+      propertyOwner
+    );
+    
+    // 4. Actualizar UI
+    refetchReceivedApplications();
+    
+    toast({
+      title: 'Postulación aprobada',
+      description: 'Se ha enviado la notificación al postulante.',
+    });
+  } catch (error) {
+    console.error('Error approving application:', error);
+    toast({
+      title: 'Error',
+      description: 'No se pudo aprobar la postulación.',
+      variant: 'destructive',
+    });
+  }
+};
+
+const handleRejectApplication = async (applicationId: string, reason?: string) => {
+  try {
+    // 1. Actualizar estado en base de datos
+    const updatedApplication = await updateApplicationStatus(applicationId, 'rechazada', reason);
+    
+    // 2. Obtener datos completos para webhook
+    const property = await getProperty(updatedApplication.property_id);
+    const applicant = await getProfile(updatedApplication.applicant_id);
+    const propertyOwner = await getProfile(property.owner_id);
+    
+    // 3. Enviar webhook de rechazo
+    await webhookClient.sendApplicationEvent(
+      'rejected',
+      updatedApplication,
+      property,
+      applicant,
+      propertyOwner
+    );
+    
+    // 4. Actualizar UI
+    refetchReceivedApplications();
+    
+    toast({
+      title: 'Postulación rechazada',
+      description: 'Se ha enviado la notificación al postulante.',
+    });
+  } catch (error) {
+    console.error('Error rejecting application:', error);
+    toast({
+      title: 'Error',
+      description: 'No se pudo rechazar la postulación.',
+      variant: 'destructive',
+    });
+  }
+};
+```
+
+### **Configuración de Webhooks**
+
+#### **Variables de Entorno**
+```env
+# Webhook URL para n8n/Railway
+VITE_RAILWAY_WEBHOOK_URL=https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb
+```
+
+#### **Estado del Webhook**
+- ✅ **Configurado**: La URL del webhook está correctamente configurada
+- ⚠️ **Modo Prueba**: El webhook está en modo test en n8n
+- 🔄 **Activación**: Para producción, activar el workflow en n8n
+
+### **Logs de Debugging**
+
+#### **Logs de Postulaciones**
+```
+🌐 Enviando webhook de nueva postulación...
+✅ Webhook de nueva postulación enviado exitosamente
+```
+
+#### **Logs de Ofertas**
+```
+🌐 Enviando webhook de nueva oferta...
+✅ Webhook de nueva oferta enviado exitosamente
+```
+
+#### **Logs de Errores**
+```
+⚠️ Servicio de notificaciones no disponible: [mensaje de error]
+```
+
+### **Consideraciones de Seguridad**
+
+- ✅ Los webhooks son opcionales (no críticos para la funcionalidad)
+- ✅ Errores no exponen información sensible
+- ✅ Headers de seguridad incluidos en las requests
+- ✅ Validación de datos antes del envío
+
+---
+
+## 📚 **Documentación Relacionada**
+
+### **🏗️ Arquitectura y APIs**
+- 🏗️ **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura del sistema y base de datos
+- 📖 **[README-API.md](README-API.md)** - APIs, webhooks y Edge Functions
+- 🔐 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - Seguridad, RLS y autenticación
+
+### **🛠️ Configuración y Debugging**
+- 🚀 **[README-INSTALACION.md](README-INSTALACION.md)** - Instalación y configuración inicial
+- 🗄️ **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones y fixes de base de datos
+- 🐛 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Debugging y troubleshooting
+
+### **🚀 Producción y Contribución**
+- 🚀 **[README-DESPLIEGUE.md](README-DESPLIEGUE.md)** - Despliegue y producción
+- 👥 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Guías de contribución y estándares
+
+---
+
+**✅ Con estos ejemplos y mejores prácticas, puedes desarrollar funcionalidades robustas y escalables.**

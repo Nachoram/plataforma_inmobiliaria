@@ -581,6 +581,97 @@ npm run analyze
 
 ---
 
+## 🔗 **Configuración de Webhooks en Producción**
+
+### **Activación de Webhooks**
+
+#### **Estado Actual**
+- ✅ **URL Configurada**: `VITE_RAILWAY_WEBHOOK_URL` está configurada
+- ⚠️ **Modo Prueba**: El webhook está en modo test en n8n
+- 🔄 **Activación**: Para producción, activar el workflow en n8n
+
+#### **Pasos para Activar en Producción**
+
+1. **Acceder a n8n/Railway**
+   ```bash
+   # URL del webhook actual
+   https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb
+   ```
+
+2. **Activar el Workflow**
+   - Ir a la interfaz de n8n
+   - Buscar el workflow "Real Estate Notifications"
+   - Cambiar de modo "Test" a "Production"
+   - Activar el workflow
+
+3. **Verificar Configuración**
+   ```typescript
+   // Test de webhook en producción
+   const testProductionWebhook = async () => {
+     try {
+       await webhookClient.send({
+         action: 'test',
+         status: 'test',
+         timestamp: new Date().toISOString(),
+         property: { id: 'test' },
+         property_owner: { id: 'test' },
+         metadata: { source: 'production_test' }
+       });
+       console.log('✅ Production webhook test successful');
+     } catch (error) {
+       console.error('❌ Production webhook test failed:', error);
+     }
+   };
+   ```
+
+#### **Eventos Soportados en Producción**
+- `application_received` - Nueva postulación
+- `application_approved` - Postulación aprobada
+- `application_rejected` - Postulación rechazada
+- `offer_received` - Nueva oferta
+- `offer_accepted` - Oferta aceptada
+- `offer_rejected` - Oferta rechazada
+
+#### **Monitoreo de Webhooks**
+```typescript
+// src/lib/webhookMonitoring.ts
+export const monitorWebhookHealth = async () => {
+  const webhookUrl = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+  
+  if (!webhookUrl) {
+    console.warn('⚠️ Webhook URL not configured');
+    return { status: 'not_configured' };
+  }
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'HealthCheck/1.0'
+      },
+      body: JSON.stringify({
+        action: 'health_check',
+        timestamp: new Date().toISOString()
+      })
+    });
+
+    return {
+      status: response.ok ? 'healthy' : 'unhealthy',
+      statusCode: response.status,
+      responseTime: Date.now()
+    };
+  } catch (error) {
+    return {
+      status: 'error',
+      error: error.message
+    };
+  }
+};
+```
+
+---
+
 ## 🏗️ **Build y Optimización**
 
 ### **Build Scripts Avanzados**
@@ -707,9 +798,43 @@ NODE_ENV=production
 # Supabase Configuration
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### **Configuración de Supabase en Producción**
+
+**Obtener Credenciales de Producción:**
+1. Ve a [https://supabase.com/dashboard/projects](https://supabase.com/dashboard/projects)
+2. Selecciona tu proyecto de producción
+3. Ve a **Settings** > **API**
+4. Copia los valores para producción:
+   - **Project URL** (para VITE_SUPABASE_URL)
+   - **anon public** key (para VITE_SUPABASE_ANON_KEY)
+
+**Verificar Configuración:**
+```typescript
+// Test de configuración en producción
+const verifySupabaseConfig = () => {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
+  console.log('🔧 Supabase Production Config:');
+  console.log('- URL configured:', !!url);
+  console.log('- Key configured:', !!key);
+  console.log('- URL format valid:', url?.startsWith('https://') && url?.includes('.supabase.co'));
+  console.log('- Key format valid:', key?.startsWith('eyJ'));
+  
+  if (!url || !key) {
+    console.error('❌ Supabase configuration incomplete');
+    return false;
+  }
+  
+  console.log('✅ Supabase configuration valid');
+  return true;
+};
+```
 
 # Webhook Configuration
-VITE_RAILWAY_WEBHOOK_URL=https://tu-webhook-endpoint.com/webhook
+VITE_RAILWAY_WEBHOOK_URL=https://primary-production-bafdc.up.railway.app/webhook-test/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb
 
 # Security Configuration
 VITE_APP_DOMAIN=https://tu-dominio.com
@@ -740,8 +865,14 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   // Supabase (required)
-  VITE_SUPABASE_URL: z.string().url('Invalid Supabase URL'),
-  VITE_SUPABASE_ANON_KEY: z.string().min(1, 'Supabase anon key is required'),
+  VITE_SUPABASE_URL: z.string().url('Invalid Supabase URL').refine(
+    (url) => url.includes('.supabase.co'),
+    'Supabase URL must be a valid Supabase project URL'
+  ),
+  VITE_SUPABASE_ANON_KEY: z.string().min(1, 'Supabase anon key is required').refine(
+    (key) => key.startsWith('eyJ'),
+    'Supabase anon key must be a valid JWT token'
+  ),
   
   // App configuration
   VITE_APP_DOMAIN: z.string().url().optional(),
@@ -1718,6 +1849,22 @@ describe('Critical User Flows', () => {
 
 ---
 
-**📖 Para más información sobre migraciones y mantenimiento, consulta [README-MIGRACIONES.md](README-MIGRACIONES.md)**
+## 📚 **Documentación Relacionada**
 
-**🔧 Para guías de desarrollo y contribución, consulta [README-CONTRIBUCION.md](README-CONTRIBUCION.md)**
+### **🏗️ Arquitectura y Desarrollo**
+- 🏗️ **[README-ARQUITECTURA.md](README-ARQUITECTURA.md)** - Arquitectura del sistema y base de datos
+- 💻 **[README-DESARROLLO.md](README-DESARROLLO.md)** - Ejemplos prácticos y mejores prácticas
+- 👥 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Guías de contribución y estándares
+
+### **🛠️ Configuración y Seguridad**
+- 🚀 **[README-INSTALACION.md](README-INSTALACION.md)** - Instalación y configuración inicial
+- 🔐 **[README-SEGURIDAD.md](README-SEGURIDAD.md)** - Seguridad, RLS y autenticación
+- 📖 **[README-API.md](README-API.md)** - APIs, webhooks y Edge Functions
+
+### **🗄️ Base de Datos y Debugging**
+- 🗄️ **[README-MIGRACIONES.md](README-MIGRACIONES.md)** - Migraciones y fixes de base de datos
+- 🐛 **[README-DEBUGGING.md](README-DEBUGGING.md)** - Debugging y troubleshooting
+
+---
+
+**✅ Con esta configuración de despliegue, tu plataforma inmobiliaria está lista para producción.**

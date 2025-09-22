@@ -33,6 +33,10 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
     address_department: '',
     address_commune: '',
     address_region: '',
+    monthly_income_clp: '',
+    nationality: '',
+    date_of_birth: '',
+    job_seniority: '',
   });
 
   // Regiones de Chile
@@ -89,6 +93,10 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
           address_department: '',
           address_commune: '',
           address_region: '',
+          monthly_income_clp: '',
+          nationality: 'Chilena',
+          date_of_birth: '',
+          job_seniority: '',
         });
       } else {
         setProfile(profileData);
@@ -107,6 +115,10 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
           address_department: profileData.address_department || '',
           address_commune: profileData.address_commune || '',
           address_region: profileData.address_region || '',
+          monthly_income_clp: String(profileData.monthly_income_clp ?? ''),
+          nationality: profileData.nationality || 'Chilena',
+          date_of_birth: profileData.date_of_birth || '',
+          job_seniority: profileData.job_seniority || '',
         });
       }
 
@@ -141,6 +153,12 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
     const value = e.target.value;
     const formattedRUT = formatRUT(value);
     setFormData(prev => ({ ...prev, rut: formattedRUT }));
+  };
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const onlyDigits = value.replace(/[^0-9]/g, '');
+    setFormData(prev => ({ ...prev, [name]: onlyDigits }));
   };
 
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,6 +274,10 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
         address_department: formData.address_department || null,
         address_commune: formData.address_commune,
         address_region: formData.address_region,
+        monthly_income_clp: formData.monthly_income_clp ? parseInt(formData.monthly_income_clp) : 0,
+        nationality: formData.nationality || 'Chilena',
+        date_of_birth: formData.date_of_birth || null,
+        job_seniority: formData.job_seniority || null,
       };
 
       const { error } = await supabase
@@ -422,6 +444,64 @@ const UserProfileForm: React.FC<UserProfileFormProps> = ({
                 onChange={handleInputChange}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ingreso Mensual (CLP)
+              </label>
+              <input
+                type="number"
+                name="monthly_income_clp"
+                value={formData.monthly_income_clp}
+                onChange={handleNumberChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                min="0"
+                placeholder="Ej: 1200000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nacionalidad
+              </label>
+              <input
+                type="text"
+                name="nationality"
+                value={formData.nationality}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Chilena"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de Nacimiento
+              </label>
+              <input
+                type="date"
+                name="date_of_birth"
+                value={formData.date_of_birth}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Antigüedad Laboral
+              </label>
+              <input
+                type="text"
+                name="job_seniority"
+                value={formData.job_seniority}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Ej: 2 años 3 meses"
               />
             </div>
           </div>

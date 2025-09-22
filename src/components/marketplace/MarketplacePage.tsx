@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Filter, MapPin, Bed, Bath, Square, DollarSign, Building, Heart, MessageSquare, TrendingUp, Eye } from 'lucide-react';
+import { Search, Filter, Building, Heart, MessageSquare, TrendingUp } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { OfferModal } from './OfferModal';
 import RentalApplicationForm from '../properties/RentalApplicationForm';
 import { useAuth } from '../../hooks/useAuth';
+import PropertyCard from '../PropertyCard';
 
 export const MarketplacePage: React.FC = () => {
   const { user } = useAuth();
@@ -386,137 +386,15 @@ export const MarketplacePage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProperties.map((property) => (
-            <div key={property.id} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              {/* Property Image */}
-              <div className="h-48 bg-gray-200 relative overflow-hidden">
-                {property.property_images && Array.isArray(property.property_images) && property.property_images.length > 0 ? (
-                  <img
-                    src={property.property_images[0].image_url}
-                    alt={`${property.address_street || 'Propiedad'} ${property.address_number || ''}`}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Building className="h-12 w-12 text-gray-400" />
-                  </div>
-                )}
-                
-                {/* Favorite Button */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleFavorite(property.id);
-                  }}
-                  className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
-                >
-                  <Heart 
-                    className={`h-4 w-4 ${
-                      favorites.includes(property.id) 
-                        ? 'text-red-500 fill-current' 
-                        : 'text-gray-600'
-                    }`} 
-                  />
-                </button>
-
-                {/* Type Badge */}
-                <div className="absolute top-3 left-3">
-                  <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    property.listing_type === 'venta'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-emerald-100 text-emerald-800'
-                  }`}>
-                    {property.listing_type
-                      ? property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1)
-                      : 'Tipo desconocido'
-                    }
-                  </span>
-                </div>
-              </div>
-
-              {/* Property Info */}
-              <div className="p-4">
-                <div className="mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 mb-1">
-                    {property.address_street ? `${property.address_street} ${property.address_number || ''}` : 'Dirección no disponible'}
-                  </h3>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span>{property.address_commune || 'Comuna no disponible'}, {property.address_region || 'Región no disponible'}</span>
-                  </div>
-                </div>
-
-                {property.description && (
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                    {property.description}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                  <div className="flex space-x-4">
-                    <div className="flex items-center">
-                      <Bed className="h-4 w-4 mr-1" />
-                      <span>{typeof property.bedrooms === 'number' ? property.bedrooms : 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Bath className="h-4 w-4 mr-1" />
-                      <span>{typeof property.bathrooms === 'number' ? property.bathrooms : 'N/A'}</span>
-                    </div>
-                    {typeof property.surface_m2 === 'number' && property.surface_m2 > 0 && (
-                      <div className="flex items-center">
-                        <Square className="h-4 w-4 mr-1" />
-                        <span>{property.surface_m2}m²</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center text-lg font-bold text-gray-900">
-                    <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-                    <span>{formatPrice(property.price_clp)}</span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    {property.listing_type === 'venta' ? (
-                      <button
-                        onClick={() => handleMakeOffer(property)}
-                        className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        <TrendingUp className="h-4 w-4" />
-                        <span>Ofertar</span>
-                      </button>
-                    ) : property.listing_type === 'arriendo' ? (
-                      <button
-                        onClick={() => handleApply(property)}
-                        className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors text-sm"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        <span>Postular</span>
-                      </button>
-                    ) : (
-                      <button
-                        disabled
-                        className="flex items-center justify-center space-x-2 bg-gray-400 text-white px-4 py-2 rounded-lg font-medium text-sm cursor-not-allowed"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        <span>Tipo desconocido</span>
-                      </button>
-                    )}
-                    
-                    <Link
-                      to={`/property/${property.id}`}
-                      className="flex items-center justify-center space-x-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm"
-                    >
-                      <Eye className="h-4 w-4" />
-                      <span>Ver detalles</span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <PropertyCard
+              key={property.id}
+              property={property}
+              context="marketplace"
+              onMakeOffer={handleMakeOffer}
+              onApply={handleApply}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={favorites.includes(property.id)}
+            />
           ))}
         </div>
       )}

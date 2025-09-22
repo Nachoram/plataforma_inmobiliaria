@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, MapPin, Bed, Bath, Square, DollarSign, Building } from 'lucide-react';
+import { Plus, Building, MessageSquare, DollarSign, Check, X, Clock, Calendar, MapPin } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import CustomButton from '../common/CustomButton';
+import PropertyCard from '../PropertyCard';
 
 interface PropertyWithImages extends Property {
   property_images?: Array<{
@@ -12,28 +13,80 @@ interface PropertyWithImages extends Property {
   }>;
 }
 
+interface ReceivedApplication {
+  id: string;
+  property_id: string;
+  applicant_id: string;
+  message: string;
+  status: 'pendiente' | 'aprobada' | 'rechazada';
+  created_at: string;
+  properties: {
+    address_street: string;
+    address_commune: string;
+    address_region: string;
+    price_clp: number;
+    listing_type: string;
+  };
+  profiles: {
+    first_name: string;
+    paternal_last_name: string;
+    email: string;
+    phone: string;
+  };
+}
+
+interface ReceivedOffer {
+  id: string;
+  property_id: string;
+  offerer_id: string;
+  amount_clp: number;
+  message: string;
+  status: 'pendiente' | 'aceptada' | 'rechazada';
+  created_at: string;
+  properties: {
+    address_street: string;
+    address_commune: string;
+    address_region: string;
+    price_clp: number;
+    listing_type: string;
+  };
+  profiles: {
+    first_name: string;
+    paternal_last_name: string;
+    email: string;
+    phone: string;
+  };
+}
+
 export const PortfolioPage: React.FC = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'properties' | 'applications' | 'offers'>('properties');
   const [properties, setProperties] = useState<PropertyWithImages[]>([]);
+  const [receivedApplications, setReceivedApplications] = useState<ReceivedApplication[]>([]);
+  const [receivedOffers, setReceivedOffers] = useState<ReceivedOffer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchProperties();
+      fetchPortfolioData();
     }
-  }, [user]);
+  }, [user?.id]);
 
-  const fetchProperties = async () => {
+  const fetchPortfolioData = async () => {
     // Verify user is authenticated before making any database queries
     if (!user || !user.id) {
-      console.warn('User not authenticated, cannot fetch properties');
+      console.warn('User not authenticated, cannot fetch portfolio data');
       setProperties([]);
+      setReceivedApplications([]);
+      setReceivedOffers([]);
       setLoading(false);
       return;
     }
 
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch properties
+      const { data: propertiesData, error: propertiesError } = await supabase
         .from('properties')
         .select(`
           *,
@@ -42,23 +95,74 @@ export const PortfolioPage: React.FC = () => {
             storage_path
           )
         `)
-        .eq('owner_id', user.id) // Use user.id directly since we verified it exists
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        // Handle RLS policy violations specifically
-        if (error.message.includes('permission denied') || error.message.includes('RLS')) {
+      if (propertiesError) {
+        if (propertiesError.message.includes('permission denied') || propertiesError.message.includes('RLS')) {
           console.error('RLS Policy violation: User does not have permission to view properties');
           setProperties([]);
         } else {
-          throw error;
+          throw propertiesError;
         }
       } else {
-        setProperties(data || []);
+        setProperties(propertiesData || []);
+      }
+
+      // Fetch received applications using explicit nested select
+      const { data: applicationsData, error: applicationsError } = await supabase
+        .from('applications')
+        .select(`
+          *,
+          properties!inner (*),
+          profiles!applicant_id (*)
+        `)
+        .eq('properties.owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      console.log('Fetched Applications:', applicationsData);
+
+      if (applicationsError) {
+        console.error('Error fetching received applications:', applicationsError);
+        setReceivedApplications([]);
+      } else {
+        setReceivedApplications(applicationsData || []);
+      }
+
+      // Fetch received offers using getReceivedOffers API
+      const { data: offersData, error: offersError } = await supabase
+        .from('offers')
+        .select(`
+          *,
+          properties!inner (
+            id,
+            address_street,
+            address_commune,
+            address_region,
+            price_clp,
+            listing_type
+          ),
+          profiles!offers_offerer_id_fkey (
+            first_name,
+            paternal_last_name,
+            email,
+            phone
+          )
+        `)
+        .eq('properties.owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (offersError) {
+        console.error('Error fetching received offers:', offersError);
+        setReceivedOffers([]);
+      } else {
+        setReceivedOffers(offersData || []);
       }
     } catch (error) {
-      console.error('Error fetching properties:', error);
-      setProperties([]); // Clear properties on error to prevent stale data
+      console.error('Error fetching portfolio data:', error);
+      setProperties([]);
+      setReceivedApplications([]);
+      setReceivedOffers([]);
     } finally {
       setLoading(false);
     }
@@ -107,25 +211,44 @@ export const PortfolioPage: React.FC = () => {
     }).format(price);
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-CL', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pendiente': return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'aceptada':
+      case 'aprobada': return <Check className="h-4 w-4 text-green-600" />;
+      case 'rechazada': return <X className="h-4 w-4 text-red-600" />;
+      default: return <Clock className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'sold': return 'bg-red-100 text-red-800';
-      case 'rented': return 'bg-yellow-100 text-yellow-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
+      case 'pendiente': return 'bg-yellow-100 text-yellow-800';
+      case 'aceptada':
+      case 'aprobada': return 'bg-green-100 text-green-800';
+      case 'rechazada': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return 'Disponible';
-      case 'sold': return 'Vendida';
-      case 'rented': return 'Arrendada';
-      case 'inactive': return 'Inactiva';
+      case 'pendiente': return 'En Revisión';
+      case 'aceptada': return 'Aceptada';
+      case 'aprobada': return 'Aprobada';
+      case 'rechazada': return 'Rechazada';
       default: return status;
     }
   };
+
 
   // Check authentication before showing any content
   if (!user) {
@@ -178,7 +301,7 @@ export const PortfolioPage: React.FC = () => {
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Mi Portafolio</h1>
-        <p className="text-gray-600 mb-6">Gestiona todas tus propiedades desde aquí</p>
+        <p className="text-gray-600 mb-6">Gestiona tus propiedades y las interacciones relacionadas</p>
         
         <div className="flex flex-col sm:flex-row gap-4">
           <Link
@@ -198,127 +321,260 @@ export const PortfolioPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Properties Grid */}
-      {properties.length === 0 ? (
-        <div className="text-center py-12">
-          <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes propiedades aún</h3>
-          <p className="text-gray-500 mb-6">Comienza publicando tu primera propiedad</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/property/new?type=venta"
-              className="flex items-center justify-center space-x-2 bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors"
+      {/* Tabs */}
+      <div className="bg-white rounded-xl shadow-sm border">
+        <div className="border-b">
+          <nav className="flex">
+            <button
+              onClick={() => setActiveTab('properties')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'properties'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
-              <Plus className="h-5 w-5" />
-              <span>Publicar en Venta</span>
-            </Link>
-            <Link
-              to="/property/new/rental"
-              className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Publicar en Arriendo</span>
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
-            <div key={property.id} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow">
-              {/* Property Image */}
-              <div className="h-48 bg-gray-200 relative">
-                {property.property_images && property.property_images.length > 0 ? (
-                  <img
-                    src={property.property_images[0].image_url}
-                    alt={`${property.address_street || ''} ${property.address_number || ''}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Building className="h-12 w-12 text-gray-400" />
-                  </div>
-                )}
-                
-                {/* Status Badge */}
-                <div className="absolute top-3 left-3">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
-                    {getStatusLabel(property.status)}
-                  </span>
-                </div>
-
-                {/* Listing Type Badge */}
-                <div className="absolute top-3 right-3">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                    {property.type?.charAt(0).toUpperCase() + property.type?.slice(1) || 'Tipo no especificado'}
-                  </span>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Building className="h-4 w-4" />
+                <span>Mis Propiedades ({properties.length})</span>
               </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('applications')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'applications'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <MessageSquare className="h-4 w-4" />
+                <span>Postulaciones Recibidas ({receivedApplications.length})</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('offers')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'offers'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-4 w-4" />
+                <span>Ofertas Recibidas ({receivedOffers.length})</span>
+              </div>
+            </button>
+          </nav>
+        </div>
 
-              {/* Property Info */}
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
-                    {property.address_street || 'Dirección no especificada'}
-                  </h3>
-                  <div className="flex space-x-2 ml-2">
+        <div className="p-6">
+          {activeTab === 'properties' && (
+            <>
+              {/* Properties Grid */}
+              {properties.length === 0 ? (
+                <div className="text-center py-12">
+                  <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes propiedades aún</h3>
+                  <p className="text-gray-500 mb-6">Comienza publicando tu primera propiedad</p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Link
-                      to={`/property/edit/${property.id}`}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Editar"
+                      to="/property/new?type=venta"
+                      className="flex items-center justify-center space-x-2 bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Plus className="h-5 w-5" />
+                      <span>Publicar en Venta</span>
                     </Link>
-                    <button
-                      onClick={() => deleteProperty(property.id)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Eliminar"
+                    <Link
+                      to="/property/new/rental"
+                      className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      <Plus className="h-5 w-5" />
+                      <span>Publicar en Arriendo</span>
+                    </Link>
                   </div>
                 </div>
-
-                <div className="flex items-center text-sm text-gray-500 mb-2">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  <span>{property.address_commune || 'Comuna no especificada'}, {property.address_region || 'Región no especificada'}</span>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {properties.map((property) => (
+                    <PropertyCard
+                      key={property.id}
+                      property={property}
+                      context="portfolio"
+                      onEdit={(property) => {
+                        // Navigate to edit page
+                        window.location.href = `/property/edit/${property.id}`;
+                      }}
+                      onDelete={deleteProperty}
+                    />
+                  ))}
                 </div>
+              )}
+            </>
+          )}
 
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-                  <div className="flex space-x-4">
-                    <div className="flex items-center">
-                      <Bed className="h-4 w-4 mr-1" />
-                      <span>{property.bedrooms}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Bath className="h-4 w-4 mr-1" />
-                      <span>{property.bathrooms}</span>
-                    </div>
-                    {property.surface_m2 && (
-                      <div className="flex items-center">
-                        <Square className="h-4 w-4 mr-1" />
-                        <span>{property.surface_m2}m²</span>
+          {activeTab === 'applications' && (
+            <div className="space-y-4">
+              {receivedApplications.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No has recibido postulaciones</h3>
+                  <p className="text-gray-500">
+                    Las postulaciones de arriendo aparecerán aquí cuando alguien se interese en tus propiedades.
+                  </p>
+                </div>
+              ) : (
+                receivedApplications.map((application) => (
+                  <div key={application.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 mb-1">
+                          {application.properties?.address_street || 'Dirección no disponible'}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Postulante: {application.profiles?.first_name || 'Usuario Anónimo'}
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(application.status)}`}>
+                            {getStatusText(application.status)}
+                          </span>
+                        </div>
                       </div>
-                    )}
+                      <div className="ml-4 flex space-x-2">
+                        <button
+                          onClick={() => {}}
+                          className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                        >
+                          Aceptar
+                        </button>
+                        <button
+                          onClick={() => {}}
+                          className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                        >
+                          Rechazar
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-lg font-bold text-gray-900">
-                    <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-                    <span>{formatPrice(property.price_clp)}</span>
-                  </div>
-                  <Link
-                    to={`/property/${property.id}`}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    Ver detalles
-                  </Link>
-                </div>
-              </div>
+                ))
+              )}
             </div>
-          ))}
+          )}
+
+          {activeTab === 'offers' && (
+            <div className="space-y-4">
+              {receivedOffers.length === 0 ? (
+                <div className="text-center py-12">
+                  <DollarSign className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No has recibido ofertas</h3>
+                  <p className="text-gray-500">
+                    Las ofertas de compra aparecerán aquí cuando alguien se interese en tus propiedades en venta.
+                  </p>
+                </div>
+              ) : (
+                receivedOffers
+                  .filter((offer) => offer.profiles !== null)
+                  .map((offer) => {
+                  const offerPercentage = ((offer.amount_clp / offer.properties.price_clp) * 100).toFixed(1);
+                  const isGoodOffer = parseFloat(offerPercentage) >= 95;
+                  const isReasonableOffer = parseFloat(offerPercentage) >= 85;
+
+                  return (
+                    <div key={offer.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900 mb-1">
+                            {offer.properties.address_street}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {offer.properties.address_commune}, {offer.properties.address_region}
+                          </p>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                              <h4 className="font-medium text-gray-900 mb-1">Precio de Venta</h4>
+                              <div className="text-lg font-bold text-gray-900">
+                                {formatPrice(offer.properties.price_clp)}
+                              </div>
+                            </div>
+                            <div className={`p-3 rounded-lg ${
+                              isGoodOffer ? 'bg-green-50 border border-green-200' :
+                              isReasonableOffer ? 'bg-yellow-50 border border-yellow-200' :
+                              'bg-red-50 border border-red-200'
+                            }`}>
+                              <h4 className="font-medium text-gray-900 mb-1">Oferta del Comprador</h4>
+                              <div className="flex items-center justify-between">
+                                <div className="text-lg font-bold text-gray-900">
+                                  {formatPrice(offer.amount_clp)}
+                                </div>
+                                <div className={`text-sm font-medium ${
+                                  isGoodOffer ? 'text-green-700' :
+                                  isReasonableOffer ? 'text-yellow-700' :
+                                  'text-red-700'
+                                }`}>
+                                  {offerPercentage}% del precio
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-gray-50 p-3 rounded-lg mb-3">
+                            <h4 className="font-medium text-gray-900 mb-2">Información del Comprador</h4>
+                            <div className="space-y-1 text-sm">
+                              <div>
+                                <span className="text-gray-500">Nombre: </span>
+                                <span className="font-medium">{offer.profiles?.first_name ?? 'Usuario Anónimo'} {offer.profiles?.paternal_last_name ?? ''}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Email: </span>
+                                <span className="font-medium">{offer.profiles?.email ?? 'No disponible'}</span>
+                              </div>
+                              {offer.profiles?.phone && (
+                                <div>
+                                  <span className="text-gray-500">Teléfono: </span>
+                                  <span className="font-medium">{offer.profiles.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {offer.message && (
+                            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-3">
+                              <h4 className="font-medium text-blue-900 mb-2">Mensaje del Comprador</h4>
+                              <p className="text-blue-700 text-sm whitespace-pre-wrap">
+                                {offer.message}
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex items-center text-xs text-gray-500">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            <span>Recibida: {formatDate(offer.created_at)}</span>
+                          </div>
+                        </div>
+
+                        <div className="ml-4 flex flex-col items-end space-y-2">
+                          <div className="flex items-center space-x-1">
+                            {getStatusIcon(offer.status)}
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(offer.status)}`}>
+                              {getStatusText(offer.status)}
+                            </span>
+                          </div>
+                          <Link
+                            to={`/property/${offer.property_id}`}
+                            className="text-green-600 hover:text-green-800 text-sm font-medium"
+                          >
+                            Ver propiedad →
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

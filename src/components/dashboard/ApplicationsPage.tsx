@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2 } from 'lucide-react';
+import { supabase, updateApplicationStatus, getCurrentProfile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { webhookClient } from '../../lib/webhook';
+import CustomButton from '../common/CustomButton';
 
 interface ApplicationWithDetails {
   id: string;
@@ -15,12 +17,14 @@ interface ApplicationWithDetails {
     address_commune: string;
     price_clp: number;
     listing_type: string;
-    property_images: { image_url: string }[];
+    property_images?: { image_url: string }[];
   };
   profiles?: {
-    full_name: string | null;
-    contact_email: string | null;
-    contact_phone: string | null;
+    first_name: string | null;
+    paternal_last_name: string | null;
+    maternal_last_name: string | null;
+    email: string | null;
+    phone: string | null;
   } | null;
   structured_applicant?: {
     full_name: string | null;
@@ -44,12 +48,40 @@ export const ApplicationsPage: React.FC = () => {
   const [messageType, setMessageType] = useState<'documents' | 'info'>('documents');
   const [messageText, setMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [propertyImages, setPropertyImages] = useState<Record<string, { image_url: string }[]>>({});
+  const [showUndoModal, setShowUndoModal] = useState(false);
+  const [applicationToUndo, setApplicationToUndo] = useState<ApplicationWithDetails | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchApplications();
     }
   }, [user]);
+
+  // Function to fetch property images separately
+  const fetchPropertyImages = async (propertyIds: string[]) => {
+    if (propertyIds.length === 0) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('property_images')
+        .select('property_id, image_url')
+        .in('property_id', propertyIds);
+      
+      if (error) throw error;
+      
+      // Group images by property_id
+      const imagesByProperty = data?.reduce((acc, img) => {
+        if (!acc[img.property_id]) acc[img.property_id] = [];
+        acc[img.property_id].push(img);
+        return acc;
+      }, {} as Record<string, { image_url: string }[]>) || {};
+      
+      setPropertyImages(imagesByProperty);
+    } catch (error) {
+      console.error('Error fetching property images:', error);
+    }
+  };
 
   // Función para obtener postulaciones recibidas (como propietario)
   const fetchReceivedApplications = async () => {
@@ -63,13 +95,14 @@ export const ApplicationsPage: React.FC = () => {
             address_commune,
             price_clp,
             listing_type,
-            owner_id,
-            property_images(image_url)
+            owner_id
           ),
           profiles(
-            full_name,
-            contact_email,
-            contact_phone
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            email,
+            phone
           )
         `)
         .eq('properties.owner_id', user?.id)
@@ -94,13 +127,14 @@ export const ApplicationsPage: React.FC = () => {
             address_street,
             address_commune,
             price_clp,
-            listing_type,
-            property_images(image_url)
+            listing_type
           ),
           profiles(
-            full_name,
-            contact_email,
-            contact_phone
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            email,
+            phone
           )
         `)
         .eq('applicant_id', user?.id)
@@ -124,6 +158,16 @@ export const ApplicationsPage: React.FC = () => {
       
       setReceivedApplications(received);
       setSentApplications(sent);
+      
+      // Fetch property images for all properties
+      const allPropertyIds = [
+        ...received.map(app => app.property_id),
+        ...sent.map(app => app.property_id)
+      ].filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
+      
+      if (allPropertyIds.length > 0) {
+        await fetchPropertyImages(allPropertyIds);
+      }
     } catch (error) {
       console.error('Error fetching applications:', error);
     } finally {
@@ -133,121 +177,54 @@ export const ApplicationsPage: React.FC = () => {
 
   // Función para aprobar postulación (integración con n8n)
   const handleApproveApplication = async (application: ApplicationWithDetails) => {
-    // Poner estado de carga para feedback visual
-    setUpdating(`${application.id}-approve`);
     console.log('🚀 Iniciando aprobación de postulación:', application.id);
     
+    // Poner estado de carga para feedback visual
+    setUpdating(`${application.id}-approve`);
+    
     try {
-      // 1. Actualizar estado en la base de datos primero
-      const { error } = await supabase
-        .from('applications')
-        .update({ status: 'aprobada' })
-        .eq('id', application.id);
-
-      if (error) throw error;
+      // 1. Actualizar estado en la base de datos usando la función API
+      console.log('📝 Actualizando estado en base de datos...');
+      const updatedApplication = await updateApplicationStatus(application.id, 'aprobada');
       console.log('✅ Base de datos actualizada correctamente');
 
-      // 2. Configurar URL del webhook de n8n
-      const webhookURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+      // 2. Obtener datos completos para el webhook
+      const property = updatedApplication.properties;
+      const applicant = updatedApplication.profiles;
       
-      // 3. Actualizar el estado de la UI inmediatamente
+      // 3. Obtener perfil del propietario (usuario actual)
+      console.log('👤 Obteniendo perfil del propietario...');
+      const propertyOwner = await getCurrentProfile();
+      if (!propertyOwner) {
+        throw new Error('No se pudo obtener el perfil del propietario');
+      }
+
+      // 4. Actualizar el estado de la UI inmediatamente
       setReceivedApplications(receivedApplications.map(app =>
         app.id === application.id ? { ...app, status: 'aprobada' } : app
       ));
 
-      // 4. Intentar enviar webhook solo si está configurado
-      if (webhookURL) {
-        try {
-          // Construir el payload completo con toda la información necesaria
-          const webhookPayload = {
-            // Información básica de la decisión
-            action: 'application_approved',
-            decision: 'approved',
-            status: 'aprobada',
-            timestamp: new Date().toISOString(),
-            
-            // Información de la aplicación
-            application: {
-              id: application.id,
-              property_id: application.property_id,
-              applicant_id: application.applicant_id,
-              message: application.message,
-              created_at: application.created_at,
-              status: 'aprobada'
-            },
-            
-            // Información de la propiedad
-            property: {
-              id: application.property_id,
-              address_street: application.properties.address_street,
-              address_commune: application.properties.address_commune,
-              price: application.properties.price_clp,
-              listing_type: application.properties.listing_type,
-              photos_urls: application.properties.property_images?.map(img => img.image_url) || []
-            },
-            
-            // Información del postulante
-            applicant: {
-              id: application.applicant_id,
-              full_name: application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado',
-              contact_email: application.structured_applicant?.contact_email || application.profiles?.contact_email || 'No especificado',
-              contact_phone: application.structured_applicant?.contact_phone || application.profiles?.contact_phone || null,
-              profession: application.structured_applicant?.profession || null,
-              company: application.structured_applicant?.company || null,
-              monthly_income: application.structured_applicant?.monthly_income || null
-            },
-            
-            // Información adicional para procesamiento
-            metadata: {
-              source: 'propiedades_app',
-              user_agent: navigator.userAgent,
-              url: window.location.href,
-              environment: import.meta.env.MODE || 'development'
-            }
-          };
-
-          console.log('📤 Enviando payload al webhook:', webhookPayload);
-
-          // Realizar la solicitud POST al webhook con las cabeceras correctas
-          const response = await fetch(webhookURL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'User-Agent': 'PropiedadesApp/1.0'
-            },
-            body: JSON.stringify(webhookPayload)
-          });
-
-          console.log('📡 Respuesta del webhook - Status:', response.status);
-          console.log('📡 Respuesta del webhook - Headers:', Object.fromEntries(response.headers.entries()));
-          
-          // Verificar si la respuesta fue exitosa
-          if (!response.ok) {
-            // Solo registrar el error sin interrumpir el proceso
-            console.warn(`⚠️ Webhook no disponible (${response.status}): El servicio de notificaciones externo no está activo`);
-          } else {
-            // Intentar leer la respuesta
-            let result;
-            try {
-              result = await response.json();
-              console.log('✅ Webhook de n8n ejecutado con éxito:', result);
-            } catch (jsonError) {
-              // Si no es JSON válido, leer como texto
-              result = await response.text();
-              console.log('✅ Webhook de n8n ejecutado con éxito (respuesta texto):', result);
-            }
-          }
-        } catch (webhookError) {
-          // Solo registrar el error sin mostrar alertas al usuario
-          console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
-        }
-      } else {
-        // No mostrar alerta si no hay webhook configurado, es opcional
-        console.log('ℹ️ Webhook no configurado - funcionando sin notificaciones externas');
+      // 5. Disparar el Webhook usando el webhookClient
+      console.log('🌐 Enviando webhook...');
+      try {
+        await webhookClient.sendApplicationEvent(
+          'approved',
+          updatedApplication,
+          property,
+          applicant,
+          propertyOwner
+        );
+        console.log('✅ Webhook enviado exitosamente');
+      } catch (webhookError) {
+        // El webhookClient maneja los errores internamente y no los propaga
+        // Solo registrar el error sin interrumpir el proceso
+        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
       }
 
       console.log('✅ Proceso de aprobación completado exitosamente');
+      
+      // 6. Mostrar notificación de éxito
+      alert('¡Postulación aprobada exitosamente! Se ha enviado la notificación al postulante.');
 
     } catch (error) {
       console.error('❌ Error aprobando postulación:', error);
@@ -257,6 +234,7 @@ export const ApplicationsPage: React.FC = () => {
         app.id === application.id ? { ...app, status: 'pendiente' } : app
       ));
       
+      // Mostrar notificación de error
       alert(`Error al aprobar la postulación: ${error.message}. Por favor, intenta nuevamente.`);
     } finally {
       // Quitar estado de carga
@@ -310,8 +288,8 @@ export const ApplicationsPage: React.FC = () => {
     
     // Pre-cargar texto según el tipo
     const preloadedText = type === 'documents' 
-      ? `Estimado/a ${application.structured_applicant?.full_name || application.profiles?.full_name || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
-      : `Estimado/a ${application.structured_applicant?.full_name || application.profiles?.full_name || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
+      ? `Estimado/a ${application.structured_applicant?.full_name || getFullName(application.profiles) || 'Postulante'},\n\nPara continuar con su postulación, por favor adjunte los siguientes documentos:\n\n- \n- \n- \n\nSaludos cordiales.`
+      : `Estimado/a ${application.structured_applicant?.full_name || getFullName(application.profiles) || 'Postulante'},\n\nNecesitamos información adicional sobre su postulación:\n\n\n\nSaludos cordiales.`;
     
     setMessageText(preloadedText);
     setShowMessageModal(true);
@@ -361,6 +339,149 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
+  // Función para deshacer aceptación de postulación
+  const handleUndoAcceptance = async (application: ApplicationWithDetails) => {
+    setApplicationToUndo(application);
+    setShowUndoModal(true);
+  };
+
+  // Función para confirmar deshacer aceptación
+  const confirmUndoAcceptance = async () => {
+    if (!applicationToUndo) return;
+
+    setUpdating(`${applicationToUndo.id}-undo`);
+    console.log('🚀 Iniciando reversión de postulación:', applicationToUndo.id);
+    
+    try {
+      // 1. Actualizar estado en la base de datos de 'aprobada' a 'pendiente'
+      const { error } = await supabase
+        .from('applications')
+        .update({ status: 'pendiente' })
+        .eq('id', applicationToUndo.id);
+
+      if (error) throw error;
+      console.log('✅ Base de datos actualizada correctamente');
+
+      // 2. Actualizar el estado de la UI inmediatamente
+      setReceivedApplications(receivedApplications.map(app =>
+        app.id === applicationToUndo.id ? { ...app, status: 'pendiente' } : app
+      ));
+
+      // 3. Configurar URL del webhook de n8n
+      const webhookURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+      
+      // 4. Intentar enviar webhook solo si está configurado
+      if (webhookURL) {
+        try {
+          // Construir el payload completo con toda la información necesaria
+          const webhookPayload = {
+            // Información básica de la decisión
+            action: 'application_reverted',
+            decision: 'reverted',
+            status: 'pendiente',
+            timestamp: new Date().toISOString(),
+            
+            // Información de la aplicación
+            application: {
+              id: applicationToUndo.id,
+              property_id: applicationToUndo.property_id,
+              applicant_id: applicationToUndo.applicant_id,
+              message: applicationToUndo.message,
+              created_at: applicationToUndo.created_at,
+              status: 'pendiente'
+            },
+            
+            // Información de la propiedad
+            property: {
+              id: applicationToUndo.property_id,
+              address_street: applicationToUndo.properties.address_street,
+              address_commune: applicationToUndo.properties.address_commune,
+              price: applicationToUndo.properties.price_clp,
+              listing_type: applicationToUndo.properties.listing_type,
+              photos_urls: applicationToUndo.properties.property_images?.map(img => img.image_url) || []
+            },
+            
+            // Información del postulante
+            applicant: {
+              id: applicationToUndo.applicant_id,
+              full_name: applicationToUndo.structured_applicant?.full_name || getFullName(applicationToUndo.profiles) || 'No especificado',
+              contact_email: applicationToUndo.structured_applicant?.contact_email || getContactEmail(applicationToUndo.profiles) || 'No especificado',
+              contact_phone: applicationToUndo.structured_applicant?.contact_phone || getContactPhone(applicationToUndo.profiles) || null,
+              profession: applicationToUndo.structured_applicant?.profession || null,
+              company: applicationToUndo.structured_applicant?.company || null,
+              monthly_income: applicationToUndo.structured_applicant?.monthly_income || null
+            },
+            
+            // Información adicional para procesamiento
+            metadata: {
+              source: 'propiedades_app',
+              user_agent: navigator.userAgent,
+              url: window.location.href,
+              environment: import.meta.env.MODE || 'development'
+            }
+          };
+
+          console.log('📤 Enviando payload al webhook:', webhookPayload);
+
+          // Realizar la solicitud POST al webhook con las cabeceras correctas
+          const response = await fetch(webhookURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'User-Agent': 'PropiedadesApp/1.0'
+            },
+            body: JSON.stringify(webhookPayload)
+          });
+
+          console.log('📡 Respuesta del webhook - Status:', response.status);
+          
+          // Verificar si la respuesta fue exitosa
+          if (!response.ok) {
+            // Solo registrar el error sin interrumpir el proceso
+            console.warn(`⚠️ Webhook no disponible (${response.status}): El servicio de notificaciones externo no está activo`);
+          } else {
+            // Intentar leer la respuesta
+            let result;
+            try {
+              result = await response.json();
+              console.log('✅ Webhook de n8n ejecutado con éxito:', result);
+            } catch (jsonError) {
+              // Si no es JSON válido, leer como texto
+              result = await response.text();
+              console.log('✅ Webhook de n8n ejecutado con éxito (respuesta texto):', result);
+            }
+          }
+        } catch (webhookError) {
+          // Solo registrar el error sin mostrar alertas al usuario
+          console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
+        }
+      } else {
+        // No mostrar alerta si no hay webhook configurado, es opcional
+        console.log('ℹ️ Webhook no configurado - funcionando sin notificaciones externas');
+      }
+
+      console.log('✅ Proceso de reversión completado exitosamente');
+
+      // Cerrar modal
+      setShowUndoModal(false);
+      setApplicationToUndo(null);
+
+    } catch (error) {
+      console.error('❌ Error revirtiendo postulación:', error);
+      
+      // Revertir cambios en la UI si hubo error en la base de datos
+      setReceivedApplications(receivedApplications.map(app =>
+        app.id === applicationToUndo.id ? { ...app, status: 'aprobada' } : app
+      ));
+      
+      alert(`Error al revertir la postulación: ${error.message}. Por favor, intenta nuevamente.`);
+    } finally {
+      // Quitar estado de carga
+      setUpdating(null);
+    }
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -376,6 +497,24 @@ export const ApplicationsPage: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(new Date(date));
+  };
+
+  // Helper function to build full name from profile data
+  const getFullName = (profiles: ApplicationWithDetails['profiles']) => {
+    if (!profiles) return 'No especificado';
+    const { first_name, paternal_last_name, maternal_last_name } = profiles;
+    if (!first_name || !paternal_last_name) return 'No especificado';
+    return `${first_name} ${paternal_last_name}${maternal_last_name ? ` ${maternal_last_name}` : ''}`;
+  };
+
+  // Helper function to get contact email from profile
+  const getContactEmail = (profiles: ApplicationWithDetails['profiles']) => {
+    return profiles?.email || 'No especificado';
+  };
+
+  // Helper function to get contact phone from profile
+  const getContactPhone = (profiles: ApplicationWithDetails['profiles']) => {
+    return profiles?.phone || null;
   };
 
   const getStatusColor = (status: string) => {
@@ -474,16 +613,16 @@ export const ApplicationsPage: React.FC = () => {
                 <div className="space-y-1 text-sm">
                   <div>
                     <span className="text-gray-500">Nombre: </span>
-                    <span className="font-medium">{application.structured_applicant?.full_name || application.profiles?.full_name || 'No especificado'}</span>
+                    <span className="font-medium">{application.structured_applicant?.full_name || getFullName(application.profiles)}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Email: </span>
-                    <span className="font-medium">{application.structured_applicant?.contact_email || application.profiles?.contact_email || 'No especificado'}</span>
+                    <span className="font-medium">{application.structured_applicant?.contact_email || getContactEmail(application.profiles)}</span>
                   </div>
-                  {(application.structured_applicant?.contact_phone || application.profiles?.contact_phone) && (
+                  {(application.structured_applicant?.contact_phone || getContactPhone(application.profiles)) && (
                     <div>
                       <span className="text-gray-500">Teléfono: </span>
-                      <span className="font-medium">{application.structured_applicant?.contact_phone || application.profiles?.contact_phone}</span>
+                      <span className="font-medium">{application.structured_applicant?.contact_phone || getContactPhone(application.profiles)}</span>
                     </div>
                   )}
                   {application.structured_applicant?.profession && (
@@ -592,6 +731,22 @@ export const ApplicationsPage: React.FC = () => {
                     </button>
                   </div>
                 )}
+
+                {/* Botón para deshacer aceptación */}
+                {application.status === 'aprobada' && (
+                  <div className="flex items-center space-x-2">
+                    <CustomButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleUndoAcceptance(application)}
+                      disabled={updating?.startsWith(application.id)}
+                      className="flex items-center space-x-1"
+                    >
+                      <Undo2 className="h-4 w-4" />
+                      <span>Deshacer Aceptación</span>
+                    </CustomButton>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -638,9 +793,9 @@ export const ApplicationsPage: React.FC = () => {
               {/* Imagen de la propiedad */}
               <div className="flex items-start space-x-4 mb-4">
                 <div className="w-24 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                  {application.properties.property_images && application.properties.property_images.length > 0 ? (
+                  {propertyImages[application.property_id] && propertyImages[application.property_id].length > 0 ? (
                     <img 
-                      src={application.properties.property_images[0].image_url} 
+                      src={propertyImages[application.property_id][0].image_url} 
                       alt={application.properties.address_street}
                       className="w-full h-full object-cover"
                     />
@@ -743,7 +898,7 @@ export const ApplicationsPage: React.FC = () => {
                 <p className="text-gray-700">{selectedApplication.properties.address_street} {selectedApplication.properties.address_number}</p>
                 <p className="text-sm text-gray-600">
                   Postulante: {selectedApplication.structured_applicant?.full_name || 
-                              selectedApplication.profiles?.full_name || 
+                              getFullName(selectedApplication.profiles) || 
                               'No especificado'}
                 </p>
               </div>
@@ -763,7 +918,7 @@ export const ApplicationsPage: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-2">
                   Este mensaje será enviado al email del postulante: {
                     selectedApplication.structured_applicant?.contact_email || 
-                    selectedApplication.profiles?.contact_email
+                    getContactEmail(selectedApplication.profiles)
                   }
                 </p>
               </div>
@@ -808,6 +963,105 @@ export const ApplicationsPage: React.FC = () => {
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Confirmar Deshacer Aceptación */}
+      {showUndoModal && applicationToUndo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            {/* Header del Modal */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">
+                Deshacer Aceptación
+              </h2>
+              <button
+                onClick={() => {
+                  setShowUndoModal(false);
+                  setApplicationToUndo(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Contenido del Modal */}
+            <div className="p-6">
+              {/* Información de la Postulación */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-yellow-900 mb-1">¿Estás seguro?</h3>
+                    <p className="text-yellow-800 text-sm">
+                      Esta acción revertirá la postulación de <strong>{applicationToUndo.structured_applicant?.full_name || getFullName(applicationToUndo.profiles) || 'el postulante'}</strong> para la propiedad <strong>{applicationToUndo.properties.address_street}</strong> de estado "Aprobada" a "Pendiente".
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detalles de la Postulación */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="font-semibold text-gray-900 mb-2">Detalles de la Postulación:</h4>
+                <div className="space-y-1 text-sm">
+                  <div>
+                    <span className="text-gray-500">Propiedad: </span>
+                    <span className="font-medium">{applicationToUndo.properties.address_street}, {applicationToUndo.properties.address_commune}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Postulante: </span>
+                    <span className="font-medium">{applicationToUndo.structured_applicant?.full_name || getFullName(applicationToUndo.profiles)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Email: </span>
+                    <span className="font-medium">{applicationToUndo.structured_applicant?.contact_email || getContactEmail(applicationToUndo.profiles)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Precio: </span>
+                    <span className="font-medium">{formatPrice(applicationToUndo.properties.price_clp)}/mes</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Información Adicional */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h4 className="font-medium text-blue-900 mb-2">¿Qué sucederá?</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• El estado de la postulación cambiará de "Aprobada" a "Pendiente"</li>
+                  <li>• Se enviará una notificación al postulante sobre este cambio</li>
+                  <li>• Podrás volver a evaluar la postulación más adelante</li>
+                  <li>• Esta acción se registrará en el sistema</li>
+                </ul>
+              </div>
+
+              {/* Botones de Acción */}
+              <div className="flex space-x-3">
+                <CustomButton
+                  variant="outline"
+                  onClick={() => {
+                    setShowUndoModal(false);
+                    setApplicationToUndo(null);
+                  }}
+                  disabled={updating?.startsWith(applicationToUndo.id)}
+                  className="flex-1"
+                >
+                  Cancelar
+                </CustomButton>
+                <CustomButton
+                  variant="secondary"
+                  onClick={confirmUndoAcceptance}
+                  disabled={updating?.startsWith(applicationToUndo.id)}
+                  loading={updating === `${applicationToUndo.id}-undo`}
+                  loadingText="Revirtiendo..."
+                  className="flex-1"
+                >
+                  <Undo2 className="h-4 w-4 mr-2" />
+                  Deshacer Aceptación
+                </CustomButton>
               </div>
             </div>
           </div>

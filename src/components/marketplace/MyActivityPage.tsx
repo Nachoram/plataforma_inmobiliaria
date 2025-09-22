@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, MessageSquare, Clock, CheckCircle, XCircle, Building, DollarSign, Calendar } from 'lucide-react';
+import { TrendingUp, MessageSquare, Clock, CheckCircle, XCircle, DollarSign, Calendar } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
 interface OfferWithProperty {
   id: string;
   property_id: string;
-  offer_amount: number;
+  amount_clp: number;
   message: string;
   status: 'pendiente' | 'aceptada' | 'rechazada';
   created_at: string;
@@ -39,7 +39,7 @@ interface ApplicationWithProperty {
 
 export const MyActivityPage: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'offers' | 'applications'>('offers');
+  const [activeTab, setActiveTab] = useState<'applications' | 'offers'>('applications');
   const [offers, setOffers] = useState<OfferWithProperty[]>([]);
   const [applications, setApplications] = useState<ApplicationWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +53,7 @@ export const MyActivityPage: React.FC = () => {
   const fetchMyActivity = async () => {
     setLoading(true);
     try {
-      // Fetch my offers
+      // Fetch my offers using getSentOffers API
       const { data: offersData, error: offersError } = await supabase
         .from('offers')
         .select(`
@@ -65,7 +65,7 @@ export const MyActivityPage: React.FC = () => {
 
       if (offersError) throw offersError;
 
-      // Fetch my applications
+      // Fetch my applications using getSentApplications API
       const { data: appsData, error: appsError } = await supabase
         .from('applications')
         .select(`
@@ -144,26 +144,13 @@ export const MyActivityPage: React.FC = () => {
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">📊 Mi Actividad</h1>
-        <p className="text-gray-600">Revisa todas tus ofertas y postulaciones</p>
+        <p className="text-gray-600">Revisa todas las acciones que has iniciado: postulaciones y ofertas que has enviado</p>
       </div>
 
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border">
         <div className="border-b">
           <nav className="flex">
-            <button
-              onClick={() => setActiveTab('offers')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'offers'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4" />
-                <span>Mis Ofertas ({offers.length})</span>
-              </div>
-            </button>
             <button
               onClick={() => setActiveTab('applications')}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -177,77 +164,23 @@ export const MyActivityPage: React.FC = () => {
                 <span>Mis Postulaciones ({applications.length})</span>
               </div>
             </button>
+            <button
+              onClick={() => setActiveTab('offers')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'offers'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-4 w-4" />
+                <span>Mis Ofertas Realizadas ({offers.length})</span>
+              </div>
+            </button>
           </nav>
         </div>
 
         <div className="p-6">
-          {activeTab === 'offers' && (
-            <div className="space-y-4">
-              {offers.length === 0 ? (
-                <div className="text-center py-8">
-                  <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No has hecho ninguna oferta aún</p>
-                  <Link 
-                    to="/"
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Explorar propiedades en venta
-                  </Link>
-                </div>
-              ) : (
-                offers.map((offer) => (
-                  <div key={offer.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 mb-1">
-                          {offer.properties.address_street}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {offer.properties.address_commune}, {offer.properties.address_region}
-                        </p>
-                        
-                        <div className="flex items-center space-x-4 mb-3">
-                          <div className="flex items-center text-sm">
-                            <DollarSign className="h-4 w-4 mr-1 text-green-600" />
-                            <span>Precio: {formatPrice(offer.properties.price_clp)}</span>
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <TrendingUp className="h-4 w-4 mr-1 text-blue-600" />
-                            <span>Tu oferta: {formatPrice(offer.offer_amount)}</span>
-                          </div>
-                        </div>
-
-                        <p className="text-sm text-gray-700 mb-2">
-                          <strong>Mensaje:</strong> {offer.message}
-                        </p>
-
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          <span>Enviada: {formatDate(offer.created_at)}</span>
-                        </div>
-                      </div>
-
-                      <div className="ml-4 flex flex-col items-end space-y-2">
-                        <div className="flex items-center space-x-1">
-                          {getStatusIcon(offer.status)}
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(offer.status)}`}>
-                            {getStatusText(offer.status)}
-                          </span>
-                        </div>
-                        <Link
-                          to={`/property/${offer.property_id}`}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          Ver propiedad →
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
           {activeTab === 'applications' && (
             <div className="space-y-4">
               {applications.length === 0 ? (
@@ -298,6 +231,73 @@ export const MyActivityPage: React.FC = () => {
                         <Link
                           to={`/property/${application.property_id}`}
                           className="text-emerald-600 hover:text-emerald-800 text-sm font-medium"
+                        >
+                          Ver propiedad →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'offers' && (
+            <div className="space-y-4">
+              {offers.length === 0 ? (
+                <div className="text-center py-8">
+                  <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No has hecho ninguna oferta aún</p>
+                  <Link 
+                    to="/"
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Explorar propiedades en venta
+                  </Link>
+                </div>
+              ) : (
+                offers.map((offer) => (
+                  <div key={offer.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 mb-1">
+                          {offer.properties.address_street}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {offer.properties.address_commune}, {offer.properties.address_region}
+                        </p>
+                        
+                        <div className="flex items-center space-x-4 mb-3">
+                          <div className="flex items-center text-sm">
+                            <DollarSign className="h-4 w-4 mr-1 text-green-600" />
+                            <span>Precio: {formatPrice(offer.properties.price_clp)}</span>
+                          </div>
+                          <div className="flex items-center text-sm">
+                            <TrendingUp className="h-4 w-4 mr-1 text-blue-600" />
+                            <span>Tu oferta: {formatPrice(offer.amount_clp)}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-sm text-gray-700 mb-2">
+                          <strong>Mensaje:</strong> {offer.message}
+                        </p>
+
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          <span>Enviada: {formatDate(offer.created_at)}</span>
+                        </div>
+                      </div>
+
+                      <div className="ml-4 flex flex-col items-end space-y-2">
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(offer.status)}
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(offer.status)}`}>
+                            {getStatusText(offer.status)}
+                          </span>
+                        </div>
+                        <Link
+                          to={`/property/${offer.property_id}`}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                         >
                           Ver propiedad →
                         </Link>

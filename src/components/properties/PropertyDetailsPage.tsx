@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, DollarSign, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, DollarSign, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X } from 'lucide-react';
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import RentalApplicationForm from './RentalApplicationForm';
 
 interface PropertyWithImages extends Property {
   property_images?: Array<{
@@ -20,6 +21,7 @@ export const PropertyDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -133,32 +135,19 @@ export const PropertyDetailsPage: React.FC = () => {
     }
   };
 
-  const handleQuickApplication = async () => {
+  const handleApplicationClick = () => {
     if (!user || !property) return;
-    
-    setActionLoading(true);
-    
-    try {
-      const message = prompt('Cuéntale al propietario por qué te interesa esta propiedad:');
-      if (!message) return;
-      
-      const { error } = await supabase
-        .from('applications')
-        .insert({
-          property_id: property.id,
-          applicant_id: user.id,
-          message: message,
-          status: 'pendiente'
-        });
+    setShowApplicationForm(true);
+  };
 
-      if (error) throw error;
-      
-      alert('¡Postulación enviada exitosamente!');
-    } catch (error: any) {
-      alert('Error enviando postulación: ' + error.message);
-    } finally {
-      setActionLoading(false);
-    }
+  const handleApplicationSuccess = () => {
+    setShowApplicationForm(false);
+    // Mostrar mensaje de éxito
+    alert('¡Postulación enviada exitosamente!');
+  };
+
+  const handleApplicationCancel = () => {
+    setShowApplicationForm(false);
   };
 
   return (
@@ -323,9 +312,9 @@ export const PropertyDetailsPage: React.FC = () => {
               </h3>
               
               <div className="space-y-3">
-                {property.type === 'arriendo' ? (
+                {property.listing_type === 'arriendo' ? (
                   <button
-                    onClick={handleQuickApplication}
+                    onClick={handleApplicationClick}
                     disabled={actionLoading}
                     className="w-full bg-emerald-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
                   >
@@ -371,6 +360,32 @@ export const PropertyDetailsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal del formulario de postulación */}
+      {showApplicationForm && property && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Postulación de Arriendo
+                </h2>
+                <button
+                  onClick={handleApplicationCancel}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <RentalApplicationForm
+                property={property}
+                onSuccess={handleApplicationSuccess}
+                onCancel={handleApplicationCancel}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

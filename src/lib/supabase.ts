@@ -68,6 +68,10 @@ export interface Profile {
   address_department: string | null;
   address_commune: string;
   address_region: string;
+  monthly_income_clp?: number; // agregado
+  nationality?: string; // agregado
+  date_of_birth?: string | null; // agregado (ISO date)
+  job_seniority?: string | null; // agregado
   created_at: string;
 }
 
@@ -611,6 +615,36 @@ export const getCurrentUser = async () => {
   }
 };
 
+// API function to get current user profile
+export const getCurrentProfile = async (): Promise<Profile | null> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('Error getting user:', userError);
+      throw new Error('Usuario no autenticado');
+    }
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to get current profile:', error);
+    throw error;
+  }
+};
+
 // Constantes compartidas para mantener consistencia
 
 // File size limits
@@ -733,3 +767,46 @@ export type PropertyRegime = typeof PROPERTY_REGIME_OPTIONS[number]['value'];
 export type ListingType = typeof LISTING_TYPE_OPTIONS[number]['value'];
 export type PropertyStatus = typeof PROPERTY_STATUS_OPTIONS[number]['value'];
 export type ApplicationStatus = typeof APPLICATION_STATUS_OPTIONS[number]['value'];
+
+// API function to update application status
+export const updateApplicationStatus = async (
+  applicationId: string, 
+  status: 'aprobada' | 'rechazada' | 'info_solicitada',
+  message?: string
+) => {
+  try {
+    const { data, error } = await supabase
+      .from('applications')
+      .update({ 
+        status,
+        ...(message && { response_message: message })
+      })
+      .eq('id', applicationId)
+      .select(`
+        *,
+        properties (
+          *,
+          profiles!owner_id (
+            first_name,
+            paternal_last_name,
+            email,
+            phone
+          ),
+          property_images (image_url)
+        ),
+        profiles!applicant_id (
+          first_name,
+          paternal_last_name,
+          email,
+          phone
+        )
+      `)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating application status:', error);
+    throw error;
+  }
+};

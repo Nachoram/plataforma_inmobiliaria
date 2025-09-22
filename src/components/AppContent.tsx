@@ -4,13 +4,11 @@ import { useAuth } from '../hooks/useAuth';
 import { Layout } from './Layout';
 import { AuthPage } from './auth/AuthPage';
 import { ProtectedRoute } from './ProtectedRoute';
-import { PublicPropertiesPage } from './properties/PublicPropertiesPage';
 import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
 import { PortfolioPage } from './portfolio/PortfolioPage';
 import { PropertyForm } from './properties/PropertyForm';
 import { RentalPublicationForm } from './properties/RentalPublicationForm';
 import { ApplicationsPage } from './dashboard/ApplicationsPage';
-import { OffersPage } from './dashboard/OffersPage';
 import { UserProfile } from './profile/UserProfile';
 import { MarketplacePage } from './marketplace/MarketplacePage';
 import { MyActivityPage } from './marketplace/MyActivityPage';
@@ -59,7 +57,6 @@ export const AppContent: React.FC = () => {
       {/* Rutas existentes */}
       <Route path="/" element={<Layout><MarketplacePage /></Layout>} />
       <Route path="/marketplace" element={<Layout><MarketplacePage /></Layout>} />
-      <Route path="/properties" element={<Layout><PublicPropertiesPage /></Layout>} />
       <Route path="/property/:id" element={<Layout><PropertyDetailsPage /></Layout>} />
       <Route path="/auth" element={<Layout><AuthPage /></Layout>} />
 
@@ -101,14 +98,6 @@ export const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <Layout><ApplicationsPage /></Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/offers"
-        element={
-          <ProtectedRoute>
-            <Layout><OffersPage /></Layout>
           </ProtectedRoute>
         }
       />

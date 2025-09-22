@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send } from 'lucide-react';
-import { supabase, Property, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, VALIDATION_RULES, validateRUT } from '../../lib/supabase';
+import { X, Send, User, AlertCircle, ExternalLink } from 'lucide-react';
+import { supabase, Property, Profile, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, VALIDATION_RULES, validateRUT, getCurrentProfile } from '../../lib/supabase';
 import CustomButton from '../common/CustomButton';
 
 interface RentalApplicationFormProps {
@@ -17,6 +17,9 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showGuarantor, setShowGuarantor] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
 
   // Datos del postulante
   const [applicantData, setApplicantData] = useState({
@@ -69,44 +72,49 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   // Usar constantes compartidas
   const regions = CHILE_REGIONS;
 
-  // Precarga de datos del perfil del usuario
+  // Precarga de datos del perfil del usuario usando la API getCurrentProfile()
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) {
-          console.error('Error getting user:', userError);
-          setError('Error de autenticación. Por favor, inicia sesión nuevamente.');
-          return;
-        }
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
+        setProfileLoading(true);
+        const profile = await getCurrentProfile();
+        
+        if (profile) {
+          setUserProfile(profile);
+          
+          // Mapear datos del perfil al formulario
+          setApplicantData(prev => ({
+            ...prev,
+            first_name: profile.first_name || '',
+            paternal_last_name: profile.paternal_last_name || '',
+            maternal_last_name: profile.maternal_last_name || '',
+            rut: profile.rut || '',
+            profession: profile.profession || '',
+            monthly_income_clp: '', // Este campo no está en el perfil, se debe llenar manualmente
+            phone: profile.phone || '',
+            email: profile.email || '',
+            marital_status: profile.marital_status || 'soltero',
+            address_street: profile.address_street || '',
+            address_number: profile.address_number || '',
+            address_department: profile.address_department || '',
+            address_commune: profile.address_commune || '',
+            address_region: profile.address_region || '',
+            nationality: (profile as any).nationality || 'Chilena',
+          }));
 
-          if (profile) {
-            setApplicantData(prev => ({
-              ...prev,
-              first_name: profile.first_name || '',
-              paternal_last_name: profile.paternal_last_name || '',
-              maternal_last_name: profile.maternal_last_name || '',
-              rut: profile.rut || '',
-              profession: profile.profession || '',
-              phone: profile.phone || '',
-              email: profile.email || '',
-              marital_status: profile.marital_status || 'soltero',
-              address_street: profile.address_street || '',
-              address_number: profile.address_number || '',
-              address_department: profile.address_department || '',
-              address_commune: profile.address_commune || '',
-              address_region: profile.address_region || '',
-            }));
-          }
+          // Verificar si el perfil está incompleto
+          const essentialFields = ['rut', 'profession', 'phone', 'address_street', 'address_number', 'address_commune', 'address_region', 'nationality'];
+          const isIncomplete = essentialFields.some(field => !(profile as any)[field]);
+          setProfileIncomplete(isIncomplete);
+        } else {
+          setProfileIncomplete(true);
         }
       } catch (err) {
         console.error('Error loading user profile:', err);
+        setError('Error cargando perfil de usuario. Por favor, verifica tu conexión.');
+        setProfileIncomplete(true);
+      } finally {
+        setProfileLoading(false);
       }
     };
 
@@ -530,10 +538,58 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         </div>
       </div>
 
+      {/* Loading state for profile */}
+      {profileLoading && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+            <span>Cargando datos de tu perfil...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Profile incomplete alert */}
+      {!profileLoading && profileIncomplete && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-800 mb-1">Perfil Incompleto</h3>
+              <p className="text-sm text-amber-700 mb-3">
+                Hemos autocompletado con los datos de tu perfil. Para postular aún más rápido la próxima vez, completa tu perfil.
+              </p>
+              <a
+                href="/profile"
+                className="inline-flex items-center text-sm font-medium text-amber-600 hover:text-amber-800 transition-colors"
+              >
+                <User className="h-4 w-4 mr-1" />
+                Completar perfil
+                <ExternalLink className="h-3 w-3 ml-1" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success message for complete profile */}
+      {!profileLoading && !profileIncomplete && userProfile && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+          <div className="flex items-center">
+            <User className="h-5 w-5 text-green-600 mr-3" />
+            <span className="text-sm">
+              ✅ Formulario autocompletado con los datos de tu perfil
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Error display */}
       {error && (
         <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-          ⚠️ {error}
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+            <span>{error}</span>
+          </div>
         </div>
       )}
 

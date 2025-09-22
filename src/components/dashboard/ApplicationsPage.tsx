@@ -37,7 +37,9 @@ interface ApplicationWithDetails {
 }
 
 export const ApplicationsPage: React.FC = () => {
+  console.log('🚀 ApplicationsPage component loaded');
   const { user } = useAuth();
+  console.log('👤 Current user:', user);
   const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
   const [receivedApplications, setReceivedApplications] = useState<ApplicationWithDetails[]>([]);
   const [sentApplications, setSentApplications] = useState<ApplicationWithDetails[]>([]);
@@ -149,12 +151,17 @@ export const ApplicationsPage: React.FC = () => {
   };
 
   const fetchApplications = async () => {
+    console.log('📡 fetchApplications iniciado');
     setLoading(true);
     try {
       const [received, sent] = await Promise.all([
         fetchReceivedApplications(),
         fetchSentApplications()
       ]);
+      
+      console.log('📊 Postulaciones recibidas:', received.length);
+      console.log('📊 Postulaciones enviadas:', sent.length);
+      console.log('📋 Estados de postulaciones recibidas:', received.map(app => ({ id: app.id, status: app.status })));
       
       setReceivedApplications(received);
       setSentApplications(sent);
@@ -177,7 +184,10 @@ export const ApplicationsPage: React.FC = () => {
 
   // Función para aprobar postulación (integración con n8n)
   const handleApproveApplication = async (application: ApplicationWithDetails) => {
-    console.log('🚀 Iniciando aprobación de postulación:', application.id);
+    console.log('🚀 === INICIANDO APROBACIÓN DE POSTULACIÓN ===');
+    console.log('📋 Application ID:', application.id);
+    console.log('📋 Application data:', application);
+    console.log('👤 Current user:', user);
     
     // Poner estado de carga para feedback visual
     setUpdating(`${application.id}-approve`);
@@ -192,15 +202,30 @@ export const ApplicationsPage: React.FC = () => {
       const property = updatedApplication.properties;
       const applicant = updatedApplication.profiles;
       
+      // Validar que tenemos todos los datos necesarios
+      if (!property) {
+        throw new Error('No se pudo obtener los datos de la propiedad');
+      }
+      if (!applicant) {
+        throw new Error('No se pudo obtener los datos del postulante');
+      }
+      
       // 3. Obtener perfil del propietario (usuario actual)
       console.log('👤 Obteniendo perfil del propietario...');
       const propertyOwner = await getCurrentProfile();
       if (!propertyOwner) {
         throw new Error('No se pudo obtener el perfil del propietario');
       }
+      
+      console.log('📊 Datos validados:', {
+        application: updatedApplication.id,
+        property: property.id,
+        applicant: applicant.id,
+        propertyOwner: propertyOwner.id
+      });
 
       // 4. Actualizar el estado de la UI inmediatamente
-      setReceivedApplications(receivedApplications.map(app =>
+      setReceivedApplications(prev => prev.map(app =>
         app.id === application.id ? { ...app, status: 'aprobada' } : app
       ));
 
@@ -224,18 +249,55 @@ export const ApplicationsPage: React.FC = () => {
       console.log('✅ Proceso de aprobación completado exitosamente');
       
       // 6. Mostrar notificación de éxito
-      alert('¡Postulación aprobada exitosamente! Se ha enviado la notificación al postulante.');
+      // Usar una notificación más elegante que alert()
+      const successMessage = '¡Postulación aprobada exitosamente! Se ha enviado la notificación al postulante.';
+      console.log('✅', successMessage);
+      
+      // Crear notificación temporal en la UI
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
+      notification.textContent = successMessage;
+      document.body.appendChild(notification);
+      
+      // Remover notificación después de 5 segundos
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 5000);
 
     } catch (error) {
       console.error('❌ Error aprobando postulación:', error);
       
       // Revertir cambios en la UI si hubo error en la base de datos
-      setReceivedApplications(receivedApplications.map(app =>
+      setReceivedApplications(prev => prev.map(app =>
         app.id === application.id ? { ...app, status: 'pendiente' } : app
       ));
       
-      // Mostrar notificación de error
-      alert(`Error al aprobar la postulación: ${error.message}. Por favor, intenta nuevamente.`);
+      // Mostrar notificación de error más elegante
+      const errorMessage = `Error al aprobar la postulación: ${error.message || 'Error desconocido'}. Por favor, intenta nuevamente.`;
+      console.error('❌', errorMessage);
+      
+      // Crear notificación de error temporal en la UI
+      const errorNotification = document.createElement('div');
+      errorNotification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
+      errorNotification.textContent = errorMessage;
+      document.body.appendChild(errorNotification);
+      
+      // Remover notificación después de 7 segundos
+      setTimeout(() => {
+        errorNotification.style.opacity = '0';
+        errorNotification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (errorNotification.parentNode) {
+            errorNotification.parentNode.removeChild(errorNotification);
+          }
+        }, 300);
+      }, 7000);
     } finally {
       // Quitar estado de carga
       setUpdating(null);
@@ -572,8 +634,13 @@ export const ApplicationsPage: React.FC = () => {
   );
 
   // Componente para postulaciones recibidas (vista actual)
-  const ReceivedApplicationsView = () => (
-    <div className="space-y-4">
+  const ReceivedApplicationsView = () => {
+    console.log('📋 ReceivedApplicationsView renderizado');
+    console.log('📊 Total postulaciones recibidas:', receivedApplications.length);
+    console.log('📊 Postulaciones:', receivedApplications.map(app => ({ id: app.id, status: app.status })));
+    
+    return (
+      <div className="space-y-4">
       {receivedApplications.length === 0 ? (
         <div className="text-center py-12">
           <Mail className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -664,7 +731,10 @@ export const ApplicationsPage: React.FC = () => {
                 </div>
 
                 {/* Panel de Acciones con Botones Individuales */}
-                {application.status === 'pendiente' && (
+                {(() => {
+                  console.log('🔍 Verificando estado de aplicación:', application.id, 'Status:', application.status);
+                  return application.status === 'pendiente';
+                })() && (
                   <div className="flex items-center space-x-2">
                     {/* Acciones Secundarias */}
                     <button
@@ -717,7 +787,11 @@ export const ApplicationsPage: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => handleApproveApplication(application as any)}
+                      onClick={() => {
+                        console.log('🖱️ BOTÓN APROBAR CLICKEADO!');
+                        console.log('📋 Application:', application);
+                        handleApproveApplication(application as any);
+                      }}
                       disabled={updating?.startsWith(application.id)}
                       className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:shadow-sm active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       title="Aprobar Postulación"
@@ -752,8 +826,9 @@ export const ApplicationsPage: React.FC = () => {
           </div>
         ))
       )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   // Componente para postulaciones enviadas (nueva vista)
   const SentApplicationsView = () => (

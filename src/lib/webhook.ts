@@ -102,7 +102,10 @@ class WebhookClient {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'PropiedadesApp/1.0',
-          'X-Webhook-Source': 'plataforma-inmobiliaria'
+          'X-Webhook-Source': 'plataforma-inmobiliaria',
+          ...(import.meta.env.VITE_WEBHOOK_SECRET && {
+            'Authorization': `Bearer ${import.meta.env.VITE_WEBHOOK_SECRET}`
+          })
         },
         body: JSON.stringify(payload)
       });

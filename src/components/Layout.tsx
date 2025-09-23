@@ -62,6 +62,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <span>Mi Portafolio</span>
                   </Link>
                   <Link
+                    to="/applications"
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                      isActive('/applications')
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    <Mail className="h-4 w-4" />
+                    <span>Postulaciones</span>
+                  </Link>
+                  <Link
                     to="/my-activity"
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
                       isActive('/my-activity')

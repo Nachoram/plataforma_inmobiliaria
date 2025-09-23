@@ -381,25 +381,6 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
-  const updateApplicationStatus = async (applicationId: string, status: 'aprobada' | 'rechazada') => {
-    setUpdating(applicationId);
-    try {
-      const { error } = await supabase
-        .from('applications')
-        .update({ status })
-        .eq('id', applicationId);
-
-      if (error) throw error;
-
-      setReceivedApplications(receivedApplications.map(app =>
-        app.id === applicationId ? { ...app, status } : app
-      ));
-    } catch (error) {
-      console.error('Error updating application:', error);
-    } finally {
-      setUpdating(null);
-    }
-  };
 
   // Función para deshacer aceptación de postulación
   const handleUndoAcceptance = async (application: ApplicationWithDetails) => {

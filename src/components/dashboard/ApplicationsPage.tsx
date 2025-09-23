@@ -343,6 +343,18 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
+  // Función para probar el webhook
+  const handleTestWebhook = async () => {
+    console.log('🧪 Iniciando prueba del webhook...');
+    try {
+      await webhookClient.testWebhook();
+      alert('✅ Prueba del webhook completada. Revisa la consola para ver los resultados.');
+    } catch (error) {
+      console.error('❌ Error en la prueba del webhook:', error);
+      alert('❌ Error en la prueba del webhook. Revisa la consola para más detalles.');
+    }
+  };
+
   // Función para abrir modal de mensaje
   const openMessageModal = (application: ApplicationWithDetails, type: 'documents' | 'info') => {
     setSelectedApplication(application);
@@ -411,7 +423,13 @@ export const ApplicationsPage: React.FC = () => {
       ));
 
       // 3. Configurar URL del webhook de n8n
-      const webhookURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+      let webhookURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+      
+      // Use proxy in development to avoid CORS issues
+      if (import.meta.env.DEV && webhookURL) {
+        const url = new URL(webhookURL);
+        webhookURL = `/api${url.pathname}`;
+      }
       
       // 4. Intentar enviar webhook solo si está configurado
       if (webhookURL) {
@@ -466,15 +484,18 @@ export const ApplicationsPage: React.FC = () => {
 
           console.log('📤 Enviando payload al webhook:', webhookPayload);
 
-          // Realizar la solicitud POST al webhook con las cabeceras correctas
-          const response = await fetch(webhookURL, {
-            method: 'POST',
+          // Convertir payload a query parameters para GET request
+          const queryParams = new URLSearchParams();
+          queryParams.append('data', JSON.stringify(webhookPayload));
+          const urlWithParams = `${webhookURL}?${queryParams.toString()}`;
+          
+          // Realizar la solicitud GET al webhook con las cabeceras correctas
+          const response = await fetch(urlWithParams, {
+            method: 'GET',
             headers: {
-              'Content-Type': 'application/json',
               'Accept': 'application/json',
               'User-Agent': 'PropiedadesApp/1.0'
-            },
-            body: JSON.stringify(webhookPayload)
+            }
           });
 
           console.log('📡 Respuesta del webhook - Status:', response.status);
@@ -909,10 +930,21 @@ export const ApplicationsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Postulaciones</h1>
-        <p className="text-gray-600">
-          Administra las postulaciones de arriendo recibidas y revisa el estado de las postulaciones que has realizado
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Postulaciones</h1>
+            <p className="text-gray-600">
+              Administra las postulaciones de arriendo recibidas y revisa el estado de las postulaciones que has realizado
+            </p>
+          </div>
+          <button
+            onClick={handleTestWebhook}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            title="Probar conectividad del webhook"
+          >
+            🧪 Probar Webhook
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border p-6">

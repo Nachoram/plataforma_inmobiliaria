@@ -86,7 +86,15 @@ class WebhookClient {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+    // Use proxy in development to avoid CORS issues
+    if (import.meta.env.DEV && import.meta.env.VITE_RAILWAY_WEBHOOK_URL) {
+      // Extract the webhook path from the full URL
+      const fullURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+      const url = new URL(fullURL);
+      this.baseURL = `/api${url.pathname}`;
+    } else {
+      this.baseURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+    }
   }
 
   async send(payload: WebhookPayload): Promise<void> {
@@ -95,23 +103,39 @@ class WebhookClient {
       return;
     }
 
+    console.log('🌐 Enviando webhook a:', this.baseURL);
+    console.log('📦 Payload del webhook:', JSON.stringify(payload, null, 2));
+
     try {
-      const response = await fetch(this.baseURL, {
-        method: 'POST',
+      // Convertir payload a query parameters para GET request
+      const queryParams = new URLSearchParams();
+      queryParams.append('data', JSON.stringify(payload));
+      
+      const urlWithParams = `${this.baseURL}?${queryParams.toString()}`;
+      console.log('🔗 URL completa del webhook:', urlWithParams);
+      
+      const response = await fetch(urlWithParams, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'PropiedadesApp/1.0',
           'X-Webhook-Source': 'plataforma-inmobiliaria',
           ...(import.meta.env.VITE_WEBHOOK_SECRET && {
             'Authorization': `Bearer ${import.meta.env.VITE_WEBHOOK_SECRET}`
           })
-        },
-        body: JSON.stringify(payload)
+        }
       });
 
       if (!response.ok) {
         console.warn(`⚠️ Webhook respondió con ${response.status}: ${response.statusText}`);
+        
+        // Intentar leer el cuerpo de la respuesta para más detalles del error
+        try {
+          const errorText = await response.text();
+          console.error('📄 Detalles del error del servidor:', errorText);
+        } catch (e) {
+          console.error('❌ No se pudo leer el cuerpo de la respuesta de error');
+        }
       } else {
         const result = await response.json();
         console.log('✅ Webhook ejecutado con éxito:', result);
@@ -250,6 +274,39 @@ class WebhookClient {
     };
 
     await this.send(payload);
+  }
+
+  // Función de prueba para verificar conectividad del webhook
+  async testWebhook(): Promise<void> {
+    const testPayload: WebhookPayload = {
+      action: 'application_received',
+      status: 'pendiente',
+      timestamp: new Date().toISOString(),
+      property: {
+        id: 'test-property-id',
+        address: 'Dirección de Prueba',
+        comuna: 'Comuna de Prueba',
+        region: 'Región de Prueba',
+        price_clp: 500000,
+        listing_type: 'arriendo',
+        photos_urls: []
+      },
+      property_owner: {
+        id: 'test-owner-id',
+        full_name: 'Propietario de Prueba',
+        contact_email: 'test@example.com',
+        contact_phone: null
+      },
+      metadata: {
+        source: 'propiedades_app',
+        user_agent: navigator.userAgent,
+        url: window.location.href,
+        environment: import.meta.env.MODE as 'development' | 'production'
+      }
+    };
+
+    console.log('🧪 Probando webhook con payload de prueba...');
+    await this.send(testPayload);
   }
 }
 

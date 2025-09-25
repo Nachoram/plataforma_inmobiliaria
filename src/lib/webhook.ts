@@ -276,6 +276,66 @@ class WebhookClient {
     await this.send(payload);
   }
 
+  // Función simplificada para enviar solo los IDs requeridos al aprobar aplicación
+  async sendSimpleApprovalEvent(
+    applicationId: string,
+    propertyId: string,
+    applicantId: string
+  ): Promise<void> {
+    const payload = {
+      applicationId,
+      propertyId,
+      applicantId
+    };
+
+    if (!this.baseURL) {
+      console.log('ℹ️ Webhook no configurado - funcionando sin notificaciones externas');
+      return;
+    }
+
+    console.log('🌐 Enviando webhook simplificado a:', this.baseURL);
+    console.log('📦 Payload simplificado:', JSON.stringify(payload, null, 2));
+
+    try {
+      // Convertir payload a query parameters para GET request
+      const queryParams = new URLSearchParams();
+      queryParams.append('data', JSON.stringify(payload));
+      
+      const urlWithParams = `${this.baseURL}?${queryParams.toString()}`;
+      console.log('🔗 URL completa del webhook:', urlWithParams);
+      
+      const response = await fetch(urlWithParams, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'PropiedadesApp/1.0',
+          'X-Webhook-Source': 'plataforma-inmobiliaria',
+          ...(import.meta.env.VITE_WEBHOOK_SECRET && {
+            'Authorization': `Bearer ${import.meta.env.VITE_WEBHOOK_SECRET}`
+          })
+        }
+      });
+
+      if (!response.ok) {
+        console.warn(`⚠️ Webhook respondió con ${response.status}: ${response.statusText}`);
+        
+        // Intentar leer el cuerpo de la respuesta para más detalles del error
+        try {
+          const errorText = await response.text();
+          console.error('📄 Detalles del error del servidor:', errorText);
+        } catch (e) {
+          console.error('❌ No se pudo leer el cuerpo de la respuesta de error');
+        }
+      } else {
+        const result = await response.json();
+        console.log('✅ Webhook simplificado ejecutado con éxito:', result);
+      }
+    } catch (error) {
+      console.warn('⚠️ Servicio de notificaciones no disponible:', error.message);
+      // No lanzar error - el webhook es opcional
+    }
+  }
+
   // Función de prueba para verificar conectividad del webhook
   async testWebhook(): Promise<void> {
     const testPayload: WebhookPayload = {

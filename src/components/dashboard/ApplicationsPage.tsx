@@ -229,17 +229,15 @@ export const ApplicationsPage: React.FC = () => {
         app.id === application.id ? { ...app, status: 'aprobada' } : app
       ));
 
-      // 5. Disparar el Webhook usando el webhookClient
-      console.log('🌐 Enviando webhook...');
+      // 5. Disparar el Webhook simplificado usando el webhookClient
+      console.log('🌐 Enviando webhook simplificado...');
       try {
-        await webhookClient.sendApplicationEvent(
-          'approved',
-          updatedApplication,
-          property,
-          applicant,
-          propertyOwner
+        await webhookClient.sendSimpleApprovalEvent(
+          updatedApplication.id,
+          updatedApplication.property_id,
+          updatedApplication.applicant_id
         );
-        console.log('✅ Webhook enviado exitosamente');
+        console.log('✅ Webhook simplificado enviado exitosamente');
       } catch (webhookError) {
         // El webhookClient maneja los errores internamente y no los propaga
         // Solo registrar el error sin interrumpir el proceso

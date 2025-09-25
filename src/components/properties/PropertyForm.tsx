@@ -141,32 +141,47 @@ export const PropertyForm: React.FC = () => {
 
   const fetchProperty = async () => {
     try {
+      if (!id) {
+        console.warn('No property ID provided for editing');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('properties')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching property:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.warn('Property not found with ID:', id);
+        return;
+      }
+      
+      console.log('Property data loaded:', data);
       
       setFormData(prev => ({
         ...prev,
-        type: data.type,
-        address: data.address,
+        type: data.type || '',
+        address: data.address || '',
         street: data.street || '',
         number: data.number || '',
         apartment: data.apartment || '',
         region: data.address_region || '',
         comuna: data.address_commune || '',
         description: data.description || '',
-        price: data.price.toString(),
-        bedrooms: data.bedrooms.toString(),
-        bathrooms: data.bathrooms.toString(),
+        price: data.price?.toString() || '',
+        bedrooms: data.bedrooms?.toString() || '',
+        bathrooms: data.bathrooms?.toString() || '',
         surface_m2: data.surface_m2?.toString() || '',
         photos_urls: data.photos_urls || [],
       }));
     } catch (error) {
-      console.error('Error fetching property:', error);
+      console.error('Error fetching property:', JSON.stringify(error, null, 2));
     }
   };
 

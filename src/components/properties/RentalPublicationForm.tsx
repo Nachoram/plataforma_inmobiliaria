@@ -63,6 +63,7 @@ export const RentalPublicationForm: React.FC = () => {
     owner_first_name: '',
     owner_paternal_last_name: '',
     owner_maternal_last_name: '',
+    owner_rut: '',
     owner_address_street: '',
     owner_address_number: '',
     owner_region: '',
@@ -172,6 +173,7 @@ export const RentalPublicationForm: React.FC = () => {
     if (!formData.owner_first_name.trim()) newErrors.owner_first_name = 'El nombre del propietario es requerido';
     if (!formData.owner_paternal_last_name.trim()) newErrors.owner_paternal_last_name = 'El apellido paterno del propietario es requerido';
     if (!formData.owner_maternal_last_name.trim()) newErrors.owner_maternal_last_name = 'El apellido materno del propietario es requerido';
+    if (!formData.owner_rut.trim()) newErrors.owner_rut = 'El RUT del propietario es requerido';
     if (!formData.owner_address_street.trim()) newErrors.owner_address_street = 'La calle del propietario es requerida';
     if (!formData.owner_address_number.trim()) newErrors.owner_address_number = 'El número del propietario es requerido';
     if (!formData.owner_region) newErrors.owner_region = 'La región del propietario es requerida';
@@ -188,64 +190,142 @@ export const RentalPublicationForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Upload files to Supabase Storage
+  // Upload files to Supabase Storage with fallback buckets
   const uploadFiles = async (tempPropertyId: string) => {
-    // Upload photos to images bucket and create property_images records
+    console.log('🚀 Iniciando upload de archivos...');
+    
+    // Upload photos with fallback buckets
     for (const file of photoFiles) {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
-        .from('property-images')
-        .upload(fileName, file);
+      // Try primary bucket first, then fallback
+      let uploadResult = null;
+      let bucketUsed = '';
+      
+      try {
+        // Try property-images bucket first
+        uploadResult = await supabase.storage
+          .from('property-images')
+          .upload(fileName, file);
+        
+        if (uploadResult.error) {
+          console.warn('⚠️ Error con bucket property-images, intentando con images:', uploadResult.error);
+          // Fallback to images bucket
+          uploadResult = await supabase.storage
+            .from('images')
+            .upload(fileName, file);
+          bucketUsed = 'images';
+        } else {
+          bucketUsed = 'property-images';
+        }
+        
+        if (uploadResult.error) {
+          console.error('❌ Error subiendo imagen:', uploadResult.error);
+          throw new Error(`Error subiendo imagen: ${uploadResult.error.message}`);
+        }
 
-      if (error) throw error;
+        console.log(`✅ Imagen subida exitosamente al bucket: ${bucketUsed}`);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('property-images')
-        .getPublicUrl(data.path);
+        const { data: { publicUrl } } = supabase.storage
+          .from(bucketUsed)
+          .getPublicUrl(uploadResult.data.path);
 
-      // Insert record in property_images table
-      const { error: dbError } = await supabase
-        .from('property_images')
-        .insert({
-          property_id: tempPropertyId, // Use temporary UUID
-          image_url: publicUrl,
-          storage_path: data.path,
-          created_at: new Date().toISOString()
-        });
+        // Insert record in property_images table
+        const { error: dbError } = await supabase
+          .from('property_images')
+          .insert({
+            property_id: tempPropertyId,
+            image_url: publicUrl,
+            storage_path: uploadResult.data.path,
+            created_at: new Date().toISOString()
+          });
 
-      if (dbError) throw dbError;
+        if (dbError) {
+          console.error('❌ Error insertando registro de imagen:', JSON.stringify(dbError, null, 2));
+          console.error('❌ Detalles del error:', {
+            message: dbError.message,
+            details: dbError.details,
+            hint: dbError.hint,
+            code: dbError.code
+          });
+          throw new Error(`Error guardando imagen en BD: ${dbError.message}`);
+        }
+
+        console.log('✅ Registro de imagen creado en BD');
+      } catch (error) {
+        console.error('❌ Error completo en upload de imagen:', error);
+        throw error;
+      }
     }
 
-    // Upload documents to files bucket and create documents records
+    // Upload documents with fallback buckets
     for (const [key, file] of Object.entries(formData.documents)) {
       if (file) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${user?.id}/${key}-${Date.now()}.${fileExt}`;
 
-        const { data, error } = await supabase.storage
-          .from('user-documents')
-          .upload(fileName, file);
+        // Try primary bucket first, then fallback
+        let uploadResult = null;
+        let bucketUsed = '';
+        
+        try {
+          // Try user-documents bucket first
+          uploadResult = await supabase.storage
+            .from('user-documents')
+            .upload(fileName, file);
+          
+          if (uploadResult.error) {
+            console.warn('⚠️ Error con bucket user-documents, intentando con files:', uploadResult.error);
+            // Fallback to files bucket
+            uploadResult = await supabase.storage
+              .from('files')
+              .upload(fileName, file);
+            bucketUsed = 'files';
+          } else {
+            bucketUsed = 'user-documents';
+          }
+          
+          if (uploadResult.error) {
+            console.error('❌ Error subiendo documento:', uploadResult.error);
+            throw new Error(`Error subiendo documento ${key}: ${uploadResult.error.message}`);
+          }
 
-        if (error) throw error;
+          console.log(`✅ Documento ${key} subido exitosamente al bucket: ${bucketUsed}`);
 
-        // Insert record in documents table
-        const { error: dbError } = await supabase
-          .from('documents')
-          .insert({
-            uploader_id: user?.id,
-            related_entity_id: tempPropertyId, // Use temporary UUID
-            related_entity_type: 'property_legal',
-            document_type: key,
-            storage_path: data.path,
-            file_name: file.name,
-            created_at: new Date().toISOString()
-          });
+          // Insert record in documents table
+          const { error: dbError } = await supabase
+            .from('documents')
+            .insert({
+              uploader_id: user?.id,
+              related_entity_id: tempPropertyId,
+              related_entity_type: 'property_legal',
+              document_type: key,
+              storage_path: uploadResult.data.path,
+              file_name: file.name,
+              created_at: new Date().toISOString()
+            });
 
-        if (dbError) throw dbError;
+          if (dbError) {
+            console.error('❌ Error insertando registro de documento:', JSON.stringify(dbError, null, 2));
+            console.error('❌ Detalles del error documento:', {
+              message: dbError.message,
+              details: dbError.details,
+              hint: dbError.hint,
+              code: dbError.code
+            });
+            throw new Error(`Error guardando documento en BD: ${dbError.message}`);
+          }
+
+          console.log(`✅ Registro de documento ${key} creado en BD`);
+        } catch (error) {
+          console.error(`❌ Error completo en upload de documento ${key}:`, error);
+          throw error;
+        }
       }
     }
+    
+    console.log('🎉 Upload de archivos completado exitosamente');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -347,6 +427,43 @@ export const RentalPublicationForm: React.FC = () => {
 
       if (error) throw error;
 
+      // Insert rental owner information with specific ID capture
+      if (propertyResult?.id) {
+        const { data: ownerResult, error: ownerError } = await supabase
+          .from('rental_owners')
+          .insert({
+            property_id: propertyResult.id,
+            first_name: formData.owner_first_name,
+            paternal_last_name: formData.owner_paternal_last_name,
+            maternal_last_name: formData.owner_maternal_last_name,
+            rut: formData.owner_rut,
+            address_street: formData.owner_address_street,
+            address_number: formData.owner_address_number,
+            address_department: null,
+            address_commune: formData.owner_commune,
+            address_region: formData.owner_region,
+            marital_status: formData.marital_status,
+            property_regime: formData.marital_status === 'casado' ? formData.property_regime : null,
+            phone: null,
+            email: user.email || null,
+          })
+          .select()
+          .single();
+
+        if (ownerError) {
+          console.warn('Warning inserting rental owner:', ownerError);
+          // Continue anyway - owner creation is not critical for property creation
+        } else {
+          console.log('✅ Rental owner creado con ID específico:', ownerResult.id);
+          console.log('📋 Datos del propietario:', {
+            id: ownerResult.id,
+            property_id: ownerResult.property_id,
+            name: `${ownerResult.first_name} ${ownerResult.paternal_last_name}`,
+            rut: ownerResult.rut
+          });
+        }
+      }
+
       // Update property_id references in images and documents
       if (propertyResult?.id) {
         // Update property_images with correct property_id
@@ -372,9 +489,16 @@ export const RentalPublicationForm: React.FC = () => {
 
       alert('Propiedad publicada exitosamente!');
       navigate('/portfolio');
-    } catch (error) {
-      console.error('Error saving rental property:', error);
-      setErrors({ submit: 'Error al publicar la propiedad. Intente nuevamente.' });
+    } catch (error: any) {
+      console.error('❌ Error saving rental property:', JSON.stringify(error, null, 2));
+      console.error('❌ Error details:', {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        stack: error?.stack
+      });
+      setErrors({ submit: `Error al publicar la propiedad: ${error?.message || 'Error desconocido'}` });
     } finally {
       setLoading(false);
     }
@@ -735,6 +859,29 @@ export const RentalPublicationForm: React.FC = () => {
                   <p className="mt-1 text-sm text-red-600 flex items-center">
                     <AlertCircle className="h-4 w-4 mr-1" />
                     {errors.owner_maternal_last_name}
+                  </p>
+                )}
+              </div>
+
+              {/* RUT del Propietario */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  RUT del Propietario *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.owner_rut}
+                  onChange={(e) => setFormData({ ...formData, owner_rut: e.target.value })}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    errors.owner_rut ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 12.345.678-9"
+                />
+                {errors.owner_rut && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.owner_rut}
                   </p>
                 )}
               </div>

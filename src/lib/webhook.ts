@@ -87,13 +87,10 @@ class WebhookClient {
 
   constructor() {
     // Use proxy in development to avoid CORS issues
-    if (import.meta.env.DEV && import.meta.env.VITE_RAILWAY_WEBHOOK_URL) {
-      // Extract the webhook path from the full URL
-      const fullURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
-      const url = new URL(fullURL);
-      this.baseURL = `/api${url.pathname}`;
+    if (import.meta.env.DEV) {
+      this.baseURL = '/api/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';
     } else {
-      this.baseURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
+      this.baseURL = 'https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';
     }
   }
 
@@ -141,7 +138,11 @@ class WebhookClient {
         console.log('✅ Webhook ejecutado con éxito:', result);
       }
     } catch (error) {
-      console.warn('⚠️ Servicio de notificaciones no disponible:', error.message);
+      console.warn('⚠️ Servicio de notificaciones no disponible:', error);
+      
+      // Safely extract error message
+      const errorMessage = error?.message || error?.error?.message || JSON.stringify(error);
+      console.warn('⚠️ Webhook error message:', errorMessage);
       // No lanzar error - el webhook es opcional
     }
   }
@@ -276,16 +277,29 @@ class WebhookClient {
     await this.send(payload);
   }
 
-  // Función simplificada para enviar solo los IDs requeridos al aprobar aplicación
+  // Función optimizada para enviar IDs característicos al aprobar aplicación (para N8N)
   async sendSimpleApprovalEvent(
     applicationId: string,
     propertyId: string,
-    applicantId: string
+    applicantId: string,
+    ownerId?: string,
+    guarantorId?: string
   ): Promise<void> {
-    const payload = {
-      applicationId,
-      propertyId,
-      applicantId
+    // Obtener los characteristic IDs para una búsqueda más eficiente en N8N
+    const data = {
+      application_characteristic_id: applicationId, // Este vendrá de la base de datos como characteristic_id
+      property_characteristic_id: propertyId,       // Este vendrá de la base de datos como characteristic_id
+      applicant_characteristic_id: applicantId,     // Este vendrá de la base de datos como characteristic_id
+      owner_characteristic_id: ownerId || null,     // Este vendrá de la base de datos como characteristic_id
+      guarantor_characteristic_id: guarantorId || null, // Este vendrá de la base de datos como characteristic_id
+      action: 'application_approved',
+      timestamp: new Date().toISOString(),
+      // Mantener compatibilidad con UUIDs por si N8N necesita fallback
+      application_uuid: applicationId,
+      property_uuid: propertyId,
+      applicant_uuid: applicantId,
+      owner_uuid: ownerId || null,
+      guarantor_uuid: guarantorId || null
     };
 
     if (!this.baseURL) {
@@ -293,32 +307,35 @@ class WebhookClient {
       return;
     }
 
-    console.log('🌐 Enviando webhook simplificado a:', this.baseURL);
-    console.log('📦 Payload simplificado:', JSON.stringify(payload, null, 2));
+    console.log('🌐 Enviando webhook GET optimizado a Railway:', this.baseURL);
+    console.log('📦 Datos con characteristic IDs:', JSON.stringify(data, null, 2));
 
     try {
-      // Convertir payload a query parameters para GET request
-      const queryParams = new URLSearchParams();
-      queryParams.append('data', JSON.stringify(payload));
-      
-      const urlWithParams = `${this.baseURL}?${queryParams.toString()}`;
-      console.log('🔗 URL completa del webhook:', urlWithParams);
-      
-      const response = await fetch(urlWithParams, {
+      // Convertir datos a query parameters para GET request
+      const params = new URLSearchParams();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          params.append(key, String(value));
+        }
+      });
+
+      const url = `${this.baseURL}?${params.toString()}`;
+      console.log('🔗 URL completa:', url);
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'PropiedadesApp/1.0',
-          'X-Webhook-Source': 'plataforma-inmobiliaria',
-          ...(import.meta.env.VITE_WEBHOOK_SECRET && {
-            'Authorization': `Bearer ${import.meta.env.VITE_WEBHOOK_SECRET}`
-          })
+          'X-Webhook-Optimized': 'true' // Indicador de que usa characteristic IDs
         }
       });
 
+      console.log('📡 Respuesta del webhook optimizado - Status:', response.status);
+
       if (!response.ok) {
         console.warn(`⚠️ Webhook respondió con ${response.status}: ${response.statusText}`);
-        
+
         // Intentar leer el cuerpo de la respuesta para más detalles del error
         try {
           const errorText = await response.text();
@@ -327,47 +344,117 @@ class WebhookClient {
           console.error('❌ No se pudo leer el cuerpo de la respuesta de error');
         }
       } else {
-        const result = await response.json();
-        console.log('✅ Webhook simplificado ejecutado con éxito:', result);
+        // Intentar leer la respuesta
+        let result;
+        try {
+          result = await response.text();
+          console.log('✅ Webhook optimizado ejecutado con éxito:', result);
+        } catch (error) {
+          console.log('✅ Webhook optimizado ejecutado con éxito (sin respuesta)');
+        }
       }
     } catch (error) {
-      console.warn('⚠️ Servicio de notificaciones no disponible:', error.message);
+      console.warn('⚠️ Servicio de notificaciones no disponible:', error);
+
+      // Safely extract error message
+      const errorMessage = error?.message || error?.error?.message || JSON.stringify(error);
+      console.warn('⚠️ Webhook error message:', errorMessage);
       // No lanzar error - el webhook es opcional
     }
   }
 
   // Función de prueba para verificar conectividad del webhook
   async testWebhook(): Promise<void> {
-    const testPayload: WebhookPayload = {
-      action: 'application_received',
-      status: 'pendiente',
-      timestamp: new Date().toISOString(),
-      property: {
-        id: 'test-property-id',
-        address: 'Dirección de Prueba',
-        comuna: 'Comuna de Prueba',
-        region: 'Región de Prueba',
-        price_clp: 500000,
-        listing_type: 'arriendo',
-        photos_urls: []
-      },
-      property_owner: {
-        id: 'test-owner-id',
-        full_name: 'Propietario de Prueba',
-        contact_email: 'test@example.com',
-        contact_phone: null
-      },
-      metadata: {
-        source: 'propiedades_app',
-        user_agent: navigator.userAgent,
-        url: window.location.href,
-        environment: import.meta.env.MODE as 'development' | 'production'
-      }
+    // Datos mínimos para probar con GET
+    const testData = {
+      applicationId: 'test-123',
+      propertyId: 'prop-456',
+      applicantId: 'user-789',
+      ownerId: 'owner-101',
+      guarantorId: null,
+      action: 'test',
+      timestamp: new Date().toISOString()
     };
 
-    console.log('🧪 Probando webhook con payload de prueba...');
-    await this.send(testPayload);
+    console.log('🧪 Probando webhook de Railway con GET...');
+    console.log('🌐 URL del webhook:', this.baseURL);
+    console.log('📦 Datos de prueba:', JSON.stringify(testData, null, 2));
+    
+    try {
+      // Convertir datos a query parameters
+      const params = new URLSearchParams();
+      Object.entries(testData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          params.append(key, String(value));
+        }
+      });
+
+      const url = `${this.baseURL}?${params.toString()}`;
+      console.log('🔗 URL de prueba:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'PropiedadesApp/1.0'
+        }
+      });
+
+      console.log('📡 Respuesta del webhook de prueba - Status:', response.status);
+      console.log('📡 Headers de respuesta:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        console.warn(`⚠️ Webhook de prueba respondió con ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('📄 Detalles del error:', errorText);
+      } else {
+        const result = await response.text();
+        console.log('✅ Webhook de prueba ejecutado con éxito:', result);
+      }
+    } catch (error) {
+      console.error('❌ Error en webhook de prueba:', error);
+    }
   }
 }
 
 export const webhookClient = new WebhookClient();
+
+// Función alternativa usando GET para webhooks simples
+export const sendWebhookGET = async (data: any) => {
+  const baseURL = import.meta.env.DEV 
+    ? '/api/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb'
+    : 'https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';
+
+  try {
+    // Convertir datos a query parameters
+    const params = new URLSearchParams();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        params.append(key, String(value));
+      }
+    });
+
+    const url = `${baseURL}?${params.toString()}`;
+    console.log('🌐 Enviando webhook GET a:', url);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'PropiedadesApp/1.0'
+      }
+    });
+
+    console.log('📡 Respuesta GET - Status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn(`⚠️ Webhook GET falló: ${response.status}`, errorText);
+    } else {
+      const result = await response.text();
+      console.log('✅ Webhook GET exitoso:', result);
+    }
+  } catch (error) {
+    console.error('❌ Error en webhook GET:', error);
+  }
+};

@@ -194,3 +194,4 @@ SELECT
 -- ✅ Público puede ver imágenes de propiedades disponibles
 --
 -- =====================================================
+

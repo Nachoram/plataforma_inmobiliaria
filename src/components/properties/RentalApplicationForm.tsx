@@ -518,27 +518,46 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           .single();
 
         if (propertyError) {
-          console.warn('⚠️ Error obteniendo datos de propiedad para webhook:', propertyError.message);
+          // Log the full error object to understand its structure
+          console.warn('⚠️ Error obteniendo datos de propiedad para webhook:', propertyError);
+          
+          // Safely extract error message
+          const errorMessage = propertyError?.message || propertyError?.error?.message || JSON.stringify(propertyError);
+          console.warn('⚠️ Error message:', errorMessage);
         } else {
           // Obtener datos del propietario
           const { data: propertyOwner, error: ownerError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', propertyData.owner_id)
-            .single();
+            .maybeSingle();
 
           if (ownerError) {
-            console.warn('⚠️ Error obteniendo datos del propietario para webhook:', ownerError.message);
+            // Log the full error object to understand its structure
+            console.warn('⚠️ Error obteniendo datos del propietario para webhook:', ownerError);
+            
+            // Safely extract error message
+            const errorMessage = ownerError?.message || ownerError?.error?.message || JSON.stringify(ownerError);
+            console.warn('⚠️ Error message:', errorMessage);
+          } else if (!propertyOwner) {
+            console.warn('⚠️ No se encontró perfil del propietario para webhook');
           } else {
             // Obtener datos del postulante (usuario actual)
             const { data: applicantProfile, error: applicantError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', user.id)
-              .single();
+              .maybeSingle();
 
             if (applicantError) {
-              console.warn('⚠️ Error obteniendo datos del postulante para webhook:', applicantError.message);
+              // Log the full error object to understand its structure
+              console.warn('⚠️ Error obteniendo datos del postulante para webhook:', applicantError);
+              
+              // Safely extract error message
+              const errorMessage = applicantError?.message || applicantError?.error?.message || JSON.stringify(applicantError);
+              console.warn('⚠️ Error message:', errorMessage);
+            } else if (!applicantProfile) {
+              console.warn('⚠️ No se encontró perfil del postulante para webhook');
             } else {
               // Enviar webhook usando el webhookClient
               await webhookClient.sendApplicationEvent(
@@ -558,7 +577,11 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       } catch (webhookError) {
         // El webhookClient maneja los errores internamente y no los propaga
         // Solo registrar el error sin interrumpir el proceso
-        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
+        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError);
+        
+        // Safely extract error message
+        const errorMessage = webhookError?.message || webhookError?.error?.message || JSON.stringify(webhookError);
+        console.warn('⚠️ Webhook error message:', errorMessage);
       }
 
       onSuccess?.();

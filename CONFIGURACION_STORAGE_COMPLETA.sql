@@ -349,3 +349,4 @@ SELECT
 -- ✅ Documentos privados solo para el propietario
 --
 -- =====================================================
+

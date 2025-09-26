@@ -168,3 +168,4 @@ SELECT
 -- ✅ Revisa los logs en la consola del navegador
 --
 -- =====================================================
+

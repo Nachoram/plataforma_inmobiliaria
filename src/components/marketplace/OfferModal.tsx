@@ -109,27 +109,46 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
           .single();
 
         if (propertyError) {
-          console.warn('⚠️ Error obteniendo datos de propiedad para webhook:', propertyError.message);
+          // Log the full error object to understand its structure
+          console.warn('⚠️ Error obteniendo datos de propiedad para webhook:', propertyError);
+          
+          // Safely extract error message
+          const errorMessage = propertyError?.message || propertyError?.error?.message || JSON.stringify(propertyError);
+          console.warn('⚠️ Error message:', errorMessage);
         } else {
           // Obtener datos del propietario
           const { data: propertyOwner, error: ownerError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', propertyData.owner_id)
-            .single();
+            .maybeSingle();
 
           if (ownerError) {
-            console.warn('⚠️ Error obteniendo datos del propietario para webhook:', ownerError.message);
+            // Log the full error object to understand its structure
+            console.warn('⚠️ Error obteniendo datos del propietario para webhook:', ownerError);
+            
+            // Safely extract error message
+            const errorMessage = ownerError?.message || ownerError?.error?.message || JSON.stringify(ownerError);
+            console.warn('⚠️ Error message:', errorMessage);
+          } else if (!propertyOwner) {
+            console.warn('⚠️ No se encontró perfil del propietario para webhook');
           } else {
             // Obtener datos del oferente (usuario actual)
             const { data: offererProfile, error: offererError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', user.id)
-              .single();
+              .maybeSingle();
 
             if (offererError) {
-              console.warn('⚠️ Error obteniendo datos del oferente para webhook:', offererError.message);
+              // Log the full error object to understand its structure
+              console.warn('⚠️ Error obteniendo datos del oferente para webhook:', offererError);
+              
+              // Safely extract error message
+              const errorMessage = offererError?.message || offererError?.error?.message || JSON.stringify(offererError);
+              console.warn('⚠️ Error message:', errorMessage);
+            } else if (!offererProfile) {
+              console.warn('⚠️ No se encontró perfil del oferente para webhook');
             } else {
               // Enviar webhook usando el webhookClient
               await webhookClient.sendOfferEvent(
@@ -149,7 +168,11 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
       } catch (webhookError) {
         // El webhookClient maneja los errores internamente y no los propaga
         // Solo registrar el error sin interrumpir el proceso
-        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
+        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError);
+        
+        // Safely extract error message
+        const errorMessage = webhookError?.message || webhookError?.error?.message || JSON.stringify(webhookError);
+        console.warn('⚠️ Webhook error message:', errorMessage);
       }
 
       alert('¡Oferta enviada exitosamente! El propietario la revisará pronto.');

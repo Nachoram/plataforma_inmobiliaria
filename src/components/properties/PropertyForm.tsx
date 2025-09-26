@@ -148,7 +148,14 @@ export const PropertyForm: React.FC = () => {
 
       const { data, error } = await supabase
         .from('properties')
-        .select('*')
+        .select(`
+          *,
+          property_images (
+            id,
+            image_url,
+            storage_path
+          )
+        `)
         .eq('id', id)
         .single();
 
@@ -166,20 +173,26 @@ export const PropertyForm: React.FC = () => {
       
       setFormData(prev => ({
         ...prev,
-        type: data.type || '',
-        address: data.address || '',
-        street: data.street || '',
-        number: data.number || '',
-        apartment: data.apartment || '',
+        type: data.listing_type || data.type || '',
+        address: data.address_street ? `${data.address_street} ${data.address_number}` : (data.address || ''),
+        street: data.address_street || data.street || '',
+        number: data.address_number || data.number || '',
+        apartment: data.address_department || data.apartment || '',
         region: data.address_region || '',
         comuna: data.address_commune || '',
         description: data.description || '',
-        price: data.price?.toString() || '',
-        bedrooms: data.bedrooms?.toString() || '',
-        bathrooms: data.bathrooms?.toString() || '',
+        price: data.price_clp?.toString() || data.price?.toString() || '',
+        common_expenses: data.common_expenses_clp?.toString() || data.common_expenses?.toString() || '',
+        bedrooms: data.bedrooms?.toString() || '1',
+        bathrooms: data.bathrooms?.toString() || '1',
         surface_m2: data.surface_m2?.toString() || '',
-        photos_urls: data.photos_urls || [],
+        photos_urls: data.property_images?.map(img => img.image_url) || [],
       }));
+
+      // Cargar imágenes existentes en el estado de preview
+      if (data.property_images && data.property_images.length > 0) {
+        setPhotoPreviews(data.property_images.map(img => img.image_url));
+      }
     } catch (error) {
       console.error('Error fetching property:', JSON.stringify(error, null, 2));
     }
@@ -357,15 +370,16 @@ export const PropertyForm: React.FC = () => {
         throw new Error('Error de conexión con la base de datos: ' + connectionError.message);
       }
 
-      let photoUrls: string[] = [...formData.photos_urls];
       let documentUrls: string[] = [];
+      let propertyId = id; // Para edición
+      let uploadedPhotoUrls: string[] = [];
 
       // Upload new files if any
       if (photoFiles.length > 0 || Object.values(formData.documents).some(doc => doc !== null)) {
         try {
-          const { uploadedPhotoUrls, uploadedDocumentUrls } = await uploadFiles();
-          photoUrls = [...photoUrls, ...uploadedPhotoUrls];
-          documentUrls = uploadedDocumentUrls;
+          const uploadResult = await uploadFiles();
+          uploadedPhotoUrls = uploadResult.uploadedPhotoUrls;
+          documentUrls = uploadResult.uploadedDocumentUrls;
         } catch (uploadError: any) {
           throw new Error('Error subiendo archivos: ' + uploadError.message);
         }
@@ -373,20 +387,18 @@ export const PropertyForm: React.FC = () => {
 
       const propertyData = {
         owner_id: user.id,
-        type: formData.type,
-        address: formData.address,
-        street: formData.street || formData.address.split(' ')[0] || 'Sin especificar',
-        number: formData.number || 'S/N',
-        apartment: formData.apartment || null,
+        listing_type: formData.type,
+        address_street: formData.street || formData.address.split(' ')[0] || 'Sin especificar',
+        address_number: formData.number || 'S/N',
+        address_department: formData.apartment || null,
         address_region: formData.region,
         address_commune: formData.comuna,
         description: formData.description || 'Sin descripción',
-        price: parseInt(formData.price),
-        common_expenses: formData.common_expenses ? parseInt(formData.common_expenses) : 0,
+        price_clp: parseInt(formData.price),
+        common_expenses_clp: formData.common_expenses ? parseInt(formData.common_expenses) : 0,
         bedrooms: parseInt(formData.bedrooms),
         bathrooms: parseInt(formData.bathrooms),
         surface_m2: formData.surface_m2 ? parseInt(formData.surface_m2) : 50,
-        // Nota: photos_urls y documents_urls pueden no existir en la BD actual
         status: 'disponible'
       };
 
@@ -403,6 +415,24 @@ export const PropertyForm: React.FC = () => {
           throw new Error('Error actualizando propiedad: ' + error.message);
         }
         
+        // Guardar nuevas imágenes en la tabla property_images para edición
+        if (uploadedPhotoUrls.length > 0 && propertyId) {
+          const imageRecords = uploadedPhotoUrls.map(url => ({
+            property_id: propertyId,
+            image_url: url,
+            storage_path: url
+          }));
+          
+          const { error: imageError } = await supabase
+            .from('property_images')
+            .insert(imageRecords);
+            
+          if (imageError) {
+            console.error('Error guardando imágenes:', imageError);
+            throw new Error('Error guardando imágenes: ' + imageError.message);
+          }
+        }
+        
         console.log('✅ Propiedad actualizada exitosamente');
       } else {
         const { data, error } = await supabase
@@ -413,6 +443,26 @@ export const PropertyForm: React.FC = () => {
         if (error) {
           console.error('❌ Error creando propiedad:', error);
           throw new Error('Error creando propiedad: ' + error.message);
+        }
+        
+        propertyId = data[0]?.id; // Obtener el ID de la propiedad creada
+        
+        // Guardar imágenes en la tabla property_images para nueva propiedad
+        if (uploadedPhotoUrls.length > 0 && propertyId) {
+          const imageRecords = uploadedPhotoUrls.map(url => ({
+            property_id: propertyId,
+            image_url: url,
+            storage_path: url
+          }));
+          
+          const { error: imageError } = await supabase
+            .from('property_images')
+            .insert(imageRecords);
+            
+          if (imageError) {
+            console.error('Error guardando imágenes:', imageError);
+            throw new Error('Error guardando imágenes: ' + imageError.message);
+          }
         }
         
         console.log('✅ Propiedad creada exitosamente:', data);

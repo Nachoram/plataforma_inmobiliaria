@@ -332,3 +332,4 @@ SELECT
 -- ✅ Relaciones entre tablas respetadas
 --
 -- =====================================================
+

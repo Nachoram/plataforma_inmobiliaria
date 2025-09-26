@@ -112,18 +112,17 @@ export interface PropertyWithExtras extends Omit<Property, 'description'> {
 
 export interface Guarantor {
   id: string;
-  first_name: string;
-  paternal_last_name: string;
-  maternal_last_name: string;
+  full_name: string;
   rut: string;
   profession: string;
-  monthly_income_clp: number;
-  address_street: string;
-  address_number: string;
-  address_department: string | null;
-  address_commune: string;
-  address_region: string;
+  company: string;
+  monthly_income: number;
+  work_seniority_years: number;
+  contact_email: string;
+  contact_phone: string;
+  address_id: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Application {
@@ -786,6 +785,7 @@ export const updateApplicationStatus = async (
         *,
         properties (
           *,
+          owner_id,
           profiles!owner_id (
             first_name,
             paternal_last_name,
@@ -807,6 +807,74 @@ export const updateApplicationStatus = async (
     return data;
   } catch (error) {
     console.error('Error updating application status:', error);
+    throw error;
+  }
+};
+
+// API function to approve application with webhook integration
+export const approveApplicationWithWebhook = async (
+  applicationId: string,
+  propertyId: string,
+  applicantId: string,
+  applicantData: {
+    full_name: string;
+    contact_email: string;
+    contact_phone?: string;
+    profession?: string;
+    company?: string;
+    monthly_income?: number;
+  },
+  propertyData: {
+    address: string;
+    city: string;
+    price: number;
+    listing_type: string;
+  }
+) => {
+  try {
+    // 1. Update application status in database
+    const { data: updatedApplication, error: updateError } = await supabase
+      .from('applications')
+      .update({ status: 'aprobada' })
+      .eq('id', applicationId)
+      .select('*')
+      .single();
+
+    if (updateError) throw updateError;
+
+    // 2. Send webhook to Supabase Edge Function
+    const webhookPayload = {
+      application_id: applicationId,
+      property_id: propertyId,
+      applicant_id: applicantId,
+      applicant_data: applicantData,
+      property_data: propertyData,
+      timestamp: new Date().toISOString(),
+      action: 'application_approved'
+    };
+
+    console.log('🌐 Enviando webhook a Edge Function:', webhookPayload);
+
+    const { data: webhookResponse, error: webhookError } = await supabase.functions.invoke(
+      'approve-application',
+      {
+        body: webhookPayload,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+
+    if (webhookError) {
+      console.warn('⚠️ Error en webhook (no crítico):', webhookError);
+    } else {
+      console.log('✅ Webhook enviado exitosamente:', webhookResponse);
+    }
+
+    return updatedApplication;
+  } catch (error) {
+    console.error('Error approving application with webhook:', error);
     throw error;
   }
 };

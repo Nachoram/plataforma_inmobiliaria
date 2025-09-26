@@ -223,3 +223,4 @@ SELECT
 -- ✅ Muestra información detallada de configuración
 --
 -- =====================================================
+

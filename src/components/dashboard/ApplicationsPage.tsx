@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2 } from 'lucide-react';
-import { supabase, updateApplicationStatus, getCurrentProfile } from '../../lib/supabase';
+import { supabase, updateApplicationStatus, getCurrentProfile, approveApplicationWithWebhook } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { webhookClient } from '../../lib/webhook';
+import { webhookClient, sendWebhookGET } from '../../lib/webhook';
 import CustomButton from '../common/CustomButton';
 
 interface ApplicationWithDetails {
@@ -92,12 +92,14 @@ export const ApplicationsPage: React.FC = () => {
         .from('applications')
         .select(`
           *,
+          application_characteristic_id,
           properties!inner(
             address_street,
             address_commune,
             price_clp,
             listing_type,
-            owner_id
+            owner_id,
+            property_characteristic_id
           ),
           profiles(
             first_name,
@@ -105,6 +107,27 @@ export const ApplicationsPage: React.FC = () => {
             maternal_last_name,
             email,
             phone
+          ),
+          guarantors(
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            rut,
+            guarantor_characteristic_id
+          ),
+          rental_owners(
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            rut,
+            rental_owner_characteristic_id
+          ),
+          sale_owners(
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            rut,
+            sale_owner_characteristic_id
           )
         `)
         .eq('properties.owner_id', user?.id)
@@ -182,7 +205,7 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
-  // Función para aprobar postulación (integración con n8n)
+  // Función para aprobar postulación (integración con webhook)
   const handleApproveApplication = async (application: ApplicationWithDetails) => {
     console.log('🚀 === INICIANDO APROBACIÓN DE POSTULACIÓN ===');
     console.log('📋 Application ID:', application.id);
@@ -193,61 +216,83 @@ export const ApplicationsPage: React.FC = () => {
     setUpdating(`${application.id}-approve`);
     
     try {
-      // 1. Actualizar estado en la base de datos usando la función API
+      // Preparar datos del postulante
+      const applicantData = {
+        full_name: application.structured_applicant?.full_name || getFullName(application.profiles) || 'No especificado',
+        contact_email: application.structured_applicant?.contact_email || getContactEmail(application.profiles) || 'No especificado',
+        contact_phone: application.structured_applicant?.contact_phone || getContactPhone(application.profiles),
+        profession: application.structured_applicant?.profession,
+        company: application.structured_applicant?.company,
+        monthly_income: application.structured_applicant?.monthly_income
+      };
+
+      // Preparar datos de la propiedad
+      const propertyData = {
+        address: application.properties.address_street,
+        city: application.properties.address_commune,
+        price: application.properties.price_clp,
+        listing_type: application.properties.listing_type
+      };
+
+      console.log('📊 Datos preparados:', {
+        applicantData,
+        propertyData
+      });
+
+      // 1. Actualizar estado en la base de datos
       console.log('📝 Actualizando estado en base de datos...');
       const updatedApplication = await updateApplicationStatus(application.id, 'aprobada');
       console.log('✅ Base de datos actualizada correctamente');
 
-      // 2. Obtener datos completos para el webhook
-      const property = updatedApplication.properties;
-      const applicant = updatedApplication.profiles;
-      
-      // Validar que tenemos todos los datos necesarios
-      if (!property) {
-        throw new Error('No se pudo obtener los datos de la propiedad');
-      }
-      if (!applicant) {
-        throw new Error('No se pudo obtener los datos del postulante');
-      }
-      
-      // 3. Obtener perfil del propietario (usuario actual)
-      console.log('👤 Obteniendo perfil del propietario...');
-      const propertyOwner = await getCurrentProfile();
-      if (!propertyOwner) {
-        throw new Error('No se pudo obtener el perfil del propietario');
-      }
-      
-      console.log('📊 Datos validados:', {
-        application: updatedApplication.id,
-        property: property.id,
-        applicant: applicant.id,
-        propertyOwner: propertyOwner.id
-      });
+      // 2. Enviar webhook a Railway (solo GET - Railway no acepta POST)
+      console.log('🌐 Enviando webhook optimizado a Railway con characteristic IDs...');
+      try {
+        // Determinar el characteristic_id del propietario según el tipo de propiedad
+        const property = application.properties;
+        const listingType = property?.listing_type;
 
-      // 4. Actualizar el estado de la UI inmediatamente
+        let ownerCharacteristicId = property?.owner_id; // Fallback a UUID
+
+        if (listingType === 'arriendo' && application.rental_owners?.rental_owner_characteristic_id) {
+          ownerCharacteristicId = application.rental_owners.rental_owner_characteristic_id;
+          console.log('🏠 Usando rental_owner_characteristic_id para arriendo');
+        } else if (listingType === 'venta' && application.sale_owners?.sale_owner_characteristic_id) {
+          ownerCharacteristicId = application.sale_owners.sale_owner_characteristic_id;
+          console.log('🏠 Usando sale_owner_characteristic_id para venta');
+        } else {
+          console.log('🏠 Usando owner_id (UUID) - no hay characteristic_id específico');
+        }
+
+        // Usar characteristic IDs optimizados para N8N
+        await webhookClient.sendSimpleApprovalEvent(
+          application.application_characteristic_id || application.id, // Application ID
+          application.properties?.property_characteristic_id || application.property_id, // Property ID
+          application.applicant_id, // Applicant ID (mantenemos UUID, no tiene characteristic_id)
+          ownerCharacteristicId, // Owner ID (usa characteristic_id si está disponible)
+          application.guarantors?.guarantor_characteristic_id || application.guarantor_id // Guarantor ID
+        );
+
+        console.log('✅ Webhook con characteristic IDs enviado exitosamente');
+        console.log('📊 IDs enviados:', {
+          application: application.application_characteristic_id || application.id,
+          property: application.properties?.property_characteristic_id || application.property_id,
+          owner: ownerCharacteristicId,
+          guarantor: application.guarantors?.guarantor_characteristic_id || application.guarantor_id
+        });
+      } catch (webhookError) {
+        console.warn('⚠️ Error en webhook (no crítico):', webhookError);
+      }
+      
+      console.log('✅ Aplicación aprobada exitosamente');
+
+      // Actualizar el estado de la UI inmediatamente
       setReceivedApplications(prev => prev.map(app =>
         app.id === application.id ? { ...app, status: 'aprobada' } : app
       ));
 
-      // 5. Disparar el Webhook simplificado usando el webhookClient
-      console.log('🌐 Enviando webhook simplificado...');
-      try {
-        await webhookClient.sendSimpleApprovalEvent(
-          updatedApplication.id,
-          updatedApplication.property_id,
-          updatedApplication.applicant_id
-        );
-        console.log('✅ Webhook simplificado enviado exitosamente');
-      } catch (webhookError) {
-        // El webhookClient maneja los errores internamente y no los propaga
-        // Solo registrar el error sin interrumpir el proceso
-        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
-      }
-
       console.log('✅ Proceso de aprobación completado exitosamente');
       
-      // 6. Mostrar notificación de éxito
-      // Usar una notificación más elegante que alert()
+      // Mostrar notificación de éxito
       const successMessage = '¡Postulación aprobada exitosamente! Se ha enviado la notificación al postulante.';
       console.log('✅', successMessage);
       
@@ -516,7 +561,11 @@ export const ApplicationsPage: React.FC = () => {
           }
         } catch (webhookError) {
           // Solo registrar el error sin mostrar alertas al usuario
-          console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError.message);
+          console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError);
+          
+          // Safely extract error message
+          const errorMessage = webhookError?.message || webhookError?.error?.message || JSON.stringify(webhookError);
+          console.warn('⚠️ Webhook error message:', errorMessage);
         }
       } else {
         // No mostrar alerta si no hay webhook configurado, es opcional

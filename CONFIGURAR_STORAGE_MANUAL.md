@@ -164,3 +164,4 @@ Si tienes problemas con la configuración:
 2. Verifica que todos los buckets y políticas estén creados correctamente
 3. Asegúrate de estar autenticado en la aplicación
 4. Prueba con archivos pequeños primero (< 1MB)
+

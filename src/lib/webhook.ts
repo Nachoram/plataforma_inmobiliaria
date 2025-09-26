@@ -309,6 +309,8 @@ class WebhookClient {
 
     console.log('🌐 Enviando webhook GET optimizado a Railway:', this.baseURL);
     console.log('📦 Datos con characteristic IDs:', JSON.stringify(data, null, 2));
+    console.log('📋 Application characteristic ID enviado:', data.application_characteristic_id);
+    console.log('🛡️ Guarantor characteristic ID enviado:', data.guarantor_characteristic_id);
 
     try {
       // Convertir datos a query parameters para GET request

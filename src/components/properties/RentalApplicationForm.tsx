@@ -413,7 +413,14 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         snapshot_applicant_address_number: applicantData.address_number,
         snapshot_applicant_address_department: applicantData.address_department || null,
         snapshot_applicant_address_commune: applicantData.address_commune,
-        snapshot_applicant_address_region: applicantData.address_region
+        snapshot_applicant_address_region: applicantData.address_region,
+        // Campos snapshot de identificación del postulante
+        snapshot_applicant_first_name: applicantData.first_name,
+        snapshot_applicant_paternal_last_name: applicantData.paternal_last_name,
+        snapshot_applicant_maternal_last_name: applicantData.maternal_last_name,
+        snapshot_applicant_rut: applicantData.rut,
+        snapshot_applicant_email: user.email || '',
+        snapshot_applicant_phone: applicantData.phone || null
       };
 
       console.log('🔍 DEBUG: Datos preparados para application:', applicationData);

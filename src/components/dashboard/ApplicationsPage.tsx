@@ -12,6 +12,7 @@ interface ApplicationWithDetails {
   message: string | null;
   status: 'pendiente' | 'aprobada' | 'rechazada';
   created_at: string;
+  application_characteristic_id?: string | null;
   properties: {
     address_street: string;
     address_commune: string;
@@ -34,6 +35,13 @@ interface ApplicationWithDetails {
     contact_email: string | null;
     contact_phone: string | null;
   } | null;
+  guarantors?: {
+    first_name: string | null;
+    paternal_last_name: string | null;
+    maternal_last_name: string | null;
+    rut: string | null;
+    guarantor_characteristic_id: string | null;
+  } | null;
 }
 
 export const ApplicationsPage: React.FC = () => {
@@ -51,6 +59,7 @@ export const ApplicationsPage: React.FC = () => {
   const [messageText, setMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [propertyImages, setPropertyImages] = useState<Record<string, { image_url: string }[]>>({});
+  const [rentalOwners, setRentalOwners] = useState<Record<string, { rental_owner_characteristic_id: string | null }>>({});
   const [showUndoModal, setShowUndoModal] = useState(false);
   const [applicationToUndo, setApplicationToUndo] = useState<ApplicationWithDetails | null>(null);
 
@@ -85,6 +94,39 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
+  // Function to fetch rental owner data separately
+  const fetchRentalOwners = async (propertyIds: string[]) => {
+    if (propertyIds.length === 0) return {};
+    
+    console.log('🔍 Fetching rental owners for property IDs:', propertyIds);
+    
+    try {
+      const { data, error } = await supabase
+        .from('rental_owners')
+        .select('property_id, rental_owner_characteristic_id')
+        .in('property_id', propertyIds);
+      
+      if (error) throw error;
+      
+      console.log('📊 Raw rental owners data:', data);
+      
+      // Group rental owners by property_id
+      const rentalOwnersByProperty = data?.reduce((acc, owner) => {
+        acc[owner.property_id] = {
+          rental_owner_characteristic_id: owner.rental_owner_characteristic_id
+        };
+        return acc;
+      }, {} as Record<string, { rental_owner_characteristic_id: string | null }>) || {};
+      
+      console.log('📊 Grouped rental owners data:', rentalOwnersByProperty);
+      
+      return rentalOwnersByProperty;
+    } catch (error) {
+      console.error('Error fetching rental owners:', error);
+      return {};
+    }
+  };
+
   // Función para obtener postulaciones recibidas (como propietario)
   const fetchReceivedApplications = async () => {
     try {
@@ -101,33 +143,19 @@ export const ApplicationsPage: React.FC = () => {
             owner_id,
             property_characteristic_id
           ),
-          profiles(
+          profiles!applicant_id(
             first_name,
             paternal_last_name,
             maternal_last_name,
             email,
             phone
           ),
-          guarantors(
+          guarantors!guarantor_id(
             first_name,
             paternal_last_name,
             maternal_last_name,
             rut,
             guarantor_characteristic_id
-          ),
-          rental_owners(
-            first_name,
-            paternal_last_name,
-            maternal_last_name,
-            rut,
-            rental_owner_characteristic_id
-          ),
-          sale_owners(
-            first_name,
-            paternal_last_name,
-            maternal_last_name,
-            rut,
-            sale_owner_characteristic_id
           )
         `)
         .eq('properties.owner_id', user?.id)
@@ -154,7 +182,7 @@ export const ApplicationsPage: React.FC = () => {
             price_clp,
             listing_type
           ),
-          profiles(
+          profiles!applicant_id(
             first_name,
             paternal_last_name,
             maternal_last_name,
@@ -189,15 +217,24 @@ export const ApplicationsPage: React.FC = () => {
       setReceivedApplications(received);
       setSentApplications(sent);
       
-      // Fetch property images for all properties
+      // Fetch property images and rental owners for all properties
       const allPropertyIds = [
         ...received.map(app => app.property_id),
         ...sent.map(app => app.property_id)
       ].filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
       
-      if (allPropertyIds.length > 0) {
-        await fetchPropertyImages(allPropertyIds);
-      }
+        if (allPropertyIds.length > 0) {
+          const [propertyImagesData, rentalOwnersData] = await Promise.all([
+            fetchPropertyImages(allPropertyIds),
+            fetchRentalOwners(allPropertyIds)
+          ]);
+          
+          setPropertyImages(propertyImagesData);
+          setRentalOwners(rentalOwnersData);
+          
+          console.log('📊 Rental owners data loaded:', rentalOwnersData);
+          console.log('📊 Property IDs processed:', allPropertyIds);
+        }
     } catch (error) {
       console.error('Error fetching applications:', error);
     } finally {
@@ -247,37 +284,63 @@ export const ApplicationsPage: React.FC = () => {
       // 2. Enviar webhook a Railway (solo GET - Railway no acepta POST)
       console.log('🌐 Enviando webhook optimizado a Railway con characteristic IDs...');
       try {
-        // Determinar el characteristic_id del propietario según el tipo de propiedad
+        // Usar el rental_owner_characteristic_id si está disponible, sino el owner_id
         const property = application.properties;
-        const listingType = property?.listing_type;
-
-        let ownerCharacteristicId = property?.owner_id; // Fallback a UUID
-
-        if (listingType === 'arriendo' && application.rental_owners?.rental_owner_characteristic_id) {
-          ownerCharacteristicId = application.rental_owners.rental_owner_characteristic_id;
-          console.log('🏠 Usando rental_owner_characteristic_id para arriendo');
-        } else if (listingType === 'venta' && application.sale_owners?.sale_owner_characteristic_id) {
-          ownerCharacteristicId = application.sale_owners.sale_owner_characteristic_id;
-          console.log('🏠 Usando sale_owner_characteristic_id para venta');
+        console.log('🔍 Debugging rental owner data:');
+        console.log('  - Property ID:', application.property_id);
+        console.log('  - All rental owners state:', rentalOwners);
+        console.log('  - Looking for property ID in rental owners:', rentalOwners[application.property_id]);
+        
+        console.log('🔍 Debugging application data:');
+        console.log('  - Application ID (UUID):', application.id);
+        console.log('  - Application characteristic ID:', application.application_characteristic_id);
+        console.log('  - Property characteristic ID:', application.properties?.property_characteristic_id);
+        console.log('  - Full application object:', application);
+        
+        const rentalOwnerData = rentalOwners[application.property_id];
+        const ownerCharacteristicId = rentalOwnerData?.rental_owner_characteristic_id || property?.owner_id;
+        
+        // Verificar si tenemos el rental_owner_characteristic_id
+        if (!rentalOwnerData?.rental_owner_characteristic_id) {
+          console.warn('⚠️ No se encontró rental_owner_characteristic_id para la propiedad:', application.property_id);
+          console.warn('⚠️ Esto puede deberse a:');
+          console.warn('  1. La propiedad no tiene registro en rental_owners');
+          console.warn('  2. El rental_owner_characteristic_id no está poblado');
+          console.warn('  3. Ejecuta el script fix_missing_rental_owners.sql para corregir esto');
+          console.warn('⚠️ Usando owner_id como fallback:', property?.owner_id);
         } else {
-          console.log('🏠 Usando owner_id (UUID) - no hay characteristic_id específico');
+          console.log('✅ rental_owner_characteristic_id encontrado:', rentalOwnerData.rental_owner_characteristic_id);
+        }
+        
+        console.log('🏠 Usando rental_owner_characteristic_id para identificar al propietario:', ownerCharacteristicId);
+        console.log('📊 Datos de rental_owners encontrados:', rentalOwnerData);
+        console.log('🏘️ Property characteristic ID:', application.properties?.property_characteristic_id);
+        console.log('📋 Application characteristic ID:', application.application_characteristic_id);
+        console.log('🛡️ Guarantor characteristic ID:', application.guarantors?.guarantor_characteristic_id);
+        console.log('👤 Guarantor data:', application.guarantors);
+
+        // Verificar que el application_characteristic_id no sea el mismo que property_characteristic_id
+        let applicationCharacteristicId = application.application_characteristic_id;
+        if (applicationCharacteristicId === application.properties?.property_characteristic_id) {
+          console.warn('⚠️ application_characteristic_id es igual a property_characteristic_id, usando UUID como fallback');
+          applicationCharacteristicId = application.id;
         }
 
         // Usar characteristic IDs optimizados para N8N
         await webhookClient.sendSimpleApprovalEvent(
-          application.application_characteristic_id || application.id, // Application ID
+          applicationCharacteristicId || application.id, // Application ID (corregido)
           application.properties?.property_characteristic_id || application.property_id, // Property ID
           application.applicant_id, // Applicant ID (mantenemos UUID, no tiene characteristic_id)
-          ownerCharacteristicId, // Owner ID (usa characteristic_id si está disponible)
-          application.guarantors?.guarantor_characteristic_id || application.guarantor_id // Guarantor ID
+          ownerCharacteristicId, // Owner ID (usa rental_owner_characteristic_id si está disponible)
+          application.guarantors?.guarantor_characteristic_id || null // Guarantor ID (solo characteristic_id, no UUID)
         );
 
         console.log('✅ Webhook con characteristic IDs enviado exitosamente');
-        console.log('📊 IDs enviados:', {
-          application: application.application_characteristic_id || application.id,
-          property: application.properties?.property_characteristic_id || application.property_id,
-          owner: ownerCharacteristicId,
-          guarantor: application.guarantors?.guarantor_characteristic_id || application.guarantor_id
+        console.log('📊 IDs enviados al webhook:', {
+          application_characteristic_id: applicationCharacteristicId || application.id,
+          property_characteristic_id: application.properties?.property_characteristic_id || application.property_id,
+          rental_owner_characteristic_id: ownerCharacteristicId,
+          guarantor_characteristic_id: application.guarantors?.guarantor_characteristic_id || null
         });
       } catch (webhookError) {
         console.warn('⚠️ Error en webhook (no crítico):', webhookError);

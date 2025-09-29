@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, MessageSquare, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2 } from 'lucide-react';
-import { supabase, updateApplicationStatus, getCurrentProfile, approveApplicationWithWebhook } from '../../lib/supabase';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2 } from 'lucide-react';
+import { supabase, updateApplicationStatus } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { webhookClient, sendWebhookGET } from '../../lib/webhook';
+import { webhookClient } from '../../lib/webhook';
 import CustomButton from '../common/CustomButton';
+import RentalContractConditionsForm, { RentalContractConditions } from './RentalContractConditionsForm';
 
 interface ApplicationWithDetails {
   id: string;
@@ -60,8 +61,11 @@ export const ApplicationsPage: React.FC = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [propertyImages, setPropertyImages] = useState<Record<string, { image_url: string }[]>>({});
   const [rentalOwners, setRentalOwners] = useState<Record<string, { rental_owner_characteristic_id: string | null }>>({});
+  const [contractStatus, setContractStatus] = useState<Record<string, { status: string; approved_at?: string; sent_to_signature_at?: string }>>({});
   const [showUndoModal, setShowUndoModal] = useState(false);
   const [applicationToUndo, setApplicationToUndo] = useState<ApplicationWithDetails | null>(null);
+  const [showContractConditionsModal, setShowContractConditionsModal] = useState(false);
+  const [applicationToApprove, setApplicationToApprove] = useState<ApplicationWithDetails | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -127,6 +131,34 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
+  // Función para cargar estado de contratos
+  const fetchContractStatus = async (applicationIds: string[]) => {
+    if (applicationIds.length === 0) return {};
+
+    try {
+      const { data, error } = await supabase
+        .from('rental_contracts')
+        .select('application_id, status, approved_at, sent_to_signature_at')
+        .in('application_id', applicationIds);
+
+      if (error) throw error;
+
+      const statusMap: Record<string, { status: string; approved_at?: string; sent_to_signature_at?: string }> = {};
+      data?.forEach(contract => {
+        statusMap[contract.application_id] = {
+          status: contract.status,
+          approved_at: contract.approved_at,
+          sent_to_signature_at: contract.sent_to_signature_at
+        };
+      });
+
+      return statusMap;
+    } catch (error) {
+      console.error('Error fetching contract status:', error);
+      return {};
+    }
+  };
+
   // Función para obtener postulaciones recibidas (como propietario)
   const fetchReceivedApplications = async () => {
     try {
@@ -162,6 +194,17 @@ export const ApplicationsPage: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Cargar estado de contratos para aplicaciones aprobadas
+      const approvedApplicationIds = (data || [])
+        .filter(app => app.status === 'aprobada')
+        .map(app => app.id);
+
+      if (approvedApplicationIds.length > 0) {
+        const contractStatusData = await fetchContractStatus(approvedApplicationIds);
+        setContractStatus(contractStatusData);
+      }
+
       return data || [];
     } catch (error) {
       console.error('Error fetching received applications:', error);
@@ -243,7 +286,7 @@ export const ApplicationsPage: React.FC = () => {
   };
 
   // Función para aprobar postulación (integración con webhook)
-  const handleApproveApplication = async (application: ApplicationWithDetails) => {
+  const handleApproveApplication = async (application: ApplicationWithDetails, contractConditions?: RentalContractConditions) => {
     console.log('🚀 === INICIANDO APROBACIÓN DE POSTULACIÓN ===');
     console.log('📋 Application ID:', application.id);
     console.log('📋 Application data:', application);
@@ -326,21 +369,28 @@ export const ApplicationsPage: React.FC = () => {
           applicationCharacteristicId = application.id;
         }
 
-        // Usar characteristic IDs optimizados para N8N
+        // Enviar únicamente el guarantor_characteristic_id original de la base de datos
+        const guarantorIdForWebhook = application.guarantors?.guarantor_characteristic_id || null;
+
+        console.log('🔍 Guarantor ID para webhook:', guarantorIdForWebhook);
+
         await webhookClient.sendSimpleApprovalEvent(
           applicationCharacteristicId || application.id, // Application ID (corregido)
           application.properties?.property_characteristic_id || application.property_id, // Property ID
           application.applicant_id, // Applicant ID (mantenemos UUID, no tiene characteristic_id)
           ownerCharacteristicId, // Owner ID (usa rental_owner_characteristic_id si está disponible)
-          application.guarantors?.guarantor_characteristic_id || null // Guarantor ID (solo characteristic_id, no UUID)
+          guarantorIdForWebhook, // Guarantor ID único por aplicación
+          contractConditions // Condiciones del contrato de arriendo
         );
 
-        console.log('✅ Webhook con characteristic IDs enviado exitosamente');
-        console.log('📊 IDs enviados al webhook:', {
+        console.log('✅ Webhook con characteristic IDs y condiciones del contrato enviado exitosamente');
+        console.log('📊 IDs y condiciones enviados al webhook:', {
           application_characteristic_id: applicationCharacteristicId || application.id,
           property_characteristic_id: application.properties?.property_characteristic_id || application.property_id,
           rental_owner_characteristic_id: ownerCharacteristicId,
-          guarantor_characteristic_id: application.guarantors?.guarantor_characteristic_id || null
+          guarantor_characteristic_id: application.guarantors?.guarantor_characteristic_id || null,
+          guarantor_id_for_webhook: guarantorIdForWebhook,
+          contract_conditions: contractConditions
         });
       } catch (webhookError) {
         console.warn('⚠️ Error en webhook (no crítico):', webhookError);
@@ -506,6 +556,41 @@ export const ApplicationsPage: React.FC = () => {
     setShowUndoModal(true);
   };
 
+  // Función para manejar el éxito del formulario de condiciones del contrato
+  const handleContractConditionsSuccess = async (conditions: RentalContractConditions) => {
+    if (!applicationToApprove) return;
+
+    console.log('✅ Condiciones del contrato guardadas:', conditions);
+
+    // Cerrar modal de condiciones
+    setShowContractConditionsModal(false);
+    setApplicationToApprove(null);
+
+    // Proceder con la aprobación normal, pasando las condiciones
+    await handleApproveApplication(applicationToApprove, conditions);
+
+    // Generar contrato automáticamente después de aprobar
+    try {
+      const { generateContractForApplication } = await import('../../lib/contractGenerator');
+      const contractId = await generateContractForApplication(applicationToApprove.id);
+
+      if (contractId) {
+        console.log('✅ Contrato generado automáticamente:', contractId);
+        // Aquí podríamos mostrar una notificación o redirigir a la gestión de contratos
+      } else {
+        console.warn('⚠️ No se pudo generar el contrato automáticamente');
+      }
+    } catch (error) {
+      console.error('❌ Error generando contrato automáticamente:', error);
+    }
+  };
+
+  // Función para cancelar el modal de condiciones del contrato
+  const handleContractConditionsCancel = () => {
+    setShowContractConditionsModal(false);
+    setApplicationToApprove(null);
+  };
+
   // Función para confirmar deshacer aceptación
   const confirmUndoAcceptance = async () => {
     if (!applicationToUndo) return;
@@ -523,12 +608,41 @@ export const ApplicationsPage: React.FC = () => {
       if (error) throw error;
       console.log('✅ Base de datos actualizada correctamente');
 
-      // 2. Actualizar el estado de la UI inmediatamente
+      // 2. Cancelar contrato si existe
+      if (contractStatus[applicationToUndo.id]) {
+        const { error: contractError } = await supabase
+          .from('rental_contracts')
+          .update({
+            status: 'cancelled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('application_id', applicationToUndo.id);
+
+        if (contractError) {
+          console.warn('⚠️ Error al cancelar contrato:', contractError);
+          // No lanzamos error para no interrumpir el flujo principal
+        } else {
+          console.log('✅ Contrato cancelado correctamente');
+        }
+      }
+
+      // 3. Actualizar el estado de la UI inmediatamente
       setReceivedApplications(receivedApplications.map(app =>
         app.id === applicationToUndo.id ? { ...app, status: 'pendiente' } : app
       ));
 
-      // 3. Configurar URL del webhook de n8n
+      // 4. Actualizar estado del contrato en el estado local
+      if (contractStatus[applicationToUndo.id]) {
+        setContractStatus(prev => ({
+          ...prev,
+          [applicationToUndo.id]: {
+            ...prev[applicationToUndo.id],
+            status: 'cancelled'
+          }
+        }));
+      }
+
+      // 5. Configurar URL del webhook de n8n
       let webhookURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
       
       // Use proxy in development to avoid CORS issues
@@ -537,7 +651,7 @@ export const ApplicationsPage: React.FC = () => {
         webhookURL = `/api${url.pathname}`;
       }
       
-      // 4. Intentar enviar webhook solo si está configurado
+      // 6. Intentar enviar webhook solo si está configurado
       if (webhookURL) {
         try {
           // Construir el payload completo con toda la información necesaria
@@ -850,7 +964,7 @@ export const ApplicationsPage: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     {/* Acciones Secundarias */}
                     <button
-                      onClick={() => openMessageModal(application as any, 'info')}
+                      onClick={() => openMessageModal(application, 'info')}
                       disabled={updating?.startsWith(application.id)}
                       className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
                       title="Solicitar Más Información"
@@ -859,7 +973,7 @@ export const ApplicationsPage: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => openMessageModal(application as any, 'documents')}
+                      onClick={() => openMessageModal(application, 'documents')}
                       disabled={updating?.startsWith(application.id)}
                       className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
                       title="Solicitar Documentos Faltantes"
@@ -868,7 +982,7 @@ export const ApplicationsPage: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => handleRequestCommercialReport(application as any)}
+                      onClick={() => handleRequestCommercialReport(application)}
                       disabled={updating?.startsWith(application.id)}
                       className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
                       title="Solicitar Informe Comercial"
@@ -885,7 +999,7 @@ export const ApplicationsPage: React.FC = () => {
 
                     {/* Acciones Principales */}
                     <button
-                      onClick={() => handleRejectApplication(application as any)}
+                      onClick={() => handleRejectApplication(application)}
                       disabled={updating?.startsWith(application.id)}
                       className="flex items-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 hover:shadow-sm active:bg-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       title="Rechazar Postulación"
@@ -902,7 +1016,9 @@ export const ApplicationsPage: React.FC = () => {
                       onClick={() => {
                         console.log('🖱️ BOTÓN APROBAR CLICKEADO!');
                         console.log('📋 Application:', application);
-                        handleApproveApplication(application as any);
+                        // Mostrar modal de condiciones del contrato antes de aprobar
+                        setApplicationToApprove(application as any);
+                        setShowContractConditionsModal(true);
                       }}
                       disabled={updating?.startsWith(application.id)}
                       className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:shadow-sm active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
@@ -918,9 +1034,87 @@ export const ApplicationsPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Botón para deshacer aceptación */}
+                {/* Botón para deshacer aceptación y banner de contrato */}
                 {application.status === 'aprobada' && (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-4">
+                    {/* Banner de acceso al contrato */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg px-4 py-3 shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-blue-900 mb-1">
+                            📄 Contrato generado
+                          </div>
+                          {contractStatus[application.id] && (
+                            <div className="text-xs text-blue-700 mb-2">
+                              Estado: <span className={`font-medium ${
+                                contractStatus[application.id].status === 'draft' ? 'text-gray-600' :
+                                contractStatus[application.id].status === 'approved' ? 'text-green-600' :
+                                contractStatus[application.id].status === 'sent_to_signature' ? 'text-blue-600' :
+                                contractStatus[application.id].status === 'partially_signed' ? 'text-yellow-600' :
+                                contractStatus[application.id].status === 'fully_signed' ? 'text-purple-600' :
+                                'text-red-600'
+                              }`}>
+                                {contractStatus[application.id].status === 'draft' ? 'Borrador' :
+                                 contractStatus[application.id].status === 'approved' ? 'Aprobado' :
+                                 contractStatus[application.id].status === 'sent_to_signature' ? 'En Firma' :
+                                 contractStatus[application.id].status === 'partially_signed' ? 'Parcialmente Firmado' :
+                                 contractStatus[application.id].status === 'fully_signed' ? 'Completado' :
+                                 'Cancelado'}
+                              </span>
+                              {contractStatus[application.id].approved_at && (
+                                <span className="ml-1 text-gray-500">
+                                  • Aprobado {new Date(contractStatus[application.id].approved_at!).toLocaleDateString('es-ES')}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <button
+                            onClick={async () => {
+                              try {
+                                // Buscar el contrato para esta aplicación
+                                const { data: contract, error } = await supabase
+                                  .from('rental_contracts')
+                                  .select('id, status, approved_at, sent_to_signature_at')
+                                  .eq('application_id', application.id)
+                                  .single();
+
+                                if (error && error.code !== 'PGRST116') {
+                                  console.error('Error buscando contrato:', error);
+                                  alert('Error al acceder al contrato');
+                                  return;
+                                }
+
+                                if (contract) {
+                                  // Abrir el canvas con el ID del contrato
+                                  window.open(`/contract-canvas/${contract.id}`, '_blank');
+                                } else {
+                                  // Si no hay contrato, abrir el canvas por defecto
+                                  window.open('/contract-canvas', '_blank');
+                                }
+                              } catch (error) {
+                                console.error('Error al acceder al canvas:', error);
+                                alert('Error al acceder al editor de contratos');
+                              }
+                            }}
+                            className="inline-flex items-center text-sm font-medium text-blue-700 hover:text-blue-800 hover:underline transition-colors"
+                          >
+                            <span>Editar en Canvas</span>
+                            <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </button>
+                          <div className="text-xs text-blue-600 mt-1">
+                            Click para editar el contrato
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     <CustomButton
                       variant="secondary"
                       size="sm"
@@ -1264,6 +1458,16 @@ export const ApplicationsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal para Condiciones del Contrato de Arriendo */}
+      {showContractConditionsModal && applicationToApprove && (
+        <RentalContractConditionsForm
+          applicationId={applicationToApprove.id}
+          propertyPrice={applicationToApprove.properties.price_clp}
+          onSuccess={handleContractConditionsSuccess}
+          onCancel={handleContractConditionsCancel}
+        />
       )}
     </div>
   );

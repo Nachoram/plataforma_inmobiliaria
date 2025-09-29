@@ -1,123 +1,97 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './Layout';
-import { AuthPage } from './auth/AuthPage';
 import { ProtectedRoute } from './ProtectedRoute';
-import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
-import { PortfolioPage } from './portfolio/PortfolioPage';
-import { PropertyForm } from './properties/PropertyForm';
-import { RentalPublicationForm } from './properties/RentalPublicationForm';
-import { ApplicationsPage } from './dashboard/ApplicationsPage';
-import { UserProfile } from './profile/UserProfile';
+
+// Auth components
+import { AuthPage } from './auth/AuthPage';
+
+// Main pages
 import { MarketplacePage } from './marketplace/MarketplacePage';
+import { PortfolioPage } from './portfolio/PortfolioPage';
+import { ApplicationsPage } from './dashboard/ApplicationsPage';
+import ContractManagementPage from './contracts/ContractManagementPage';
 import { MyActivityPage } from './marketplace/MyActivityPage';
-import AdminSetup from './AdminSetup';
-import EnvTest from './EnvTest';
-import DemoPage from './DemoPage';
-import SupabaseConnectionTest from './SupabaseConnectionTest';
-import SupabaseDiagnostic from './SupabaseDiagnostic';
+import { UserProfile } from './profile/UserProfile';
+
+// Property components
+import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
+
+// Contract components
+import ContractCanvasDemo from './contracts/ContractCanvasDemo';
 
 export const AppContent: React.FC = () => {
-  const { loading } = useAuth();
-
-  // Mostrar pantalla de carga mientras se inicializa la autenticación
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">Inicializando aplicación...</p>
-        </div>
-      </div>
-    );
-  }
+  console.log('🏠 AppContent renderizado - plataforma completa');
 
   return (
     <Routes>
-      {/* Demo Route - Nueva implementación */}
-      <Route
-        path="/demo"
-        element={
-          <ProtectedRoute>
-            <Layout><DemoPage /></Layout>
-          </ProtectedRoute>
-        }
-      />
+      {/* Public routes without layout */}
+      <Route path="/auth" element={<AuthPage />} />
 
-      {/* Environment Variables Test Route */}
-      <Route path="/env-test" element={<Layout><EnvTest /></Layout>} />
+      {/* Routes with layout */}
+      <Route path="/" element={
+        <Layout>
+          <MarketplacePage />
+        </Layout>
+      } />
 
-      {/* Supabase Connection Test Route */}
-      <Route path="/supabase-test" element={<Layout><SupabaseConnectionTest /></Layout>} />
+      <Route path="/property/:id" element={
+        <Layout>
+          <PropertyDetailsPage />
+        </Layout>
+      } />
 
-      {/* Supabase Diagnostic Route */}
-      <Route path="/supabase-diagnostic" element={<Layout><SupabaseDiagnostic /></Layout>} />
+      {/* Protected routes */}
+      <Route path="/portfolio" element={
+        <ProtectedRoute>
+          <Layout>
+            <PortfolioPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
 
-      {/* Rutas existentes */}
-      <Route path="/" element={<Layout><MarketplacePage /></Layout>} />
-      <Route path="/marketplace" element={<Layout><MarketplacePage /></Layout>} />
-      <Route path="/property/:id" element={<Layout><PropertyDetailsPage /></Layout>} />
-      <Route path="/auth" element={<Layout><AuthPage /></Layout>} />
+      <Route path="/applications" element={
+        <ProtectedRoute>
+          <Layout>
+            <ApplicationsPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
 
-      {/* Protected Routes */}
-      <Route
-        path="/portfolio"
-        element={
-          <ProtectedRoute>
-            <Layout><PortfolioPage /></Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/property/new"
-        element={
-          <ProtectedRoute>
-            <Layout><PropertyForm /></Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/property/new/rental"
-        element={
-          <ProtectedRoute>
-            <Layout><RentalPublicationForm /></Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/property/edit/:id"
-        element={
-          <ProtectedRoute>
-            <Layout><PropertyForm /></Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/applications"
-        element={
-          <ProtectedRoute>
-            <Layout><ApplicationsPage /></Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/my-activity"
-        element={
-          <ProtectedRoute>
-            <Layout><MyActivityPage /></Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Layout><UserProfile /></Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/admin-setup" element={<Layout><AdminSetup /></Layout>} />
+      <Route path="/contracts" element={
+        <ProtectedRoute>
+          <Layout>
+            <ContractManagementPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/contract-canvas" element={
+        <ProtectedRoute>
+          <Layout>
+            <ContractCanvasDemo />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-activity" element={
+        <ProtectedRoute>
+          <Layout>
+            <MyActivityPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Layout>
+            <UserProfile />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      {/* Default redirect */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

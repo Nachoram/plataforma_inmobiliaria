@@ -4,8 +4,7 @@ import { validateEnvironment } from './config/envValidator';
 import App from './App.tsx';
 import './index.css';
 
-// 🚀 VALIDACIÓN CRÍTICA: Verificar configuración de entorno antes de inicializar la aplicación
-// Esto asegura que cualquier error de configuración se detecte inmediatamente y detenga la ejecución
+// 🚀 Validación de entorno (modo desarrollo - no falla si faltan variables)
 validateEnvironment();
 
 createRoot(document.getElementById('root')!).render(

@@ -149,13 +149,13 @@ class WebhookClient {
 
   async sendApplicationEvent(
     action: 'received' | 'approved' | 'rejected',
-    application: any,
-    property: any,
-    applicant: any,
-    propertyOwner: any
+    application: Record<string, unknown>,
+    property: Record<string, unknown>,
+    applicant: Record<string, unknown>,
+    propertyOwner: Record<string, unknown>
   ): Promise<void> {
     const payload: WebhookPayload = {
-      action: `application_${action}` as any,
+      action: `application_${action}` as WebhookPayload['action'],
       decision: action === 'received' ? undefined : action,
       status: action === 'approved' ? 'aprobada' : action === 'rejected' ? 'rechazada' : 'pendiente',
       timestamp: new Date().toISOString(),
@@ -283,7 +283,8 @@ class WebhookClient {
     propertyId: string,
     applicantId: string,
     ownerId?: string,
-    guarantorId?: string
+    guarantorId?: string,
+    contractConditions?: Record<string, unknown>
   ): Promise<void> {
     // Obtener los characteristic IDs para una búsqueda más eficiente en N8N
     const data = {
@@ -299,7 +300,9 @@ class WebhookClient {
       property_uuid: propertyId,
       applicant_uuid: applicantId,
       owner_uuid: ownerId || null,
-      guarantor_uuid: guarantorId || null
+      guarantor_uuid: guarantorId || null,
+      // Condiciones del contrato de arriendo (si existen)
+      contract_conditions: contractConditions || null
     };
 
     if (!this.baseURL) {
@@ -422,7 +425,7 @@ class WebhookClient {
 export const webhookClient = new WebhookClient();
 
 // Función alternativa usando GET para webhooks simples
-export const sendWebhookGET = async (data: any) => {
+export const sendWebhookGET = async (data: Record<string, unknown>) => {
   const baseURL = import.meta.env.DEV 
     ? '/api/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb'
     : 'https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';

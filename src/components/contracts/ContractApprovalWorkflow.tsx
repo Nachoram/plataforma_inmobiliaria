@@ -1,0 +1,580 @@
+import React, { useState, useEffect } from 'react';
+import {
+  CheckCircle,
+  Clock,
+  FileText,
+  Send,
+  User,
+  Shield,
+  AlertTriangle,
+  Eye,
+  Edit3,
+  Mail
+} from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { electronicSignatureService } from '../../lib/electronicSignature';
+import CustomButton from '../common/CustomButton';
+import ContractCanvasPrototype from './ContractCanvasPrototype';
+
+interface ContractApprovalWorkflowProps {
+  contractId: string;
+  onContractUpdated?: () => void;
+  onClose?: () => void;
+}
+
+interface Contract {
+  id: string;
+  status: string;
+  contract_content: any;
+  approved_at: string;
+  sent_to_signature_at: string;
+  owner_signed_at: string;
+  tenant_signed_at: string;
+  guarantor_signed_at: string;
+  applications: {
+    id: string;
+    snapshot_applicant_first_name: string;
+    snapshot_applicant_paternal_last_name: string;
+    snapshot_applicant_email: string;
+    properties: {
+      title: string;
+      owner_id: string;
+      profiles: {
+        first_name: string;
+        paternal_last_name: string;
+        email: string;
+      };
+    };
+    guarantors: Array<{
+      profiles: {
+        first_name: string;
+        paternal_last_name: string;
+        email: string;
+      };
+    }>;
+  };
+}
+
+interface Signature {
+  id: string;
+  signer_type: string;
+  signer_name: string;
+  signer_email: string;
+  signature_status: string;
+  signed_at: string;
+  signature_url: string;
+}
+
+const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
+  contractId,
+  onContractUpdated,
+  onClose
+}) => {
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [signatures, setSignatures] = useState<Signature[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [showCanvas, setShowCanvas] = useState(false);
+
+  useEffect(() => {
+    loadContractData();
+  }, [contractId]);
+
+  const loadContractData = async () => {
+    try {
+      setLoading(true);
+
+      // Cargar contrato con datos relacionados
+      const { data: contractData, error: contractError } = await supabase
+        .from('rental_contracts')
+        .select(`
+          *,
+          applications (
+            id,
+            snapshot_applicant_first_name,
+            snapshot_applicant_paternal_last_name,
+            snapshot_applicant_email,
+            properties (
+              title,
+              owner_id,
+              profiles!properties_owner_id_fkey (
+                first_name,
+                paternal_last_name,
+                email
+              )
+            ),
+            guarantors (
+              guarantor_id,
+              profiles!guarantors_guarantor_id_fkey (
+                first_name,
+                paternal_last_name,
+                email
+              )
+            )
+          )
+        `)
+        .eq('id', contractId)
+        .single();
+
+      if (contractError) throw contractError;
+      setContract(contractData);
+
+      // Cargar firmas
+      const { data: signaturesData, error: signaturesError } = await supabase
+        .from('contract_signatures')
+        .select('*')
+        .eq('contract_id', contractId)
+        .order('created_at');
+
+      if (signaturesError) throw signaturesError;
+      setSignatures(signaturesData || []);
+
+    } catch (error) {
+      console.error('Error loading contract data:', error);
+      alert('Error al cargar los datos del contrato');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveContract = async () => {
+    if (!confirm('¿Estás seguro de que deseas aprobar este contrato? Una vez aprobado, se enviará a firma electrónica.')) {
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('rental_contracts')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('id', contractId);
+
+      if (error) throw error;
+
+      setContract(prev => prev ? {
+        ...prev,
+        status: 'approved',
+        approved_at: new Date().toISOString()
+      } : null);
+
+      if (onContractUpdated) {
+        onContractUpdated();
+      }
+
+      alert('Contrato aprobado exitosamente');
+    } catch (error) {
+      console.error('Error approving contract:', error);
+      alert('Error al aprobar el contrato');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSendToSignature = async () => {
+    if (!confirm('¿Estás seguro de que deseas enviar este contrato a firma electrónica? Se enviarán correos a todas las partes.')) {
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      // Crear registros de firma para cada parte
+      const signatureRecords = [
+        {
+          contract_id: contractId,
+          signer_type: 'owner',
+          signer_user_id: contract?.applications.properties.owner_id,
+          signer_name: `${contract?.applications.properties.profiles.first_name} ${contract?.applications.properties.profiles.paternal_last_name}`,
+          signer_email: contract?.applications.properties.profiles.email,
+          signature_status: 'pending'
+        },
+        {
+          contract_id: contractId,
+          signer_type: 'tenant',
+          signer_name: `${contract?.applications.snapshot_applicant_first_name} ${contract?.applications.snapshot_applicant_paternal_last_name}`,
+          signer_email: contract?.applications.snapshot_applicant_email,
+          signature_status: 'pending'
+        }
+      ];
+
+      // Agregar aval si existe
+      if (contract?.applications.guarantors?.[0]) {
+        const guarantor = contract.applications.guarantors[0];
+        signatureRecords.push({
+          contract_id: contractId,
+          signer_type: 'guarantor',
+          signer_user_id: null, // Los garantes no necesariamente son usuarios registrados
+          signer_name: `${guarantor.profiles.first_name} ${guarantor.profiles.paternal_last_name}`,
+          signer_email: guarantor.profiles.email,
+          signature_status: 'pending'
+        });
+      }
+
+      // Insertar registros de firma
+      const { error: signaturesError } = await supabase
+        .from('contract_signatures')
+        .insert(signatureRecords);
+
+      if (signaturesError) throw signaturesError;
+
+      // Actualizar estado del contrato
+      const { error: contractError } = await supabase
+        .from('rental_contracts')
+        .update({
+          status: 'sent_to_signature',
+          sent_to_signature_at: new Date().toISOString()
+        })
+        .eq('id', contractId);
+
+      if (contractError) throw contractError;
+
+      // Enviar firmas electrónicas usando el servicio real
+      await sendElectronicSignatures(signatureRecords);
+
+      setContract(prev => prev ? {
+        ...prev,
+        status: 'sent_to_signature',
+        sent_to_signature_at: new Date().toISOString()
+      } : null);
+
+      // Recargar firmas
+      await loadContractData();
+
+      if (onContractUpdated) {
+        onContractUpdated();
+      }
+
+      alert('Contrato enviado a firma electrónica exitosamente');
+    } catch (error) {
+      console.error('Error sending to signature:', error);
+      alert('Error al enviar a firma electrónica');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const sendElectronicSignatures = async (signatureRecords: any[]) => {
+    // Usar el servicio de firma electrónica real
+    for (const record of signatureRecords) {
+      try {
+        // Generar contenido HTML del contrato para firma
+        const contractHtml = generateContractHtml(contract);
+
+        const signatureRequest = {
+          contractId: record.contract_id,
+          signerType: record.signer_type as 'owner' | 'tenant' | 'guarantor',
+          signerName: record.signer_name,
+          signerEmail: record.signer_email,
+          documentContent: contractHtml
+        };
+
+        const response = await electronicSignatureService.sendForSignature(signatureRequest);
+
+        if (response.success && response.signatureRequestId && response.signatureUrl) {
+          // Actualizar registro de firma con datos reales
+          await supabase
+            .from('contract_signatures')
+            .update({
+              signature_request_id: response.signatureRequestId,
+              signature_url: response.signatureUrl,
+              signature_status: 'sent',
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 días
+            })
+            .eq('contract_id', contractId)
+            .eq('signer_type', record.signer_type);
+        } else {
+          console.error('Error sending signature for', record.signer_type, response.error);
+          // Mantener como pendiente si falla
+        }
+      } catch (error) {
+        console.error('Error processing signature for', record.signer_type, error);
+      }
+    }
+  };
+
+  const generateContractHtml = (contract: Contract): string => {
+    if (!contract.contract_content?.sections) {
+      return '<p>Contenido del contrato no disponible</p>';
+    }
+
+    let html = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1, h2, h3 { color: #333; }
+            .signature-section { margin-top: 50px; border-top: 1px solid #000; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+    `;
+
+    contract.contract_content.sections.forEach((section: any) => {
+      html += `
+        <h2>${section.title}</h2>
+        ${section.content}
+      `;
+    });
+
+    html += `
+        </body>
+      </html>
+    `;
+
+    return html;
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return <Edit3 className="h-5 w-5 text-gray-500" />;
+      case 'approved':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'sent_to_signature':
+        return <Send className="h-5 w-5 text-blue-500" />;
+      case 'partially_signed':
+        return <Clock className="h-5 w-5 text-yellow-500" />;
+      case 'fully_signed':
+        return <Shield className="h-5 w-5 text-green-600" />;
+      default:
+        return <AlertTriangle className="h-5 w-5 text-red-500" />;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return 'Borrador';
+      case 'approved':
+        return 'Aprobado';
+      case 'sent_to_signature':
+        return 'Enviado a Firma';
+      case 'partially_signed':
+        return 'Parcialmente Firmado';
+      case 'fully_signed':
+        return 'Completamente Firmado';
+      default:
+        return 'Cancelado';
+    }
+  };
+
+  const getSignatureStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-gray-400" />;
+      case 'sent':
+        return <Mail className="h-4 w-4 text-blue-500" />;
+      case 'signed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'rejected':
+        return <AlertTriangle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getSignatureStatusText = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pendiente';
+      case 'sent':
+        return 'Enviado';
+      case 'signed':
+        return 'Firmado';
+      case 'rejected':
+        return 'Rechazado';
+      case 'expired':
+        return 'Expirado';
+      default:
+        return 'Pendiente';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-gray-500">Cargando contrato...</div>
+      </div>
+    );
+  }
+
+  if (!contract) {
+    return (
+      <div className="text-center p-8">
+        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <p className="text-gray-600">No se pudo cargar el contrato</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-500 to-green-600 text-white rounded-t-xl">
+        <div className="flex items-center space-x-3">
+          <FileText className="h-6 w-6" />
+          <div>
+            <h2 className="text-xl font-bold">Flujo de Aprobación del Contrato</h2>
+            <p className="text-green-100 text-sm">
+              {contract.applications.properties.title} - {contract.applications.snapshot_applicant_first_name} {contract.applications.snapshot_applicant_paternal_last_name}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 bg-white bg-opacity-20 rounded-lg px-3 py-1">
+            {getStatusIcon(contract.status)}
+            <span className="font-medium">{getStatusText(contract.status)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {/* Contract Status Timeline */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado del Contrato</h3>
+          <div className="flex items-center space-x-4">
+            <div className={`flex items-center space-x-2 p-3 rounded-lg ${
+              contract.status === 'draft' ? 'bg-blue-100 text-blue-800' :
+              contract.status === 'approved' ? 'bg-green-100 text-green-800' :
+              contract.status === 'sent_to_signature' ? 'bg-yellow-100 text-yellow-800' :
+              contract.status === 'fully_signed' ? 'bg-purple-100 text-purple-800' :
+              'bg-gray-100 text-gray-800'
+            }`}>
+              {getStatusIcon(contract.status)}
+              <div>
+                <p className="font-medium">{getStatusText(contract.status)}</p>
+                {contract.approved_at && (
+                  <p className="text-xs">
+                    {contract.status === 'approved' ? 'Aprobado' :
+                     contract.status === 'sent_to_signature' ? 'Enviado a firma' : 'Completado'} el {new Date(contract.approved_at).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Signatures Status */}
+        {signatures.length > 0 && (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de las Firmas</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {signatures.map((signature) => (
+                <div key={signature.id} className="bg-white p-4 rounded-lg border">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      {signature.signer_type === 'owner' && <User className="h-4 w-4 text-blue-500" />}
+                      {signature.signer_type === 'tenant' && <User className="h-4 w-4 text-green-500" />}
+                      {signature.signer_type === 'guarantor' && <Shield className="h-4 w-4 text-purple-500" />}
+                      <span className="font-medium capitalize">
+                        {signature.signer_type === 'owner' ? 'Propietario' :
+                         signature.signer_type === 'tenant' ? 'Arrendatario' :
+                         'Aval'}
+                      </span>
+                    </div>
+                    {getSignatureStatusIcon(signature.signature_status)}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-1">{signature.signer_name}</p>
+                  <p className="text-sm text-gray-500 mb-2">{signature.signer_email}</p>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      signature.signature_status === 'signed' ? 'bg-green-100 text-green-800' :
+                      signature.signature_status === 'sent' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {getSignatureStatusText(signature.signature_status)}
+                    </span>
+                    {signature.signed_at && (
+                      <span className="text-xs text-gray-500">
+                        {new Date(signature.signed_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  {signature.signature_url && signature.signature_status !== 'signed' && (
+                    <a
+                      href={signature.signature_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block"
+                    >
+                      Ver enlace de firma →
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-between items-center pt-4 border-t">
+          <div className="flex space-x-3">
+            <CustomButton
+              onClick={() => setShowCanvas(true)}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <Eye className="h-4 w-4" />
+              <span>Ver Contrato</span>
+            </CustomButton>
+          </div>
+
+          <div className="flex space-x-3">
+            {contract.status === 'draft' && (
+              <CustomButton
+                onClick={handleApproveContract}
+                disabled={processing}
+                loading={processing}
+                loadingText="Aprobando..."
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Aprobar y Enviar a Firma
+              </CustomButton>
+            )}
+
+            {contract.status === 'approved' && (
+              <CustomButton
+                onClick={handleSendToSignature}
+                disabled={processing}
+                loading={processing}
+                loadingText="Enviando..."
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Enviar a Firma Electrónica
+              </CustomButton>
+            )}
+
+            {onClose && (
+              <CustomButton
+                onClick={onClose}
+                variant="outline"
+              >
+                Cerrar
+              </CustomButton>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Contract Canvas Modal */}
+      {showCanvas && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <ContractCanvasPrototype
+              contractId={contractId}
+              readOnly={contract.status !== 'draft'}
+              onCancel={() => setShowCanvas(false)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ContractApprovalWorkflow;

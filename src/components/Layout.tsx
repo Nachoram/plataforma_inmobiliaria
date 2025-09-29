@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, LogOut, Building, Mail, DollarSign, UserCircle, ShoppingBag, BarChart3 } from 'lucide-react';
+import { Home, User, LogOut, Building, Mail, DollarSign, UserCircle, ShoppingBag, BarChart3, FileText, Edit3 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface LayoutProps {
@@ -73,6 +73,28 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <span>Postulaciones</span>
                   </Link>
                   <Link
+                    to="/contracts"
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                      isActive('/contracts')
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>Contratos</span>
+                  </Link>
+                  <Link
+                    to="/contract-canvas"
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
+                      isActive('/contract-canvas')
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    <span>Canvas Demo</span>
+                  </Link>
+                  <Link
                     to="/my-activity"
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
                       isActive('/my-activity')
@@ -142,22 +164,44 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <Home className="h-4 w-4" />
                   <span>Portafolio</span>
                 </Link>
-                <Link 
-                  to="/applications" 
+                <Link
+                  to="/applications"
                   className={`flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                    isActive('/applications') 
-                      ? 'bg-blue-100 text-blue-700' 
+                    isActive('/applications')
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                   }`}
                 >
                   <Mail className="h-4 w-4" />
                   <span>Postulaciones</span>
                 </Link>
-                <Link 
-                  to="/profile" 
+                <Link
+                  to="/contracts"
                   className={`flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                    isActive('/profile') 
-                      ? 'bg-blue-100 text-blue-700' 
+                    isActive('/contracts')
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Contratos</span>
+                </Link>
+                <Link
+                  to="/contract-canvas"
+                  className={`flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+                    isActive('/contract-canvas')
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
+                  }`}
+                >
+                  <Edit3 className="h-4 w-4" />
+                  <span>Canvas Demo</span>
+                </Link>
+                <Link
+                  to="/profile"
+                  className={`flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+                    isActive('/profile')
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
                   }`}
                 >

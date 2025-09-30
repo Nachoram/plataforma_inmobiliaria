@@ -62,6 +62,51 @@ BEGIN
 END $$;
 
 -- =====================================================
+-- STEP 1.5: ADD CHARACTERISTIC ID TO RENTAL CONTRACT CONDITIONS
+-- =====================================================
+
+-- Create trigger function for auto-generating characteristic_id (outside DO block)
+CREATE OR REPLACE FUNCTION generate_rental_contract_conditions_characteristic_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.rental_contract_conditions_characteristic_id IS NULL THEN
+    NEW.rental_contract_conditions_characteristic_id :=
+      'CONTRACT_COND_' || LPAD(EXTRACT(EPOCH FROM NOW())::text, 10, '0') || '_' || SUBSTRING(NEW.id::text, 1, 8);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Add characteristic_id to rental_contract_conditions table for N8N optimization
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'rental_contract_conditions' AND table_schema = 'public') THEN
+    ALTER TABLE rental_contract_conditions ADD COLUMN IF NOT EXISTS rental_contract_conditions_characteristic_id text UNIQUE;
+
+    -- Populate existing records with characteristic IDs
+    UPDATE rental_contract_conditions
+    SET rental_contract_conditions_characteristic_id = 'CONTRACT_COND_' || LPAD(EXTRACT(EPOCH FROM created_at)::text, 10, '0') || '_' || SUBSTRING(id::text, 1, 8)
+    WHERE rental_contract_conditions_characteristic_id IS NULL;
+
+    -- Create index for better performance
+    CREATE INDEX IF NOT EXISTS idx_rental_contract_conditions_characteristic_id ON rental_contract_conditions(rental_contract_conditions_characteristic_id);
+
+    RAISE NOTICE 'Added rental_contract_conditions_characteristic_id to rental_contract_conditions table';
+
+    -- Create trigger
+    DROP TRIGGER IF EXISTS trigger_generate_rental_contract_conditions_characteristic_id ON rental_contract_conditions;
+    CREATE TRIGGER trigger_generate_rental_contract_conditions_characteristic_id
+      BEFORE INSERT ON rental_contract_conditions
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_rental_contract_conditions_characteristic_id();
+
+    RAISE NOTICE 'Created trigger for auto-generating rental_contract_conditions_characteristic_id';
+  ELSE
+    RAISE NOTICE 'rental_contract_conditions table does not exist - skipping';
+  END IF;
+END $$;
+
+-- =====================================================
 -- STEP 2: UPDATE CONTRACT FUNCTIONS WITH OWNER DATA
 -- =====================================================
 
@@ -181,7 +226,20 @@ RETURNS TABLE (
 
   -- Documents
   application_documents jsonb,
-  property_documents jsonb
+  property_documents jsonb,
+
+  -- Rental contract conditions
+  rental_contract_conditions_id uuid,
+  rental_contract_conditions_characteristic_id text,
+  lease_term_months integer,
+  payment_day integer,
+  final_price_clp integer,
+  broker_commission_clp integer,
+  guarantee_amount_clp integer,
+  official_communication_email text,
+  accepts_pets boolean,
+  dicom_clause boolean,
+  additional_conditions text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -328,7 +386,20 @@ BEGIN
         )
       ) FILTER (WHERE pd.id IS NOT NULL AND pd.related_entity_type = 'property_legal'),
       '[]'::jsonb
-    ) as property_documents
+    ) as property_documents,
+
+    -- Rental contract conditions
+    rcc.id as rental_contract_conditions_id,
+    rcc.rental_contract_conditions_characteristic_id,
+    rcc.lease_term_months,
+    rcc.payment_day,
+    rcc.final_price_clp,
+    rcc.broker_commission_clp,
+    rcc.guarantee_amount_clp,
+    rcc.official_communication_email,
+    rcc.accepts_pets,
+    rcc.dicom_clause,
+    rcc.additional_conditions
 
   FROM applications a
   INNER JOIN properties p ON a.property_id = p.id
@@ -337,6 +408,7 @@ BEGIN
   LEFT JOIN rental_owners ro ON p.id = ro.property_id
   LEFT JOIN sale_owners so ON p.id = so.property_id
   LEFT JOIN guarantors g ON a.guarantor_id = g.id
+  LEFT JOIN rental_contract_conditions rcc ON a.id = rcc.application_id
 
   -- Property images
   LEFT JOIN property_images pi ON p.id = pi.property_id
@@ -378,7 +450,11 @@ BEGIN
     g.id, g.guarantor_characteristic_id, g.first_name, g.paternal_last_name,
     g.maternal_last_name, g.rut, g.profession, g.monthly_income_clp,
     g.address_street, g.address_number, g.address_department,
-    g.address_commune, g.address_region;
+    g.address_commune, g.address_region,
+    rcc.id, rcc.rental_contract_conditions_characteristic_id, rcc.lease_term_months,
+    rcc.payment_day, rcc.final_price_clp, rcc.broker_commission_clp,
+    rcc.guarantee_amount_clp, rcc.official_communication_email, rcc.accepts_pets,
+    rcc.dicom_clause, rcc.additional_conditions;
 END;
 $$;
 
@@ -485,7 +561,19 @@ RETURNS TABLE (
 
   property_images jsonb,
   application_documents jsonb,
-  property_documents jsonb
+  property_documents jsonb,
+
+  rental_contract_conditions_id uuid,
+  rental_contract_conditions_characteristic_id text,
+  lease_term_months integer,
+  payment_day integer,
+  final_price_clp integer,
+  broker_commission_clp integer,
+  guarantee_amount_clp integer,
+  official_communication_email text,
+  accepts_pets boolean,
+  dicom_clause boolean,
+  additional_conditions text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -632,6 +720,7 @@ BEGIN
   LEFT JOIN rental_owners ro ON p.id = ro.property_id
   LEFT JOIN sale_owners so ON p.id = so.property_id
   LEFT JOIN guarantors g ON a.guarantor_id = g.id
+  LEFT JOIN rental_contract_conditions rcc ON a.id = rcc.application_id
 
   LEFT JOIN property_images pi ON p.id = pi.property_id
   LEFT JOIN documents ad ON ad.related_entity_id = a.id AND ad.related_entity_type = 'application_applicant'
@@ -668,7 +757,11 @@ BEGIN
     g.id, g.guarantor_characteristic_id, g.first_name, g.paternal_last_name,
     g.maternal_last_name, g.rut, g.profession, g.monthly_income_clp,
     g.address_street, g.address_number, g.address_department,
-    g.address_commune, g.address_region;
+    g.address_commune, g.address_region,
+    rcc.id, rcc.rental_contract_conditions_characteristic_id, rcc.lease_term_months,
+    rcc.payment_day, rcc.final_price_clp, rcc.broker_commission_clp,
+    rcc.guarantee_amount_clp, rcc.official_communication_email, rcc.accepts_pets,
+    rcc.dicom_clause, rcc.additional_conditions;
 END;
 $$;
 

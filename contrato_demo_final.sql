@@ -1,101 +1,52 @@
 -- =====================================================
--- SCRIPT PARA POBLAR DATOS DE DEMOSTRACIÓN DEL CONTRATO
+-- CONTRATO DE DEMOSTRACIÓN - VERSIÓN FINAL ULTRA SIMPLE
 -- =====================================================
 
--- Este script inserta todos los datos necesarios para que se vea
--- el contrato de ejemplo en el Contract Canvas
+-- INSTRUCCIONES:
+-- 1. Crea estos usuarios en Supabase Auth (si no existen):
+--    - carolina.soto@example.com / password: demo123456
+--    - carlos.soto@example.com / password: demo123456
 --
--- IMPORTANTE: Debes crear los usuarios primero usando el dashboard de Supabase
--- o las APIs de autenticación antes de ejecutar este script.
+-- 2. Obtén sus IDs reales ejecutando:
+--    SELECT id, email FROM auth.users WHERE email LIKE '%@example.com';
 --
--- 1. Crea usuarios con estos emails:
---    - carolina.soto@example.com (password: demo123456)
---    - carlos.soto@example.com (password: demo123456)
+-- 3. Reemplaza los IDs en las líneas marcadas con [REEMPLAZA_ID_AQUI]
+--    con los IDs reales que obtuviste
 --
--- 2. Obtén los IDs reales de auth.users para estos usuarios
---
--- 3. Reemplaza los IDs en este script con los IDs reales
+-- 4. Ejecuta todo el script de una vez
 
 -- =====================================================
--- INSTRUCCIONES PARA EJECUTAR ESTE SCRIPT:
--- =====================================================
---
--- PASO 1: Crea los usuarios usando el dashboard de Supabase Auth
---         o ejecuta las funciones de signup
---
--- PASO 2: Obtén los IDs reales ejecutando:
---         SELECT id, email FROM auth.users WHERE email IN ('carolina.soto@example.com', 'carlos.soto@example.com');
---
--- PASO 3: Reemplaza los IDs en este script con los IDs reales
---         Busca y reemplaza:
---         '550e8400-e29b-41d4-a716-446655440001' → [ID real del arrendador]
---         '550e8400-e29b-41d4-a716-446655440002' → [ID real del arrendatario]
---
--- PASO 4: Ejecuta este script completo
-
--- =====================================================
--- 1. INSERTAR USUARIOS EN PROFILES
+-- IDs QUE DEBES REEMPLAZAR (obtenlos de auth.users)
 -- =====================================================
 
--- IMPORTANTE: REEMPLAZA ESTOS IDs CON LOS IDs REALES DE auth.users
--- Arrendador (Owner) - Reemplaza el ID con el ID real del usuario
+-- Reemplaza estos valores con los IDs reales de auth.users:
+-- Ejemplo: Si obtuviste 'abc123-def456-ghi789' para carolina.soto@example.com,
+-- reemplaza '[ID_CAROLINA]' con 'abc123-def456-ghi789'
+
+-- ID de Carolina Soto (arrendadora): [ID_CAROLINA]
+-- ID de Carlos Soto (arrendatario): [ID_CARLOS]
+
+-- =====================================================
+-- 1. INSERTAR PERFILES (reemplaza los IDs)
+-- =====================================================
+
+-- Perfil de Carolina (arrendadora)
 INSERT INTO profiles (id, first_name, paternal_last_name, maternal_last_name, rut, email, phone, profession, marital_status, address_street, address_number, address_commune, address_region)
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440001', 'Carolina', 'Soto', 'Rojas', '15.123.456-7', 'carolina.soto@example.com', '+56912345678', 'Profesora', 'casado', 'Eliodoro Yáñez', '1890', 'Providencia', 'Metropolitana')
+  ('[ID_CAROLINA]', 'Carolina', 'Soto', 'Rojas', '15.123.456-7', 'carolina.soto@example.com', '+56912345678', 'Profesora', 'casado', 'Eliodoro Yáñez', '1890', 'Providencia', 'Metropolitana');
 
-ON CONFLICT (rut) DO UPDATE SET
-  first_name = EXCLUDED.first_name,
-  paternal_last_name = EXCLUDED.paternal_last_name,
-  maternal_last_name = EXCLUDED.maternal_last_name,
-  id = EXCLUDED.id,
-  email = EXCLUDED.email,
-  phone = EXCLUDED.phone,
-  profession = EXCLUDED.profession,
-  marital_status = EXCLUDED.marital_status,
-  address_street = EXCLUDED.address_street,
-  address_number = EXCLUDED.address_number,
-  address_commune = EXCLUDED.address_commune,
-  address_region = EXCLUDED.address_region;
-
--- Arrendatario (Applicant) - Reemplaza el ID con el ID real del usuario
+-- Perfil de Carlos (arrendatario)
 INSERT INTO profiles (id, first_name, paternal_last_name, maternal_last_name, rut, email, phone, profession, marital_status, address_street, address_number, address_commune, address_region)
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440002', 'Carlos', 'Soto', 'Vega', '33.333.333-3', 'carlos.soto@example.com', '+56987654321', 'Ingeniero', 'soltero', 'Los Leones', '567', 'Providencia', 'Metropolitana')
-
-ON CONFLICT (rut) DO UPDATE SET
-  first_name = EXCLUDED.first_name,
-  paternal_last_name = EXCLUDED.paternal_last_name,
-  maternal_last_name = EXCLUDED.maternal_last_name,
-  id = EXCLUDED.id,
-  email = EXCLUDED.email,
-  phone = EXCLUDED.phone,
-  profession = EXCLUDED.profession,
-  marital_status = EXCLUDED.marital_status,
-  address_street = EXCLUDED.address_street,
-  address_number = EXCLUDED.address_number,
-  address_commune = EXCLUDED.address_commune,
-  address_region = EXCLUDED.address_region;
+  ('[ID_CARLOS]', 'Carlos', 'Soto', 'Vega', '33.333.333-3', 'carlos.soto@example.com', '+56987654321', 'Ingeniero', 'soltero', 'Los Leones', '567', 'Providencia', 'Metropolitana');
 
 -- =====================================================
--- 2. INSERTAR AVAL (GUARANTOR)
--- Si el RUT ya existe, actualiza el registro existente
+-- 2. INSERTAR AVAL
 -- =====================================================
 
 INSERT INTO guarantors (id, first_name, paternal_last_name, maternal_last_name, rut, profession, monthly_income_clp, address_street, address_number, address_department, address_commune, address_region)
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440003', 'Rodolfo', 'Rrrrrrrr', 'Mmmmmm', '44.444.444-4', 'Abogado', 3500000, 'Irarrazaval', '5350', '22', 'Ñuñoa', 'Metropolitana')
-
-ON CONFLICT (rut) DO UPDATE SET
-  first_name = EXCLUDED.first_name,
-  paternal_last_name = EXCLUDED.paternal_last_name,
-  maternal_last_name = EXCLUDED.maternal_last_name,
-  profession = EXCLUDED.profession,
-  monthly_income_clp = EXCLUDED.monthly_income_clp,
-  address_street = EXCLUDED.address_street,
-  address_number = EXCLUDED.address_number,
-  address_department = EXCLUDED.address_department,
-  address_commune = EXCLUDED.address_commune,
-  address_region = EXCLUDED.address_region;
+  ('550e8400-e29b-41d4-a716-446655440003', 'Rodolfo', 'Rrrrrrrr', 'Mmmmmm', '44.444.444-4', 'Abogado', 3500000, 'Irarrazaval', '5350', '22', 'Ñuñoa', 'Metropolitana');
 
 -- =====================================================
 -- 3. INSERTAR PROPIEDAD
@@ -108,9 +59,9 @@ INSERT INTO properties (
 )
 VALUES
   ('550e8400-e29b-41d4-a716-446655440004',
-   '550e8400-e29b-41d4-a716-446655440001', -- owner_id (usuario real)
+   '[ID_CAROLINA]', -- owner_id
    'disponible',
-   'casa',
+   'arriendo',
    'Suecia',
    '1234',
    'Casa A',
@@ -122,31 +73,14 @@ VALUES
    2,       -- baños
    120,     -- superficie
    'Hermosa casa en Providencia, ideal para familia. Incluye estacionamiento y bodega.'
-  )
-
-ON CONFLICT (id) DO UPDATE SET
-  owner_id = EXCLUDED.owner_id,
-  status = EXCLUDED.status,
-  listing_type = EXCLUDED.listing_type,
-  address_street = EXCLUDED.address_street,
-  address_number = EXCLUDED.address_number,
-  address_department = EXCLUDED.address_department,
-  address_commune = EXCLUDED.address_commune,
-  address_region = EXCLUDED.address_region,
-  price_clp = EXCLUDED.price_clp,
-  common_expenses_clp = EXCLUDED.common_expenses_clp,
-  bedrooms = EXCLUDED.bedrooms,
-  bathrooms = EXCLUDED.bathrooms,
-  surface_m2 = EXCLUDED.surface_m2,
-  description = EXCLUDED.description;
+  );
 
 -- =====================================================
--- 4. INSERTAR APLICACIÓN (APPLICATION)
+-- 4. INSERTAR APLICACIÓN
 -- =====================================================
 
 INSERT INTO applications (
   id, property_id, applicant_id, guarantor_id, status, message,
-  -- Campos de snapshot del postulante
   snapshot_applicant_first_name, snapshot_applicant_paternal_last_name, snapshot_applicant_maternal_last_name,
   snapshot_applicant_rut, snapshot_applicant_email, snapshot_applicant_phone, snapshot_applicant_profession,
   snapshot_applicant_monthly_income_clp, snapshot_applicant_age, snapshot_applicant_nationality,
@@ -156,40 +90,16 @@ INSERT INTO applications (
 VALUES
   ('550e8400-e29b-41d4-a716-446655440005',
    '550e8400-e29b-41d4-a716-446655440004', -- property_id
-   '550e8400-e29b-41d4-a716-446655440002', -- applicant_id
+   '[ID_CARLOS]', -- applicant_id
    '550e8400-e29b-41d4-a716-446655440003', -- guarantor_id
    'aprobada',
    'Excelente postulante, recomendado por conocidos. Tiene ingresos estables y referencias positivas.',
-   -- Snapshot data
    'Carlos', 'Soto', 'Vega', '33.333.333-3', 'carlos.soto@example.com', '+56987654321', 'Ingeniero',
    4500000, 35, 'Chilena', 'soltero', 'Los Leones', '567', NULL, 'Providencia', 'Metropolitana'
-  )
-
-ON CONFLICT (id) DO UPDATE SET
-  property_id = EXCLUDED.property_id,
-  applicant_id = EXCLUDED.applicant_id,
-  guarantor_id = EXCLUDED.guarantor_id,
-  status = EXCLUDED.status,
-  message = EXCLUDED.message,
-  snapshot_applicant_first_name = EXCLUDED.snapshot_applicant_first_name,
-  snapshot_applicant_paternal_last_name = EXCLUDED.snapshot_applicant_paternal_last_name,
-  snapshot_applicant_maternal_last_name = EXCLUDED.snapshot_applicant_maternal_last_name,
-  snapshot_applicant_rut = EXCLUDED.snapshot_applicant_rut,
-  snapshot_applicant_email = EXCLUDED.snapshot_applicant_email,
-  snapshot_applicant_phone = EXCLUDED.snapshot_applicant_phone,
-  snapshot_applicant_profession = EXCLUDED.snapshot_applicant_profession,
-  snapshot_applicant_monthly_income_clp = EXCLUDED.snapshot_applicant_monthly_income_clp,
-  snapshot_applicant_age = EXCLUDED.snapshot_applicant_age,
-  snapshot_applicant_nationality = EXCLUDED.snapshot_applicant_nationality,
-  snapshot_applicant_marital_status = EXCLUDED.snapshot_applicant_marital_status,
-  snapshot_applicant_address_street = EXCLUDED.snapshot_applicant_address_street,
-  snapshot_applicant_address_number = EXCLUDED.snapshot_applicant_address_number,
-  snapshot_applicant_address_department = EXCLUDED.snapshot_applicant_address_department,
-  snapshot_applicant_address_commune = EXCLUDED.snapshot_applicant_address_commune,
-  snapshot_applicant_address_region = EXCLUDED.snapshot_applicant_address_region;
+  );
 
 -- =====================================================
--- 5. INSERTAR CONTRATO DE ARRIENDO
+-- 5. INSERTAR CONTRATO
 -- =====================================================
 
 INSERT INTO rental_contracts (
@@ -198,7 +108,7 @@ INSERT INTO rental_contracts (
 )
 VALUES
   ('550e8400-e29b-41d4-a716-446655440006',
-   '550e8400-e29b-41d4-a716-446655440005', -- application_id
+   '550e8400-e29b-41d4-a716-446655440005',
    'approved',
    '{
      "header": {
@@ -222,33 +132,22 @@ VALUES
        "content": "## ESPACIOS PARA FIRMAS\\n\\nFirmado en dos ejemplares de un mismo tenor y a un solo efecto, en Santiago de Chile a 29 de septiembre de 2025.\\n\\n_____________________________\\nCarolina Andrea Soto Rojas\\nRUT: 15.123.456-7\\nARRENDADOR\\n\\n_____________________________\\nCarlos Alberto Soto Vega\\nRUT: 33.333.333-3\\nARRENDATARIO\\n\\n_____________________________\\nRodolfo Rrrrrrrr Mmmmmm\\nRUT: 44.444.444-4\\nAVAL Y CODEUDOR SOLIDARIO"
      }
    }'::jsonb,
-  '550e8400-e29b-41d4-a716-446655440001', -- created_by (owner)
-  '550e8400-e29b-41d4-a716-446655440001', -- approved_by (owner)
+  '[ID_CAROLINA]', -- created_by
+  '[ID_CAROLINA]', -- approved_by
    'Contrato generado automáticamente para demostración del sistema de contratos.'
-  )
-
-ON CONFLICT (application_id) DO UPDATE SET
-  status = EXCLUDED.status,
-  contract_content = EXCLUDED.contract_content,
-  created_by = EXCLUDED.created_by,
-  approved_by = EXCLUDED.approved_by,
-  notes = EXCLUDED.notes,
-  approved_at = NOW();
+  );
 
 -- =====================================================
--- 6. INSERTAR CLÁUSULAS DEL CONTRATO (PARA EL CANVAS)
+-- 6. INSERTAR CLÁUSULAS DEL CONTRATO
 -- =====================================================
 
--- Primero, obtener el ID del contrato insertado
 DO $$
 DECLARE
     contract_id_var UUID := '550e8400-e29b-41d4-a716-446655440006';
 BEGIN
 
-    -- Limpiar cláusulas existentes para este contrato
     DELETE FROM contract_clauses WHERE contract_id = contract_id_var;
 
-    -- Insertar cláusulas del contrato (estas se usarán en el canvas)
     INSERT INTO contract_clauses (contract_id, clause_type, content, sort_order) VALUES
     (contract_id_var, 'header', '## CONTRATO DE ARRENDAMIENTO RESIDENCIAL
 
@@ -326,7 +225,7 @@ ARRENDADOR
 
 _____________________________
 Carlos Alberto Soto Vega
-RUT: 22.222.222-2
+RUT: 33.333.333-3
 ARRENDATARIO
 
 _____________________________
@@ -345,106 +244,31 @@ INSERT INTO rental_contract_conditions (
   guarantee_amount_clp, official_communication_email, accepts_pets, dicom_clause, additional_conditions
 )
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440005', -- application_id
-   12,     -- lease_term_months
-   5,      -- payment_day (primeros 5 días del mes)
-   1600000, -- final_price_clp (renta mensual)
-   0,      -- broker_commission_clp (sin corredor)
-   3200000, -- guarantee_amount_clp (2 meses de garantía)
-   'carlos.soto@example.com', -- official_communication_email
-   false,  -- accepts_pets
-   true,   -- dicom_clause
+  ('550e8400-e29b-41d4-a716-446655440005',
+   12, 5, 1600000, 0, 3200000, 'carlos.soto@example.com', false, true,
    'El arrendatario se compromete a mantener el jardín en buen estado. No se permiten mascotas sin autorización expresa del arrendador.'
-  )
-
-ON CONFLICT (application_id) DO UPDATE SET
-  lease_term_months = EXCLUDED.lease_term_months,
-  payment_day = EXCLUDED.payment_day,
-  final_price_clp = EXCLUDED.final_price_clp,
-  broker_commission_clp = EXCLUDED.broker_commission_clp,
-  guarantee_amount_clp = EXCLUDED.guarantee_amount_clp,
-  official_communication_email = EXCLUDED.official_communication_email,
-  accepts_pets = EXCLUDED.accepts_pets,
-  dicom_clause = EXCLUDED.dicom_clause,
-  additional_conditions = EXCLUDED.additional_conditions;
+  );
 
 -- =====================================================
--- VERIFICACIÓN DE DATOS INSERTADOS
+-- VERIFICACIÓN FINAL
 -- =====================================================
 
--- Verificar que todos los datos se insertaron correctamente
 SELECT
-  'Profiles procesados:' as info,
-  COUNT(*) as count
+  '✅ Perfiles:' as status,
+  COUNT(*) as total
 FROM profiles
-WHERE id IN ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002')
+WHERE email LIKE '%@example.com'
 
 UNION ALL
 
-SELECT
-  'Guarantor insertado:',
-  COUNT(*)
-FROM guarantors
-WHERE rut = '44.444.444-4'
-
+SELECT '✅ Aval:', COUNT(*) FROM guarantors WHERE rut = '44.444.444-4'
 UNION ALL
-
-SELECT
-  'Propiedad insertada:',
-  COUNT(*)
-FROM properties
-WHERE id = '550e8400-e29b-41d4-a716-446655440004'
-
+SELECT '✅ Propiedad:', COUNT(*) FROM properties WHERE id = '550e8400-e29b-41d4-a716-446655440004'
 UNION ALL
-
-SELECT
-  'Aplicación insertada:',
-  COUNT(*)
-FROM applications
-WHERE id = '550e8400-e29b-41d4-a716-446655440005'
-
+SELECT '✅ Aplicación:', COUNT(*) FROM applications WHERE id = '550e8400-e29b-41d4-a716-446655440005'
 UNION ALL
-
-SELECT
-  'Contrato insertado:',
-  COUNT(*)
-FROM rental_contracts
-WHERE id = '550e8400-e29b-41d4-a716-446655440006'
-
+SELECT '✅ Contrato:', COUNT(*) FROM rental_contracts WHERE id = '550e8400-e29b-41d4-a716-446655440006'
 UNION ALL
-
-SELECT
-  'Cláusulas del contrato:',
-  COUNT(*)
-FROM contract_clauses
-WHERE contract_id = '550e8400-e29b-41d4-a716-446655440006'
-
+SELECT '✅ Cláusulas:', COUNT(*) FROM contract_clauses WHERE contract_id = '550e8400-e29b-41d4-a716-446655440006'
 UNION ALL
-
-SELECT
-  'Condiciones del contrato:',
-  COUNT(*)
-FROM rental_contract_conditions
-WHERE application_id = '550e8400-e29b-41d4-a716-446655440005';
-
--- =====================================================
--- INSTRUCCIONES PARA USAR LOS DATOS
--- =====================================================
-
-/*
-Para ver el contrato en el canvas:
-
-1. Ve a la página de gestión de contratos
-2. Deberías ver el contrato con ID: 550e8400-e29b-41d4-a716-446655440006
-3. Haz clic en "Ver Detalles" para abrir el Contract Canvas
-4. El canvas cargará automáticamente el contenido del contrato
-
-IDs importantes:
-- Contrato ID: 550e8400-e29b-41d4-a716-446655440006
-- Aplicación ID: 550e8400-e29b-41d4-a716-446655440005
-- Propiedad ID: 550e8400-e29b-41d4-a716-446655440004
-- Arrendador ID: 550e8400-e29b-41d4-a716-446655440001 (perfil de demostración)
-
-Si quieres acceder directamente al canvas:
-- URL: /contract-canvas/550e8400-e29b-41d4-a716-446655440006
-*/
+SELECT '✅ Condiciones:', COUNT(*) FROM rental_contract_conditions WHERE application_id = '550e8400-e29b-41d4-a716-446655440005';

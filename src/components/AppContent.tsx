@@ -17,8 +17,9 @@ import { UserProfile } from './profile/UserProfile';
 // Property components
 import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
 
-// Contract components
-import ContractCanvasDemo from './contracts/ContractCanvasDemo';
+
+// Diagnostic components
+import { SupabaseDiagnostic } from './SupabaseDiagnostic';
 
 export const AppContent: React.FC = () => {
   console.log('🏠 AppContent renderizado - plataforma completa');
@@ -66,13 +67,6 @@ export const AppContent: React.FC = () => {
         </ProtectedRoute>
       } />
 
-      <Route path="/contract-canvas" element={
-        <ProtectedRoute>
-          <Layout>
-            <ContractCanvasDemo />
-          </Layout>
-        </ProtectedRoute>
-      } />
 
       <Route path="/my-activity" element={
         <ProtectedRoute>
@@ -88,6 +82,13 @@ export const AppContent: React.FC = () => {
             <UserProfile />
           </Layout>
         </ProtectedRoute>
+      } />
+
+      {/* Diagnostic routes */}
+      <Route path="/diagnostic" element={
+        <Layout>
+          <SupabaseDiagnostic />
+        </Layout>
       } />
 
       {/* Default redirect */}

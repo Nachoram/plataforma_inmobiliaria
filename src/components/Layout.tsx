@@ -84,17 +84,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <span>Contratos</span>
                   </Link>
                   <Link
-                    to="/contract-canvas"
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
-                      isActive('/contract-canvas')
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
-                    }`}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    <span>Canvas Demo</span>
-                  </Link>
-                  <Link
                     to="/my-activity"
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 ${
                       isActive('/my-activity')
@@ -185,17 +174,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 >
                   <FileText className="h-4 w-4" />
                   <span>Contratos</span>
-                </Link>
-                <Link
-                  to="/contract-canvas"
-                  className={`flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                    isActive('/contract-canvas')
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
-                  }`}
-                >
-                  <Edit3 className="h-4 w-4" />
-                  <span>Canvas Demo</span>
                 </Link>
                 <Link
                   to="/profile"

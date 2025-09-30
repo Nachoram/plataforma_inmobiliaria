@@ -1,53 +1,36 @@
 -- =====================================================
--- SCRIPT PARA POBLAR DATOS DE DEMOSTRACIÓN DEL CONTRATO
+-- CONTRATO DE DEMOSTRACIÓN - SIN POLÍTICAS RLS
 -- =====================================================
 
--- Este script inserta todos los datos necesarios para que se vea
--- el contrato de ejemplo en el Contract Canvas
---
--- IMPORTANTE: Debes crear los usuarios primero usando el dashboard de Supabase
--- o las APIs de autenticación antes de ejecutar este script.
---
--- 1. Crea usuarios con estos emails:
---    - carolina.soto@example.com (password: demo123456)
---    - carlos.soto@example.com (password: demo123456)
---
--- 2. Obtén los IDs reales de auth.users para estos usuarios
---
--- 3. Reemplaza los IDs en este script con los IDs reales
+-- Este script temporalmente desactiva las políticas RLS para insertar datos de demostración,
+-- luego las reactiva. Usa con cuidado en producción.
 
 -- =====================================================
--- INSTRUCCIONES PARA EJECUTAR ESTE SCRIPT:
--- =====================================================
---
--- PASO 1: Crea los usuarios usando el dashboard de Supabase Auth
---         o ejecuta las funciones de signup
---
--- PASO 2: Obtén los IDs reales ejecutando:
---         SELECT id, email FROM auth.users WHERE email IN ('carolina.soto@example.com', 'carlos.soto@example.com');
---
--- PASO 3: Reemplaza los IDs en este script con los IDs reales
---         Busca y reemplaza:
---         '550e8400-e29b-41d4-a716-446655440001' → [ID real del arrendador]
---         '550e8400-e29b-41d4-a716-446655440002' → [ID real del arrendatario]
---
--- PASO 4: Ejecuta este script completo
-
--- =====================================================
--- 1. INSERTAR USUARIOS EN PROFILES
+-- 1. DESACTIVAR POLÍTICAS RLS TEMPORALMENTE
 -- =====================================================
 
--- IMPORTANTE: REEMPLAZA ESTOS IDs CON LOS IDs REALES DE auth.users
--- Arrendador (Owner) - Reemplaza el ID con el ID real del usuario
+-- Desactivar RLS para las tablas que necesitamos
+ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE guarantors DISABLE ROW LEVEL SECURITY;
+ALTER TABLE properties DISABLE ROW LEVEL SECURITY;
+ALTER TABLE applications DISABLE ROW LEVEL SECURITY;
+ALTER TABLE rental_contracts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE contract_clauses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE rental_contract_conditions DISABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- 2. INSERTAR DATOS DE DEMOSTRACIÓN
+-- =====================================================
+
+-- Perfil de Carolina (arrendadora) - usando un ID fijo para demo
 INSERT INTO profiles (id, first_name, paternal_last_name, maternal_last_name, rut, email, phone, profession, marital_status, address_street, address_number, address_commune, address_region)
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440001', 'Carolina', 'Soto', 'Rojas', '15.123.456-7', 'carolina.soto@example.com', '+56912345678', 'Profesora', 'casado', 'Eliodoro Yáñez', '1890', 'Providencia', 'Metropolitana')
-
-ON CONFLICT (rut) DO UPDATE SET
+  ('550e8400-e29b-41d4-a716-446655440001', 'Carolina', 'Soto', 'Rojas', '15.123.456-7', 'carolina.soto@example.com', '+56912345678', 'Profesora', 'casado'::marital_status_enum, 'Eliodoro Yáñez', '1890', 'Providencia', 'Metropolitana')
+ON CONFLICT (id) DO UPDATE SET
   first_name = EXCLUDED.first_name,
   paternal_last_name = EXCLUDED.paternal_last_name,
   maternal_last_name = EXCLUDED.maternal_last_name,
-  id = EXCLUDED.id,
+  rut = EXCLUDED.rut,
   email = EXCLUDED.email,
   phone = EXCLUDED.phone,
   profession = EXCLUDED.profession,
@@ -57,16 +40,15 @@ ON CONFLICT (rut) DO UPDATE SET
   address_commune = EXCLUDED.address_commune,
   address_region = EXCLUDED.address_region;
 
--- Arrendatario (Applicant) - Reemplaza el ID con el ID real del usuario
+-- Perfil de Carlos (arrendatario) - usando un ID fijo para demo
 INSERT INTO profiles (id, first_name, paternal_last_name, maternal_last_name, rut, email, phone, profession, marital_status, address_street, address_number, address_commune, address_region)
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440002', 'Carlos', 'Soto', 'Vega', '33.333.333-3', 'carlos.soto@example.com', '+56987654321', 'Ingeniero', 'soltero', 'Los Leones', '567', 'Providencia', 'Metropolitana')
-
-ON CONFLICT (rut) DO UPDATE SET
+  ('550e8400-e29b-41d4-a716-446655440002', 'Carlos', 'Soto', 'Vega', '33.333.333-3', 'carlos.soto@example.com', '+56987654321', 'Ingeniero', 'soltero'::marital_status_enum, 'Los Leones', '567', 'Providencia', 'Metropolitana')
+ON CONFLICT (id) DO UPDATE SET
   first_name = EXCLUDED.first_name,
   paternal_last_name = EXCLUDED.paternal_last_name,
   maternal_last_name = EXCLUDED.maternal_last_name,
-  id = EXCLUDED.id,
+  rut = EXCLUDED.rut,
   email = EXCLUDED.email,
   phone = EXCLUDED.phone,
   profession = EXCLUDED.profession,
@@ -76,19 +58,15 @@ ON CONFLICT (rut) DO UPDATE SET
   address_commune = EXCLUDED.address_commune,
   address_region = EXCLUDED.address_region;
 
--- =====================================================
--- 2. INSERTAR AVAL (GUARANTOR)
--- Si el RUT ya existe, actualiza el registro existente
--- =====================================================
-
+-- Aval
 INSERT INTO guarantors (id, first_name, paternal_last_name, maternal_last_name, rut, profession, monthly_income_clp, address_street, address_number, address_department, address_commune, address_region)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440003', 'Rodolfo', 'Rrrrrrrr', 'Mmmmmm', '44.444.444-4', 'Abogado', 3500000, 'Irarrazaval', '5350', '22', 'Ñuñoa', 'Metropolitana')
-
-ON CONFLICT (rut) DO UPDATE SET
+ON CONFLICT (id) DO UPDATE SET
   first_name = EXCLUDED.first_name,
   paternal_last_name = EXCLUDED.paternal_last_name,
   maternal_last_name = EXCLUDED.maternal_last_name,
+  rut = EXCLUDED.rut,
   profession = EXCLUDED.profession,
   monthly_income_clp = EXCLUDED.monthly_income_clp,
   address_street = EXCLUDED.address_street,
@@ -97,10 +75,7 @@ ON CONFLICT (rut) DO UPDATE SET
   address_commune = EXCLUDED.address_commune,
   address_region = EXCLUDED.address_region;
 
--- =====================================================
--- 3. INSERTAR PROPIEDAD
--- =====================================================
-
+-- Propiedad
 INSERT INTO properties (
   id, owner_id, status, listing_type, address_street, address_number, address_department,
   address_commune, address_region, price_clp, common_expenses_clp, bedrooms, bathrooms,
@@ -108,9 +83,9 @@ INSERT INTO properties (
 )
 VALUES
   ('550e8400-e29b-41d4-a716-446655440004',
-   '550e8400-e29b-41d4-a716-446655440001', -- owner_id (usuario real)
+   '550e8400-e29b-41d4-a716-446655440001', -- owner_id
    'disponible',
-   'casa',
+   'arriendo',
    'Suecia',
    '1234',
    'Casa A',
@@ -123,7 +98,6 @@ VALUES
    120,     -- superficie
    'Hermosa casa en Providencia, ideal para familia. Incluye estacionamiento y bodega.'
   )
-
 ON CONFLICT (id) DO UPDATE SET
   owner_id = EXCLUDED.owner_id,
   status = EXCLUDED.status,
@@ -140,13 +114,9 @@ ON CONFLICT (id) DO UPDATE SET
   surface_m2 = EXCLUDED.surface_m2,
   description = EXCLUDED.description;
 
--- =====================================================
--- 4. INSERTAR APLICACIÓN (APPLICATION)
--- =====================================================
-
+-- Aplicación
 INSERT INTO applications (
   id, property_id, applicant_id, guarantor_id, status, message,
-  -- Campos de snapshot del postulante
   snapshot_applicant_first_name, snapshot_applicant_paternal_last_name, snapshot_applicant_maternal_last_name,
   snapshot_applicant_rut, snapshot_applicant_email, snapshot_applicant_phone, snapshot_applicant_profession,
   snapshot_applicant_monthly_income_clp, snapshot_applicant_age, snapshot_applicant_nationality,
@@ -160,11 +130,9 @@ VALUES
    '550e8400-e29b-41d4-a716-446655440003', -- guarantor_id
    'aprobada',
    'Excelente postulante, recomendado por conocidos. Tiene ingresos estables y referencias positivas.',
-   -- Snapshot data
    'Carlos', 'Soto', 'Vega', '33.333.333-3', 'carlos.soto@example.com', '+56987654321', 'Ingeniero',
-   4500000, 35, 'Chilena', 'soltero', 'Los Leones', '567', NULL, 'Providencia', 'Metropolitana'
+   4500000, 35, 'Chilena', 'soltero'::marital_status_enum, 'Los Leones', '567', NULL, 'Providencia', 'Metropolitana'
   )
-
 ON CONFLICT (id) DO UPDATE SET
   property_id = EXCLUDED.property_id,
   applicant_id = EXCLUDED.applicant_id,
@@ -188,17 +156,14 @@ ON CONFLICT (id) DO UPDATE SET
   snapshot_applicant_address_commune = EXCLUDED.snapshot_applicant_address_commune,
   snapshot_applicant_address_region = EXCLUDED.snapshot_applicant_address_region;
 
--- =====================================================
--- 5. INSERTAR CONTRATO DE ARRIENDO
--- =====================================================
-
+-- Contrato
 INSERT INTO rental_contracts (
   id, application_id, status, contract_content,
   created_by, approved_by, notes
 )
 VALUES
   ('550e8400-e29b-41d4-a716-446655440006',
-   '550e8400-e29b-41d4-a716-446655440005', -- application_id
+   '550e8400-e29b-41d4-a716-446655440005',
    'approved',
    '{
      "header": {
@@ -222,11 +187,10 @@ VALUES
        "content": "## ESPACIOS PARA FIRMAS\\n\\nFirmado en dos ejemplares de un mismo tenor y a un solo efecto, en Santiago de Chile a 29 de septiembre de 2025.\\n\\n_____________________________\\nCarolina Andrea Soto Rojas\\nRUT: 15.123.456-7\\nARRENDADOR\\n\\n_____________________________\\nCarlos Alberto Soto Vega\\nRUT: 33.333.333-3\\nARRENDATARIO\\n\\n_____________________________\\nRodolfo Rrrrrrrr Mmmmmm\\nRUT: 44.444.444-4\\nAVAL Y CODEUDOR SOLIDARIO"
      }
    }'::jsonb,
-  '550e8400-e29b-41d4-a716-446655440001', -- created_by (owner)
-  '550e8400-e29b-41d4-a716-446655440001', -- approved_by (owner)
+  '550e8400-e29b-41d4-a716-446655440001', -- created_by
+  '550e8400-e29b-41d4-a716-446655440001', -- approved_by
    'Contrato generado automáticamente para demostración del sistema de contratos.'
   )
-
 ON CONFLICT (application_id) DO UPDATE SET
   status = EXCLUDED.status,
   contract_content = EXCLUDED.contract_content,
@@ -235,89 +199,58 @@ ON CONFLICT (application_id) DO UPDATE SET
   notes = EXCLUDED.notes,
   approved_at = NOW();
 
--- =====================================================
--- 6. INSERTAR CLÁUSULAS DEL CONTRATO (PARA EL CANVAS)
--- =====================================================
-
--- Primero, obtener el ID del contrato insertado
-DO $$
-DECLARE
-    contract_id_var UUID := '550e8400-e29b-41d4-a716-446655440006';
-BEGIN
-
-    -- Limpiar cláusulas existentes para este contrato
-    DELETE FROM contract_clauses WHERE contract_id = contract_id_var;
-
-    -- Insertar cláusulas del contrato (estas se usarán en el canvas)
-    INSERT INTO contract_clauses (contract_id, clause_type, content, sort_order) VALUES
-    (contract_id_var, 'header', '## CONTRATO DE ARRENDAMIENTO RESIDENCIAL
-
-En Santiago de Chile, a 29 de septiembre de 2025, comparecen:
+-- Cláusulas del contrato
+INSERT INTO contract_clauses (contract_id, clause_number, clause_title, clause_content, canvas_section, sort_order) VALUES
+('550e8400-e29b-41d4-a716-446655440006', 'PRIMERA', 'COMPARECIENCIA', 'En Santiago de Chile, a 29 de septiembre de 2025, comparecen:
 
 **Carolina Andrea Soto Rojas**, con RUT N° 15.123.456-7, domiciliada en Eliodoro Yáñez 1890, Providencia, en adelante "el Arrendador"; y
 
 **Carlos Alberto Soto Vega**, con RUT N° 33.333.333-3, domiciliado en Los Leones 567 Depto. 56, Providencia, en adelante "el Arrendatario".
 
-Ambas partes convienen en celebrar el presente contrato de arrendamiento residencial, el que se regirá por las siguientes cláusulas.', 1),
+Ambas partes convienen en celebrar el presente contrato de arrendamiento residencial, el que se regirá por las siguientes cláusulas.', 'header', 1),
 
-    (contract_id_var, 'conditions', '## CLÁUSULA SEGUNDA: OBJETO
-
-El Arrendador da en arrendamiento al Arrendatario, quien acepta para sí, el inmueble ubicado en Suecia 1234 Casa A, Providencia, con ROL de avalúo N° [ROL no especificado].
+('550e8400-e29b-41d4-a716-446655440006', 'SEGUNDA', 'OBJETO', 'El Arrendador da en arrendamiento al Arrendatario, quien acepta para sí, el inmueble ubicado en Suecia 1234 Casa A, Providencia, con ROL de avalúo N° [ROL no especificado].
 
 El inmueble arrendado se destina exclusivamente para fines residenciales, para la habitación del Arrendatario y su familia.
 
-Se deja constancia que el inmueble no incluye estacionamiento ni bodega.
+Se deja constancia que el inmueble no incluye estacionamiento ni bodega.', 'conditions', 2),
 
-## CLÁUSULA TERCERA: RENTA
+('550e8400-e29b-41d4-a716-446655440006', 'TERCERA', 'RENTA', 'La renta mensual de arrendamiento será la suma de $1.600.000 (un millón seiscientos mil pesos chilenos).
 
-La renta mensual de arrendamiento será la suma de $1.600.000 (un millón seiscientos mil pesos chilenos).
+El Arrendatario se obliga a pagar dicha suma por adelantado dentro de los primeros cinco (5) días de cada mes, en la forma y lugar que las partes convengan o determinen posteriormente.', 'conditions', 3),
 
-El Arrendatario se obliga a pagar dicha suma por adelantado dentro de los primeros cinco (5) días de cada mes, en la forma y lugar que las partes convengan o determinen posteriormente.
-
-## CLÁUSULA CUARTA: DURACIÓN
-
-El presente contrato tendrá una duración de 12 meses a contar del 1 de octubre de 2025, pudiendo renovarse previo acuerdo expreso entre las partes.
+('550e8400-e29b-41d4-a716-446655440006', 'CUARTA', 'DURACIÓN', 'El presente contrato tendrá una duración de 12 meses a contar del 1 de octubre de 2025, pudiendo renovarse previo acuerdo expreso entre las partes.
 
 El Arrendatario podrá poner término al contrato notificando al Arrendador con al menos 30 días de anticipación, en conformidad con la legislación vigente.
 
-Asimismo, el Arrendador podrá poner término conforme a los plazos y causales legales aplicables.', 2),
+Asimismo, el Arrendador podrá poner término conforme a los plazos y causales legales aplicables.', 'conditions', 4),
 
-    (contract_id_var, 'obligations', '## CLÁUSULA QUINTA: GARANTÍA, AVAL Y CODEUDOR SOLIDARIO
+('550e8400-e29b-41d4-a716-446655440006', 'QUINTA', 'GARANTÍA, AVAL Y CODEUDOR SOLIDARIO', 'Para garantía del fiel cumplimiento de todas las obligaciones emanadas del presente contrato, comparece y se constituye en aval y codeudor solidario:
 
-Para garantía del fiel cumplimiento de todas las obligaciones emanadas del presente contrato, comparece y se constituye en aval y codeudor solidario:
+**Don Rodolfo Rrrrrrrr Mmmmmm**, con RUT N° 44.444.444-4, domiciliado en Irarrazaval 5350 Depto. 22, Ñuñoa, quien responde solidariamente con el Arrendatario por todas las obligaciones presentes y futuras derivadas del presente contrato.', 'obligations', 5),
 
-**Don Rodolfo Rrrrrrrr Mmmmmm**, con RUT N° 44.444.444-4, domiciliado en Irarrazaval 5350 Depto. 22, Ñuñoa, quien responde solidariamente con el Arrendatario por todas las obligaciones presentes y futuras derivadas del presente contrato.
-
-## OBLIGACIONES DEL ARRENDATARIO
-- Pagar puntualmente la renta y gastos comunes
+('550e8400-e29b-41d4-a716-446655440006', 'SEXTA', 'OBLIGACIONES DEL ARRENDATARIO', '- Pagar puntualmente la renta y gastos comunes
 - Mantener el inmueble en buen estado
 - Permitir inspecciones con previo aviso
-- No subarrendar sin autorización
+- No subarrendar sin autorización', 'obligations', 6),
 
-## OBLIGACIONES DEL ARRENDADOR
-- Entregar el inmueble en perfectas condiciones
+('550e8400-e29b-41d4-a716-446655440006', 'SÉPTIMA', 'OBLIGACIONES DEL ARRENDADOR', '- Entregar el inmueble en perfectas condiciones
 - Realizar reparaciones necesarias
 - Respetar el uso pacífico del inmueble
-- Cumplir con las normativas vigentes', 3),
+- Cumplir con las normativas vigentes', 'obligations', 7),
 
-    (contract_id_var, 'termination', '## CLÁUSULA DE TERMINACIÓN
-
-El contrato podrá terminarse por:
+('550e8400-e29b-41d4-a716-446655440006', 'OCTAVA', 'TERMINACIÓN', 'El contrato podrá terminarse por:
 
 1. **Mutuo acuerdo** entre las partes
 2. **Incumplimiento** de cualquiera de las obligaciones contractuales
 3. **Necesidades propias** del arrendador (con preaviso de 90 días)
 4. **Pérdida del empleo** del arrendatario (con preaviso de 60 días)
 
-En caso de terminación anticipada, se aplicarán las multas correspondientes según la legislación vigente.
+En caso de terminación anticipada, se aplicarán las multas correspondientes según la legislación vigente.', 'termination', 8),
 
-## LEGISLACIÓN APLICABLE
+('550e8400-e29b-41d4-a716-446655440006', 'NOVENA', 'LEGISLACIÓN APLICABLE', 'Este contrato se rige por las disposiciones de la Ley N° 18.101 sobre Arrendamiento de Bienes Raíces Urbanos y demás normas complementarias.', 'termination', 9),
 
-Este contrato se rige por las disposiciones de la Ley N° 18.101 sobre Arrendamiento de Bienes Raíces Urbanos y demás normas complementarias.', 4),
-
-    (contract_id_var, 'signatures', '## ESPACIOS PARA FIRMAS
-
-Firmado en dos ejemplares de un mismo tenor y a un solo efecto, en Santiago de Chile a 29 de septiembre de 2025.
+('550e8400-e29b-41d4-a716-446655440006', 'DÉCIMA', 'FIRMAS', 'Firmado en dos ejemplares de un mismo tenor y a un solo efecto, en Santiago de Chile a 29 de septiembre de 2025.
 
 _____________________________
 Carolina Andrea Soto Rojas
@@ -326,37 +259,29 @@ ARRENDADOR
 
 _____________________________
 Carlos Alberto Soto Vega
-RUT: 22.222.222-2
+RUT: 33.333.333-3
 ARRENDATARIO
 
 _____________________________
 Rodolfo Rrrrrrrr Mmmmmm
 RUT: 44.444.444-4
-AVAL Y CODEUDOR SOLIDARIO', 5);
+AVAL Y CODEUDOR SOLIDARIO', 'signatures', 10)
+ON CONFLICT (contract_id, clause_number) DO UPDATE SET
+  clause_title = EXCLUDED.clause_title,
+  clause_content = EXCLUDED.clause_content,
+  canvas_section = EXCLUDED.canvas_section,
+  sort_order = EXCLUDED.sort_order;
 
-END $$;
-
--- =====================================================
--- 7. INSERTAR CONDICIONES DEL CONTRATO
--- =====================================================
-
+-- Condiciones del contrato
 INSERT INTO rental_contract_conditions (
   application_id, lease_term_months, payment_day, final_price_clp, broker_commission_clp,
   guarantee_amount_clp, official_communication_email, accepts_pets, dicom_clause, additional_conditions
 )
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440005', -- application_id
-   12,     -- lease_term_months
-   5,      -- payment_day (primeros 5 días del mes)
-   1600000, -- final_price_clp (renta mensual)
-   0,      -- broker_commission_clp (sin corredor)
-   3200000, -- guarantee_amount_clp (2 meses de garantía)
-   'carlos.soto@example.com', -- official_communication_email
-   false,  -- accepts_pets
-   true,   -- dicom_clause
+  ('550e8400-e29b-41d4-a716-446655440005',
+   12, 5, 1600000, 0, 3200000, 'carlos.soto@example.com', false, true,
    'El arrendatario se compromete a mantener el jardín en buen estado. No se permiten mascotas sin autorización expresa del arrendador.'
   )
-
 ON CONFLICT (application_id) DO UPDATE SET
   lease_term_months = EXCLUDED.lease_term_months,
   payment_day = EXCLUDED.payment_day,
@@ -369,82 +294,37 @@ ON CONFLICT (application_id) DO UPDATE SET
   additional_conditions = EXCLUDED.additional_conditions;
 
 -- =====================================================
--- VERIFICACIÓN DE DATOS INSERTADOS
+-- 3. REACTIVAR POLÍTICAS RLS
 -- =====================================================
 
--- Verificar que todos los datos se insertaron correctamente
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guarantors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rental_contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contract_clauses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rental_contract_conditions ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- VERIFICACIÓN FINAL
+-- =====================================================
+
 SELECT
-  'Profiles procesados:' as info,
-  COUNT(*) as count
+  '✅ Perfiles:' as status,
+  COUNT(*) as total
 FROM profiles
 WHERE id IN ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002')
 
 UNION ALL
 
-SELECT
-  'Guarantor insertado:',
-  COUNT(*)
-FROM guarantors
-WHERE rut = '44.444.444-4'
-
+SELECT '✅ Aval:', COUNT(*) FROM guarantors WHERE id = '550e8400-e29b-41d4-a716-446655440003'
 UNION ALL
-
-SELECT
-  'Propiedad insertada:',
-  COUNT(*)
-FROM properties
-WHERE id = '550e8400-e29b-41d4-a716-446655440004'
-
+SELECT '✅ Propiedad:', COUNT(*) FROM properties WHERE id = '550e8400-e29b-41d4-a716-446655440004'
 UNION ALL
-
-SELECT
-  'Aplicación insertada:',
-  COUNT(*)
-FROM applications
-WHERE id = '550e8400-e29b-41d4-a716-446655440005'
-
+SELECT '✅ Aplicación:', COUNT(*) FROM applications WHERE id = '550e8400-e29b-41d4-a716-446655440005'
 UNION ALL
-
-SELECT
-  'Contrato insertado:',
-  COUNT(*)
-FROM rental_contracts
-WHERE id = '550e8400-e29b-41d4-a716-446655440006'
-
+SELECT '✅ Contrato:', COUNT(*) FROM rental_contracts WHERE id = '550e8400-e29b-41d4-a716-446655440006'
 UNION ALL
-
-SELECT
-  'Cláusulas del contrato:',
-  COUNT(*)
-FROM contract_clauses
-WHERE contract_id = '550e8400-e29b-41d4-a716-446655440006'
-
+SELECT '✅ Cláusulas:', COUNT(*) FROM contract_clauses WHERE contract_id = '550e8400-e29b-41d4-a716-446655440006'
 UNION ALL
-
-SELECT
-  'Condiciones del contrato:',
-  COUNT(*)
-FROM rental_contract_conditions
-WHERE application_id = '550e8400-e29b-41d4-a716-446655440005';
-
--- =====================================================
--- INSTRUCCIONES PARA USAR LOS DATOS
--- =====================================================
-
-/*
-Para ver el contrato en el canvas:
-
-1. Ve a la página de gestión de contratos
-2. Deberías ver el contrato con ID: 550e8400-e29b-41d4-a716-446655440006
-3. Haz clic en "Ver Detalles" para abrir el Contract Canvas
-4. El canvas cargará automáticamente el contenido del contrato
-
-IDs importantes:
-- Contrato ID: 550e8400-e29b-41d4-a716-446655440006
-- Aplicación ID: 550e8400-e29b-41d4-a716-446655440005
-- Propiedad ID: 550e8400-e29b-41d4-a716-446655440004
-- Arrendador ID: 550e8400-e29b-41d4-a716-446655440001 (perfil de demostración)
-
-Si quieres acceder directamente al canvas:
-- URL: /contract-canvas/550e8400-e29b-41d4-a716-446655440006
-*/
+SELECT '✅ Condiciones:', COUNT(*) FROM rental_contract_conditions WHERE application_id = '550e8400-e29b-41d4-a716-446655440005';

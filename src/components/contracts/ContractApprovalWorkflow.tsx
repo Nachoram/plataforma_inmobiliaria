@@ -14,7 +14,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { electronicSignatureService } from '../../lib/electronicSignature';
 import CustomButton from '../common/CustomButton';
-import ContractCanvasPrototype from './ContractCanvasPrototype';
+// Canvas removido temporalmente para desarrollo futuro
 
 interface ContractApprovalWorkflowProps {
   contractId: string;
@@ -74,7 +74,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [showCanvas, setShowCanvas] = useState(false);
+  // Canvas removido temporalmente para desarrollo futuro
 
   useEffect(() => {
     loadContractData();
@@ -513,12 +513,12 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
         <div className="flex justify-between items-center pt-4 border-t">
           <div className="flex space-x-3">
             <CustomButton
-              onClick={() => setShowCanvas(true)}
               variant="outline"
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 opacity-50 cursor-not-allowed"
+              disabled
             >
               <Eye className="h-4 w-4" />
-              <span>Ver Contrato</span>
+              <span>Canvas (Próximamente)</span>
             </CustomButton>
           </div>
 
@@ -561,18 +561,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
         </div>
       </div>
 
-      {/* Contract Canvas Modal */}
-      {showCanvas && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <ContractCanvasPrototype
-              contractId={contractId}
-              readOnly={contract.status !== 'draft'}
-              onCancel={() => setShowCanvas(false)}
-            />
-          </div>
-        </div>
-      )}
+      {/* Canvas removido temporalmente para desarrollo futuro */}
     </div>
   );
 };

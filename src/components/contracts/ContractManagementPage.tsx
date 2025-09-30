@@ -266,12 +266,12 @@ const ContractManagementPage: React.FC = () => {
             </div>
             <div className="flex space-x-2">
               <CustomButton
-                onClick={() => window.open('/contract-canvas', '_blank')}
                 variant="outline"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 opacity-50 cursor-not-allowed"
+                disabled
               >
                 <Eye className="h-4 w-4" />
-                <span>Ver Contrato de Ejemplo</span>
+                <span>Canvas (Próximamente)</span>
               </CustomButton>
               <CustomButton
                 onClick={async () => {

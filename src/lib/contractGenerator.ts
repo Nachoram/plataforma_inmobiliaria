@@ -22,17 +22,24 @@ export interface ApplicationData {
       phone: string;
     };
   };
-  guarantors: Array<{
-    guarantor_id: string;
-    profiles: {
-      first_name: string;
-      paternal_last_name: string;
-      maternal_last_name: string;
-      rut: string;
-      email: string;
-      phone: string;
-    };
-  }>;
+  structured_applicant: {
+    id: string;
+    full_name: string;
+    rut: string;
+    contact_email: string;
+    contact_phone: string;
+    profession: string;
+    company: string;
+  } | null;
+  structured_guarantor: {
+    id: string;
+    full_name: string;
+    rut: string;
+    contact_email: string;
+    contact_phone: string;
+    profession: string;
+    company: string;
+  } | null;
 }
 
 export interface ContractConditions {
@@ -71,7 +78,29 @@ export function generateContractContent(
     email: application.snapshot_applicant_email,
     phone: application.snapshot_applicant_phone
   };
-  const guarantor = application.guarantors?.[0]?.profiles;
+
+  // Use structured data if available, otherwise fallback to snapshot data
+  const structuredApplicant = application.structured_applicant;
+  const structuredGuarantor = application.structured_guarantor;
+
+  // Prioritize structured data over snapshot data
+  const tenantData = structuredApplicant ? {
+    first_name: structuredApplicant.full_name.split(' ')[0] || '',
+    paternal_last_name: structuredApplicant.full_name.split(' ')[1] || '',
+    maternal_last_name: structuredApplicant.full_name.split(' ').slice(2).join(' ') || '',
+    rut: structuredApplicant.rut,
+    email: structuredApplicant.contact_email,
+    phone: structuredApplicant.contact_phone || ''
+  } : tenant;
+
+  const guarantor = structuredGuarantor ? {
+    first_name: structuredGuarantor.full_name.split(' ')[0] || '',
+    paternal_last_name: structuredGuarantor.full_name.split(' ')[1] || '',
+    maternal_last_name: structuredGuarantor.full_name.split(' ').slice(2).join(' ') || '',
+    rut: structuredGuarantor.rut,
+    email: structuredGuarantor.contact_email || '',
+    phone: structuredGuarantor.contact_phone || ''
+  } : null;
 
   return [
     {
@@ -106,10 +135,10 @@ export function generateContractContent(
         <p><strong>Teléfono:</strong> ${owner.phone || 'No especificado'}</p>
 
         <h3 style="margin-top: 20px;">SEGUNDA: EL ARRENDATARIO</h3>
-        <p><strong>Nombre:</strong> ${tenant.first_name} ${tenant.paternal_last_name} ${tenant.maternal_last_name || ''}</p>
-        <p><strong>RUT:</strong> ${tenant.rut}</p>
-        <p><strong>Email:</strong> ${tenant.email}</p>
-        <p><strong>Teléfono:</strong> ${tenant.phone || 'No especificado'}</p>
+        <p><strong>Nombre:</strong> ${tenantData.first_name} ${tenantData.paternal_last_name} ${tenantData.maternal_last_name || ''}</p>
+        <p><strong>RUT:</strong> ${tenantData.rut}</p>
+        <p><strong>Email:</strong> ${tenantData.email}</p>
+        <p><strong>Teléfono:</strong> ${tenantData.phone || 'No especificado'}</p>
 
         ${guarantor ? `
         <h3 style="margin-top: 20px;">TERCERA: EL AVAL O GARANTE</h3>
@@ -232,8 +261,8 @@ export function generateContractContent(
           </div>
           <div style="width: 30%; text-align: center; border-top: 1px solid #000; padding-top: 10px;">
             <p><strong>ARRENDATARIO</strong></p>
-            <p>${tenant.first_name} ${tenant.paternal_last_name}</p>
-            <p>RUT: ${tenant.rut}</p>
+            <p>${tenantData.first_name} ${tenantData.paternal_last_name}</p>
+            <p>RUT: ${tenantData.rut}</p>
             <p style="margin-top: 20px; font-size: 10px; color: #666;">Firma electrónica</p>
           </div>
           ${guarantor ? `
@@ -283,16 +312,23 @@ export async function generateContractForApplication(
             phone
           )
         ),
-        guarantors (
-          guarantor_id,
-          profiles!guarantors_guarantor_id_fkey (
-            first_name,
-            paternal_last_name,
-            maternal_last_name,
-            rut,
-            email,
-            phone
-          )
+        structured_applicant:applicants (
+          id,
+          full_name,
+          rut,
+          contact_email,
+          contact_phone,
+          profession,
+          company
+        ),
+        structured_guarantor:guarantors (
+          id,
+          full_name,
+          rut,
+          contact_email,
+          contact_phone,
+          profession,
+          company
         ),
         rental_contract_conditions (*)
       `)

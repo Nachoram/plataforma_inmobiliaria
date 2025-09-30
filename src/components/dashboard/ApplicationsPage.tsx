@@ -15,10 +15,14 @@ interface ApplicationWithDetails {
   created_at: string;
   application_characteristic_id?: string | null;
   properties: {
+    id: string;
     address_street: string;
+    address_number?: string;
     address_commune: string;
     price_clp: number;
     listing_type: string;
+    property_characteristic_id?: string;
+    owner_id: string;
     property_images?: { image_url: string }[];
   };
   profiles?: {
@@ -370,9 +374,11 @@ export const ApplicationsPage: React.FC = () => {
         }
 
         // Enviar únicamente el guarantor_characteristic_id original de la base de datos
-        const guarantorIdForWebhook = application.guarantors?.guarantor_characteristic_id || null;
+        const guarantorIdForWebhook = application.guarantors?.guarantor_characteristic_id || undefined;
 
         console.log('🔍 Guarantor ID para webhook:', guarantorIdForWebhook);
+        console.log('🔍 Contract conditions object:', contractConditions);
+        console.log('🔍 Contract conditions characteristic ID:', contractConditions?.rental_contract_conditions_characteristic_id);
 
         await webhookClient.sendSimpleApprovalEvent(
           applicationCharacteristicId || application.id, // Application ID (corregido)
@@ -380,7 +386,7 @@ export const ApplicationsPage: React.FC = () => {
           application.applicant_id, // Applicant ID (mantenemos UUID, no tiene characteristic_id)
           ownerCharacteristicId, // Owner ID (usa rental_owner_characteristic_id si está disponible)
           guarantorIdForWebhook, // Guarantor ID único por aplicación
-          contractConditions // Condiciones del contrato de arriendo
+          contractConditions?.rental_contract_conditions_characteristic_id || undefined // ID característico de las condiciones del contrato
         );
 
         console.log('✅ Webhook con characteristic IDs y condiciones del contrato enviado exitosamente');
@@ -390,7 +396,7 @@ export const ApplicationsPage: React.FC = () => {
           rental_owner_characteristic_id: ownerCharacteristicId,
           guarantor_characteristic_id: application.guarantors?.guarantor_characteristic_id || null,
           guarantor_id_for_webhook: guarantorIdForWebhook,
-          contract_conditions: contractConditions
+          contract_conditions_characteristic_id: contractConditions?.rental_contract_conditions_characteristic_id || undefined
         });
       } catch (webhookError) {
         console.warn('⚠️ Error en webhook (no crítico):', webhookError);
@@ -1074,36 +1080,10 @@ export const ApplicationsPage: React.FC = () => {
                             </div>
                           )}
                           <button
-                            onClick={async () => {
-                              try {
-                                // Buscar el contrato para esta aplicación
-                                const { data: contract, error } = await supabase
-                                  .from('rental_contracts')
-                                  .select('id, status, approved_at, sent_to_signature_at')
-                                  .eq('application_id', application.id)
-                                  .single();
-
-                                if (error && error.code !== 'PGRST116') {
-                                  console.error('Error buscando contrato:', error);
-                                  alert('Error al acceder al contrato');
-                                  return;
-                                }
-
-                                if (contract) {
-                                  // Abrir el canvas con el ID del contrato
-                                  window.open(`/contract-canvas/${contract.id}`, '_blank');
-                                } else {
-                                  // Si no hay contrato, abrir el canvas por defecto
-                                  window.open('/contract-canvas', '_blank');
-                                }
-                              } catch (error) {
-                                console.error('Error al acceder al canvas:', error);
-                                alert('Error al acceder al editor de contratos');
-                              }
-                            }}
-                            className="inline-flex items-center text-sm font-medium text-blue-700 hover:text-blue-800 hover:underline transition-colors"
+                            disabled
+                            className="inline-flex items-center text-sm font-medium text-gray-400 cursor-not-allowed"
                           >
-                            <span>Editar en Canvas</span>
+                            <span>Canvas (Próximamente)</span>
                             <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>

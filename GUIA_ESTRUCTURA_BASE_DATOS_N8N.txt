@@ -26,6 +26,7 @@ Los siguientes IDs son los únicos que N8N necesita para funcionar:
 3. "applicant_characteristic_id" - ID único del arrendatario (opcional, se obtiene automáticamente)
 4. "owner_characteristic_id" - ID único del propietario (se obtiene automáticamente)
 5. "guarantor_characteristic_id" - ID único del garante (opcional)
+6. "rental_contract_conditions_characteristic_id" - ID único de las condiciones del contrato (opcional, se obtiene automáticamente)
 
 📊 ESTRUCTURA DE TABLAS PRINCIPALES
 ===================================
@@ -70,6 +71,21 @@ Los siguientes IDs son los únicos que N8N necesita para funcionar:
 - rut (varchar) - RUT chileno único
 - profession, monthly_income_clp
 - address_* - Dirección completa
+
+📋 TABLA: rental_contract_conditions
+-----------------------------------
+- id (uuid) - ID interno de la base de datos
+- application_id (uuid) - Referencia a la aplicación
+- rental_contract_conditions_characteristic_id (text) - ID para N8N: "CONTRACT_COND_1704067200_d4e5f6g7"
+- lease_term_months (integer) - Plazo del contrato en meses
+- payment_day (integer) - Día de pago mensual
+- final_price_clp (integer) - Precio final acordado
+- broker_commission_clp (integer) - Comisión del corredor
+- guarantee_amount_clp (integer) - Monto de garantía
+- official_communication_email (text) - Email oficial para comunicaciones
+- accepts_pets (boolean) - Acepta mascotas
+- dicom_clause (boolean) - Cláusula DICOM
+- additional_conditions (text) - Condiciones adicionales
 
 🏢 TABLAS DE PROPIETARIOS (OPCIONALES)
 ======================================
@@ -134,6 +150,13 @@ La función retorna TODOS los datos necesarios para generar un contrato:
 - guarantor_id, guarantor_characteristic_id
 - guarantor_first_name, guarantor_paternal_last_name, guarantor_maternal_last_name
 - guarantor_rut, guarantor_profession, guarantor_monthly_income_clp
+
+📋 DATOS DE CONDICIONES DEL CONTRATO (si existe):
+- rental_contract_conditions_id, rental_contract_conditions_characteristic_id
+- lease_term_months, payment_day, final_price_clp
+- broker_commission_clp, guarantee_amount_clp
+- official_communication_email, accepts_pets, dicom_clause
+- additional_conditions
 
 📎 DOCUMENTOS E IMÁGENES:
 - property_images (jsonb) - Array de imágenes de la propiedad
@@ -201,12 +224,13 @@ La función retorna TODOS los datos necesarios para generar un contrato:
 Los IDs característicos siguen este patrón:
 
 - APPLICATION: "APP_" + timestamp + "_" + 8 caracteres del UUID
-- PROPERTY: "PROP_" + timestamp + "_" + 8 caracteres del UUID  
+- PROPERTY: "PROP_" + timestamp + "_" + 8 caracteres del UUID
 - GUARANTOR: "GUAR_" + timestamp + "_" + 8 caracteres del UUID
 - RENTAL_OWNER: "RENTAL_OWNER_" + timestamp + "_" + 8 caracteres del UUID
 - SALE_OWNER: "SALE_OWNER_" + timestamp + "_" + 8 caracteres del UUID
+- RENTAL_CONTRACT_CONDITIONS: "CONTRACT_COND_" + timestamp + "_" + 8 caracteres del UUID
 
-Ejemplo: "APP_1704067200_b2c3d4e5"
+Ejemplo: "APP_1704067200_b2c3d4e5", "CONTRACT_COND_1704067200_d4e5f6g7"
 
 🔍 CONSULTAS DE VERIFICACIÓN
 ============================
@@ -235,6 +259,7 @@ Para obtener IDs reales para testing:
 SELECT application_characteristic_id FROM applications LIMIT 1;
 SELECT property_characteristic_id FROM properties LIMIT 1;
 SELECT guarantor_characteristic_id FROM guarantors LIMIT 1;
+SELECT rental_contract_conditions_characteristic_id FROM rental_contract_conditions LIMIT 1;
 ```
 
 ⚠️ CONSIDERACIONES IMPORTANTES

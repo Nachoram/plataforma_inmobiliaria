@@ -284,7 +284,7 @@ class WebhookClient {
     applicantId: string,
     ownerId?: string,
     guarantorId?: string,
-    contractConditions?: Record<string, unknown>
+    contractConditionsId?: string
   ): Promise<void> {
     // Obtener los characteristic IDs para una búsqueda más eficiente en N8N
     const data = {
@@ -293,6 +293,7 @@ class WebhookClient {
       applicant_characteristic_id: applicantId,     // Este vendrá de la base de datos como characteristic_id
       owner_characteristic_id: ownerId || null,     // Este vendrá de la base de datos como characteristic_id
       guarantor_characteristic_id: guarantorId || null, // Este vendrá de la base de datos como characteristic_id
+      contract_conditions_characteristic_id: contractConditionsId || null, // ID característico de las condiciones del contrato
       action: 'application_approved',
       timestamp: new Date().toISOString(),
       // Mantener compatibilidad con UUIDs por si N8N necesita fallback
@@ -300,9 +301,7 @@ class WebhookClient {
       property_uuid: propertyId,
       applicant_uuid: applicantId,
       owner_uuid: ownerId || null,
-      guarantor_uuid: guarantorId || null,
-      // Condiciones del contrato de arriendo (si existen)
-      contract_conditions: contractConditions || null
+      guarantor_uuid: guarantorId || null
     };
 
     if (!this.baseURL) {

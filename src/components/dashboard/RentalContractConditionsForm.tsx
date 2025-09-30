@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, FileText, DollarSign, Calendar, Mail, Check } from 'lucide-react';
+import { X, FileText, DollarSign, Calendar, Mail, Check, Building2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import CustomButton from '../common/CustomButton';
 
@@ -11,6 +11,8 @@ interface RentalContractConditionsFormProps {
 }
 
 export interface RentalContractConditions {
+  id?: string;
+  rental_contract_conditions_characteristic_id?: string;
   lease_term_months: number;
   payment_day: number;
   final_price_clp: number;
@@ -20,7 +22,17 @@ export interface RentalContractConditions {
   accepts_pets: boolean;
   dicom_clause: boolean;
   additional_conditions: string;
+  bank_name: string;
+  bank_account_type: string;
+  bank_account_number: string;
+  bank_account_rut: string;
+  bank_account_holder: string;
+  automatic_renewal: boolean;
+  termination_clause_non_payment: string;
+  contract_start_date: string;
 }
+
+type RentalContractConditionsErrors = Partial<Record<keyof RentalContractConditions, string>>;
 
 const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> = ({
   applicationId,
@@ -37,13 +49,21 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
     official_communication_email: '',
     accepts_pets: false,
     dicom_clause: true, // Default true para protección del arrendatario
-    additional_conditions: ''
+    additional_conditions: '',
+    bank_name: '',
+    bank_account_type: '',
+    bank_account_number: '',
+    bank_account_rut: '',
+    bank_account_holder: '',
+    automatic_renewal: false,
+    termination_clause_non_payment: 'En caso de no pago, el arrendador podrá terminar el contrato previo aviso de 15 días.',
+    contract_start_date: new Date().toISOString().split('T')[0] // Fecha actual por defecto
   });
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [errors, setErrors] = useState<Partial<RentalContractConditions>>({});
+  const [errors, setErrors] = useState<RentalContractConditionsErrors>({});
 
   // Load existing conditions when component mounts
   React.useEffect(() => {
@@ -52,7 +72,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
         setLoading(true);
         const { data, error } = await supabase
           .from('rental_contract_conditions')
-          .select('*')
+          .select('*, rental_contract_conditions_characteristic_id')
           .eq('application_id', applicationId)
           .single();
 
@@ -62,8 +82,13 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
         }
 
         if (data) {
+          console.log('📋 Condiciones existentes cargadas:', data);
+          console.log('🔑 Characteristic ID existente:', data.rental_contract_conditions_characteristic_id);
+
           // Load existing data into form
           setFormData({
+            id: data.id,
+            rental_contract_conditions_characteristic_id: data.rental_contract_conditions_characteristic_id,
             lease_term_months: data.lease_term_months,
             payment_day: data.payment_day,
             final_price_clp: data.final_price_clp,
@@ -72,7 +97,15 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
             official_communication_email: data.official_communication_email || '',
             accepts_pets: data.accepts_pets || false,
             dicom_clause: data.dicom_clause || false,
-            additional_conditions: data.additional_conditions || ''
+            additional_conditions: data.additional_conditions || '',
+            bank_name: data.bank_name || '',
+            bank_account_type: data.bank_account_type || '',
+            bank_account_number: data.bank_account_number || '',
+            bank_account_rut: data.bank_account_rut || '',
+            bank_account_holder: data.bank_account_holder || '',
+            automatic_renewal: data.automatic_renewal || false,
+            termination_clause_non_payment: data.termination_clause_non_payment || 'En caso de no pago, el arrendador podrá terminar el contrato previo aviso de 15 días.',
+            contract_start_date: data.contract_start_date || new Date().toISOString().split('T')[0]
           });
           setIsEditing(true);
         }
@@ -88,7 +121,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
   }, [applicationId]);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<RentalContractConditions> = {};
+    const newErrors: RentalContractConditionsErrors = {};
 
     if (!formData.lease_term_months || formData.lease_term_months < 1 || formData.lease_term_months > 60) {
       newErrors.lease_term_months = 'El plazo debe estar entre 1 y 60 meses';
@@ -114,6 +147,42 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
       newErrors.official_communication_email = 'Debe ingresar un email válido';
     }
 
+    if (!formData.bank_name || formData.bank_name.trim().length < 3) {
+      newErrors.bank_name = 'Debe ingresar el nombre del banco';
+    }
+
+    if (!formData.bank_account_type) {
+      newErrors.bank_account_type = 'Debe seleccionar el tipo de cuenta';
+    }
+
+    if (!formData.bank_account_number || formData.bank_account_number.trim().length < 5) {
+      newErrors.bank_account_number = 'Debe ingresar un número de cuenta válido';
+    }
+
+    if (!formData.bank_account_rut || formData.bank_account_rut.trim().length < 9) {
+      newErrors.bank_account_rut = 'Debe ingresar un RUT válido';
+    }
+
+    if (!formData.bank_account_holder || formData.bank_account_holder.trim().length < 3) {
+      newErrors.bank_account_holder = 'Debe ingresar el nombre del titular';
+    }
+
+    if (!formData.termination_clause_non_payment || formData.termination_clause_non_payment.trim().length < 10) {
+      newErrors.termination_clause_non_payment = 'Debe especificar la cláusula de término por no pago';
+    }
+
+    if (!formData.contract_start_date) {
+      newErrors.contract_start_date = 'Debe especificar la fecha de inicio del contrato';
+    } else {
+      const startDate = new Date(formData.contract_start_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (startDate < today) {
+        newErrors.contract_start_date = 'La fecha de inicio no puede ser anterior a hoy';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -123,6 +192,21 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
       style: 'currency',
       currency: 'CLP'
     }).format(price);
+  };
+
+  // Calcula la fecha de término del contrato basado en fecha de inicio y plazo
+  const calculateEndDate = (): string | null => {
+    if (!formData.contract_start_date || !formData.lease_term_months) return null;
+    
+    const startDate = new Date(formData.contract_start_date);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + formData.lease_term_months);
+    
+    return endDate.toLocaleDateString('es-CL', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   const handleInputChange = (field: keyof RentalContractConditions, value: string | number | boolean) => {
@@ -169,7 +253,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
           .from('rental_contract_conditions')
           .update(formData)
           .eq('application_id', applicationId)
-          .select()
+          .select('*, rental_contract_conditions_characteristic_id')
           .single();
 
         if (error) throw error;
@@ -182,11 +266,33 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
             application_id: applicationId,
             ...formData
           })
-          .select()
+          .select('*, rental_contract_conditions_characteristic_id')
           .single();
 
         if (error) throw error;
         result = data;
+      }
+
+      console.log('✅ Condiciones guardadas. Resultado:', result);
+      console.log('🔑 Characteristic ID generado:', result?.rental_contract_conditions_characteristic_id);
+
+      // Si no se generó el characteristic_id, intentar generarlo manualmente
+      if (!result?.rental_contract_conditions_characteristic_id && result?.id) {
+        console.log('⚠️ Characteristic ID no generado por trigger, generando manualmente...');
+
+        const characteristicId = `CONTRACT_COND_${Math.floor(Date.now() / 1000)}_${result.id.substring(0, 8)}`;
+
+        const { error: updateError } = await supabase
+          .from('rental_contract_conditions')
+          .update({ rental_contract_conditions_characteristic_id: characteristicId })
+          .eq('id', result.id);
+
+        if (updateError) {
+          console.error('❌ Error generando characteristic_id manualmente:', updateError);
+        } else {
+          console.log('✅ Characteristic ID generado manualmente:', characteristicId);
+          result.rental_contract_conditions_characteristic_id = characteristicId;
+        }
       }
 
       onSuccess(result);
@@ -260,6 +366,23 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de Inicio del Contrato *
+                </label>
+                <input
+                  type="date"
+                  value={formData.contract_start_date}
+                  onChange={(e) => handleInputChange('contract_start_date', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                    errors.contract_start_date ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.contract_start_date && (
+                  <p className="text-red-500 text-xs mt-1">{errors.contract_start_date}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Plazo del Contrato (meses) *
                 </label>
                 <select
@@ -277,6 +400,11 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
                   <option value={48}>4 años</option>
                   <option value={60}>5 años</option>
                 </select>
+                {calculateEndDate() && (
+                  <p className="text-xs text-emerald-600 mt-1 font-medium">
+                    📅 Término estimado: {calculateEndDate()}
+                  </p>
+                )}
                 {errors.lease_term_months && (
                   <p className="text-red-500 text-xs mt-1">{errors.lease_term_months}</p>
                 )}
@@ -406,6 +534,123 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
             </div>
           </div>
 
+          {/* Sección: Información de Pago */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Building2 className="h-5 w-5 mr-2 text-emerald-600" />
+              Información de Pago
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Banco *
+                </label>
+                <select
+                  value={formData.bank_name}
+                  onChange={(e) => handleInputChange('bank_name', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                    errors.bank_name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Seleccione un banco</option>
+                  <option value="Banco de Chile">Banco de Chile</option>
+                  <option value="Banco Santander">Banco Santander</option>
+                  <option value="Banco Estado">Banco Estado</option>
+                  <option value="BCI">BCI - Banco de Crédito e Inversiones</option>
+                  <option value="Scotiabank">Scotiabank</option>
+                  <option value="Banco Itaú">Banco Itaú</option>
+                  <option value="Banco Security">Banco Security</option>
+                  <option value="Banco Falabella">Banco Falabella</option>
+                  <option value="Banco Ripley">Banco Ripley</option>
+                  <option value="Banco Consorcio">Banco Consorcio</option>
+                  <option value="Banco BICE">Banco BICE</option>
+                  <option value="Coopeuch">Coopeuch</option>
+                  <option value="Otro">Otro</option>
+                </select>
+                {errors.bank_name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.bank_name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Cuenta *
+                </label>
+                <select
+                  value={formData.bank_account_type}
+                  onChange={(e) => handleInputChange('bank_account_type', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                    errors.bank_account_type ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Seleccione tipo de cuenta</option>
+                  <option value="Cuenta Corriente">Cuenta Corriente</option>
+                  <option value="Cuenta Vista">Cuenta Vista</option>
+                  <option value="Cuenta de Ahorro">Cuenta de Ahorro</option>
+                  <option value="Cuenta RUT">Cuenta RUT</option>
+                </select>
+                {errors.bank_account_type && (
+                  <p className="text-red-500 text-xs mt-1">{errors.bank_account_type}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de Cuenta *
+                </label>
+                <input
+                  type="text"
+                  value={formData.bank_account_number}
+                  onChange={(e) => handleInputChange('bank_account_number', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                    errors.bank_account_number ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 12345678"
+                />
+                {errors.bank_account_number && (
+                  <p className="text-red-500 text-xs mt-1">{errors.bank_account_number}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  RUT del Titular *
+                </label>
+                <input
+                  type="text"
+                  value={formData.bank_account_rut}
+                  onChange={(e) => handleInputChange('bank_account_rut', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                    errors.bank_account_rut ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 12.345.678-9"
+                />
+                {errors.bank_account_rut && (
+                  <p className="text-red-500 text-xs mt-1">{errors.bank_account_rut}</p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre del Titular *
+                </label>
+                <input
+                  type="text"
+                  value={formData.bank_account_holder}
+                  onChange={(e) => handleInputChange('bank_account_holder', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                    errors.bank_account_holder ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: Juan Pérez González"
+                />
+                {errors.bank_account_holder && (
+                  <p className="text-red-500 text-xs mt-1">{errors.bank_account_holder}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Sección: Condiciones Especiales */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -441,6 +686,49 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
                   <span className="text-gray-500 ml-2">Derecho a Crédito por Cobranza Indebida</span>
                 </label>
               </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="automatic_renewal"
+                  checked={formData.automatic_renewal}
+                  onChange={(e) => handleInputChange('automatic_renewal', e.target.checked)}
+                  className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                />
+                <label htmlFor="automatic_renewal" className="ml-2 text-sm text-gray-700">
+                  <span className="font-medium">Renovación Automática</span>
+                  <span className="text-gray-500 ml-2">El contrato se renueva automáticamente al término del plazo</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección: Cláusula de Término por No Pago */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2 text-emerald-600" />
+              Cláusula de Término por No Pago
+            </h3>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Condiciones de Término en Caso de No Pago *
+              </label>
+              <textarea
+                value={formData.termination_clause_non_payment}
+                onChange={(e) => handleInputChange('termination_clause_non_payment', e.target.value)}
+                rows={4}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none ${
+                  errors.termination_clause_non_payment ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Especifica las condiciones de término del contrato en caso de no pago..."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Define el plazo y condiciones bajo las cuales el contrato puede terminar por falta de pago
+              </p>
+              {errors.termination_clause_non_payment && (
+                <p className="text-red-500 text-xs mt-1">{errors.termination_clause_non_payment}</p>
+              )}
             </div>
           </div>
 

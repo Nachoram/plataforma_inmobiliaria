@@ -1,66 +1,35 @@
 -- =====================================================
--- SCRIPT PARA POBLAR DATOS DE DEMOSTRACIÓN DEL CONTRATO
+-- SCRIPT SENCILLO PARA POBLAR DATOS DE DEMOSTRACIÓN DEL CONTRATO
 -- =====================================================
 
--- Este script inserta todos los datos necesarios para que se vea
--- el contrato de ejemplo en el Contract Canvas
---
--- IMPORTANTE: Debes crear los usuarios primero usando el dashboard de Supabase
--- o las APIs de autenticación antes de ejecutar este script.
---
--- 1. Crea usuarios con estos emails:
---    - carolina.soto@example.com (password: demo123456)
---    - carlos.soto@example.com (password: demo123456)
---
--- 2. Obtén los IDs reales de auth.users para estos usuarios
---
--- 3. Reemplaza los IDs en este script con los IDs reales
-
--- =====================================================
--- INSTRUCCIONES PARA EJECUTAR ESTE SCRIPT:
+-- INSTRUCCIONES PARA USAR ESTE SCRIPT:
 -- =====================================================
 --
--- PASO 1: Crea los usuarios usando el dashboard de Supabase Auth
---         o ejecuta las funciones de signup
+-- PASO 1: Crea los usuarios en Supabase Dashboard → Authentication → Add User
+--         - Email: carolina.soto@example.com, Password: demo123456
+--         - Email: carlos.soto@example.com, Password: demo123456
 --
--- PASO 2: Obtén los IDs reales ejecutando:
+-- PASO 2: Obtén los IDs reales ejecutando esta consulta por separado:
 --         SELECT id, email FROM auth.users WHERE email IN ('carolina.soto@example.com', 'carlos.soto@example.com');
 --
--- PASO 3: Reemplaza los IDs en este script con los IDs reales
+-- PASO 3: Copia los IDs reales y reemplaza las líneas marcadas con [REEMPLAZAR_ID_AQUI]
 --         Busca y reemplaza:
---         '550e8400-e29b-41d4-a716-446655440001' → [ID real del arrendador]
---         '550e8400-e29b-41d4-a716-446655440002' → [ID real del arrendatario]
+--         '[REEMPLAZAR_ID_ARRENDADOR_AQUI]' → 'el-id-real-que-obtuviste-para-carolina'
+--         '[REEMPLAZAR_ID_ARRENDATARIO_AQUI]' → 'el-id-real-que-obtuviste-para-carlos'
 --
--- PASO 4: Ejecuta este script completo
+-- PASO 4: Ejecuta todo el script de una vez
 
 -- =====================================================
--- 1. INSERTAR USUARIOS EN PROFILES
+-- CONFIGURACIÓN - REEMPLAZA ESTOS IDs CON LOS REALES
 -- =====================================================
 
--- IMPORTANTE: REEMPLAZA ESTOS IDs CON LOS IDs REALES DE auth.users
--- Arrendador (Owner) - Reemplaza el ID con el ID real del usuario
+-- IDs DE USUARIOS (REEMPLAZA CON LOS IDs REALES DE auth.users)
+-- Obtén estos IDs ejecutando: SELECT id, email FROM auth.users WHERE email IN ('carolina.soto@example.com', 'carlos.soto@example.com');
+
 INSERT INTO profiles (id, first_name, paternal_last_name, maternal_last_name, rut, email, phone, profession, marital_status, address_street, address_number, address_commune, address_region)
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440001', 'Carolina', 'Soto', 'Rojas', '15.123.456-7', 'carolina.soto@example.com', '+56912345678', 'Profesora', 'casado', 'Eliodoro Yáñez', '1890', 'Providencia', 'Metropolitana')
-
-ON CONFLICT (rut) DO UPDATE SET
-  first_name = EXCLUDED.first_name,
-  paternal_last_name = EXCLUDED.paternal_last_name,
-  maternal_last_name = EXCLUDED.maternal_last_name,
-  id = EXCLUDED.id,
-  email = EXCLUDED.email,
-  phone = EXCLUDED.phone,
-  profession = EXCLUDED.profession,
-  marital_status = EXCLUDED.marital_status,
-  address_street = EXCLUDED.address_street,
-  address_number = EXCLUDED.address_number,
-  address_commune = EXCLUDED.address_commune,
-  address_region = EXCLUDED.address_region;
-
--- Arrendatario (Applicant) - Reemplaza el ID con el ID real del usuario
-INSERT INTO profiles (id, first_name, paternal_last_name, maternal_last_name, rut, email, phone, profession, marital_status, address_street, address_number, address_commune, address_region)
-VALUES
-  ('550e8400-e29b-41d4-a716-446655440002', 'Carlos', 'Soto', 'Vega', '33.333.333-3', 'carlos.soto@example.com', '+56987654321', 'Ingeniero', 'soltero', 'Los Leones', '567', 'Providencia', 'Metropolitana')
+  ('[REEMPLAZAR_ID_ARRENDADOR_AQUI]', 'Carolina', 'Soto', 'Rojas', '15.123.456-7', 'carolina.soto@example.com', '+56912345678', 'Profesora', 'casado', 'Eliodoro Yáñez', '1890', 'Providencia', 'Metropolitana'),
+  ('[REEMPLAZAR_ID_ARRENDATARIO_AQUI]', 'Carlos', 'Soto', 'Vega', '33.333.333-3', 'carlos.soto@example.com', '+56987654321', 'Ingeniero', 'soltero', 'Los Leones', '567', 'Providencia', 'Metropolitana')
 
 ON CONFLICT (rut) DO UPDATE SET
   first_name = EXCLUDED.first_name,
@@ -78,7 +47,6 @@ ON CONFLICT (rut) DO UPDATE SET
 
 -- =====================================================
 -- 2. INSERTAR AVAL (GUARANTOR)
--- Si el RUT ya existe, actualiza el registro existente
 -- =====================================================
 
 INSERT INTO guarantors (id, first_name, paternal_last_name, maternal_last_name, rut, profession, monthly_income_clp, address_street, address_number, address_department, address_commune, address_region)
@@ -108,9 +76,9 @@ INSERT INTO properties (
 )
 VALUES
   ('550e8400-e29b-41d4-a716-446655440004',
-   '550e8400-e29b-41d4-a716-446655440001', -- owner_id (usuario real)
+   '[REEMPLAZAR_ID_ARRENDADOR_AQUI]', -- owner_id (usuario real)
    'disponible',
-   'casa',
+   'arriendo',
    'Suecia',
    '1234',
    'Casa A',
@@ -156,7 +124,7 @@ INSERT INTO applications (
 VALUES
   ('550e8400-e29b-41d4-a716-446655440005',
    '550e8400-e29b-41d4-a716-446655440004', -- property_id
-   '550e8400-e29b-41d4-a716-446655440002', -- applicant_id
+   '[REEMPLAZAR_ID_ARRENDATARIO_AQUI]', -- applicant_id
    '550e8400-e29b-41d4-a716-446655440003', -- guarantor_id
    'aprobada',
    'Excelente postulante, recomendado por conocidos. Tiene ingresos estables y referencias positivas.',
@@ -222,8 +190,8 @@ VALUES
        "content": "## ESPACIOS PARA FIRMAS\\n\\nFirmado en dos ejemplares de un mismo tenor y a un solo efecto, en Santiago de Chile a 29 de septiembre de 2025.\\n\\n_____________________________\\nCarolina Andrea Soto Rojas\\nRUT: 15.123.456-7\\nARRENDADOR\\n\\n_____________________________\\nCarlos Alberto Soto Vega\\nRUT: 33.333.333-3\\nARRENDATARIO\\n\\n_____________________________\\nRodolfo Rrrrrrrr Mmmmmm\\nRUT: 44.444.444-4\\nAVAL Y CODEUDOR SOLIDARIO"
      }
    }'::jsonb,
-  '550e8400-e29b-41d4-a716-446655440001', -- created_by (owner)
-  '550e8400-e29b-41d4-a716-446655440001', -- approved_by (owner)
+  '[REEMPLAZAR_ID_ARRENDADOR_AQUI]', -- created_by (owner)
+  '[REEMPLAZAR_ID_ARRENDADOR_AQUI]', -- approved_by (owner)
    'Contrato generado automáticamente para demostración del sistema de contratos.'
   )
 
@@ -236,10 +204,9 @@ ON CONFLICT (application_id) DO UPDATE SET
   approved_at = NOW();
 
 -- =====================================================
--- 6. INSERTAR CLÁUSULAS DEL CONTRATO (PARA EL CANVAS)
+-- 6. INSERTAR CLÁUSULAS DEL CONTRATO
 -- =====================================================
 
--- Primero, obtener el ID del contrato insertado
 DO $$
 DECLARE
     contract_id_var UUID := '550e8400-e29b-41d4-a716-446655440006';
@@ -248,7 +215,7 @@ BEGIN
     -- Limpiar cláusulas existentes para este contrato
     DELETE FROM contract_clauses WHERE contract_id = contract_id_var;
 
-    -- Insertar cláusulas del contrato (estas se usarán en el canvas)
+    -- Insertar cláusulas del contrato
     INSERT INTO contract_clauses (contract_id, clause_type, content, sort_order) VALUES
     (contract_id_var, 'header', '## CONTRATO DE ARRENDAMIENTO RESIDENCIAL
 
@@ -372,17 +339,16 @@ ON CONFLICT (application_id) DO UPDATE SET
 -- VERIFICACIÓN DE DATOS INSERTADOS
 -- =====================================================
 
--- Verificar que todos los datos se insertaron correctamente
 SELECT
-  'Profiles procesados:' as info,
+  'Perfiles procesados:' as info,
   COUNT(*) as count
 FROM profiles
-WHERE id IN ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002')
+WHERE id IN ('[REEMPLAZAR_ID_ARRENDADOR_AQUI]', '[REEMPLAZAR_ID_ARRENDATARIO_AQUI]')
 
 UNION ALL
 
 SELECT
-  'Guarantor insertado:',
+  'Aval insertado:',
   COUNT(*)
 FROM guarantors
 WHERE rut = '44.444.444-4'
@@ -427,24 +393,3 @@ SELECT
 FROM rental_contract_conditions
 WHERE application_id = '550e8400-e29b-41d4-a716-446655440005';
 
--- =====================================================
--- INSTRUCCIONES PARA USAR LOS DATOS
--- =====================================================
-
-/*
-Para ver el contrato en el canvas:
-
-1. Ve a la página de gestión de contratos
-2. Deberías ver el contrato con ID: 550e8400-e29b-41d4-a716-446655440006
-3. Haz clic en "Ver Detalles" para abrir el Contract Canvas
-4. El canvas cargará automáticamente el contenido del contrato
-
-IDs importantes:
-- Contrato ID: 550e8400-e29b-41d4-a716-446655440006
-- Aplicación ID: 550e8400-e29b-41d4-a716-446655440005
-- Propiedad ID: 550e8400-e29b-41d4-a716-446655440004
-- Arrendador ID: 550e8400-e29b-41d4-a716-446655440001 (perfil de demostración)
-
-Si quieres acceder directamente al canvas:
-- URL: /contract-canvas/550e8400-e29b-41d4-a716-446655440006
-*/

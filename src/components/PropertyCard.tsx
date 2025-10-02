@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, DollarSign, Building, Heart, TrendingUp, MessageSquare, Eye, Edit, Trash2 } from 'lucide-react';
 import { Property as SupabaseProperty, formatPriceCLP, isValidPrice } from '../lib/supabase';
 import CustomButton from './common/CustomButton';
+import ImageGallery from './common/ImageGallery';
 
 // Usar la interfaz Property de supabase.ts para consistencia
 type Property = SupabaseProperty;
@@ -39,6 +40,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   onDelete,
   isFavorite = false
 }) => {
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   const handleMakeOffer = () => {
     onMakeOffer?.(property);
@@ -59,6 +62,34 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 
   const handleDelete = () => {
     onDelete?.(property.id);
+  };
+
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (property.property_images && property.property_images.length > 0) {
+      setGalleryIndex(0);
+      setShowGallery(true);
+    }
+  };
+
+  const handleGalleryClose = () => {
+    setShowGallery(false);
+  };
+
+  const handleGalleryNext = () => {
+    if (property.property_images) {
+      setGalleryIndex((prev) =>
+        prev === property.property_images!.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
+
+  const handleGalleryPrevious = () => {
+    if (property.property_images) {
+      setGalleryIndex((prev) =>
+        prev === 0 ? property.property_images!.length - 1 : prev - 1
+      );
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -82,145 +113,170 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+    <div className="mobile-card overflow-hidden hover:shadow-medium transition-all duration-300 hover:-translate-y-0.5 active:scale-98">
       {/* Property Image */}
-      <div className="h-48 bg-gray-200 relative overflow-hidden">
+      <div className="h-40 xs:h-48 bg-gray-200 relative overflow-hidden">
         {property.property_images && property.property_images.length > 0 ? (
-          <img
-            src={property.property_images[0].image_url}
-            alt={`${property.address_street || ''} ${property.address_number || ''}`}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          />
+          <button
+            onClick={handleImageClick}
+            className="w-full h-full group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-t-xl"
+            aria-label={`Ver galería de imágenes (${property.property_images.length} imagen${property.property_images.length !== 1 ? 'es' : ''})`}
+          >
+            <img
+              src={property.property_images[0].image_url}
+              alt={`${property.address_street || ''} ${property.address_number || ''}`}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+            {property.property_images.length > 1 && (
+              <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/60 text-white text-mobile-xs rounded-full">
+                +{property.property_images.length - 1}
+              </div>
+            )}
+          </button>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Building className="h-12 w-12 text-gray-400" />
+            <Building className="h-10 w-10 xs:h-12 xs:w-12 text-gray-400" />
           </div>
         )}
 
-        {/* Favorite Button - Only show in marketplace context */}
-        {context === 'marketplace' && onToggleFavorite && (
-          <button
-            onClick={handleToggleFavorite}
-            className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
-            aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-            aria-pressed={isFavorite}
-          >
-            <Heart
-              className={`h-4 w-4 ${
-                isFavorite
-                  ? 'text-red-500 fill-current'
-                  : 'text-gray-600'
-              }`}
-              aria-hidden="true"
-            />
-          </button>
-        )}
+        {/* Badges Overlay */}
+        <div className="absolute inset-0 p-3 flex justify-between items-start pointer-events-none">
+          <div className="flex flex-col space-y-2">
+            {/* Type Badge */}
+            {context === 'marketplace' && (
+              <span className={`px-2 py-1 text-xs font-medium rounded-full pointer-events-auto ${
+                property.listing_type === 'venta'
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {property.listing_type === 'venta' ? 'Venta' : 'Arriendo'}
+              </span>
+            )}
 
-        {/* Status Badge - Portfolio context */}
-        {context === 'portfolio' && (
-          <div className="absolute top-3 left-3">
-            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
-              {getStatusLabel(property.status)}
-            </span>
+            {/* Status Badge - Portfolio context */}
+            {context === 'portfolio' && (
+              <span className={`px-2 py-1 text-xs font-medium rounded-full pointer-events-auto ${getStatusColor(property.status)}`}>
+                {getStatusLabel(property.status)}
+              </span>
+            )}
           </div>
-        )}
 
-        {/* Type Badge */}
-        {context === 'marketplace' && (
-          <div className="absolute top-3 left-3">
-            <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-              property.listing_type === 'venta'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-emerald-100 text-emerald-800'
-            }`}>
-              {property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1)}
-            </span>
-          </div>
-        )}
+          <div className="flex flex-col space-y-2 items-end">
+            {/* Favorite Button - Only show in marketplace context */}
+            {context === 'marketplace' && onToggleFavorite && (
+              <button
+                onClick={handleToggleFavorite}
+                className="p-2 rounded-full bg-white/90 hover:bg-white shadow-sm transition-colors pointer-events-auto mobile-btn"
+                aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                aria-pressed={isFavorite}
+              >
+                <Heart
+                  className={`h-4 w-4 ${
+                    isFavorite
+                      ? 'text-red-500 fill-current'
+                      : 'text-gray-600'
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
+            )}
 
-        {/* Type Badge - Portfolio context (right side) */}
-        {context === 'portfolio' && (
-          <div className="absolute top-3 right-3">
-            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-              {property.type?.charAt(0).toUpperCase() + property.type?.slice(1) || 'Tipo no especificado'}
-            </span>
+            {/* Type Badge - Portfolio context (right side) */}
+            {context === 'portfolio' && (
+              <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 pointer-events-auto">
+                {property.type?.charAt(0).toUpperCase() + property.type?.slice(1) || 'Tipo no especificado'}
+              </span>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Property Info */}
-      <div className="p-4">
-        <div className="mb-2">
-          <div className="flex items-start justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
-              {context === 'marketplace' 
-                ? `${property.address_street} ${property.address_number}${property.address_department ? `, ${property.address_department}` : ''}`
-                : property.address_street || 'Dirección no especificada'
-              }
-            </h3>
-            {/* Edit/Delete buttons for portfolio context */}
-            {context === 'portfolio' && (
-              <div className="flex space-x-2 ml-2">
-                <button
-                  onClick={handleEdit}
-                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Editar"
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Eliminar"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center text-sm text-gray-500">
-            <MapPin className="h-4 w-4 mr-1" />
-            <span>{property.address_commune || 'Comuna no disponible'}, {property.address_region || 'Región no disponible'}</span>
-          </div>
+      <div className="p-3 xs:p-4">
+        {/* Header with title and actions */}
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-base xs:text-lg font-semibold text-gray-900 mobile-line-clamp-2 flex-1 mr-2">
+            {context === 'marketplace'
+              ? `${property.address_street || ''} ${property.address_number || ''}${property.address_department ? `, ${property.address_department}` : ''}`
+              : property.address_street || 'Dirección no especificada'
+            }
+          </h3>
+
+          {/* Edit/Delete buttons for portfolio context */}
+          {context === 'portfolio' && (
+            <div className="flex space-x-1 ml-2 flex-shrink-0">
+              <button
+                onClick={handleEdit}
+                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors mobile-btn"
+                title="Editar"
+                aria-label="Editar propiedad"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleDelete}
+                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors mobile-btn"
+                title="Eliminar"
+                aria-label="Eliminar propiedad"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
 
+        {/* Location */}
+        <div className="flex items-center text-mobile-sm text-gray-500 mb-2">
+          <MapPin className="h-3 w-3 xs:h-4 xs:w-4 mr-1 flex-shrink-0" />
+          <span className="mobile-truncate">
+            {property.address_commune || 'Comuna no disponible'}, {property.address_region || 'Región no disponible'}
+          </span>
+        </div>
+
+        {/* Description */}
         {property.description && (
-          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+          <p className="text-gray-600 text-mobile-sm mb-3 mobile-line-clamp-2">
             {property.description}
           </p>
         )}
 
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-          <div className="flex space-x-4">
+        {/* Property Features */}
+        <div className="flex items-center justify-between text-mobile-sm text-gray-500 mb-3">
+          <div className="flex space-x-3 xs:space-x-4">
             <div className="flex items-center">
-              <Bed className="h-4 w-4 mr-1" />
-              <span>{property.bedrooms}</span>
+              <Bed className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
+              <span>{property.bedrooms || 0}</span>
             </div>
             <div className="flex items-center">
-              <Bath className="h-4 w-4 mr-1" />
-              <span>{property.bathrooms}</span>
+              <Bath className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
+              <span>{property.bathrooms || 0}</span>
             </div>
             <div className="flex items-center">
-              <Square className="h-4 w-4 mr-1" />
-              <span>{property.surface_m2 ?? 0}m²</span>
+              <Square className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
+              <span>{property.surface_m2 || 0}m²</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center text-lg font-bold text-gray-900">
-            <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-            <span>{formatPriceCLP(isValidPrice(property.price_clp) ? property.price_clp : 0)}</span>
+        {/* Price and additional info */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center text-lg xs:text-xl font-bold text-gray-900">
+            <DollarSign className="h-4 w-4 xs:h-5 xs:w-5 mr-1 text-green-600 flex-shrink-0" />
+            <span className="text-mobile-lg font-bold">
+              {formatPriceCLP(isValidPrice(property.price_clp) ? property.price_clp : 0)}
+            </span>
           </div>
           {context === 'marketplace' && isValidPrice(property.common_expenses_clp) && property.common_expenses_clp > 0 && (
-            <div className="text-sm text-gray-500">
-              + {formatPriceCLP(property.common_expenses_clp)} gastos comunes
+            <div className="text-mobile-xs text-gray-500 text-right">
+              + {formatPriceCLP(property.common_expenses_clp)}<br />
+              <span>gastos comunes</span>
             </div>
           )}
           {context === 'portfolio' && (
             <Link
               to={`/property/${property.id}`}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              className="text-blue-600 hover:text-blue-800 text-mobile-sm font-medium mobile-btn px-3 py-1"
             >
               Ver detalles
             </Link>
@@ -236,20 +292,22 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                   onClick={handleMakeOffer}
                   variant="primary"
                   size="sm"
-                  className="w-full"
+                  className="w-full mobile-btn text-mobile-sm"
                 >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Ofertar
+                  <TrendingUp className="h-4 w-4 mr-1 xs:mr-2" />
+                  <span className="hidden xs:inline">Ofertar</span>
+                  <span className="xs:hidden">Oferta</span>
                 </CustomButton>
               ) : (
                 <CustomButton
                   onClick={handleApply}
                   variant="primary"
                   size="sm"
-                  className="w-full"
+                  className="w-full mobile-btn text-mobile-sm"
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Postular
+                  <MessageSquare className="h-4 w-4 mr-1 xs:mr-2" />
+                  <span className="hidden xs:inline">Postular</span>
+                  <span className="xs:hidden">Postular</span>
                 </CustomButton>
               )}
 
@@ -257,16 +315,28 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 <CustomButton
                   variant="outline"
                   size="sm"
-                  className="w-full"
+                  className="w-full mobile-btn text-mobile-sm"
                 >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Ver detalles
+                  <Eye className="h-4 w-4 mr-1 xs:mr-2" />
+                  <span className="hidden xs:inline">Ver detalles</span>
+                  <span className="xs:hidden">Ver</span>
                 </CustomButton>
               </Link>
             </div>
           </div>
         )}
       </div>
+
+      {/* Image Gallery Modal */}
+      {showGallery && property.property_images && (
+        <ImageGallery
+          images={property.property_images}
+          currentIndex={galleryIndex}
+          onClose={handleGalleryClose}
+          onNext={handleGalleryNext}
+          onPrevious={handleGalleryPrevious}
+        />
+      )}
     </div>
   );
 };

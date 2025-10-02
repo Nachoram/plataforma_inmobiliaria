@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Building, Heart, MessageSquare, TrendingUp } from 'lucide-react';
+import { Search, Filter, Building, Heart, MessageSquare, TrendingUp, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { OfferModal } from './OfferModal';
 import RentalApplicationForm from '../properties/RentalApplicationForm';
@@ -15,7 +15,8 @@ export const MarketplacePage: React.FC = () => {
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
-  
+  const [showFilters, setShowFilters] = useState(false);
+
   const [filters, setFilters] = useState({
     search: '',
     type: '',
@@ -256,21 +257,23 @@ export const MarketplacePage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl shadow-lg text-white p-8">
+      <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl shadow-soft text-white padding-mobile">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">🏠 Marketplace Inmobiliario</h1>
-          <p className="text-xl text-blue-100 mb-6">
+          <h1 className="text-2xl xs:text-3xl md:text-4xl font-bold mb-3 xs:mb-4">
+            🏠 Marketplace Inmobiliario
+          </h1>
+          <p className="text-base xs:text-lg md:text-xl text-blue-100 mb-4 xs:mb-6">
             Encuentra, oferta y postula por propiedades en toda Chile
           </p>
           <div className="max-w-2xl mx-auto">
             <div className="relative">
-              <Search className="absolute left-4 top-3 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                 placeholder="Buscar por dirección, comuna o descripción..."
-                className="w-full pl-12 pr-4 py-3 text-gray-900 rounded-lg border-0 focus:ring-2 focus:ring-blue-300"
+                className="w-full pl-12 pr-4 py-3 xs:py-4 text-gray-900 rounded-lg border-0 focus:ring-2 focus:ring-blue-300 text-base mobile-input"
               />
             </div>
           </div>
@@ -278,113 +281,153 @@ export const MarketplacePage: React.FC = () => {
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
-          <Building className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{properties.length}</p>
-          <p className="text-gray-600">Propiedades Disponibles</p>
+      <div className="grid grid-cols-1 xs:grid-cols-3 gap-4 xs:gap-6">
+        <div className="bg-white rounded-xl shadow-soft border p-4 xs:p-6 text-center mobile-card">
+          <Building className="h-6 w-6 xs:h-8 xs:w-8 text-blue-600 mx-auto mb-2" />
+          <p className="text-xl xs:text-2xl font-bold text-gray-900">{properties.length}</p>
+          <p className="text-mobile-sm text-gray-600">Propiedades Disponibles</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
-          <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{properties.filter(p => p.listing_type === 'venta').length}</p>
-          <p className="text-gray-600">En Venta</p>
+        <div className="bg-white rounded-xl shadow-soft border p-4 xs:p-6 text-center mobile-card">
+          <TrendingUp className="h-6 w-6 xs:h-8 xs:w-8 text-green-600 mx-auto mb-2" />
+          <p className="text-xl xs:text-2xl font-bold text-gray-900">{properties.filter(p => p.listing_type === 'venta').length}</p>
+          <p className="text-mobile-sm text-gray-600">En Venta</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
-          <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{properties.filter(p => p.listing_type === 'arriendo').length}</p>
-          <p className="text-gray-600">En Arriendo</p>
+        <div className="bg-white rounded-xl shadow-soft border p-4 xs:p-6 text-center mobile-card">
+          <Heart className="h-6 w-6 xs:h-8 xs:w-8 text-red-600 mx-auto mb-2" />
+          <p className="text-xl xs:text-2xl font-bold text-gray-900">{properties.filter(p => p.listing_type === 'arriendo').length}</p>
+          <p className="text-mobile-sm text-gray-600">En Arriendo</p>
         </div>
       </div>
 
       {/* Advanced Filters */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="bg-white rounded-xl shadow-soft border p-4 xs:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
-            Filtros Avanzados
-          </h2>
           <button
-            onClick={resetFilters}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center text-lg font-semibold text-gray-900 mobile-btn"
           >
-            Limpiar filtros
+            <Filter className="h-5 w-5 mr-2" />
+            <span>Filtros Avanzados</span>
+            {showFilters ? (
+              <ChevronUp className="h-5 w-5 ml-2" />
+            ) : (
+              <ChevronDown className="h-5 w-5 ml-2" />
+            )}
           </button>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <select
-            value={filters.type}
-            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Todos los tipos</option>
-            <option value="venta">Venta</option>
-            <option value="arriendo">Arriendo</option>
-          </select>
-
-          <select
-            value={filters.comuna}
-            onChange={(e) => setFilters({ ...filters, comuna: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Todas las comunas</option>
-            {getUniqueValues('comuna').map(comuna => (
-              <option key={comuna} value={comuna}>{comuna}</option>
-            ))}
-          </select>
-
-          <input
-            type="number"
-            placeholder="Precio mín"
-            value={filters.minPrice}
-            onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          />
-
-          <input
-            type="number"
-            placeholder="Precio máx"
-            value={filters.maxPrice}
-            onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          />
-
-          <select
-            value={filters.bedrooms}
-            onChange={(e) => setFilters({ ...filters, bedrooms: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Cualquier dormitorio</option>
-            {[1, 2, 3, 4, 5].map(num => (
-              <option key={num} value={num}>{num}+ dormitorios</option>
-            ))}
-          </select>
-
-          <input
-            type="number"
-            placeholder="Superficie mín"
-            value={filters.minSurface}
-            onChange={(e) => setFilters({ ...filters, minSurface: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="flex items-center space-x-2">
+            <span className="text-mobile-sm text-gray-600 hidden xs:block">
+              {filteredProperties.length} propiedades
+            </span>
+            <button
+              onClick={resetFilters}
+              className="text-blue-600 hover:text-blue-800 text-mobile-sm font-medium mobile-btn px-3 py-1"
+            >
+              Limpiar
+            </button>
+          </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            {filteredProperties.length} propiedades encontradas
-          </p>
+        {/* Mobile Filters Toggle */}
+        <div className="md:hidden mb-4">
+          <div className="flex items-center justify-between text-mobile-sm text-gray-600">
+            <span>{filteredProperties.length} propiedades encontradas</span>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center text-blue-600 mobile-btn"
+            >
+              {showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
+              {showFilters ? (
+                <ChevronUp className="h-4 w-4 ml-1" />
+              ) : (
+                <ChevronDown className="h-4 w-4 ml-1" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Filters Content */}
+        <div className={`transition-all duration-300 overflow-hidden ${
+          showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 md:max-h-96 md:opacity-100'
+        }`}>
+          <div className="space-mobile">
+            {/* Primary filters - always visible on desktop */}
+            <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 xs:gap-4">
+              <select
+                value={filters.type}
+                onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                className="mobile-input text-mobile-sm"
+              >
+                <option value="">Todos los tipos</option>
+                <option value="venta">Venta</option>
+                <option value="arriendo">Arriendo</option>
+              </select>
+
+              <select
+                value={filters.comuna}
+                onChange={(e) => setFilters({ ...filters, comuna: e.target.value })}
+                className="mobile-input text-mobile-sm"
+              >
+                <option value="">Todas las comunas</option>
+                {getUniqueValues('comuna').map(comuna => (
+                  <option key={comuna} value={comuna}>{comuna}</option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                placeholder="Precio mín"
+                value={filters.minPrice}
+                onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
+                className="mobile-input text-mobile-sm"
+              />
+
+              <input
+                type="number"
+                placeholder="Precio máx"
+                value={filters.maxPrice}
+                onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
+                className="mobile-input text-mobile-sm"
+              />
+
+              <select
+                value={filters.bedrooms}
+                onChange={(e) => setFilters({ ...filters, bedrooms: e.target.value })}
+                className="mobile-input text-mobile-sm"
+              >
+                <option value="">Cualquier dormitorio</option>
+                {[1, 2, 3, 4, 5].map(num => (
+                  <option key={num} value={num}>{num}+ dormitorios</option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                placeholder="Superficie mín"
+                value={filters.minSurface}
+                onChange={(e) => setFilters({ ...filters, minSurface: e.target.value })}
+                className="mobile-input text-mobile-sm"
+              />
+            </div>
+
+            {/* Results count - desktop only */}
+            <div className="hidden md:flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                {filteredProperties.length} propiedades encontradas
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Properties Grid */}
       {filteredProperties.length === 0 ? (
-        <div className="text-center py-12">
-          <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay propiedades disponibles</h3>
-          <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+        <div className="text-center py-8 xs:py-12">
+          <Building className="h-12 w-12 xs:h-16 xs:w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-base xs:text-lg font-medium text-gray-900 mb-2">No hay propiedades disponibles</h3>
+          <p className="text-mobile-sm text-gray-500">Intenta ajustar los filtros de búsqueda</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid-mobile-cards">
           {filteredProperties.map((property) => (
             <PropertyCard
               key={property.id}

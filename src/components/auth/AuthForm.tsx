@@ -119,14 +119,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg" role="main" aria-labelledby="auth-title">
-      <h2 id="auth-title" className="text-2xl font-bold text-gray-800 mb-6 text-center">
+    <div className="max-w-md mx-auto padding-mobile bg-white rounded-xl shadow-soft mobile-card" role="main" aria-labelledby="auth-title">
+      <h2 id="auth-title" className="text-xl xs:text-2xl font-bold text-gray-800 mb-4 xs:mb-6 text-center">
         {isLogin ? 'Iniciar Sesión' : 'Registrarse'}
       </h2>
 
       {error && (
         <div
-          className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded"
+          className="mb-4 p-3 xs:p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-mobile-sm"
           role="alert"
           aria-live="polite"
         >
@@ -136,7 +136,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
 
       {message && (
         <div
-          className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded"
+          className="mb-4 p-3 xs:p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg text-mobile-sm"
           role="status"
           aria-live="polite"
         >
@@ -144,9 +144,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit} className="space-mobile" noValidate>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-mobile-sm font-medium text-gray-700 mb-2">
             Email *
           </label>
           <input
@@ -154,14 +154,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
             name="email"
             value={formData.email}
             onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="mobile-input w-full"
             required
+            autoComplete="email"
+            inputMode="email"
           />
         </div>
 
         {!isLogin && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-mobile-sm font-medium text-gray-700 mb-2">
               Nombre *
             </label>
             <input
@@ -169,15 +171,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               name="firstName"
               value={formData.firstName}
               onChange={handleInputChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="mobile-input w-full"
               required
               placeholder="Tu nombre"
+              autoComplete="given-name"
+              inputMode="text"
             />
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-mobile-sm font-medium text-gray-700 mb-2">
             Contraseña *
           </label>
           <input
@@ -185,15 +189,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
             name="password"
             value={formData.password}
             onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="mobile-input w-full"
             required
             minLength={6}
+            autoComplete={isLogin ? "current-password" : "new-password"}
+            inputMode="text"
           />
         </div>
 
         {!isLogin && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-mobile-sm font-medium text-gray-700 mb-2">
               Confirmar Contraseña *
             </label>
             <input
@@ -201,9 +207,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="mobile-input w-full"
               required
               minLength={6}
+              autoComplete="new-password"
+              inputMode="text"
             />
           </div>
         )}
@@ -214,13 +222,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
           size="lg"
           loading={loading}
           loadingText="Procesando..."
-          className="w-full"
+          className="w-full mt-6"
         >
           {isLogin ? 'Iniciar Sesión' : 'Registrarse'}
         </CustomButton>
       </form>
 
-      <div className="mt-6 text-center">
+      <div className="mt-4 xs:mt-6 text-center">
         <CustomButton
           type="button"
           variant="outline"
@@ -234,10 +242,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               firstName: '',
             });
           }}
+          className="w-full"
         >
           {isLogin
-            ? '¿No tienes cuenta? Regístrate aquí'
-            : '¿Ya tienes cuenta? Inicia sesión aquí'
+            ? '¿No tienes cuenta? Regístrate'
+            : '¿Ya tienes cuenta? Inicia sesión'
           }
         </CustomButton>
       </div>
@@ -249,6 +258,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
             variant="secondary"
             size="sm"
             onClick={handleLogout}
+            className="w-full"
           >
             Cerrar Sesión
           </CustomButton>

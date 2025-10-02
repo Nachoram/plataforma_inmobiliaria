@@ -16,6 +16,7 @@ import { UserProfile } from './profile/UserProfile';
 
 // Property components
 import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
+import PropertyFormPage from './properties/PropertyFormPage';
 
 
 // Diagnostic components
@@ -40,6 +41,31 @@ export const AppContent: React.FC = () => {
         <Layout>
           <PropertyDetailsPage />
         </Layout>
+      } />
+
+      {/* Property publication routes */}
+      <Route path="/property/new" element={
+        <ProtectedRoute>
+          <Layout>
+            <PropertyFormPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/property/new/rental" element={
+        <ProtectedRoute>
+          <Layout>
+            <PropertyFormPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/property/edit/:id" element={
+        <ProtectedRoute>
+          <Layout>
+            <PropertyFormPage />
+          </Layout>
+        </ProtectedRoute>
       } />
 
       {/* Protected routes */}

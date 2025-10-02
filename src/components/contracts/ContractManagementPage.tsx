@@ -156,17 +156,17 @@ const ContractManagementPage: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white';
       case 'approved':
-        return 'bg-green-100 text-green-800';
+        return 'bg-gradient-to-r from-green-500 to-emerald-600 text-white';
       case 'sent_to_signature':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white';
       case 'partially_signed':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-gradient-to-r from-amber-400 to-orange-500 text-white';
       case 'fully_signed':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-gradient-to-r from-purple-500 to-pink-600 text-white';
       default:
-        return 'bg-red-100 text-red-800';
+        return 'bg-gradient-to-r from-red-500 to-red-600 text-white';
     }
   };
 
@@ -195,58 +195,64 @@ const ContractManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+        {/* Header mejorado con gradiente */}
+        <div className="bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-2xl shadow-lg border border-blue-100/50 p-5 sm:p-8 mb-6 backdrop-blur-sm">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
-                <FileText className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-blue-600" />
-                Gestión de Contratos
-              </h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">
-                Administra los contratos de arriendo de tus propiedades
-              </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                  <FileText className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Contratos</h1>
+                  <p className="text-sm sm:text-base text-gray-600">
+                    Gestiona tus contratos de arriendo
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="text-left sm:text-right">
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{contracts.length}</p>
-              <p className="text-xs sm:text-sm text-gray-500">Contratos totales</p>
+            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 sm:p-6 shadow-lg text-white">
+              <p className="text-3xl sm:text-4xl font-extrabold">{contracts.length}</p>
+              <p className="text-xs sm:text-sm opacity-90 font-medium">Contratos activos</p>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+        {/* Filters con diseño mejorado */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            {/* Search */}
+            {/* Search mejorado */}
             <div className="flex-1">
               <div className="relative">
-                <Search className="h-4 w-4 sm:h-5 sm:w-5 absolute left-3 top-2.5 sm:top-3 text-gray-400" />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                </div>
                 <input
                   type="text"
-                  placeholder="Buscar..."
+                  placeholder="Buscar contratos..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 sm:pl-11 pr-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
                 />
               </div>
             </div>
 
-            {/* Status Filter */}
-            <div className="w-full sm:w-48">
+            {/* Status Filter mejorado */}
+            <div className="w-full sm:w-56">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white cursor-pointer"
               >
-                <option value="all">Todos los estados</option>
-                <option value="draft">Borrador</option>
-                <option value="approved">Aprobado</option>
-                <option value="sent_to_signature">En Firma</option>
-                <option value="partially_signed">Parcialmente Firmado</option>
-                <option value="fully_signed">Completado</option>
-                <option value="cancelled">Cancelado</option>
+                <option value="all">🔍 Todos los estados</option>
+                <option value="draft">📝 Borrador</option>
+                <option value="approved">✅ Aprobado</option>
+                <option value="sent_to_signature">✍️ En Firma</option>
+                <option value="partially_signed">📋 Parcialmente Firmado</option>
+                <option value="fully_signed">🎉 Completado</option>
+                <option value="cancelled">❌ Cancelado</option>
               </select>
             </div>
           </div>
@@ -460,66 +466,82 @@ const ContractManagementPage: React.FC = () => {
             {filteredContracts.map((contract) => (
               <div
                 key={contract.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer touch-manipulation"
+                className="group bg-white rounded-2xl shadow-md hover:shadow-2xl border border-gray-100 transition-all duration-300 cursor-pointer touch-manipulation hover:-translate-y-1"
                 onClick={() => handleViewContract(contract)}
               >
-                <div className="p-4 sm:p-6">
-                  {/* Status Badge */}
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <div className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(contract.status)}`}>
+                <div className="p-5 sm:p-6">
+                  {/* Status Badge mejorado */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-sm ${getStatusColor(contract.status)}`}>
                       {getStatusIcon(contract.status)}
                       <span className="hidden sm:inline">{getStatusText(contract.status)}</span>
                       <span className="sm:hidden">{getStatusText(contract.status).substring(0, 3)}</span>
                     </div>
-                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-indigo-600" />
+                    </div>
                   </div>
 
-                  {/* Property Info */}
-                  <div className="mb-3 sm:mb-4">
-                    <h3 className="text-sm sm:text-lg font-semibold text-gray-900 mb-1 flex items-center">
-                      <Building className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="truncate">{contract.applications.properties.title}</span>
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">{contract.applications.properties.address}</p>
+                  {/* Property Info mejorado */}
+                  <div className="mb-4 bg-gradient-to-br from-gray-50 to-blue-50/30 p-4 rounded-xl">
+                    <div className="flex items-start gap-3 mb-2">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                        <Building className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1 truncate group-hover:text-blue-600 transition-colors">
+                          {contract.applications.properties.title}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">{contract.applications.properties.address}</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Applicant Info */}
-                  <div className="mb-3 sm:mb-4">
-                    <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-1 flex items-center">
-                      <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
-                      Arrendatario
-                    </h4>
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">
+                  {/* Applicant Info mejorado */}
+                  <div className="mb-4 bg-gradient-to-br from-purple-50 to-pink-50/30 p-4 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
+                      <h4 className="text-xs sm:text-sm font-bold text-gray-900">Arrendatario</h4>
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-700 font-medium truncate">
                       {contract.applications.snapshot_applicant_first_name} {contract.applications.snapshot_applicant_paternal_last_name}
                     </p>
                     <p className="text-xs text-gray-500 truncate">{contract.applications.snapshot_applicant_email}</p>
                   </div>
 
-                  {/* Dates */}
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <p>Creado: {new Date(contract.created_at).toLocaleDateString()}</p>
+                  {/* Dates mejorado */}
+                  <div className="text-xs text-gray-600 space-y-1.5 mb-4 bg-gray-50 p-3 rounded-lg">
+                    <p className="flex items-center gap-2">
+                      <span className="font-semibold">📅 Creado:</span>
+                      <span>{new Date(contract.created_at).toLocaleDateString()}</span>
+                    </p>
                     {contract.approved_at && (
-                      <p>Aprobado: {new Date(contract.approved_at).toLocaleDateString()}</p>
+                      <p className="flex items-center gap-2">
+                        <span className="font-semibold">✅ Aprobado:</span>
+                        <span>{new Date(contract.approved_at).toLocaleDateString()}</span>
+                      </p>
                     )}
                     {contract.sent_to_signature_at && (
-                      <p className="truncate">Enviado: {new Date(contract.sent_to_signature_at).toLocaleDateString()}</p>
+                      <p className="flex items-center gap-2 truncate">
+                        <span className="font-semibold">✍️ Enviado:</span>
+                        <span>{new Date(contract.sent_to_signature_at).toLocaleDateString()}</span>
+                      </p>
                     )}
                   </div>
 
-                  {/* Action */}
-                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
-                    <CustomButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewContract(contract);
-                      }}
-                      variant="outline"
-                      className="w-full flex items-center justify-center space-x-2 text-xs sm:text-sm touch-manipulation"
-                    >
-                      <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span>Ver Detalles</span>
-                    </CustomButton>
-                  </div>
+                  {/* Action mejorado */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewContract(contract);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 font-semibold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>Ver Contrato</span>
+                  </button>
                 </div>
               </div>
             ))}

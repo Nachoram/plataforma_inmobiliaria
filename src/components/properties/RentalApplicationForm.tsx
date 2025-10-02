@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, User, AlertCircle, ExternalLink } from 'lucide-react';
+import { X, Send, User, AlertCircle, ExternalLink, Building, FileText, MessageSquarePlus, CheckCircle } from 'lucide-react';
 import { supabase, Property, Profile, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, VALIDATION_RULES, validateRUT, getCurrentProfile } from '../../lib/supabase';
 import { webhookClient } from '../../lib/webhook';
 import CustomButton from '../common/CustomButton';
@@ -600,27 +600,42 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-3 sm:p-6 bg-white rounded-lg shadow-lg">
-      {/* Header con información de la propiedad */}
+    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-4 sm:p-8 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/20 rounded-2xl shadow-2xl border border-gray-200">
+      {/* Header con información de la propiedad mejorado */}
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
-          📋 Postulación de Arriendo
-        </h2>
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-lg border border-blue-200">
-          <h3 className="text-base sm:text-lg font-semibold text-blue-900 mb-2">
-            {property.address_street} {property.address_number}
-          </h3>
-          <p className="text-sm sm:text-base text-blue-700 mb-2">
-            {property.address_commune}, {property.address_region}
-          </p>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-blue-800">
-            <span className="font-semibold text-sm sm:text-base">
-              {formatPriceCLP(property.price_clp)} / mes
-            </span>
-            {property.common_expenses_clp && (
-              <span className="text-xs sm:text-sm">
-                + {formatPriceCLP(property.common_expenses_clp)} gastos comunes
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <FileText className="h-6 w-6 text-white" />
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            Postulación de Arriendo
+          </h2>
+        </div>
+        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-5 sm:p-7 rounded-2xl shadow-xl text-white">
+          <div className="flex items-start gap-4 mb-3">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+              <Building className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg sm:text-xl font-bold mb-1">
+                {property.address_street} {property.address_number}
+              </h3>
+              <p className="text-sm sm:text-base text-blue-100">
+                📍 {property.address_commune}, {property.address_region}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mt-4 pt-4 border-t border-white/20">
+            <div className="flex items-center gap-2">
+              <span className="text-3xl sm:text-4xl font-extrabold">
+                {formatPriceCLP(property.price_clp)}
               </span>
+              <span className="text-sm opacity-90">/ mes</span>
+            </div>
+            {property.common_expenses_clp && (
+              <div className="text-xs sm:text-sm bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+                + {formatPriceCLP(property.common_expenses_clp)} gastos comunes
+              </div>
             )}
           </div>
         </div>
@@ -681,16 +696,26 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         </div>
       )}
 
-      {/* SECCIÓN 1: Datos del Postulante */}
+      {/* SECCIÓN 1: Datos del Postulante con diseño mejorado */}
       <div className="mb-6 sm:mb-8">
-        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-blue-200">
-          👤 Datos del Postulante
-        </h3>
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+            <User className="h-5 w-5 text-white" />
+          </div>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Datos del Postulante
+          </h3>
+        </div>
 
-        {/* Información Personal */}
-        <div className="space-y-4 sm:space-y-6">
-          <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-            <h4 className="text-base sm:text-lg font-medium text-gray-800 mb-3 sm:mb-4">Información Personal</h4>
+        {/* Información Personal con diseño mejorado */}
+        <div className="space-y-5 sm:space-y-6">
+          <div className="bg-gradient-to-br from-white to-purple-50/30 p-5 sm:p-6 rounded-2xl shadow-lg border border-purple-100">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
+                <User className="h-4 w-4 text-white" />
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-gray-900">Información Personal</h4>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-4">
               <div>
@@ -817,9 +842,14 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             </div>
           </div>
 
-          {/* Información Laboral y Contacto */}
-          <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-            <h4 className="text-base sm:text-lg font-medium text-gray-800 mb-3 sm:mb-4">Información Laboral y Contacto</h4>
+          {/* Información Laboral y Contacto con diseño mejorado */}
+          <div className="bg-gradient-to-br from-white to-blue-50/30 p-5 sm:p-6 rounded-2xl shadow-lg border border-blue-100">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
+                <Building className="h-4 w-4 text-white" />
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-gray-900">Información Laboral y Contacto</h4>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
@@ -945,13 +975,18 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         </div>
       </div>
 
-      {/* SECCIÓN 2: Aval o Garante (Opcional) */}
+      {/* SECCIÓN 2: Aval o Garante (Opcional) con diseño mejorado */}
       <div className="mb-6 sm:mb-8">
-        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-green-200">
-          🛡️ Aval o Garante (Opcional)
-        </h3>
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+            <CheckCircle className="h-5 w-5 text-white" />
+          </div>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Aval o Garante <span className="text-sm text-gray-500 font-normal">(Opcional)</span>
+          </h3>
+        </div>
 
-        <div className="bg-green-50 p-3 sm:p-4 rounded-lg border border-green-200">
+        <div className="bg-gradient-to-br from-emerald-50 to-green-50/50 p-5 sm:p-6 rounded-2xl shadow-lg border border-emerald-200">
           <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
             <input
               type="checkbox"
@@ -1136,13 +1171,18 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         </div>
       </div>
 
-      {/* SECCIÓN 3: Mensaje al Propietario */}
+      {/* SECCIÓN 3: Mensaje al Propietario con diseño mejorado */}
       <div className="mb-6 sm:mb-8">
-        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-purple-200">
-          💬 Mensaje al Propietario
-        </h3>
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <MessageSquarePlus className="h-5 w-5 text-white" />
+          </div>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Mensaje al Propietario
+          </h3>
+        </div>
 
-        <div className="bg-purple-50 p-3 sm:p-4 rounded-lg border border-purple-200">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50/50 p-5 sm:p-6 rounded-2xl shadow-lg border border-indigo-200">
           <div className="mb-4 sm:mb-6">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
               Mensaje Adicional (Opcional)
@@ -1192,32 +1232,36 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         </div>
       </div>
 
-      {/* Botones de acción */}
-      <div className="flex flex-col sm:flex-row sm:justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-gray-200">
+      {/* Botones de acción mejorados */}
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-3 sm:gap-4 pt-6 sm:pt-8 mt-6 border-t-2 border-gray-200">
         {onCancel && (
-          <CustomButton
+          <button
             type="button"
-            variant="outline"
             onClick={onCancel}
-            size="lg"
-            className="w-full sm:w-auto touch-manipulation"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold shadow-md hover:shadow-lg touch-manipulation"
           >
-            <X className="h-4 w-4 mr-2" />
-            Cancelar
-          </CustomButton>
+            <X className="h-5 w-5" />
+            <span>Cancelar</span>
+          </button>
         )}
 
-        <CustomButton
+        <button
           type="submit"
-          variant="success"
-          loading={loading}
-          loadingText="Enviando postulación..."
-          size="lg"
-          className="w-full sm:w-auto touch-manipulation"
+          disabled={loading}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 touch-manipulation text-lg"
         >
-          <Send className="h-4 w-4 mr-2" />
-          Enviar Postulación
-        </CustomButton>
+          {loading ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>Enviando postulación...</span>
+            </>
+          ) : (
+            <>
+              <Send className="h-5 w-5" />
+              <span>Enviar Postulación</span>
+            </>
+          )}
+        </button>
       </div>
     </form>
   );

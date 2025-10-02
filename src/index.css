@@ -147,4 +147,14 @@
   .flex-mobile-wrap {
     @apply flex flex-wrap xs:flex-nowrap;
   }
+
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

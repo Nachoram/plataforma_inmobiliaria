@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2 } from 'lucide-react';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2, User } from 'lucide-react';
 import { supabase, updateApplicationStatus } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { webhookClient } from '../../lib/webhook';
@@ -810,9 +810,9 @@ export const ApplicationsPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'aprobada': return 'bg-green-100 text-green-800';
-      case 'rechazada': return 'bg-red-100 text-red-800';
-      default: return 'bg-yellow-100 text-yellow-800';
+      case 'aprobada': return 'bg-gradient-to-r from-green-500 to-emerald-600 text-white';
+      case 'rechazada': return 'bg-gradient-to-r from-red-500 to-red-600 text-white';
+      default: return 'bg-gradient-to-r from-amber-400 to-orange-500 text-white';
     }
   };
 
@@ -824,39 +824,57 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
-  // Componente de pestañas
+  // Componente de pestañas mejorado
   const TabNavigation = () => (
     <div className="border-b border-gray-200 mb-4 sm:mb-6 overflow-x-auto">
-      <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-max">
+      <nav className="-mb-px flex space-x-2 sm:space-x-4 min-w-max">
         <button
           onClick={() => setActiveTab('received')}
-          className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+          className={`relative py-3 px-4 sm:px-6 font-semibold text-xs sm:text-sm transition-all duration-200 whitespace-nowrap rounded-t-xl ${
             activeTab === 'received'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'text-emerald-700 bg-gradient-to-b from-emerald-50 to-transparent'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           }`}
         >
-          Postulaciones Recibidas
-          {receivedApplications.length > 0 && (
-            <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2 sm:px-2.5 rounded-full text-xs">
-              {receivedApplications.length}
-            </span>
+          {activeTab === 'received' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full" />
           )}
+          <span className="flex items-center gap-2">
+            📥 Recibidas
+            {receivedApplications.length > 0 && (
+              <span className={`py-1 px-2.5 rounded-full text-xs font-bold ${
+                activeTab === 'received'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-gray-200 text-gray-700'
+              }`}>
+                {receivedApplications.length}
+              </span>
+            )}
+          </span>
         </button>
         <button
           onClick={() => setActiveTab('sent')}
-          className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+          className={`relative py-3 px-4 sm:px-6 font-semibold text-xs sm:text-sm transition-all duration-200 whitespace-nowrap rounded-t-xl ${
             activeTab === 'sent'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'text-emerald-700 bg-gradient-to-b from-emerald-50 to-transparent'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           }`}
         >
-          Postulaciones Realizadas
-          {sentApplications.length > 0 && (
-            <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2 sm:px-2.5 rounded-full text-xs">
-              {sentApplications.length}
-            </span>
+          {activeTab === 'sent' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full" />
           )}
+          <span className="flex items-center gap-2">
+            📤 Enviadas
+            {sentApplications.length > 0 && (
+              <span className={`py-1 px-2.5 rounded-full text-xs font-bold ${
+                activeTab === 'sent'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-gray-200 text-gray-700'
+              }`}>
+                {sentApplications.length}
+              </span>
+            )}
+          </span>
         </button>
       </nav>
     </div>
@@ -880,25 +898,34 @@ export const ApplicationsPage: React.FC = () => {
         </div>
       ) : (
         receivedApplications.map((application) => (
-          <div key={application.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="p-4 sm:p-6">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
+          <div key={application.id} className="group bg-white rounded-2xl shadow-md hover:shadow-xl border border-gray-100 overflow-hidden transition-all duration-300 hover:-translate-y-1">
+            <div className="p-5 sm:p-6">
+              {/* Header con diseño mejorado */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-5 gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">
-                    {application.properties.address_street}
-                  </h3>
-                  <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 mb-2 gap-1">
-                    <div className="flex items-center">
-                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      <span>{application.properties.address_commune}</span>
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                      <Building className="h-5 w-5 text-white" />
                     </div>
-                    <span className="mx-1 hidden sm:inline">•</span>
-                    <span className="w-full sm:w-auto mt-1 sm:mt-0">{formatPrice(application.properties.price_clp)}/mes</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 truncate group-hover:text-emerald-600 transition-colors">
+                        {application.properties.address_street}
+                      </h3>
+                      <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-600 gap-2">
+                        <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
+                          <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
+                          <span>{application.properties.address_commune}</span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg">
+                          <span className="font-bold text-emerald-700">{formatPrice(application.properties.price_clp)}</span>
+                          <span className="text-emerald-600 text-xs">/mes</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 self-start">
-                  <span className={`px-2 sm:px-3 py-1 text-xs font-medium rounded-full flex items-center space-x-1 ${getStatusColor(application.status)}`}>
+                  <span className={`px-3 sm:px-4 py-1.5 text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm ${getStatusColor(application.status)}`}>
                     {getStatusIcon(application.status)}
                     <span className="hidden sm:inline">{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
                     <span className="sm:hidden">{application.status.charAt(0).toUpperCase()}</span>
@@ -906,10 +933,15 @@ export const ApplicationsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Applicant Information */}
-              <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4">
-                <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Información del Postulante</h4>
-                <div className="space-y-1 text-xs sm:text-sm">
+              {/* Applicant Information con diseño mejorado */}
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 p-4 sm:p-5 rounded-xl mb-4 border border-gray-200/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 text-sm sm:text-base">Información del Postulante</h4>
+                </div>
+                <div className="space-y-2 text-xs sm:text-sm">
                   <div>
                     <span className="text-gray-500">Nombre: </span>
                     <span className="font-medium">{application.structured_applicant?.full_name || getFullName(application.profiles)}</span>
@@ -945,11 +977,14 @@ export const ApplicationsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Message */}
+              {/* Message con diseño mejorado */}
               {application.message && (
-                <div className="bg-emerald-50 border border-emerald-200 p-3 sm:p-4 rounded-lg mb-4">
-                  <h4 className="font-medium text-emerald-900 mb-2 text-sm sm:text-base">Mensaje del Postulante</h4>
-                  <p className="text-emerald-700 text-xs sm:text-sm whitespace-pre-wrap">
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border-l-4 border-emerald-500 p-4 sm:p-5 rounded-xl mb-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquarePlus className="h-4 w-4 text-emerald-600" />
+                    <h4 className="font-bold text-emerald-900 text-sm sm:text-base">Mensaje del Postulante</h4>
+                  </div>
+                  <p className="text-emerald-800 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed">
                     {application.message}
                   </p>
                 </div>
@@ -968,11 +1003,11 @@ export const ApplicationsPage: React.FC = () => {
                   return application.status === 'pendiente';
                 })() && (
                   <div className="flex flex-wrap items-center gap-2 sm:space-x-2">
-                    {/* Acciones Secundarias - Ocultas en móvil muy pequeño */}
+                    {/* Acciones Secundarias con diseño mejorado */}
                     <button
                       onClick={() => openMessageModal(application, 'info')}
                       disabled={updating?.startsWith(application.id)}
-                      className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-200 disabled:opacity-50 touch-manipulation"
+                      className="p-2.5 bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700 rounded-xl transition-all duration-200 disabled:opacity-50 touch-manipulation hover:scale-105 shadow-sm"
                       title="Solicitar Más Información"
                     >
                       <MessageSquarePlus className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -981,7 +1016,7 @@ export const ApplicationsPage: React.FC = () => {
                     <button
                       onClick={() => openMessageModal(application, 'documents')}
                       disabled={updating?.startsWith(application.id)}
-                      className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors duration-200 disabled:opacity-50 touch-manipulation"
+                      className="p-2.5 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-700 rounded-xl transition-all duration-200 disabled:opacity-50 touch-manipulation hover:scale-105 shadow-sm"
                       title="Solicitar Documentos Faltantes"
                     >
                       <FileStack className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -990,7 +1025,7 @@ export const ApplicationsPage: React.FC = () => {
                     <button
                       onClick={() => handleRequestCommercialReport(application)}
                       disabled={updating?.startsWith(application.id)}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 disabled:opacity-50 touch-manipulation"
+                      className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-xl transition-all duration-200 disabled:opacity-50 touch-manipulation hover:scale-105 shadow-sm"
                       title="Solicitar Informe Comercial"
                     >
                       {updating === `${application.id}-report` ? (
@@ -1001,33 +1036,32 @@ export const ApplicationsPage: React.FC = () => {
                     </button>
 
                     {/* Separador Visual */}
-                    <div className="hidden sm:block w-px h-6 bg-gray-300 mx-1"></div>
+                    <div className="hidden sm:block w-px h-8 bg-gray-200 mx-2"></div>
 
-                    {/* Acciones Principales */}
+                    {/* Acciones Principales con diseño mejorado */}
                     <button
                       onClick={() => handleRejectApplication(application)}
                       disabled={updating?.startsWith(application.id)}
-                      className="flex items-center space-x-1 px-2 sm:px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 hover:shadow-sm active:bg-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation"
+                      className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation font-semibold"
                       title="Rechazar Postulación"
                     >
                       {updating === `${application.id}-reject` ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       ) : (
                         <XCircle className="h-4 w-4" />
                       )}
-                      <span className="text-xs sm:text-sm font-medium">Rechazar</span>
+                      <span className="text-xs sm:text-sm">Rechazar</span>
                     </button>
 
                     <button
                       onClick={() => {
                         console.log('🖱️ BOTÓN APROBAR CLICKEADO!');
                         console.log('📋 Application:', application);
-                        // Mostrar modal de condiciones del contrato antes de aprobar
                         setApplicationToApprove(application as any);
                         setShowContractConditionsModal(true);
                       }}
                       disabled={updating?.startsWith(application.id)}
-                      className="flex items-center space-x-1 px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:shadow-sm active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation"
+                      className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation font-semibold"
                       title="Aprobar Postulación"
                     >
                       {updating === `${application.id}-approve` ? (
@@ -1035,7 +1069,7 @@ export const ApplicationsPage: React.FC = () => {
                       ) : (
                         <CheckCircle2 className="h-4 w-4" />
                       )}
-                      <span className="text-xs sm:text-sm font-medium">Aprobar</span>
+                      <span className="text-xs sm:text-sm">Aprobar</span>
                     </button>
                   </div>
                 )}
@@ -1044,19 +1078,19 @@ export const ApplicationsPage: React.FC = () => {
                 {application.status === 'aprobada' && (
                   <div className="flex items-center space-x-4">
                     {/* Banner de acceso al contrato */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg px-4 py-3 shadow-sm">
-                      <div className="flex items-center space-x-3">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg px-2 py-1.5 shadow-sm">
+                      <div className="flex items-center space-x-1.5">
                         <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <FileText className="h-4 w-4 text-blue-600" />
+                          <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                            <FileText className="h-2.5 w-2.5 text-blue-600" />
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-blue-900 mb-1">
+                          <div className="text-xs font-medium text-blue-900 leading-tight">
                             📄 Contrato generado
                           </div>
                           {contractStatus[application.id] && (
-                            <div className="text-xs text-blue-700 mb-2">
+                            <div className="text-xs text-blue-700 leading-tight">
                               Estado: <span className={`font-medium ${
                                 contractStatus[application.id].status === 'draft' ? 'text-gray-600' :
                                 contractStatus[application.id].status === 'approved' ? 'text-green-600' :
@@ -1072,25 +1106,8 @@ export const ApplicationsPage: React.FC = () => {
                                  contractStatus[application.id].status === 'fully_signed' ? 'Completado' :
                                  'Cancelado'}
                               </span>
-                              {contractStatus[application.id].approved_at && (
-                                <span className="ml-1 text-gray-500">
-                                  • Aprobado {new Date(contractStatus[application.id].approved_at!).toLocaleDateString('es-ES')}
-                                </span>
-                              )}
                             </div>
                           )}
-                          <button
-                            disabled
-                            className="inline-flex items-center text-sm font-medium text-gray-400 cursor-not-allowed"
-                          >
-                            <span>Canvas (Próximamente)</span>
-                            <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </button>
-                          <div className="text-xs text-blue-600 mt-1">
-                            Click para editar el contrato
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -1129,24 +1146,33 @@ export const ApplicationsPage: React.FC = () => {
         </div>
       ) : (
         sentApplications.map((application) => (
-          <div key={application.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="p-4 sm:p-6">
+          <div key={application.id} className="group bg-white rounded-2xl shadow-md hover:shadow-xl border border-gray-100 overflow-hidden transition-all duration-300 hover:-translate-y-1">
+            <div className="p-5 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">
-                    {application.properties.address_street}
-                  </h3>
-                  <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 mb-2 gap-1">
-                    <div className="flex items-center">
-                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      <span>{application.properties.address_commune}</span>
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                      <Building className="h-5 w-5 text-white" />
                     </div>
-                    <span className="mx-1 hidden sm:inline">•</span>
-                    <span className="w-full sm:w-auto mt-1 sm:mt-0">{formatPrice(application.properties.price_clp)}/mes</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 truncate group-hover:text-indigo-600 transition-colors">
+                        {application.properties.address_street}
+                      </h3>
+                      <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-600 gap-2">
+                        <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
+                          <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
+                          <span>{application.properties.address_commune}</span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg">
+                          <span className="font-bold text-indigo-700">{formatPrice(application.properties.price_clp)}</span>
+                          <span className="text-indigo-600 text-xs">/mes</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 self-start">
-                  <span className={`px-2 sm:px-3 py-1 text-xs font-medium rounded-full flex items-center space-x-1 ${getStatusColor(application.status)}`}>
+                  <span className={`px-3 sm:px-4 py-1.5 text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm ${getStatusColor(application.status)}`}>
                     {getStatusIcon(application.status)}
                     <span className="hidden sm:inline">{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
                     <span className="sm:hidden">{application.status.charAt(0).toUpperCase()}</span>
@@ -1154,34 +1180,38 @@ export const ApplicationsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Imagen de la propiedad */}
-              <div className="flex items-start space-x-3 sm:space-x-4 mb-4">
-                <div className="w-20 h-16 sm:w-24 sm:h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+              {/* Imagen de la propiedad con diseño mejorado */}
+              <div className="flex items-start space-x-4 mb-4 bg-gradient-to-br from-gray-50 to-gray-100/50 p-3 rounded-xl">
+                <div className="w-20 h-16 sm:w-24 sm:h-20 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
                   {propertyImages[application.property_id] && propertyImages[application.property_id].length > 0 ? (
                     <img 
                       src={propertyImages[application.property_id][0].image_url} 
                       alt={application.properties.address_street}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Building className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-300 to-gray-400">
+                      <Building className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                     </div>
                   )}
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs sm:text-sm text-gray-500 mb-1">Precio de arriendo mensual</div>
-                  <div className="text-base sm:text-lg font-bold text-emerald-600 truncate">
+                  <div className="text-xs sm:text-sm text-gray-600 mb-1 font-medium">💰 Precio de arriendo</div>
+                  <div className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                     {formatPrice(application.properties.price_clp)}
                   </div>
+                  <div className="text-xs text-gray-500">por mes</div>
                 </div>
               </div>
 
               {application.message && (
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4">
-                  <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Tu mensaje</h4>
-                  <p className="text-gray-700 text-xs sm:text-sm whitespace-pre-wrap line-clamp-3 sm:line-clamp-none">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50/30 border-l-4 border-indigo-500 p-4 sm:p-5 rounded-xl mb-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquarePlus className="h-4 w-4 text-indigo-600" />
+                    <h4 className="font-bold text-indigo-900 text-sm sm:text-base">Tu mensaje</h4>
+                  </div>
+                  <p className="text-indigo-800 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed line-clamp-3 sm:line-clamp-none">
                     {application.message}
                   </p>
                 </div>
@@ -1216,17 +1246,23 @@ export const ApplicationsPage: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+      {/* Header mejorado con gradiente */}
+      <div className="bg-gradient-to-br from-emerald-50 via-white to-blue-50 rounded-2xl shadow-lg border border-emerald-100/50 p-5 sm:p-8 backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Gestión de Postulaciones</h1>
-            <p className="text-sm sm:text-base text-gray-600">
-              Administra las postulaciones de arriendo recibidas y revisa el estado de las postulaciones que has realizado
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
+                <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Postulaciones</h1>
+            </div>
+            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+              Administra tus postulaciones de arriendo de forma eficiente
             </p>
           </div>
           <button
             onClick={handleTestWebhook}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap self-start sm:self-auto"
+            className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium whitespace-nowrap self-start sm:self-auto shadow-md shadow-blue-200 hover:shadow-lg hover:shadow-blue-300 hover:-translate-y-0.5"
             title="Probar conectividad del webhook"
           >
             🧪 Probar Webhook
@@ -1234,7 +1270,7 @@ export const ApplicationsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6">
         <TabNavigation />
         
         {activeTab === 'received' ? (

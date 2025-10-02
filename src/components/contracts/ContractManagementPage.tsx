@@ -196,49 +196,49 @@ const ContractManagementPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                <FileText className="h-8 w-8 mr-3 text-blue-600" />
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
+                <FileText className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-blue-600" />
                 Gestión de Contratos
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
                 Administra los contratos de arriendo de tus propiedades
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-gray-900">{contracts.length}</p>
-              <p className="text-sm text-gray-500">Contratos totales</p>
+            <div className="text-left sm:text-right">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{contracts.length}</p>
+              <p className="text-xs sm:text-sm text-gray-500">Contratos totales</p>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             {/* Search */}
             <div className="flex-1">
               <div className="relative">
-                <Search className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
+                <Search className="h-4 w-4 sm:h-5 sm:w-5 absolute left-3 top-2.5 sm:top-3 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por propiedad o postulante..."
+                  placeholder="Buscar..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
 
             {/* Status Filter */}
-            <div className="sm:w-48">
+            <div className="w-full sm:w-48">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">Todos los estados</option>
                 <option value="draft">Borrador</option>
@@ -253,25 +253,26 @@ const ContractManagementPage: React.FC = () => {
         </div>
 
         {/* Sample Contract Section */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-blue-600" />
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
                 Contrato de Ejemplo
               </h2>
-              <p className="text-gray-600 text-sm mt-1">
+              <p className="text-gray-600 text-xs sm:text-sm mt-1">
                 Visualiza un contrato de arriendo residencial de ejemplo para orientarte
               </p>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <CustomButton
                 variant="outline"
-                className="flex items-center space-x-2 opacity-50 cursor-not-allowed"
+                className="flex items-center space-x-2 opacity-50 cursor-not-allowed text-xs sm:text-sm"
                 disabled
               >
-                <Eye className="h-4 w-4" />
-                <span>Canvas (Próximamente)</span>
+                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Canvas (Próximamente)</span>
+                <span className="sm:hidden">Canvas</span>
               </CustomButton>
               <CustomButton
                 onClick={async () => {
@@ -419,18 +420,19 @@ const ContractManagementPage: React.FC = () => {
                   }
                 }}
                 variant="secondary"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 text-xs sm:text-sm"
                 disabled={loading}
               >
-                <Plus className="h-4 w-4" />
-                <span>{loading ? 'Poblando...' : 'Poblar Datos de Ejemplo'}</span>
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">{loading ? 'Poblando...' : 'Poblar Datos de Ejemplo'}</span>
+                <span className="sm:hidden">{loading ? 'Poblando...' : 'Poblar Datos'}</span>
               </CustomButton>
             </div>
           </div>
 
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-            <h3 className="font-medium text-gray-900 mb-2">Contrato de Arriendo Residencial</h3>
-            <div className="text-sm text-gray-600 space-y-2">
+          <div className="mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+            <h3 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Contrato de Arriendo Residencial</h3>
+            <div className="text-xs sm:text-sm text-gray-600 space-y-2">
               <p><strong>Arrendador:</strong> Carolina Andrea Soto Rojas (RUT: 15.123.456-7)</p>
               <p><strong>Arrendatario:</strong> Carlos Alberto Soto Vega (RUT: 33.333.333-3)</p>
               <p><strong>Aval:</strong> Rodolfo Rrrrrrrr Mmmmmm (RUT: 44.444.444-4)</p>
@@ -442,54 +444,55 @@ const ContractManagementPage: React.FC = () => {
 
         {/* Contracts Grid */}
         {filteredContracts.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="bg-white rounded-xl shadow-sm p-8 sm:p-12 text-center">
+            <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
               {contracts.length === 0 ? 'No tienes contratos aún' : 'No se encontraron contratos'}
             </h3>
-            <p className="text-gray-500">
+            <p className="text-sm sm:text-base text-gray-500 px-4">
               {contracts.length === 0
                 ? 'Los contratos se crearán automáticamente cuando apruebes postulantes con condiciones específicas.'
                 : 'Intenta ajustar los filtros de búsqueda.'}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredContracts.map((contract) => (
               <div
                 key={contract.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer touch-manipulation"
                 onClick={() => handleViewContract(contract)}
               >
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {/* Status Badge */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(contract.status)}`}>
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(contract.status)}`}>
                       {getStatusIcon(contract.status)}
-                      <span>{getStatusText(contract.status)}</span>
+                      <span className="hidden sm:inline">{getStatusText(contract.status)}</span>
+                      <span className="sm:hidden">{getStatusText(contract.status).substring(0, 3)}</span>
                     </div>
-                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
                   </div>
 
                   {/* Property Info */}
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center">
-                      <Building className="h-5 w-5 mr-2 text-gray-500" />
-                      {contract.applications.properties.title}
+                  <div className="mb-3 sm:mb-4">
+                    <h3 className="text-sm sm:text-lg font-semibold text-gray-900 mb-1 flex items-center">
+                      <Building className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gray-500 flex-shrink-0" />
+                      <span className="truncate">{contract.applications.properties.title}</span>
                     </h3>
-                    <p className="text-sm text-gray-600">{contract.applications.properties.address}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">{contract.applications.properties.address}</p>
                   </div>
 
                   {/* Applicant Info */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-1 flex items-center">
-                      <User className="h-4 w-4 mr-2" />
+                  <div className="mb-3 sm:mb-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-1 flex items-center">
+                      <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
                       Arrendatario
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">
                       {contract.applications.snapshot_applicant_first_name} {contract.applications.snapshot_applicant_paternal_last_name}
                     </p>
-                    <p className="text-xs text-gray-500">{contract.applications.snapshot_applicant_email}</p>
+                    <p className="text-xs text-gray-500 truncate">{contract.applications.snapshot_applicant_email}</p>
                   </div>
 
                   {/* Dates */}
@@ -499,21 +502,21 @@ const ContractManagementPage: React.FC = () => {
                       <p>Aprobado: {new Date(contract.approved_at).toLocaleDateString()}</p>
                     )}
                     {contract.sent_to_signature_at && (
-                      <p>Enviado a firma: {new Date(contract.sent_to_signature_at).toLocaleDateString()}</p>
+                      <p className="truncate">Enviado: {new Date(contract.sent_to_signature_at).toLocaleDateString()}</p>
                     )}
                   </div>
 
                   {/* Action */}
-                  <div className="mt-4 pt-4 border-t">
+                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
                     <CustomButton
                       onClick={(e) => {
                         e.stopPropagation();
                         handleViewContract(contract);
                       }}
                       variant="outline"
-                      className="w-full flex items-center justify-center space-x-2"
+                      className="w-full flex items-center justify-center space-x-2 text-xs sm:text-sm touch-manipulation"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span>Ver Detalles</span>
                     </CustomButton>
                   </div>
@@ -525,8 +528,8 @@ const ContractManagementPage: React.FC = () => {
 
         {/* Contract Approval Workflow Modal */}
         {showWorkflow && selectedContract && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+            <div className="w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
               <ContractApprovalWorkflow
                 contractId={selectedContract.id}
                 onContractUpdated={loadContracts}

@@ -271,12 +271,9 @@ export const ApplicationsPage: React.FC = () => {
       ].filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
       
         if (allPropertyIds.length > 0) {
-          const [propertyImagesData, rentalOwnersData] = await Promise.all([
-            fetchPropertyImages(allPropertyIds),
-            fetchRentalOwners(allPropertyIds)
-          ]);
+          await fetchPropertyImages(allPropertyIds);
+          const rentalOwnersData = await fetchRentalOwners(allPropertyIds);
           
-          setPropertyImages(propertyImagesData);
           setRentalOwners(rentalOwnersData);
           
           console.log('📊 Rental owners data loaded:', rentalOwnersData);
@@ -325,7 +322,7 @@ export const ApplicationsPage: React.FC = () => {
 
       // 1. Actualizar estado en la base de datos
       console.log('📝 Actualizando estado en base de datos...');
-      const updatedApplication = await updateApplicationStatus(application.id, 'aprobada');
+      await updateApplicationStatus(application.id, 'aprobada');
       console.log('✅ Base de datos actualizada correctamente');
 
       // 2. Enviar webhook a Railway (solo GET - Railway no acepta POST)
@@ -441,7 +438,7 @@ export const ApplicationsPage: React.FC = () => {
       ));
       
       // Mostrar notificación de error más elegante
-      const errorMessage = `Error al aprobar la postulación: ${error.message || 'Error desconocido'}. Por favor, intenta nuevamente.`;
+      const errorMessage = `Error al aprobar la postulación: ${error instanceof Error ? error.message : 'Error desconocido'}. Por favor, intenta nuevamente.`;
       console.error('❌', errorMessage);
       
       // Crear notificación de error temporal en la UI
@@ -747,7 +744,7 @@ export const ApplicationsPage: React.FC = () => {
           console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError);
           
           // Safely extract error message
-          const errorMessage = webhookError?.message || webhookError?.error?.message || JSON.stringify(webhookError);
+          const errorMessage = webhookError instanceof Error ? webhookError.message : JSON.stringify(webhookError);
           console.warn('⚠️ Webhook error message:', errorMessage);
         }
       } else {
@@ -769,7 +766,7 @@ export const ApplicationsPage: React.FC = () => {
         app.id === applicationToUndo.id ? { ...app, status: 'aprobada' } : app
       ));
       
-      alert(`Error al revertir la postulación: ${error.message}. Por favor, intenta nuevamente.`);
+      alert(`Error al revertir la postulación: ${error instanceof Error ? error.message : 'Error desconocido'}. Por favor, intenta nuevamente.`);
     } finally {
       // Quitar estado de carga
       setUpdating(null);
@@ -829,11 +826,11 @@ export const ApplicationsPage: React.FC = () => {
 
   // Componente de pestañas
   const TabNavigation = () => (
-    <div className="border-b border-gray-200 mb-6">
-      <nav className="-mb-px flex space-x-8">
+    <div className="border-b border-gray-200 mb-4 sm:mb-6 overflow-x-auto">
+      <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-max">
         <button
           onClick={() => setActiveTab('received')}
-          className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+          className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
             activeTab === 'received'
               ? 'border-emerald-500 text-emerald-600'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -841,14 +838,14 @@ export const ApplicationsPage: React.FC = () => {
         >
           Postulaciones Recibidas
           {receivedApplications.length > 0 && (
-            <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+            <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2 sm:px-2.5 rounded-full text-xs">
               {receivedApplications.length}
             </span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('sent')}
-          className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+          className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
             activeTab === 'sent'
               ? 'border-emerald-500 text-emerald-600'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -856,7 +853,7 @@ export const ApplicationsPage: React.FC = () => {
         >
           Postulaciones Realizadas
           {sentApplications.length > 0 && (
-            <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+            <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2 sm:px-2.5 rounded-full text-xs">
               {sentApplications.length}
             </span>
           )}
@@ -884,32 +881,35 @@ export const ApplicationsPage: React.FC = () => {
       ) : (
         receivedApplications.map((application) => (
           <div key={application.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {/* Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">
                     {application.properties.address_street}
                   </h3>
-                  <div className="flex items-center text-sm text-gray-500 mb-2">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span>{application.properties.address_commune}</span>
-                    <span className="mx-2">•</span>
-                    <span>{formatPrice(application.properties.price_clp)}/mes</span>
+                  <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 mb-2 gap-1">
+                    <div className="flex items-center">
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span>{application.properties.address_commune}</span>
+                    </div>
+                    <span className="mx-1 hidden sm:inline">•</span>
+                    <span className="w-full sm:w-auto mt-1 sm:mt-0">{formatPrice(application.properties.price_clp)}/mes</span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`px-3 py-1 text-xs font-medium rounded-full flex items-center space-x-1 ${getStatusColor(application.status)}`}>
+                <div className="flex items-center space-x-2 self-start">
+                  <span className={`px-2 sm:px-3 py-1 text-xs font-medium rounded-full flex items-center space-x-1 ${getStatusColor(application.status)}`}>
                     {getStatusIcon(application.status)}
-                    <span>{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
+                    <span className="hidden sm:inline">{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
+                    <span className="sm:hidden">{application.status.charAt(0).toUpperCase()}</span>
                   </span>
                 </div>
               </div>
 
               {/* Applicant Information */}
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <h4 className="font-medium text-gray-900 mb-2">Información del Postulante</h4>
-                <div className="space-y-1 text-sm">
+              <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4">
+                <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Información del Postulante</h4>
+                <div className="space-y-1 text-xs sm:text-sm">
                   <div>
                     <span className="text-gray-500">Nombre: </span>
                     <span className="font-medium">{application.structured_applicant?.full_name || getFullName(application.profiles)}</span>
@@ -947,18 +947,18 @@ export const ApplicationsPage: React.FC = () => {
 
               {/* Message */}
               {application.message && (
-                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg mb-4">
-                  <h4 className="font-medium text-emerald-900 mb-2">Mensaje del Postulante</h4>
-                  <p className="text-emerald-700 text-sm whitespace-pre-wrap">
+                <div className="bg-emerald-50 border border-emerald-200 p-3 sm:p-4 rounded-lg mb-4">
+                  <h4 className="font-medium text-emerald-900 mb-2 text-sm sm:text-base">Mensaje del Postulante</h4>
+                  <p className="text-emerald-700 text-xs sm:text-sm whitespace-pre-wrap">
                     {application.message}
                   </p>
                 </div>
               )}
 
               {/* Footer */}
-              <div className="flex items-center justify-between pt-4 border-t">
-                <div className="flex items-center text-sm text-gray-500">
-                  <Calendar className="h-4 w-4 mr-1" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t gap-3">
+                <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span>Recibida el {formatDate(application.created_at)}</span>
                 </div>
 
@@ -967,47 +967,47 @@ export const ApplicationsPage: React.FC = () => {
                   console.log('🔍 Verificando estado de aplicación:', application.id, 'Status:', application.status);
                   return application.status === 'pendiente';
                 })() && (
-                  <div className="flex items-center space-x-2">
-                    {/* Acciones Secundarias */}
+                  <div className="flex flex-wrap items-center gap-2 sm:space-x-2">
+                    {/* Acciones Secundarias - Ocultas en móvil muy pequeño */}
                     <button
                       onClick={() => openMessageModal(application, 'info')}
                       disabled={updating?.startsWith(application.id)}
-                      className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                      className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-200 disabled:opacity-50 touch-manipulation"
                       title="Solicitar Más Información"
                     >
-                      <MessageSquarePlus className="h-4 w-4" />
+                      <MessageSquarePlus className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
 
                     <button
                       onClick={() => openMessageModal(application, 'documents')}
                       disabled={updating?.startsWith(application.id)}
-                      className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                      className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors duration-200 disabled:opacity-50 touch-manipulation"
                       title="Solicitar Documentos Faltantes"
                     >
-                      <FileStack className="h-4 w-4" />
+                      <FileStack className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
 
                     <button
                       onClick={() => handleRequestCommercialReport(application)}
                       disabled={updating?.startsWith(application.id)}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 disabled:opacity-50 touch-manipulation"
                       title="Solicitar Informe Comercial"
                     >
                       {updating === `${application.id}-report` ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-blue-600"></div>
                       ) : (
-                        <FileText className="h-4 w-4" />
+                        <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                       )}
                     </button>
 
                     {/* Separador Visual */}
-                    <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                    <div className="hidden sm:block w-px h-6 bg-gray-300 mx-1"></div>
 
                     {/* Acciones Principales */}
                     <button
                       onClick={() => handleRejectApplication(application)}
                       disabled={updating?.startsWith(application.id)}
-                      className="flex items-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 hover:shadow-sm active:bg-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      className="flex items-center space-x-1 px-2 sm:px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 hover:shadow-sm active:bg-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation"
                       title="Rechazar Postulación"
                     >
                       {updating === `${application.id}-reject` ? (
@@ -1015,7 +1015,7 @@ export const ApplicationsPage: React.FC = () => {
                       ) : (
                         <XCircle className="h-4 w-4" />
                       )}
-                      <span className="text-sm font-medium">Rechazar</span>
+                      <span className="text-xs sm:text-sm font-medium">Rechazar</span>
                     </button>
 
                     <button
@@ -1027,7 +1027,7 @@ export const ApplicationsPage: React.FC = () => {
                         setShowContractConditionsModal(true);
                       }}
                       disabled={updating?.startsWith(application.id)}
-                      className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:shadow-sm active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      className="flex items-center space-x-1 px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:shadow-sm active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation"
                       title="Aprobar Postulación"
                     >
                       {updating === `${application.id}-approve` ? (
@@ -1035,7 +1035,7 @@ export const ApplicationsPage: React.FC = () => {
                       ) : (
                         <CheckCircle2 className="h-4 w-4" />
                       )}
-                      <span className="text-sm font-medium">Aprobar</span>
+                      <span className="text-xs sm:text-sm font-medium">Aprobar</span>
                     </button>
                   </div>
                 )}
@@ -1121,39 +1121,42 @@ export const ApplicationsPage: React.FC = () => {
     <div className="space-y-4">
       {sentApplications.length === 0 ? (
         <div className="text-center py-12">
-          <Mail className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No has realizado postulaciones</h3>
-          <p className="text-gray-500">
+          <Mail className="h-12 sm:h-16 w-12 sm:w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2 px-4">No has realizado postulaciones</h3>
+          <p className="text-sm sm:text-base text-gray-500 px-4">
             Las postulaciones que hagas a propiedades en arriendo aparecerán aquí para que puedas seguir su estado.
           </p>
         </div>
       ) : (
         sentApplications.map((application) => (
           <div key={application.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">
                     {application.properties.address_street}
                   </h3>
-                  <div className="flex items-center text-sm text-gray-500 mb-2">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span>{application.properties.address_commune}</span>
-                    <span className="mx-2">•</span>
-                    <span>{formatPrice(application.properties.price_clp)}/mes</span>
+                  <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 mb-2 gap-1">
+                    <div className="flex items-center">
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span>{application.properties.address_commune}</span>
+                    </div>
+                    <span className="mx-1 hidden sm:inline">•</span>
+                    <span className="w-full sm:w-auto mt-1 sm:mt-0">{formatPrice(application.properties.price_clp)}/mes</span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`px-3 py-1 text-xs font-medium rounded-full flex items-center space-x-1 ${getStatusColor(application.status)}`}>
+                <div className="flex items-center space-x-2 self-start">
+                  <span className={`px-2 sm:px-3 py-1 text-xs font-medium rounded-full flex items-center space-x-1 ${getStatusColor(application.status)}`}>
                     {getStatusIcon(application.status)}
-                    <span>{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
+                    <span className="hidden sm:inline">{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
+                    <span className="sm:hidden">{application.status.charAt(0).toUpperCase()}</span>
                   </span>
                 </div>
               </div>
 
               {/* Imagen de la propiedad */}
-              <div className="flex items-start space-x-4 mb-4">
-                <div className="w-24 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+              <div className="flex items-start space-x-3 sm:space-x-4 mb-4">
+                <div className="w-20 h-16 sm:w-24 sm:h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                   {propertyImages[application.property_id] && propertyImages[application.property_id].length > 0 ? (
                     <img 
                       src={propertyImages[application.property_id][0].image_url} 
@@ -1162,36 +1165,36 @@ export const ApplicationsPage: React.FC = () => {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Building className="h-8 w-8 text-gray-400" />
+                      <Building className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                     </div>
                   )}
                 </div>
                 
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500 mb-1">Precio de arriendo mensual</div>
-                  <div className="text-lg font-bold text-emerald-600">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs sm:text-sm text-gray-500 mb-1">Precio de arriendo mensual</div>
+                  <div className="text-base sm:text-lg font-bold text-emerald-600 truncate">
                     {formatPrice(application.properties.price_clp)}
                   </div>
                 </div>
               </div>
 
               {application.message && (
-                <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Tu mensaje</h4>
-                  <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4">
+                  <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Tu mensaje</h4>
+                  <p className="text-gray-700 text-xs sm:text-sm whitespace-pre-wrap line-clamp-3 sm:line-clamp-none">
                     {application.message}
                   </p>
                 </div>
               )}
 
-              <div className="flex items-center justify-between pt-4 border-t">
-                <div className="flex items-center text-sm text-gray-500">
-                  <Calendar className="h-4 w-4 mr-1" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t gap-2">
+                <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span>Enviada el {formatDate(application.created_at)}</span>
                 </div>
                 
                 {application.status === 'pendiente' && (
-                  <div className="text-sm text-gray-500">
+                  <div className="text-xs sm:text-sm text-gray-500">
                     Esperando respuesta del propietario
                   </div>
                 )}
@@ -1212,18 +1215,18 @@ export const ApplicationsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex justify-between items-start">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Postulaciones</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Gestión de Postulaciones</h1>
+            <p className="text-sm sm:text-base text-gray-600">
               Administra las postulaciones de arriendo recibidas y revisa el estado de las postulaciones que has realizado
             </p>
           </div>
           <button
             onClick={handleTestWebhook}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap self-start sm:self-auto"
             title="Probar conectividad del webhook"
           >
             🧪 Probar Webhook
@@ -1231,7 +1234,7 @@ export const ApplicationsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
         <TabNavigation />
         
         {activeTab === 'received' ? (

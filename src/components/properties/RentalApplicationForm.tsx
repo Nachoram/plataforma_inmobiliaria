@@ -600,25 +600,25 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-3 sm:p-6 bg-white rounded-lg shadow-lg">
       {/* Header con información de la propiedad */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
           📋 Postulación de Arriendo
         </h2>
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-lg border border-blue-200">
+          <h3 className="text-base sm:text-lg font-semibold text-blue-900 mb-2">
             {property.address_street} {property.address_number}
           </h3>
-          <p className="text-blue-700 mb-2">
+          <p className="text-sm sm:text-base text-blue-700 mb-2">
             {property.address_commune}, {property.address_region}
           </p>
-          <div className="flex items-center space-x-4 text-blue-800">
-            <span className="font-semibold">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-blue-800">
+            <span className="font-semibold text-sm sm:text-base">
               {formatPriceCLP(property.price_clp)} / mes
             </span>
             {property.common_expenses_clp && (
-              <span className="text-sm">
+              <span className="text-xs sm:text-sm">
                 + {formatPriceCLP(property.common_expenses_clp)} gastos comunes
               </span>
             )}
@@ -628,31 +628,31 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
       {/* Loading state for profile */}
       {profileLoading && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg">
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg">
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
-            <span>Cargando datos de tu perfil...</span>
+            <span className="text-xs sm:text-sm">Cargando datos de tu perfil...</span>
           </div>
         </div>
       )}
 
       {/* Profile incomplete alert */}
       {!profileLoading && profileIncomplete && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg">
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg">
           <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-semibold text-amber-800 mb-1">Perfil Incompleto</h3>
-              <p className="text-sm text-amber-700 mb-3">
+              <h3 className="font-semibold text-amber-800 mb-1 text-sm sm:text-base">Perfil Incompleto</h3>
+              <p className="text-xs sm:text-sm text-amber-700 mb-3">
                 Hemos autocompletado con los datos de tu perfil. Para postular aún más rápido la próxima vez, completa tu perfil.
               </p>
               <a
                 href="/profile"
-                className="inline-flex items-center text-sm font-medium text-amber-600 hover:text-amber-800 transition-colors"
+                className="inline-flex items-center text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-800 transition-colors"
               >
-                <User className="h-4 w-4 mr-1" />
+                <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 Completar perfil
-                <ExternalLink className="h-3 w-3 ml-1" />
+                <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3 ml-1" />
               </a>
             </div>
           </div>
@@ -661,10 +661,10 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
       {/* Success message for complete profile */}
       {!profileLoading && !profileIncomplete && userProfile && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
           <div className="flex items-center">
-            <User className="h-5 w-5 text-green-600 mr-3" />
-            <span className="text-sm">
+            <User className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 mr-2 sm:mr-3" />
+            <span className="text-xs sm:text-sm">
               ✅ Formulario autocompletado con los datos de tu perfil
             </span>
           </div>
@@ -673,28 +673,28 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
       {/* Error display */}
       {error && (
-        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
           <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
-            <span>{error}</span>
+            <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 mr-2 sm:mr-3 flex-shrink-0" />
+            <span className="text-xs sm:text-sm break-words">{error}</span>
           </div>
         </div>
       )}
 
       {/* SECCIÓN 1: Datos del Postulante */}
-      <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6 pb-3 border-b-2 border-blue-200">
+      <div className="mb-6 sm:mb-8">
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-blue-200">
           👤 Datos del Postulante
         </h3>
 
         {/* Información Personal */}
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="text-lg font-medium text-gray-800 mb-4">Información Personal</h4>
+        <div className="space-y-4 sm:space-y-6">
+          <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+            <h4 className="text-base sm:text-lg font-medium text-gray-800 mb-3 sm:mb-4">Información Personal</h4>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                   Nombre *
                 </label>
                 <input
@@ -702,12 +702,12 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   name="first_name"
                   value={applicantData.first_name}
                   onChange={handleApplicantChange}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-2 sm:p-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                   Apellido Paterno *
                 </label>
                 <input
@@ -715,12 +715,12 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   name="paternal_last_name"
                   value={applicantData.paternal_last_name}
                   onChange={handleApplicantChange}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-2 sm:p-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                   Apellido Materno *
                 </label>
                 <input
@@ -728,7 +728,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   name="maternal_last_name"
                   value={applicantData.maternal_last_name}
                   onChange={handleApplicantChange}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-2 sm:p-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
@@ -818,8 +818,8 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           </div>
 
           {/* Información Laboral y Contacto */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="text-lg font-medium text-gray-800 mb-4">Información Laboral y Contacto</h4>
+          <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+            <h4 className="text-base sm:text-lg font-medium text-gray-800 mb-3 sm:mb-4">Información Laboral y Contacto</h4>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
@@ -946,21 +946,21 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       </div>
 
       {/* SECCIÓN 2: Aval o Garante (Opcional) */}
-      <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6 pb-3 border-b-2 border-green-200">
+      <div className="mb-6 sm:mb-8">
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-green-200">
           🛡️ Aval o Garante (Opcional)
         </h3>
 
-        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-          <div className="flex items-center space-x-3 mb-4">
+        <div className="bg-green-50 p-3 sm:p-4 rounded-lg border border-green-200">
+          <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
             <input
               type="checkbox"
               id="showGuarantor"
               checked={showGuarantor}
               onChange={(e) => setShowGuarantor(e.target.checked)}
-              className="h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+              className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded touch-manipulation"
             />
-            <label htmlFor="showGuarantor" className="text-sm font-medium text-gray-700">
+            <label htmlFor="showGuarantor" className="text-xs sm:text-sm font-medium text-gray-700">
               Deseo agregar un aval que respalde mi postulación
             </label>
           </div>
@@ -1137,27 +1137,27 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       </div>
 
       {/* SECCIÓN 3: Mensaje al Propietario */}
-      <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6 pb-3 border-b-2 border-purple-200">
+      <div className="mb-6 sm:mb-8">
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-purple-200">
           💬 Mensaje al Propietario
         </h3>
 
-        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="bg-purple-50 p-3 sm:p-4 rounded-lg border border-purple-200">
+          <div className="mb-4 sm:mb-6">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
               Mensaje Adicional (Opcional)
             </label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Cuéntanos por qué eres un buen candidato para esta propiedad. Menciona tu situación laboral, estabilidad financiera, referencias, o cualquier otra información relevante que consideres importante..."
+              className="w-full p-2 sm:p-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Cuéntanos por qué eres un buen candidato para esta propiedad..."
             />
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="mb-4 sm:mb-6">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
               📎 Documentos del Postulante
             </label>
             <input
@@ -1165,16 +1165,16 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               multiple
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               onChange={(e) => setApplicantDocuments(Array.from(e.target.files || []))}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">
               📋 Cédula de identidad, certificado de ingresos, contrato de trabajo, referencias laborales, etc.
             </p>
           </div>
 
           {showGuarantor && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                 📎 Documentos del Aval
               </label>
               <input
@@ -1182,9 +1182,9 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                 multiple
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                 onChange={(e) => setGuarantorDocuments(Array.from(e.target.files || []))}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
                 📋 Cédula de identidad del aval, certificado de ingresos, referencias, etc.
               </p>
             </div>
@@ -1193,13 +1193,14 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       </div>
 
       {/* Botones de acción */}
-      <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-gray-200">
         {onCancel && (
           <CustomButton
             type="button"
             variant="outline"
             onClick={onCancel}
             size="lg"
+            className="w-full sm:w-auto touch-manipulation"
           >
             <X className="h-4 w-4 mr-2" />
             Cancelar
@@ -1212,6 +1213,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           loading={loading}
           loadingText="Enviando postulación..."
           size="lg"
+          className="w-full sm:w-auto touch-manipulation"
         >
           <Send className="h-4 w-4 mr-2" />
           Enviar Postulación

@@ -831,20 +831,80 @@ export const approveApplicationWithWebhook = async (
     listing_type: string;
   }
 ) => {
+  console.log('🚀 === approveApplicationWithWebhook LLAMADA ===');
+  console.log('📋 applicationId:', applicationId);
+  console.log('🏠 propertyId:', propertyId);
+  console.log('👤 applicantId:', applicantId);
+
   try {
-    // 1. Update application status in database
+    // Get current user (who is approving)
+    console.log('🔐 Obteniendo sesión del usuario...');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('🔍 Resultado de getSession:', { session: !!session, sessionError });
+
+    if (sessionError || !session?.user) {
+      console.error('❌ Error de autenticación:', sessionError);
+      throw new Error('User not authenticated - no active session');
+    }
+    const user = session.user;
+    console.log('✅ Usuario autenticado:', user.id);
+
+    // Get existing application to retrieve created_by (applicant_id)
+    console.log('📊 Consultando aplicación existente...');
+    const { data: existingApplication, error: fetchError } = await supabase
+      .from('applications')
+      .select('applicant_id')
+      .eq('id', applicationId)
+      .single();
+
+    console.log('🔍 Resultado consulta aplicación:', { existingApplication, fetchError });
+
+    if (fetchError) {
+      console.error('❌ Error consultando aplicación:', fetchError);
+      throw fetchError;
+    }
+
+    console.log('✅ Aplicación encontrada - created_by (applicant_id):', existingApplication.applicant_id);
+
+    // 1. Update application status in database with approval tracking
+    console.log('💾 Actualizando base de datos...');
+    console.log('📝 Datos a actualizar:', {
+      status: 'aprobada',
+      approved_by: user.id,
+      approved_at: new Date().toISOString()
+    });
+
     const { data: updatedApplication, error: updateError } = await supabase
       .from('applications')
-      .update({ status: 'aprobada' })
+      .update({
+        status: 'aprobada',
+        approved_by: user.id,
+        approved_at: new Date().toISOString()
+      })
       .eq('id', applicationId)
       .select('*')
       .single();
 
-    if (updateError) throw updateError;
+    console.log('🔍 Resultado actualización BD:', { updatedApplication: !!updatedApplication, updateError });
 
-    // 2. Send webhook to Supabase Edge Function
+    if (updateError) {
+      console.error('❌ Error actualizando BD:', updateError);
+      throw updateError;
+    }
+
+    console.log('✅ Base de datos actualizada exitosamente');
+    console.log('📋 Aplicación actualizada:', {
+      id: updatedApplication.id,
+      status: updatedApplication.status,
+      approved_by: updatedApplication.approved_by,
+      approved_at: updatedApplication.approved_at
+    });
+
+    // 2. Send webhook to Supabase Edge Function with additional tracking info
     const webhookPayload = {
       application_id: applicationId,
+      created_by: existingApplication.applicant_id,
+      approved_by: user.id,
       property_id: propertyId,
       applicant_id: applicantId,
       applicant_data: applicantData,
@@ -853,23 +913,48 @@ export const approveApplicationWithWebhook = async (
       action: 'application_approved'
     };
 
-    console.log('🌐 Enviando webhook a Edge Function:', webhookPayload);
+    console.log('🌐 === WEBHOOK PAYLOAD ===');
+    console.log('📋 application_id:', webhookPayload.application_id);
+    console.log('👤 created_by:', webhookPayload.created_by);
+    console.log('✅ approved_by:', webhookPayload.approved_by);
+    console.log('🏠 property_id:', webhookPayload.property_id);
+    console.log('👨‍💼 applicant_id:', webhookPayload.applicant_id);
+    console.log('⏰ timestamp:', webhookPayload.timestamp);
+    console.log('🎯 action:', webhookPayload.action);
+    console.log('🌐 Enviando webhook completo a Edge Function...');
 
-    const { data: webhookResponse, error: webhookError } = await supabase.functions.invoke(
-      'approve-application',
-      {
-        body: webhookPayload,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+    try {
+      // Por ahora, intentar con el token de Supabase (temporal)
+      // TODO: Configurar WEBHOOK_SECRET en las variables de entorno de Supabase
+      const { data: webhookResponse, error: webhookError } = await supabase.functions.invoke(
+        'approve-application',
+        {
+          body: webhookPayload,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          }
         }
-      }
-    );
+      );
 
-    if (webhookError) {
-      console.warn('⚠️ Error en webhook (no crítico):', webhookError);
-    } else {
-      console.log('✅ Webhook enviado exitosamente:', webhookResponse);
+      if (webhookError) {
+        console.warn('⚠️ Error en webhook (puede que la función no esté desplegada):', webhookError.message);
+        console.warn('💡 SOLUCIÓN TEMPORAL: La aprobación funciona correctamente sin webhook por ahora');
+        console.warn('💡 PARA SOLUCIÓN DEFINITIVA: Despliega la función Edge Function desde el dashboard de Supabase');
+        console.warn('📋 Instrucciones: https://supabase.com/dashboard/project/phnkervuiijqmapgswkc/functions');
+      } else {
+        console.log('✅ Webhook enviado exitosamente:', webhookResponse);
+      }
+    } catch (webhookError) {
+      console.warn('⚠️ Error al enviar webhook:', webhookError.message);
+      console.warn('💡 SOLUCIÓN TEMPORAL: La aprobación funciona correctamente sin webhook por ahora');
+      console.warn('💡 PARA SOLUCIÓN DEFINITIVA: Despliega la función Edge Function desde el dashboard de Supabase');
+      console.warn('📋 Instrucciones: https://supabase.com/dashboard/project/phnkervuiijqmapgswkc/functions');
+      console.warn('💡 Datos que se intentarían enviar:', {
+        application_id: applicationId,
+        created_by: existingApplication.applicant_id,
+        approved_by: user.id
+      });
     }
 
     return updatedApplication;

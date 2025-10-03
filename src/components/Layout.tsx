@@ -22,12 +22,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         try {
           const { data, error } = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('first_name, paternal_last_name, maternal_last_name')
             .eq('id', user.id)
             .maybeSingle();
 
-          if (!error && data?.full_name) {
-            setUserName(data.full_name);
+          if (!error && data) {
+            const { first_name, paternal_last_name, maternal_last_name } = data;
+            if (first_name && paternal_last_name) {
+              const fullName = `${first_name} ${paternal_last_name}${maternal_last_name ? ` ${maternal_last_name}` : ''}`;
+              setUserName(fullName);
+            } else {
+              // If no name in profile, use email username as fallback
+              setUserName(user.email?.split('@')[0] || 'Usuario');
+            }
           } else {
             // If no name in profile, use email username as fallback
             setUserName(user.email?.split('@')[0] || 'Usuario');

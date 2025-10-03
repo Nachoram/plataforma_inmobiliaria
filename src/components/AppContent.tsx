@@ -11,6 +11,7 @@ import { MarketplacePage } from './marketplace/MarketplacePage';
 import { PortfolioPage } from './portfolio/PortfolioPage';
 import { ApplicationsPage } from './dashboard/ApplicationsPage';
 import ContractManagementPage from './contracts/ContractManagementPage';
+import ContractViewerPage from './contracts/ContractViewerPage';
 import { MyActivityPage } from './marketplace/MyActivityPage';
 import { UserProfile } from './profile/UserProfile';
 
@@ -93,6 +94,11 @@ export const AppContent: React.FC = () => {
         </ProtectedRoute>
       } />
 
+      <Route path="/contract/:contractId" element={
+        <ProtectedRoute>
+          <ContractViewerPage />
+        </ProtectedRoute>
+      } />
 
       <Route path="/my-activity" element={
         <ProtectedRoute>

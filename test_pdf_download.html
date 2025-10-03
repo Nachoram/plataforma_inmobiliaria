@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Descarga de Contratos PDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #333;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .contract-preview {
+            border: 2px solid #ddd;
+            padding: 60px 100px;
+            margin: 20px auto;
+            background: white;
+            font-family: 'Times New Roman', serif;
+            max-width: 210mm;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .contract-title {
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            line-height: 1.4;
+        }
+        .contract-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 25px;
+            border-bottom: 3px double #000;
+        }
+        .contract-date {
+            font-size: 13px;
+            color: #555;
+            margin-top: 8px;
+            font-style: italic;
+            text-align: center;
+        }
+        .section {
+            margin: 35px 0;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #000;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 18px;
+            letter-spacing: 1px;
+        }
+        .party-info {
+            border: 2px solid #000;
+            background: #f9f9f9;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .party-header {
+            font-weight: bold;
+            font-size: 15px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            text-decoration: underline;
+        }
+        .section-content {
+            text-align: justify;
+            line-height: 1.9;
+        }
+        .property-box {
+            border: 2px solid #000;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f5f5f5;
+        }
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .test-results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .test-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 4px solid #28a745;
+            background: white;
+        }
+        .test-item.pending {
+            border-left-color: #ffc107;
+        }
+        .test-item.failed {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Test - Funcionalidad de Descarga PDF</h1>
+            <p>Prueba la nueva funcionalidad de descarga de contratos en formato PDF</p>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Instrucciones:</h3>
+            <ol>
+                <li>Revisa el contrato de ejemplo a continuación</li>
+                <li>Haz clic en "Descargar PDF de Prueba"</li>
+                <li>Verifica que el archivo se descargue correctamente</li>
+                <li>Abre el PDF y comprueba que el contenido sea legible</li>
+                <li>Verifica que tenga múltiples páginas si es necesario</li>
+            </ol>
+        </div>
+
+        <div id="status-container"></div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button id="downloadBtn" onclick="downloadPDF()">
+                📄 Descargar PDF de Prueba
+            </button>
+            <button onclick="resetTest()" style="background: #6c757d;">
+                🔄 Reiniciar Test
+            </button>
+        </div>
+
+        <div id="contract-preview" class="contract-preview">
+            <div class="contract-header">
+                <div class="contract-title">
+                    CONTRATO DE ARRENDAMIENTO<br>DE BIEN RAÍZ URBANO
+                </div>
+                <div class="contract-date">Santiago, Chile - <span id="currentDate"></span></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">I. COMPARECIENTES</div>
+                <div class="party-info">
+                    <div class="party-header">ARRENDADOR</div>
+                    <p><strong>Nombre:</strong> INMOBILIARIA DEMO S.A.</p>
+                    <p><strong>RUT:</strong> 76.XXX.XXX-X</p>
+                    <p><strong>Domicilio:</strong> Av. Providencia 1234, Santiago, Chile</p>
+                    <p><strong>Representante Legal:</strong> María González Castro</p>
+                </div>
+                <div class="party-info">
+                    <div class="party-header">ARRENDATARIO</div>
+                    <p><strong>Nombre:</strong> Juan Pérez González</p>
+                    <p><strong>RUT:</strong> 12.345.678-9</p>
+                    <p><strong>Domicilio:</strong> Las Condes, Santiago, Chile</p>
+                    <p><strong>Estado Civil:</strong> Soltero</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">II. BIEN ARRENDADO</div>
+                <div class="section-content">
+                    <p>El ARRENDADOR da en arrendamiento al ARRENDATARIO y éste toma en arrendamiento, un inmueble ubicado en:</p>
+                </div>
+                <div class="property-box">
+                    <p><strong>Dirección Completa:</strong> Avenida Providencia 1234, Departamento 501</p>
+                    <p><strong>Comuna:</strong> Providencia</p>
+                    <p><strong>Ciudad:</strong> Santiago</p>
+                    <p><strong>Región:</strong> Metropolitana</p>
+                    <p><strong>Superficie Útil:</strong> 65 m²</p>
+                    <p><strong>Tipo de Inmueble:</strong> Departamento Residencial</p>
+                    <p><strong>Rol de Avalúo:</strong> 123-456-789-0</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">III. CONDICIONES ECONÓMICAS Y DURACIÓN</div>
+                <div class="section-content">
+                    <p><strong>RENTA:</strong> Las partes acuerdan que la renta mensual del inmueble será de $650.000 (Seiscientos cincuenta mil pesos chilenos), pagaderos dentro de los primeros cinco días de cada mes mediante transferencia bancaria.</p>
+                    
+                    <p><strong>GARANTÍA:</strong> El arrendatario entregará en este acto la suma de $650.000 (Seiscientos cincuenta mil pesos) equivalente a un mes de renta, como garantía del cumplimiento del contrato.</p>
+                    
+                    <p><strong>REAJUSTABILIDAD:</strong> La renta se reajustará anualmente conforme a la variación del Índice de Precios al Consumidor (IPC) determinado por el Instituto Nacional de Estadísticas.</p>
+                    
+                    <p><strong>DURACIÓN:</strong> El presente contrato tendrá una duración de 12 (doce) meses, contados desde el 01 de noviembre de 2025 hasta el 31 de octubre de 2026.</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">IV. OBLIGACIONES DEL ARRENDATARIO</div>
+                <div class="section-content">
+                    <p>El ARRENDATARIO se obliga a:</p>
+                    <ol style="list-style-type: decimal; padding-left: 25px;">
+                        <li style="margin-bottom: 12px;">Pagar puntualmente la renta mensual acordada en la forma y plazo convenidos.</li>
+                        <li style="margin-bottom: 12px;">Mantener la propiedad en buen estado de conservación y limpieza.</li>
+                        <li style="margin-bottom: 12px;">Hacer uso del inmueble conforme a su destinación habitacional.</li>
+                        <li style="margin-bottom: 12px;">Dar aviso oportuno de cualquier desperfecto o deterioro que requiera reparación.</li>
+                        <li style="margin-bottom: 12px;">No subarrendar ni ceder el inmueble sin autorización escrita del arrendador.</li>
+                        <li style="margin-bottom: 12px;">Cumplir estrictamente con las normas del reglamento de copropiedad.</li>
+                        <li style="margin-bottom: 12px;">Pagar oportunamente los servicios básicos (luz, agua, gas) y gastos comunes.</li>
+                        <li style="margin-bottom: 12px;">Permitir inspecciones periódicas del inmueble previa coordinación.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">V. OBLIGACIONES DEL ARRENDADOR</div>
+                <div class="section-content">
+                    <p>El ARRENDADOR se obliga a:</p>
+                    <ol style="list-style-type: decimal; padding-left: 25px;">
+                        <li style="margin-bottom: 12px;">Entregar la propiedad en condiciones óptimas de habitabilidad y funcionamiento.</li>
+                        <li style="margin-bottom: 12px;">Mantener en buen estado la estructura general del inmueble.</li>
+                        <li style="margin-bottom: 12px;">Realizar las reparaciones mayores que sean necesarias por deterioro normal.</li>
+                        <li style="margin-bottom: 12px;">Respetar el uso pacífico y la privacidad del arrendatario.</li>
+                        <li style="margin-bottom: 12px;">Garantizar que el inmueble cumple con todas las normativas vigentes.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">VI. TÉRMINO DEL CONTRATO</div>
+                <div class="section-content">
+                    <p>El presente contrato podrá terminarse anticipadamente por las siguientes causales:</p>
+                    <ol style="list-style-type: lower-alpha; padding-left: 25px;">
+                        <li style="margin-bottom: 12px;">Vencimiento del plazo pactado sin renovación.</li>
+                        <li style="margin-bottom: 12px;">Mutuo acuerdo entre las partes, formalizado por escrito.</li>
+                        <li style="margin-bottom: 12px;">Incumplimiento grave de las obligaciones contractuales.</li>
+                        <li style="margin-bottom: 12px;">Mora en el pago de la renta por más de dos períodos consecutivos.</li>
+                        <li style="margin-bottom: 12px;">Daños intencionales al inmueble o destino indebido del mismo.</li>
+                        <li style="margin-bottom: 12px;">Por las demás causales establecidas en la Ley N° 18.101.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="section" style="margin-top: 60px;">
+                <div class="section-title" style="text-align: center;">FIRMAS</div>
+                <p style="text-align: justify; margin-bottom: 40px;">
+                    En comprobante de lo pactado, se firma el presente contrato en dos ejemplares de igual tenor y fecha, 
+                    declarando las partes haber leído y aceptado todas y cada una de las cláusulas del presente instrumento.
+                </p>
+                <div style="display: flex; justify-content: space-between; margin-top: 60px;">
+                    <div style="text-align: center; width: 45%;">
+                        <div style="border-top: 2px solid #000; padding-top: 10px; margin-bottom: 10px;"></div>
+                        <div style="font-weight: bold; text-transform: uppercase; font-size: 12px;">ARRENDADOR</div>
+                        <div style="margin-top: 5px;">INMOBILIARIA DEMO S.A.</div>
+                        <div style="font-size: 12px; color: #555;">RUT: 76.XXX.XXX-X</div>
+                    </div>
+                    <div style="text-align: center; width: 45%;">
+                        <div style="border-top: 2px solid #000; padding-top: 10px; margin-bottom: 10px;"></div>
+                        <div style="font-weight: bold; text-transform: uppercase; font-size: 12px;">ARRENDATARIO</div>
+                        <div style="margin-top: 5px;">Juan Pérez González</div>
+                        <div style="font-size: 12px; color: #555;">RUT: 12.345.678-9</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px; padding-top: 25px; border-top: 2px solid #ccc; font-size: 11px; color: #666;">
+                <p style="margin-bottom: 5px;"><strong>DOCUMENTO GENERADO ELECTRÓNICAMENTE</strong></p>
+                <p style="margin-bottom: 5px;">Fecha de Generación: <span id="footerDate"></span></p>
+                <p style="margin-bottom: 5px;">ID del Contrato: TEST-001-2025</p>
+                <p style="margin-top: 10px; font-style: italic;">
+                    Este contrato se rige por la Ley N° 18.101 sobre Arrendamiento de Bienes Raíces Urbanos
+                </p>
+                <p style="margin-top: 10px; color: #999;">
+                    Este es un documento de prueba para validar la funcionalidad de descarga PDF
+                </p>
+            </div>
+        </div>
+
+        <div class="test-results">
+            <h3>✅ Checklist de Validación:</h3>
+            <div class="test-item pending" id="test1">
+                ⏳ Generar y descargar archivo PDF
+            </div>
+            <div class="test-item pending" id="test2">
+                ⏳ Verificar que el PDF contiene todo el texto
+            </div>
+            <div class="test-item pending" id="test3">
+                ⏳ Confirmar que el formato es legible
+            </div>
+            <div class="test-item pending" id="test4">
+                ⏳ Validar paginación correcta
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar fecha actual
+        const currentDate = new Date();
+        const formattedDate = currentDate.toLocaleDateString('es-CL', { 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+        });
+        const shortDate = currentDate.toLocaleDateString('es-CL');
+        
+        document.getElementById('currentDate').textContent = formattedDate;
+        document.getElementById('footerDate').textContent = shortDate;
+
+        // Función para mostrar status
+        function showStatus(message, type) {
+            const container = document.getElementById('status-container');
+            container.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                if (type !== 'error') {
+                    container.innerHTML = '';
+                }
+            }, 5000);
+        }
+
+        // Función para descargar PDF
+        async function downloadPDF() {
+            const button = document.getElementById('downloadBtn');
+            button.disabled = true;
+            button.textContent = '⏳ Generando PDF...';
+            
+            try {
+                showStatus('🔄 Iniciando generación de PDF...', 'info');
+                
+                // Obtener el contenedor del contrato
+                const contractElement = document.getElementById('contract-preview');
+                
+                // Generar canvas con html2canvas
+                showStatus('📸 Capturando contenido...', 'info');
+                const canvas = await html2canvas(contractElement, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+                
+                // Actualizar checklist
+                document.getElementById('test1').className = 'test-item';
+                document.getElementById('test1').innerHTML = '✅ Generar y descargar archivo PDF';
+                
+                showStatus('📄 Generando documento PDF...', 'info');
+                
+                // Crear PDF con jsPDF
+                const { jsPDF } = window.jspdf;
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Dimensiones
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                const pdfWidth = 210;
+                const pdfHeight = 297;
+                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                const finalWidth = imgWidth * ratio;
+                const finalHeight = imgHeight * ratio;
+                
+                // Calcular páginas
+                const pageHeight = pdfHeight;
+                const totalPages = Math.ceil(finalHeight / pageHeight);
+                
+                showStatus(`📊 Generando ${totalPages} página(s)...`, 'info');
+                
+                // Crear PDF
+                const pdf = new jsPDF({
+                    orientation: finalHeight > finalWidth ? 'portrait' : 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                // Añadir páginas
+                for (let page = 0; page < totalPages; page++) {
+                    if (page > 0) {
+                        pdf.addPage();
+                    }
+                    const yOffset = -page * pageHeight;
+                    pdf.addImage(imgData, 'PNG', 0, yOffset, finalWidth, finalHeight, undefined, 'FAST');
+                }
+                
+                // Actualizar checklist
+                document.getElementById('test2').className = 'test-item';
+                document.getElementById('test2').innerHTML = '✅ Verificar que el PDF contiene todo el texto';
+                document.getElementById('test3').className = 'test-item';
+                document.getElementById('test3').innerHTML = '✅ Confirmar que el formato es legible';
+                document.getElementById('test4').className = 'test-item';
+                document.getElementById('test4').innerHTML = `✅ Validar paginación correcta (${totalPages} páginas)`;
+                
+                // Guardar PDF
+                pdf.save('contrato-prueba-juan-perez.pdf');
+                
+                showStatus('✅ ¡PDF generado y descargado exitosamente! Revisa tu carpeta de descargas.', 'success');
+                
+            } catch (error) {
+                console.error('Error al generar PDF:', error);
+                showStatus('❌ Error al generar PDF: ' + error.message, 'error');
+                
+                // Marcar test como fallido
+                document.getElementById('test1').className = 'test-item failed';
+                document.getElementById('test1').innerHTML = '❌ Error al generar PDF';
+            } finally {
+                button.disabled = false;
+                button.textContent = '📄 Descargar PDF de Prueba';
+            }
+        }
+
+        // Función para reiniciar test
+        function resetTest() {
+            document.getElementById('status-container').innerHTML = '';
+            document.getElementById('test1').className = 'test-item pending';
+            document.getElementById('test1').innerHTML = '⏳ Generar y descargar archivo PDF';
+            document.getElementById('test2').className = 'test-item pending';
+            document.getElementById('test2').innerHTML = '⏳ Verificar que el PDF contiene todo el texto';
+            document.getElementById('test3').className = 'test-item pending';
+            document.getElementById('test3').innerHTML = '⏳ Confirmar que el formato es legible';
+            document.getElementById('test4').className = 'test-item pending';
+            document.getElementById('test4').innerHTML = '⏳ Validar paginación correcta';
+        }
+    </script>
+</body>
+</html>
+

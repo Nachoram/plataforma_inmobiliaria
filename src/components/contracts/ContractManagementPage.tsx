@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FileText,
   Search,
@@ -7,14 +8,12 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  Plus,
   Calendar,
   User,
   Building
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import CustomButton from '../common/CustomButton';
-import ContractApprovalWorkflow from './ContractApprovalWorkflow';
 
 interface Contract {
   id: string;
@@ -42,10 +41,9 @@ interface Contract {
 }
 
 const ContractManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
-  const [showWorkflow, setShowWorkflow] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -56,6 +54,9 @@ const ContractManagementPage: React.FC = () => {
   const loadContracts = async () => {
     try {
       setLoading(true);
+
+      console.log('🔍 Loading contracts...');
+
       // First get contracts with applications data
       const { data: contractsData, error: contractsError } = await supabase
         .from('rental_contracts')
@@ -71,21 +72,31 @@ const ContractManagementPage: React.FC = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (contractsError) throw contractsError;
+      if (contractsError) {
+        console.error('❌ Error fetching contracts:', contractsError);
+        throw new Error(`Error fetching contracts: ${contractsError.message || 'Unknown error'}`);
+      }
+
+      console.log('✅ Contracts loaded:', contractsData?.length || 0);
 
       // Then get property data for all contracts
       if (contractsData && contractsData.length > 0) {
         const propertyIds = contractsData.map(c => c.applications?.property_id).filter(Boolean);
+        console.log('🔍 Property IDs to fetch:', propertyIds);
 
         if (propertyIds.length > 0) {
           const { data: propertiesData, error: propertiesError } = await supabase
             .from('properties')
             .select(`
               id,
-              title,
-              address,
+              description,
+              address_street,
+              address_number,
+              address_department,
+              address_commune,
+              address_region,
               owner_id,
-              profiles (
+              profiles!properties_owner_id_fkey (
                 first_name,
                 paternal_last_name,
                 email
@@ -93,7 +104,12 @@ const ContractManagementPage: React.FC = () => {
             `)
             .in('id', propertyIds);
 
-          if (propertiesError) throw propertiesError;
+          if (propertiesError) {
+            console.error('❌ Error fetching properties:', propertiesError);
+            throw new Error(`Error fetching properties: ${propertiesError.message || 'Unknown error'}`);
+          }
+
+          console.log('✅ Properties loaded:', propertiesData?.length || 0);
 
           // Combine the data
           const contractsWithProperties = contractsData.map(contract => ({
@@ -106,14 +122,22 @@ const ContractManagementPage: React.FC = () => {
 
           setContracts(contractsWithProperties);
         } else {
+          console.log('⚠️ No property IDs found, setting contracts without properties');
           setContracts(contractsData);
         }
       } else {
+        console.log('ℹ️ No contracts found');
         setContracts([]);
       }
-    } catch (error) {
-      console.error('Error loading contracts:', error);
-      alert('Error al cargar los contratos');
+    } catch (error: any) {
+      console.error('❌ Error loading contracts:', error);
+
+      // Mostrar error más específico
+      const errorMessage = error?.message || 'Error desconocido al cargar contratos';
+      alert(`Error al cargar los contratos:\n\n${errorMessage}\n\nRevisa la consola para más detalles.`);
+
+      // Set empty contracts array on error
+      setContracts([]);
     } finally {
       setLoading(false);
     }
@@ -170,9 +194,14 @@ const ContractManagementPage: React.FC = () => {
     }
   };
 
+  const getPropertyTitle = (property: any) => {
+    return property.description || `Propiedad en ${property.address_commune}`;
+  };
+
   const filteredContracts = contracts.filter(contract => {
+    const propertyTitle = getPropertyTitle(contract.applications.properties);
     const matchesSearch = searchTerm === '' ||
-      contract.applications.properties.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      propertyTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contract.applications.snapshot_applicant_first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contract.applications.snapshot_applicant_paternal_last_name.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -182,8 +211,23 @@ const ContractManagementPage: React.FC = () => {
   });
 
   const handleViewContract = (contract: Contract) => {
-    setSelectedContract(contract);
-    setShowWorkflow(true);
+    navigate(`/contract/${contract.id}`);
+  };
+
+  const handleViewWorkflowContract = (contract: Contract) => {
+    // URL del webhook de N8N (esto debería venir de configuración o variables de entorno)
+    const webhookUrl = import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_URL ||
+                      'https://your-n8n-instance.com/webhook/contract-generator';
+
+    // Construir la URL con parámetros para el workflow contract viewer
+    const params = new URLSearchParams({
+      webhookUrl,
+      workflowId: 'contrato_arriendo',
+      propertyId: contract.applications.properties.id,
+      applicationId: contract.applications.id
+    });
+
+    navigate(`/workflow-contract/${contract.id}?${params.toString()}`);
   };
 
   if (loading) {
@@ -258,196 +302,6 @@ const ContractManagementPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Sample Contract Section */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
-                <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
-                Contrato de Ejemplo
-              </h2>
-              <p className="text-gray-600 text-xs sm:text-sm mt-1">
-                Visualiza un contrato de arriendo residencial de ejemplo para orientarte
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <CustomButton
-                variant="outline"
-                className="flex items-center space-x-2 opacity-50 cursor-not-allowed text-xs sm:text-sm"
-                disabled
-              >
-                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Canvas (Próximamente)</span>
-                <span className="sm:hidden">Canvas</span>
-              </CustomButton>
-              <CustomButton
-                onClick={async () => {
-                  if (confirm('¿Quieres poblar la base de datos con datos de ejemplo para el contrato? Esto insertará usuarios, propiedades, aplicaciones y contratos de demostración.')) {
-                    try {
-                      setLoading(true);
-                      alert('Ejecutando seed de datos... Esto puede tomar unos segundos.');
-
-                      // Crear perfil del arrendador de demostración
-                      await supabase.from('profiles').upsert({
-                        id: '550e8400-e29b-41d4-a716-446655440001',
-                        first_name: 'Carolina',
-                        paternal_last_name: 'Soto',
-                        maternal_last_name: 'Rojas',
-                        rut: '15.123.456-7',
-                        email: 'carolina.soto@example.com',
-                        phone: '+56912345678',
-                        profession: 'Profesora',
-                        marital_status: 'casado',
-                        address_street: 'Eliodoro Yáñez',
-                        address_number: '1890',
-                        address_commune: 'Providencia',
-                        address_region: 'Metropolitana'
-                      });
-
-                      // Insertar/actualizar arrendatario
-                      await supabase.from('profiles').upsert({
-                        id: '550e8400-e29b-41d4-a716-446655440002',
-                        first_name: 'Carlos',
-                        paternal_last_name: 'Soto',
-                        maternal_last_name: 'Vega',
-                        rut: '33.333.333-3',
-                        email: 'carlos.soto@example.com',
-                        phone: '+56987654321',
-                        profession: 'Ingeniero',
-                        marital_status: 'soltero',
-                        address_street: 'Los Leones',
-                        address_number: '567',
-                        address_commune: 'Providencia',
-                        address_region: 'Metropolitana'
-                      });
-
-                      // Insertar guarantor
-                      await supabase.from('guarantors').upsert({
-                        id: '550e8400-e29b-41d4-a716-446655440003',
-                        first_name: 'Rodolfo',
-                        paternal_last_name: 'Rrrrrrrr',
-                        maternal_last_name: 'Mmmmmm',
-                        rut: '44.444.444-4',
-                        profession: 'Abogado',
-                        monthly_income_clp: 3500000,
-                        address_street: 'Irarrazaval',
-                        address_number: '5350',
-                        address_department: '22',
-                        address_commune: 'Ñuñoa',
-                        address_region: 'Metropolitana'
-                      });
-
-                      // Insertar propiedad
-                      await supabase.from('properties').upsert({
-                        id: '550e8400-e29b-41d4-a716-446655440004',
-                        owner_id: '550e8400-e29b-41d4-a716-446655440001', // ID del arrendador de demostración
-                        status: 'disponible',
-                        listing_type: 'casa',
-                        address_street: 'Suecia',
-                        address_number: '1234',
-                        address_department: 'Casa A',
-                        address_commune: 'Providencia',
-                        address_region: 'Metropolitana',
-                        price_clp: 1600000,
-                        common_expenses_clp: 80000,
-                        bedrooms: 3,
-                        bathrooms: 2,
-                        surface_m2: 120,
-                        description: 'Hermosa casa en Providencia, ideal para familia. Incluye estacionamiento y bodega.'
-                      });
-
-                      // Insertar aplicación
-                      await supabase.from('applications').upsert({
-                        id: '550e8400-e29b-41d4-a716-446655440005',
-                        property_id: '550e8400-e29b-41d4-a716-446655440004',
-                        applicant_id: '550e8400-e29b-41d4-a716-446655440002',
-                        guarantor_id: '550e8400-e29b-41d4-a716-446655440003',
-                        status: 'aprobada',
-                        message: 'Excelente postulante, recomendado por conocidos. Tiene ingresos estables y referencias positivas.',
-                        snapshot_applicant_first_name: 'Carlos',
-                        snapshot_applicant_paternal_last_name: 'Soto',
-                        snapshot_applicant_maternal_last_name: 'Vega',
-                        snapshot_applicant_rut: '33.333.333-3',
-                        snapshot_applicant_email: 'carlos.soto@example.com',
-                        snapshot_applicant_phone: '+56987654321',
-                        snapshot_applicant_profession: 'Ingeniero',
-                        snapshot_applicant_monthly_income_clp: 4500000,
-                        snapshot_applicant_age: 35,
-                        snapshot_applicant_nationality: 'Chilena',
-                        snapshot_applicant_marital_status: 'soltero',
-                        snapshot_applicant_address_street: 'Los Leones',
-                        snapshot_applicant_address_number: '567',
-                        snapshot_applicant_address_commune: 'Providencia',
-                        snapshot_applicant_address_region: 'Metropolitana'
-                      });
-
-                      // Insertar contrato
-                      await supabase.from('rental_contracts').upsert({
-                        id: '550e8400-e29b-41d4-a716-446655440006',
-                        application_id: '550e8400-e29b-41d4-a716-446655440005',
-                        status: 'approved',
-                        contract_content: {
-                          header: {
-                            title: 'Encabezado del Contrato',
-                            content: '## CONTRATO DE ARRENDAMIENTO RESIDENCIAL\n\nEn Santiago de Chile, a 29 de septiembre de 2025, comparecen:\n\n**Carolina Andrea Soto Rojas**, con RUT N° 15.123.456-7, domiciliada en Eliodoro Yáñez 1890, Providencia, en adelante "el Arrendador"; y\n\n**Carlos Alberto Soto Vega**, con RUT N° 33.333.333-3, domiciliado en Los Leones 567 Depto. 56, Providencia, en adelante "el Arrendatario".\n\nAmbas partes convienen en celebrar el presente contrato de arrendamiento residencial, el que se regirá por las siguientes cláusulas.'
-                          },
-                          conditions: {
-                            title: 'Condiciones del Arriendo',
-                            content: '## CLÁUSULA SEGUNDA: OBJETO\n\nEl Arrendador da en arrendamiento al Arrendatario, quien acepta para sí, el inmueble ubicado en Suecia 1234 Casa A, Providencia, con ROL de avalúo N° [ROL no especificado].\n\nEl inmueble arrendado se destina exclusivamente para fines residenciales, para la habitación del Arrendatario y su familia.\n\nSe deja constancia que el inmueble no incluye estacionamiento ni bodega.\n\n## CLÁUSULA TERCERA: RENTA\n\nLa renta mensual de arrendamiento será la suma de $1.600.000 (un millón seiscientos mil pesos chilenos).\n\nEl Arrendatario se obliga a pagar dicha suma por adelantado dentro de los primeros cinco (5) días de cada mes, en la forma y lugar que las partes convengan o determinen posteriormente.\n\n## CLÁUSULA CUARTA: DURACIÓN\n\nEl presente contrato tendrá una duración de 12 meses a contar del 1 de octubre de 2025, pudiendo renovarse previo acuerdo expreso entre las partes.\n\nEl Arrendatario podrá poner término al contrato notificando al Arrendador con al menos 30 días de anticipación, en conformidad con la legislación vigente.\n\nAsimismo, el Arrendador podrá poner término conforme a los plazos y causales legales aplicables.'
-                          },
-                          obligations: {
-                            title: 'Obligaciones de las Partes',
-                            content: '## CLÁUSULA QUINTA: GARANTÍA, AVAL Y CODEUDOR SOLIDARIO\n\nPara garantía del fiel cumplimiento de todas las obligaciones emanadas del presente contrato, comparece y se constituye en aval y codeudor solidario:\n\n**Don Rodolfo Rrrrrrrr Mmmmmm**, con RUT N° 44.444.444-4, domiciliado en Irarrazaval 5350 Depto. 22, Ñuñoa, quien responde solidariamente con el Arrendatario por todas las obligaciones presentes y futuras derivadas del presente contrato.\n\n## OBLIGACIONES DEL ARRENDATARIO\n- Pagar puntualmente la renta y gastos comunes\n- Mantener el inmueble en buen estado\n- Permitir inspecciones con previo aviso\n- No subarrendar sin autorización\n\n## OBLIGACIONES DEL ARRENDADOR\n- Entregar el inmueble en perfectas condiciones\n- Realizar reparaciones necesarias\n- Respetar el uso pacífico del inmueble\n- Cumplir con las normativas vigentes'
-                          },
-                          termination: {
-                            title: 'Terminación del Contrato',
-                            content: '## CLÁUSULA DE TERMINACIÓN\n\nEl contrato podrá terminarse por:\n\n1. **Mutuo acuerdo** entre las partes\n2. **Incumplimiento** de cualquiera de las obligaciones contractuales\n3. **Necesidades propias** del arrendador (con preaviso de 90 días)\n4. **Pérdida del empleo** del arrendatario (con preaviso de 60 días)\n\nEn caso de terminación anticipada, se aplicarán las multas correspondientes según la legislación vigente.'
-                          },
-                          signatures: {
-                            title: 'Firmas Digitales',
-                            content: '## ESPACIOS PARA FIRMAS\n\nFirmado en dos ejemplares de un mismo tenor y a un solo efecto, en Santiago de Chile a 29 de septiembre de 2025.\n\n_____________________________\nCarolina Andrea Soto Rojas\nRUT: 15.123.456-7\nARRENDADOR\n\n_____________________________\nCarlos Alberto Soto Vega\nRUT: 33.333.333-3\nARRENDATARIO\n\n_____________________________\nRodolfo Rrrrrrrr Mmmmmm\nRUT: 44.444.444-4\nAVAL Y CODEUDOR SOLIDARIO'
-                          }
-                        },
-                        created_by: '550e8400-e29b-41d4-a716-446655440001',
-                        approved_by: '550e8400-e29b-41d4-a716-446655440001',
-                        notes: 'Contrato generado automáticamente para demostración del sistema de contratos.'
-                      });
-
-                      // Recargar contratos
-                      await loadContracts();
-
-                      alert('✅ Datos de ejemplo insertados correctamente. Ahora puedes ver el contrato en la lista.');
-                    } catch (error) {
-                      console.error('Error seeding data:', error);
-                      alert('❌ Error al poblar datos de ejemplo: ' + (error as Error).message);
-                    } finally {
-                      setLoading(false);
-                    }
-                  }
-                }}
-                variant="secondary"
-                className="flex items-center space-x-2 text-xs sm:text-sm"
-                disabled={loading}
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">{loading ? 'Poblando...' : 'Poblar Datos de Ejemplo'}</span>
-                <span className="sm:hidden">{loading ? 'Poblando...' : 'Poblar Datos'}</span>
-              </CustomButton>
-            </div>
-          </div>
-
-          <div className="mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-            <h3 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Contrato de Arriendo Residencial</h3>
-            <div className="text-xs sm:text-sm text-gray-600 space-y-2">
-              <p><strong>Arrendador:</strong> Carolina Andrea Soto Rojas (RUT: 15.123.456-7)</p>
-              <p><strong>Arrendatario:</strong> Carlos Alberto Soto Vega (RUT: 33.333.333-3)</p>
-              <p><strong>Aval:</strong> Rodolfo Rrrrrrrr Mmmmmm (RUT: 44.444.444-4)</p>
-              <p><strong>Propiedad:</strong> Suecia 1234 Casa A, Providencia</p>
-              <p><strong>Renta mensual:</strong> $1.600.000 CLP</p>
-            </div>
-          </div>
-        </div>
-
         {/* Contracts Grid */}
         {filteredContracts.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-8 sm:p-12 text-center">
@@ -490,9 +344,13 @@ const ContractManagementPage: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1 truncate group-hover:text-blue-600 transition-colors">
-                          {contract.applications.properties.title}
+                          {getPropertyTitle(contract.applications.properties)}
                         </h3>
-                        <p className="text-xs sm:text-sm text-gray-600 truncate">{contract.applications.properties.address}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">
+                          {contract.applications.properties.address_street} {contract.applications.properties.address_number}
+                          {contract.applications.properties.address_department ? `, ${contract.applications.properties.address_department}` : ''}
+                          , {contract.applications.properties.address_commune}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -531,38 +389,25 @@ const ContractManagementPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Action mejorado */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewContract(contract);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 font-semibold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span>Ver Contrato</span>
-                  </button>
+                  {/* Actions mejoradas */}
+                  <div className="space-y-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewContract(contract);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Ver Contrato</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Contract Approval Workflow Modal */}
-        {showWorkflow && selectedContract && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-            <div className="w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-              <ContractApprovalWorkflow
-                contractId={selectedContract.id}
-                onContractUpdated={loadContracts}
-                onClose={() => {
-                  setShowWorkflow(false);
-                  setSelectedContract(null);
-                }}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

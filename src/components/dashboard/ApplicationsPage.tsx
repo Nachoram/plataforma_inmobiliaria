@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2, User } from 'lucide-react';
-import { supabase, updateApplicationStatus } from '../../lib/supabase';
+import { supabase, updateApplicationStatus, approveApplicationWithWebhook } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { webhookClient } from '../../lib/webhook';
 import CustomButton from '../common/CustomButton';
@@ -288,10 +288,11 @@ export const ApplicationsPage: React.FC = () => {
 
   // Función para aprobar postulación (integración con webhook)
   const handleApproveApplication = async (application: ApplicationWithDetails, contractConditions?: RentalContractConditions) => {
-    console.log('🚀 === INICIANDO APROBACIÓN DE POSTULACIÓN ===');
+    console.log('🚀 === handleApproveApplication INICIADA ===');
     console.log('📋 Application ID:', application.id);
     console.log('📋 Application data:', application);
     console.log('👤 Current user:', user);
+    console.log('🔄 Usuario autenticado en contexto:', !!user);
     
     // Poner estado de carga para feedback visual
     setUpdating(`${application.id}-approve`);
@@ -320,10 +321,59 @@ export const ApplicationsPage: React.FC = () => {
         propertyData
       });
 
-      // 1. Actualizar estado en la base de datos
-      console.log('📝 Actualizando estado en base de datos...');
-      await updateApplicationStatus(application.id, 'aprobada');
-      console.log('✅ Base de datos actualizada correctamente');
+      // 1. Actualizar estado en la base de datos con webhook integrado
+      console.log('📝 Actualizando estado en base de datos con webhook...');
+      const updatedApplication = await approveApplicationWithWebhook(
+        application.id,
+        application.property_id,
+        application.applicant_id,
+        applicantData,
+        propertyData
+      );
+      console.log('✅ Base de datos actualizada y webhook enviado correctamente');
+
+      // 2. Crear nueva fila en rental_contracts después de la aprobación exitosa
+      console.log('🏠 Creando contrato de arriendo para la aplicación aprobada...');
+      let contractId: string | undefined;
+      try {
+        const now = new Date().toISOString();
+        const { data: contractData, error: contractError } = await supabase
+          .from('rental_contracts')
+          .insert({
+            application_id: application.id,
+            status: 'draft', // Borrador - el contenido se generará externamente por N8N
+            contract_content: {}, // Objeto vacío en lugar de null para cumplir constraint
+            contract_format: 'html', // Formato esperado desde N8N
+            approved_at: now,
+            notes: 'Contrato creado automáticamente al aprobar aplicación - pendiente de HTML desde N8N',
+            version: 1
+          })
+          .select('id, contract_number, contract_characteristic_id, application_id, status, approved_at, version')
+          .single();
+
+        if (contractError) {
+          console.error('❌ Error creando contrato:', contractError);
+          throw contractError;
+        }
+
+        // Capturar el contract_characteristic_id para el webhook (no el UUID)
+        contractId = contractData.contract_characteristic_id;
+
+        console.log('✅ Contrato creado exitosamente:', contractData);
+        console.log('📋 Contract ID (UUID):', contractData.id);
+        console.log('📋 Contract Characteristic ID:', contractData.contract_characteristic_id);
+        console.log('📋 Contract Number:', contractData.contract_number);
+        console.log('📋 Application ID:', contractData.application_id);
+        console.log('📊 Status:', contractData.status);
+        console.log('📊 Approved at:', contractData.approved_at);
+        console.log('📊 Version:', contractData.version);
+        console.log('\n💡 Ahora N8N debe actualizar este contrato con el HTML');
+        console.log('💡 O visualizar en: /contract/' + contractData.id);
+      } catch (contractError) {
+        console.error('❌ Error al crear contrato de arriendo:', contractError);
+        // No lanzamos el error para no interrumpir el flujo principal,
+        // pero registramos el problema
+      }
 
       // 2. Enviar webhook a Railway (solo GET - Railway no acepta POST)
       console.log('🌐 Enviando webhook optimizado a Railway con characteristic IDs...');
@@ -376,6 +426,7 @@ export const ApplicationsPage: React.FC = () => {
         console.log('🔍 Guarantor ID para webhook:', guarantorIdForWebhook);
         console.log('🔍 Contract conditions object:', contractConditions);
         console.log('🔍 Contract conditions characteristic ID:', contractConditions?.rental_contract_conditions_characteristic_id);
+        console.log('📄 Contract characteristic ID para webhook:', contractId);
 
         await webhookClient.sendSimpleApprovalEvent(
           applicationCharacteristicId || application.id, // Application ID (corregido)
@@ -383,7 +434,8 @@ export const ApplicationsPage: React.FC = () => {
           application.applicant_id, // Applicant ID (mantenemos UUID, no tiene characteristic_id)
           ownerCharacteristicId, // Owner ID (usa rental_owner_characteristic_id si está disponible)
           guarantorIdForWebhook, // Guarantor ID único por aplicación
-          contractConditions?.rental_contract_conditions_characteristic_id || undefined // ID característico de las condiciones del contrato
+          contractConditions?.rental_contract_conditions_characteristic_id || undefined, // ID característico de las condiciones del contrato
+          contractId // ID del contrato generado
         );
 
         console.log('✅ Webhook con characteristic IDs y condiciones del contrato enviado exitosamente');
@@ -393,7 +445,8 @@ export const ApplicationsPage: React.FC = () => {
           rental_owner_characteristic_id: ownerCharacteristicId,
           guarantor_characteristic_id: application.guarantors?.guarantor_characteristic_id || null,
           guarantor_id_for_webhook: guarantorIdForWebhook,
-          contract_conditions_characteristic_id: contractConditions?.rental_contract_conditions_characteristic_id || undefined
+          contract_conditions_characteristic_id: contractConditions?.rental_contract_conditions_characteristic_id || undefined,
+          contract_characteristic_id: contractId
         });
       } catch (webhookError) {
         console.warn('⚠️ Error en webhook (no crítico):', webhookError);
@@ -502,18 +555,6 @@ export const ApplicationsPage: React.FC = () => {
     }
   };
 
-  // Función para probar el webhook
-  const handleTestWebhook = async () => {
-    console.log('🧪 Iniciando prueba del webhook...');
-    try {
-      await webhookClient.testWebhook();
-      alert('✅ Prueba del webhook completada. Revisa la consola para ver los resultados.');
-    } catch (error) {
-      console.error('❌ Error en la prueba del webhook:', error);
-      alert('❌ Error en la prueba del webhook. Revisa la consola para más detalles.');
-    }
-  };
-
   // Función para abrir modal de mensaje
   const openMessageModal = (application: ApplicationWithDetails, type: 'documents' | 'info') => {
     setSelectedApplication(application);
@@ -572,20 +613,9 @@ export const ApplicationsPage: React.FC = () => {
     // Proceder con la aprobación normal, pasando las condiciones
     await handleApproveApplication(applicationToApprove, conditions);
 
-    // Generar contrato automáticamente después de aprobar
-    try {
-      const { generateContractForApplication } = await import('../../lib/contractGenerator');
-      const contractId = await generateContractForApplication(applicationToApprove.id);
-
-      if (contractId) {
-        console.log('✅ Contrato generado automáticamente:', contractId);
-        // Aquí podríamos mostrar una notificación o redirigir a la gestión de contratos
-      } else {
-        console.warn('⚠️ No se pudo generar el contrato automáticamente');
-      }
-    } catch (error) {
-      console.error('❌ Error generando contrato automáticamente:', error);
-    }
+    // El contrato se crea vacío, sin contenido HTML generado
+    // El contenido será generado externamente (por ejemplo, por N8N u otro sistema externo)
+    console.log('✅ Contrato creado en estado draft, sin contenido HTML');
   };
 
   // Función para cancelar el modal de condiciones del contrato
@@ -1260,13 +1290,6 @@ export const ApplicationsPage: React.FC = () => {
               Administra tus postulaciones de arriendo de forma eficiente
             </p>
           </div>
-          <button
-            onClick={handleTestWebhook}
-            className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium whitespace-nowrap self-start sm:self-auto shadow-md shadow-blue-200 hover:shadow-lg hover:shadow-blue-300 hover:-translate-y-0.5"
-            title="Probar conectividad del webhook"
-          >
-            🧪 Probar Webhook
-          </button>
         </div>
       </div>
 

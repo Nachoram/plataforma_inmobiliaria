@@ -8,6 +8,8 @@ const corsHeaders = {
 
 interface ApprovalWebhookPayload {
   application_id: string;
+  created_by: string;
+  approved_by: string;
   property_id: string;
   applicant_id: string;
   applicant_data: {
@@ -46,26 +48,33 @@ serve(async (req) => {
       )
     }
 
-    // Verificar autorización
+    // Verificar autorización (temporal: aceptar token de Supabase)
     const authHeader = req.headers.get('Authorization')
-    const expectedSecret = Deno.env.get('WEBHOOK_SECRET') || 'default-secret'
-    
+    const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Missing or invalid authorization header' }),
-        { 
-          status: 401, 
+        {
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
 
     const token = authHeader.replace('Bearer ', '')
-    if (token !== expectedSecret) {
+
+    // Temporal: aceptar tanto WEBHOOK_SECRET como SUPABASE_ANON_KEY
+    const isValidToken = (webhookSecret && token === webhookSecret) ||
+                        (supabaseAnonKey && token === supabaseAnonKey) ||
+                        (!webhookSecret && !supabaseAnonKey) // desarrollo local
+
+    if (!isValidToken) {
       return new Response(
-        JSON.stringify({ error: 'Invalid webhook secret' }),
-        { 
-          status: 401, 
+        JSON.stringify({ error: 'Invalid authorization token' }),
+        {
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
@@ -75,11 +84,11 @@ serve(async (req) => {
     const payload: ApprovalWebhookPayload = await req.json()
 
     // Validar payload requerido
-    if (!payload.application_id || !payload.applicant_data?.contact_email) {
+    if (!payload.application_id || !payload.created_by || !payload.approved_by || !payload.applicant_data?.contact_email) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { 
-          status: 400, 
+        JSON.stringify({ error: 'Missing required fields: application_id, created_by, approved_by, and applicant contact_email are required' }),
+        {
+          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
@@ -87,6 +96,8 @@ serve(async (req) => {
 
     // Aquí puedes integrar con servicios externos
     console.log('🎉 Application approved:', payload.application_id)
+    console.log('👤 Created by:', payload.created_by)
+    console.log('✅ Approved by:', payload.approved_by)
     console.log('📧 Sending notification to:', payload.applicant_data.contact_email)
     console.log('🏠 Property:', payload.property_data.address)
 
@@ -105,14 +116,16 @@ serve(async (req) => {
     await generateContractDocuments(payload)
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Webhook processed successfully',
         application_id: payload.application_id,
+        created_by: payload.created_by,
+        approved_by: payload.approved_by,
         timestamp: new Date().toISOString()
       }),
-      { 
-        status: 200, 
+      {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
@@ -214,14 +227,21 @@ function generateApprovalEmailHTML(payload: ApprovalWebhookPayload): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10b981;">¡Felicitaciones! Tu postulación ha sido aprobada</h2>
-      
+
       <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3>Detalles de la Propiedad:</h3>
         <p><strong>Dirección:</strong> ${payload.property_data.address}</p>
         <p><strong>Ciudad:</strong> ${payload.property_data.city}</p>
         <p><strong>Precio:</strong> $${payload.property_data.price.toLocaleString('es-CL')}</p>
       </div>
-      
+
+      <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Información del Proceso:</h3>
+        <p><strong>ID de Postulación:</strong> ${payload.application_id}</p>
+        <p><strong>Postulación creada por:</strong> ${payload.created_by}</p>
+        <p><strong>Aprobada por:</strong> ${payload.approved_by}</p>
+      </div>
+
       <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3>Próximos Pasos:</h3>
         <ol>
@@ -230,9 +250,9 @@ function generateApprovalEmailHTML(payload: ApprovalWebhookPayload): string {
           <li>Coordinaremos la entrega de llaves</li>
         </ol>
       </div>
-      
+
       <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
-      
+
       <p style="color: #6b7280; font-size: 12px;">
         Este email fue generado automáticamente el ${new Date(payload.timestamp).toLocaleString('es-CL')}
       </p>

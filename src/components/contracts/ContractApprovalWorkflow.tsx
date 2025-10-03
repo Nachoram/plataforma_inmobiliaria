@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle,
   Clock,
@@ -14,7 +15,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { electronicSignatureService } from '../../lib/electronicSignature';
 import CustomButton from '../common/CustomButton';
-// Canvas removido temporalmente para desarrollo futuro
+import { HTMLCanvasViewer } from '../common/HTMLCanvasViewer';
 
 interface ContractApprovalWorkflowProps {
   contractId: string;
@@ -37,7 +38,12 @@ interface Contract {
     snapshot_applicant_paternal_last_name: string;
     snapshot_applicant_email: string;
     properties: {
-      title: string;
+      description: string;
+      address_street: string;
+      address_number: string;
+      address_department: string | null;
+      address_commune: string;
+      address_region: string;
       owner_id: string;
       profiles: {
         first_name: string;
@@ -70,11 +76,13 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
   onContractUpdated,
   onClose
 }) => {
+  const navigate = useNavigate();
   const [contract, setContract] = useState<Contract | null>(null);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  // Canvas removido temporalmente para desarrollo futuro
+  const [showCanvasViewer, setShowCanvasViewer] = useState(false);
+  const [contractHtmlContent, setContractHtmlContent] = useState<string>('');
 
   useEffect(() => {
     loadContractData();
@@ -95,7 +103,12 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
             snapshot_applicant_paternal_last_name,
             snapshot_applicant_email,
             properties (
-              title,
+              description,
+              address_street,
+              address_number,
+              address_department,
+              address_commune,
+              address_region,
               owner_id,
               profiles!properties_owner_id_fkey (
                 first_name,
@@ -119,6 +132,10 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
       if (contractError) throw contractError;
       setContract(contractData);
 
+      // Generar HTML del contrato para canvas
+      const htmlContent = generateContractHtmlForCanvas(contractData);
+      setContractHtmlContent(htmlContent);
+
       // Cargar firmas
       const { data: signaturesData, error: signaturesError } = await supabase
         .from('contract_signatures')
@@ -129,9 +146,10 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
       if (signaturesError) throw signaturesError;
       setSignatures(signaturesData || []);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading contract data:', error);
-      alert('Error al cargar los datos del contrato');
+      const errorMessage = error?.message || 'Error desconocido';
+      alert(`Error al cargar los datos del contrato:\n\n${errorMessage}\n\nRevisa la consola para más detalles.`);
     } finally {
       setLoading(false);
     }
@@ -166,9 +184,11 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
       }
 
       alert('Contrato aprobado exitosamente');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving contract:', error);
-      alert('Error al aprobar el contrato');
+      const errorMessage = error?.message || 'Error desconocido';
+      alert(`Error al aprobar el contrato:\n\n${errorMessage}\n\nRevisa la consola para más detalles.`);
+      setProcessing(false);
     } finally {
       setProcessing(false);
     }
@@ -248,9 +268,11 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
       }
 
       alert('Contrato enviado a firma electrónica exitosamente');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending to signature:', error);
-      alert('Error al enviar a firma electrónica');
+      const errorMessage = error?.message || 'Error desconocido';
+      alert(`Error al enviar a firma electrónica:\n\n${errorMessage}\n\nRevisa la consola para más detalles.`);
+      setProcessing(false);
     } finally {
       setProcessing(false);
     }
@@ -318,6 +340,258 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
         ${section.content}
       `;
     });
+
+    html += `
+        </body>
+      </html>
+    `;
+
+    return html;
+  };
+
+  const generateContractHtmlForCanvas = (contract: Contract): string => {
+    if (!contract.contract_content?.sections) {
+      return '<div class="text-center p-8 text-gray-500">Contenido del contrato no disponible</div>';
+    }
+
+    const sections = contract.contract_content.sections;
+    const property = contract.applications.properties;
+
+    // Construir dirección completa
+    const fullAddress = `${property.address_street} ${property.address_number}${property.address_department ? `, ${property.address_department}` : ''}, ${property.address_commune}`;
+
+    let html = `
+      <!DOCTYPE html>
+      <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Contrato de Arriendo - ${contract.applications.snapshot_applicant_first_name} ${contract.applications.snapshot_applicant_paternal_last_name}</title>
+          <style>
+            body {
+              font-family: 'Times New Roman', serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 40px;
+              background: white;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px solid #000;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .contract-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              text-transform: uppercase;
+            }
+            .contract-subtitle {
+              font-size: 16px;
+              color: #666;
+              margin-bottom: 20px;
+            }
+            .section {
+              margin-bottom: 30px;
+              page-break-inside: avoid;
+            }
+            .section-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 15px;
+              color: #2c3e50;
+              border-bottom: 1px solid #eee;
+              padding-bottom: 5px;
+            }
+            .party-info {
+              background: #f8f9fa;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 10px 0;
+            }
+            .party-label {
+              font-weight: bold;
+              color: #495057;
+            }
+            .signatures {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 60px;
+              page-break-inside: avoid;
+            }
+            .signature-box {
+              width: 30%;
+              text-align: center;
+              border-top: 1px solid #000;
+              padding-top: 20px;
+            }
+            .signature-label {
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+            .signature-name {
+              margin-bottom: 5px;
+            }
+            .signature-rut {
+              font-size: 12px;
+              color: #666;
+            }
+            .property-info {
+              background: #e8f4f8;
+              padding: 15px;
+              border-radius: 5px;
+              border-left: 4px solid #17a2b8;
+              margin: 15px 0;
+            }
+            .conditions-list {
+              background: #fff3cd;
+              padding: 15px;
+              border-radius: 5px;
+              border-left: 4px solid #ffc107;
+              margin: 15px 0;
+            }
+            .obligations-list {
+              background: #d1ecf1;
+              padding: 15px;
+              border-radius: 5px;
+              border-left: 4px solid #17a2b8;
+              margin: 15px 0;
+            }
+            ol, ul {
+              padding-left: 20px;
+            }
+            li {
+              margin-bottom: 8px;
+            }
+            .contract-footer {
+              margin-top: 50px;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+              border-top: 1px solid #ddd;
+              padding-top: 20px;
+            }
+            @media print {
+              body {
+                padding: 20px;
+                font-size: 12px;
+              }
+              .contract-title {
+                font-size: 20px;
+              }
+              .section-title {
+                font-size: 16px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+    `;
+
+    // Header
+    const headerSection = sections.find((s: any) => s.id === 'header');
+    if (headerSection) {
+      html += `
+        <div class="header">
+          ${headerSection.content}
+        </div>
+      `;
+    }
+
+    // Parties
+    const partiesSection = sections.find((s: any) => s.id === 'parties');
+    if (partiesSection) {
+      html += `
+        <div class="section">
+          <div class="section-title">${partiesSection.title}</div>
+          ${partiesSection.content}
+        </div>
+      `;
+    }
+
+    // Property
+    const propertySection = sections.find((s: any) => s.id === 'property');
+    if (propertySection) {
+      html += `
+        <div class="section">
+          <div class="section-title">${propertySection.title}</div>
+          <div class="property-info">
+            <strong>Información de la Propiedad:</strong><br>
+            <strong>Dirección:</strong> ${fullAddress}<br>
+            <strong>Tipo:</strong> ${property.description || 'Propiedad residencial'}
+          </div>
+          ${propertySection.content}
+        </div>
+      `;
+    }
+
+    // Conditions
+    const conditionsSection = sections.find((s: any) => s.id === 'conditions');
+    if (conditionsSection) {
+      html += `
+        <div class="section">
+          <div class="section-title">${conditionsSection.title}</div>
+          ${conditionsSection.content}
+        </div>
+      `;
+    }
+
+    // Obligations
+    const obligationsSection = sections.find((s: any) => s.id === 'obligations');
+    if (obligationsSection) {
+      html += `
+        <div class="section">
+          <div class="section-title">${obligationsSection.title}</div>
+          ${obligationsSection.content}
+        </div>
+      `;
+    }
+
+    // Termination
+    const terminationSection = sections.find((s: any) => s.id === 'termination');
+    if (terminationSection) {
+      html += `
+        <div class="section">
+          <div class="section-title">${terminationSection.title}</div>
+          ${terminationSection.content}
+        </div>
+      `;
+    }
+
+    // Legal
+    const legalSection = sections.find((s: any) => s.id === 'legal');
+    if (legalSection) {
+      html += `
+        <div class="section">
+          <div class="section-title">${legalSection.title}</div>
+          ${legalSection.content}
+        </div>
+      `;
+    }
+
+    // Signatures
+    const signaturesSection = sections.find((s: any) => s.id === 'signatures');
+    if (signaturesSection) {
+      html += `
+        <div class="section">
+          <div class="section-title">${signaturesSection.title}</div>
+          ${signaturesSection.content}
+        </div>
+      `;
+    }
+
+    // Footer
+    html += `
+      <div class="contract-footer">
+        <p><strong>Contrato generado electrónicamente</strong></p>
+        <p>ID del contrato: ${contract.id}</p>
+        <p>Fecha de generación: ${new Date().toLocaleDateString('es-CL')}</p>
+        <p>Estado: ${getStatusText(contract.status)}</p>
+      </div>
+    `;
 
     html += `
         </body>
@@ -419,7 +693,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
           <div>
             <h2 className="text-xl font-bold">Flujo de Aprobación del Contrato</h2>
             <p className="text-green-100 text-sm">
-              {contract.applications.properties.title} - {contract.applications.snapshot_applicant_first_name} {contract.applications.snapshot_applicant_paternal_last_name}
+              {contract.applications.properties.description || `Propiedad en ${contract.applications.properties.address_commune}`} - {contract.applications.snapshot_applicant_first_name} {contract.applications.snapshot_applicant_paternal_last_name}
             </p>
           </div>
         </div>
@@ -513,12 +787,20 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
         <div className="flex justify-between items-center pt-4 border-t">
           <div className="flex space-x-3">
             <CustomButton
+              onClick={() => setShowCanvasViewer(true)}
               variant="outline"
-              className="flex items-center space-x-2 opacity-50 cursor-not-allowed"
-              disabled
+              className="flex items-center space-x-2"
             >
               <Eye className="h-4 w-4" />
-              <span>Canvas (Próximamente)</span>
+              <span>Ver en Canvas</span>
+            </CustomButton>
+            <CustomButton
+              onClick={() => navigate(`/contract/${contractId}`)}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <Eye className="h-4 w-4" />
+              <span>Ver Contrato Completo</span>
             </CustomButton>
           </div>
 
@@ -561,7 +843,38 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
         </div>
       </div>
 
-      {/* Canvas removido temporalmente para desarrollo futuro */}
+      {/* Canvas Viewer Modal */}
+      {showCanvasViewer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
+          <div className="w-full max-w-6xl max-h-[95vh] overflow-hidden bg-white rounded-lg">
+            <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg">
+              <h2 className="text-xl font-bold flex items-center">
+                <Eye className="h-6 w-6 mr-2" />
+                Vista Previa del Contrato
+              </h2>
+              <button
+                onClick={() => setShowCanvasViewer(false)}
+                className="text-white hover:text-gray-200 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 max-h-[85vh] overflow-y-auto">
+              <div className="border rounded-lg overflow-hidden">
+                <HTMLCanvasViewer htmlString={contractHtmlContent} />
+              </div>
+            </div>
+            <div className="flex justify-end p-4 border-t bg-gray-50 rounded-b-lg">
+              <CustomButton
+                onClick={() => setShowCanvasViewer(false)}
+                variant="outline"
+              >
+                Cerrar
+              </CustomButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

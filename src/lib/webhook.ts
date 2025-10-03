@@ -282,25 +282,27 @@ class WebhookClient {
     applicationId: string,
     propertyId: string,
     applicantId: string,
-    ownerId?: string,
+    rentalOwnerCharacteristicId?: string,
     guarantorId?: string,
-    contractConditionsId?: string
+    contractConditionsId?: string,
+    contractCharacteristicId?: string
   ): Promise<void> {
     // Obtener los characteristic IDs para una búsqueda más eficiente en N8N
     const data = {
       application_characteristic_id: applicationId, // Este vendrá de la base de datos como characteristic_id
       property_characteristic_id: propertyId,       // Este vendrá de la base de datos como characteristic_id
       applicant_characteristic_id: applicantId,     // Este vendrá de la base de datos como characteristic_id
-      owner_characteristic_id: ownerId || null,     // Este vendrá de la base de datos como characteristic_id
+      rental_owner_characteristic_id: rentalOwnerCharacteristicId || null, // ID característico del propietario (de rental_owners)
       guarantor_characteristic_id: guarantorId || null, // Este vendrá de la base de datos como characteristic_id
       contract_conditions_characteristic_id: contractConditionsId || null, // ID característico de las condiciones del contrato
+      contract_characteristic_id: contractCharacteristicId || null, // ID característico del contrato generado
       action: 'application_approved',
       timestamp: new Date().toISOString(),
       // Mantener compatibilidad con UUIDs por si N8N necesita fallback
       application_uuid: applicationId,
       property_uuid: propertyId,
       applicant_uuid: applicantId,
-      owner_uuid: ownerId || null,
+      owner_uuid: rentalOwnerCharacteristicId || null,
       guarantor_uuid: guarantorId || null
     };
 
@@ -312,7 +314,9 @@ class WebhookClient {
     console.log('🌐 Enviando webhook GET optimizado a Railway:', this.baseURL);
     console.log('📦 Datos con characteristic IDs:', JSON.stringify(data, null, 2));
     console.log('📋 Application characteristic ID enviado:', data.application_characteristic_id);
+    console.log('🏠 Rental owner characteristic ID enviado:', data.rental_owner_characteristic_id);
     console.log('🛡️ Guarantor characteristic ID enviado:', data.guarantor_characteristic_id);
+    console.log('📄 Contract characteristic ID enviado:', data.contract_characteristic_id);
 
     try {
       // Convertir datos a query parameters para GET request

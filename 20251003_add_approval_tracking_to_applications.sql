@@ -1,0 +1,46 @@
+-- Migration: Add approval tracking fields to applications table
+-- Date: 2025-10-03
+-- Description: Add fields to track who approved applications and when
+
+-- =====================================================
+-- ADD APPROVAL TRACKING FIELDS TO APPLICATIONS TABLE
+-- =====================================================
+
+DO $$
+BEGIN
+  -- Add approved_by column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'applications' AND column_name = 'approved_by'
+  ) THEN
+    ALTER TABLE applications ADD COLUMN approved_by uuid REFERENCES profiles(id) ON DELETE SET NULL;
+    RAISE NOTICE '✅ Added approved_by column to applications table';
+  ELSE
+    RAISE NOTICE 'ℹ️  approved_by column already exists';
+  END IF;
+
+  -- Add approved_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'applications' AND column_name = 'approved_at'
+  ) THEN
+    ALTER TABLE applications ADD COLUMN approved_at timestamptz;
+    RAISE NOTICE '✅ Added approved_at column to applications table';
+  ELSE
+    RAISE NOTICE 'ℹ️  approved_at column already exists';
+  END IF;
+END $$;
+
+-- =====================================================
+-- CREATE INDEX FOR PERFORMANCE
+-- =====================================================
+
+CREATE INDEX IF NOT EXISTS idx_applications_approved_by ON applications(approved_by);
+CREATE INDEX IF NOT EXISTS idx_applications_approved_at ON applications(approved_at);
+
+-- =====================================================
+-- UPDATE RLS POLICIES IF NEEDED
+-- =====================================================
+
+-- The approval fields should be accessible to the same users who can access the application
+-- No additional RLS policies needed as they inherit from the existing application policies

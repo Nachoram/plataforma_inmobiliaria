@@ -10,8 +10,12 @@ export interface ApplicationData {
   snapshot_applicant_phone: string;
   properties: {
     id: string;
-    title: string;
-    address: string;
+    address_street: string;
+    address_number: string;
+    address_department: string | null;
+    address_commune: string;
+    address_region: string;
+    description: string | null;
     owner_id: string;
     profiles: {
       first_name: string;
@@ -22,24 +26,6 @@ export interface ApplicationData {
       phone: string;
     };
   };
-  structured_applicant: {
-    id: string;
-    full_name: string;
-    rut: string;
-    contact_email: string;
-    contact_phone: string;
-    profession: string;
-    company: string;
-  } | null;
-  structured_guarantor: {
-    id: string;
-    full_name: string;
-    rut: string;
-    contact_email: string;
-    contact_phone: string;
-    profession: string;
-    company: string;
-  } | null;
 }
 
 export interface ContractConditions {
@@ -70,6 +56,13 @@ export function generateContractContent(
 ): ContractSection[] {
   const property = application.properties;
   const owner = property.profiles;
+
+  // Construct full address from components
+  const fullAddress = `${property.address_street} ${property.address_number}${property.address_department ? `, ${property.address_department}` : ''}, ${property.address_commune}, ${property.address_region}`;
+
+  // Use description as title, or construct one from address if no description
+  const propertyTitle = property.description || `Propiedad en ${property.address_commune}`;
+
   const tenant = {
     first_name: application.snapshot_applicant_first_name,
     paternal_last_name: application.snapshot_applicant_paternal_last_name,
@@ -79,9 +72,9 @@ export function generateContractContent(
     phone: application.snapshot_applicant_phone
   };
 
-  // Use structured data if available, otherwise fallback to snapshot data
-  const structuredApplicant = application.structured_applicant;
-  const structuredGuarantor = application.structured_guarantor;
+  // For now, use only snapshot data since structured data relationships have issues
+  const structuredApplicant = null; // application.applicants;
+  const structuredGuarantor = null; // application.guarantors;
 
   // Prioritize structured data over snapshot data
   const tenantData = structuredApplicant ? {
@@ -130,7 +123,7 @@ export function generateContractContent(
         <h3>PRIMERA: EL ARRENDADOR (PROPIETARIO)</h3>
         <p><strong>Nombre:</strong> ${owner.first_name} ${owner.paternal_last_name} ${owner.maternal_last_name || ''}</p>
         <p><strong>RUT:</strong> ${owner.rut}</p>
-        <p><strong>Domicilio:</strong> ${property.address}</p>
+        <p><strong>Domicilio:</strong> ${fullAddress}</p>
         <p><strong>Email:</strong> ${owner.email}</p>
         <p><strong>Teléfono:</strong> ${owner.phone || 'No especificado'}</p>
 
@@ -155,8 +148,8 @@ export function generateContractContent(
       title: 'TERCERA: BIEN ARRENDADO',
       content: `
         <p>El ARRENDADOR da en arriendo al ARRENDATARIO y este lo toma, el siguiente inmueble:</p>
-        <p><strong>Dirección:</strong> ${property.address}</p>
-        <p><strong>Tipo:</strong> ${property.title}</p>
+        <p><strong>Dirección:</strong> ${fullAddress}</p>
+        <p><strong>Tipo:</strong> ${propertyTitle}</p>
         <p><strong>Uso:</strong> Vivienda</p>
         <p><strong>Estado de entrega:</strong> En buen estado de conservación y funcionamiento.</p>
       `,
@@ -300,10 +293,14 @@ export async function generateContractForApplication(
         snapshot_applicant_phone,
         properties (
           id,
-          title,
-          address,
+          address_street,
+          address_number,
+          address_department,
+          address_commune,
+          address_region,
+          description,
           owner_id,
-          profiles!properties_owner_id_fkey (
+          profiles!owner_id (
             first_name,
             paternal_last_name,
             maternal_last_name,
@@ -311,24 +308,6 @@ export async function generateContractForApplication(
             email,
             phone
           )
-        ),
-        structured_applicant:applicants (
-          id,
-          full_name,
-          rut,
-          contact_email,
-          contact_phone,
-          profession,
-          company
-        ),
-        structured_guarantor:guarantors (
-          id,
-          full_name,
-          rut,
-          contact_email,
-          contact_phone,
-          profession,
-          company
         ),
         rental_contract_conditions (*)
       `)
@@ -341,14 +320,17 @@ export async function generateContractForApplication(
     }
 
     // Verificar si ya existe un contrato
-    const { data: existingContract } = await supabase
+    const { data: existingContracts, error: checkError } = await supabase
       .from('rental_contracts')
       .select('id')
       .eq('application_id', applicationId)
-      .single();
+      .limit(1);
 
-    if (existingContract) {
-      return existingContract.id;
+    if (checkError) {
+      console.warn('Error checking for existing contract:', checkError);
+      // Continue with creation instead of failing
+    } else if (existingContracts && existingContracts.length > 0) {
+      return existingContracts[0].id;
     }
 
     // Generar contenido del contrato
@@ -364,15 +346,37 @@ export async function generateContractForApplication(
       generatedAt: new Date().toISOString()
     };
 
+    // Get current user for created_by field
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    console.log('🔍 Contract creation debug info:');
+    console.log('  - Current user ID:', user.id);
+    console.log('  - Application ID:', applicationId);
+    console.log('  - Property owner ID:', applicationData.properties.owner_id);
+    console.log('  - Is user property owner?', user.id === applicationData.properties.owner_id);
+
+    // Check application ownership
+    console.log('  - Application applicant ID:', applicationData.applicant_id);
+    console.log('  - Application guarantor ID:', applicationData.guarantor_id);
+    console.log('  - Is user applicant?', user.id === applicationData.applicant_id);
+    console.log('  - Is user guarantor?', user.id === applicationData.guarantor_id);
+
     // Crear el contrato
+    const contractData = {
+      application_id: applicationId,
+      contract_content: contractContent,
+      status: 'draft',
+      created_by: user.id  // Current user creates the contract
+    };
+
+    console.log('📄 Contract data to insert:', contractData);
+
     const { data: contract, error: contractError } = await supabase
       .from('rental_contracts')
-      .insert({
-        application_id: applicationId,
-        contract_content: contractContent,
-        status: 'draft',
-        created_by: applicationData.properties.owner_id
-      })
+      .insert(contractData)
       .select()
       .single();
 

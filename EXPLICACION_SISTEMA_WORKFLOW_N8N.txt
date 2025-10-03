@@ -1,0 +1,283 @@
+================================================================================
+EXPLICACIÓN DEL SISTEMA DE WORKFLOW HTML PARA N8N
+================================================================================
+
+FECHA: 2025-10-03
+DESARROLLADOR: AI Assistant
+DESTINATARIO: Agente de automatización N8N
+
+================================================================================
+RESUMEN EJECUTIVO
+================================================================================
+
+Se ha implementado un sistema completo para generar, almacenar y visualizar informes HTML
+como imágenes en canvas. El sistema está diseñado para integrarse perfectamente con
+automatizaciones N8N y proporcionar una experiencia de usuario fluida.
+
+================================================================================
+FLUJOS IMPLEMENTADOS
+================================================================================
+
+FLUJOS PRINCIPAIS:
+1. GENERACIÓN DE INFORMES HTML
+2. ALMACENAMIENTO EN STORAGE
+3. VISUALIZACIÓN EN CANVAS
+4. GESTIÓN DE METADATOS
+
+================================================================================
+1. ARQUITECTURA DEL SISTEMA
+================================================================================
+
+COMPONENTES TÉCNICOS IMPLEMENTADOS:
+
+A) FRONTEND (React/TypeScript)
+   - HTMLCanvasViewer: Componente para convertir HTML a imágenes canvas
+   - WorkflowResultPage: Página completa con flujo end-to-end
+   - WorkflowViewer: Componente simple para consumir webhooks N8N
+   - API helpers: Funciones para interactuar con backend
+
+B) BACKEND (Supabase)
+   - Edge Function: get-workflow-html
+   - Base de datos: Tabla workflow_outputs
+   - Storage: Bucket privado workflow-outputs
+   - Políticas RLS: Seguridad a nivel de fila
+
+================================================================================
+2. FLUJO DETALLADO DEL SISTEMA
+================================================================================
+
+PASO A PASO DE FUNCIONAMIENTO:
+
+1. USUARIO SOLICITA INFORME
+   - Frontend: Usuario hace clic en "Generar Informe"
+   - Tipo: informe_mensual_propiedad, reporte_financiero, etc.
+
+2. LLAMADA A EDGE FUNCTION
+   - Frontend llama a: supabase.functions.invoke('get-workflow-html')
+   - Parámetros: { workflowId, propertyId? }
+
+3. GENERACIÓN DEL HTML
+   - Edge Function genera HTML dinámico con datos del usuario
+   - Formato: HTML completo con estilos CSS embebidos
+   - Contenido personalizado por tipo de workflow
+
+4. ALMACENAMIENTO EN STORAGE
+   - Archivo HTML se guarda en bucket privado 'workflow-outputs'
+   - Ruta: {user_id}/{workflowId}-{timestamp}.html
+   - Políticas de seguridad: Solo el propietario puede acceder
+
+5. REGISTRO EN BASE DE DATOS
+   - Metadatos se guardan en tabla 'workflow_outputs'
+   - Campos: user_id, workflow_type, storage_path, file_size, etc.
+   - RLS asegura que solo el usuario vea sus propios informes
+
+6. DESCARGA Y VISUALIZACIÓN
+   - Frontend descarga el HTML desde Storage
+   - HTMLCanvasViewer convierte HTML a imagen canvas
+   - Usuario ve el informe renderizado como imagen
+
+================================================================================
+3. COMPONENTES TÉCNICOS DETALLADOS
+================================================================================
+
+A) HTMLCanvasViewer (src/components/common/HTMLCanvasViewer.tsx)
+   - Convierte HTML string a imagen canvas usando html2canvas
+   - Manejo de errores y estados de carga
+   - Limpieza automática del DOM
+   - Soporte para CORS y rendering asíncrono
+
+B) Edge Function (supabase/functions/get-workflow-html/index.ts)
+   - Genera HTML dinámico basado en workflowId
+   - Autenticación requerida (Bearer token)
+   - Manejo de errores robusto
+   - Integración con Storage y Database
+
+C) WorkflowViewer (src/components/workflow/WorkflowViewer.tsx)
+   - Componente simple para consumir webhooks N8N
+   - Props: webhookUrl (requerido), requestBody (opcional)
+   - Estados: htmlContent, loading, error
+   - Renderiza HTML usando dangerouslySetInnerHTML
+   - Ideal para integraciones directas con N8N
+
+D) API Helpers (src/lib/api/workflow.ts)
+   - generateWorkflowOutput(): Genera y almacena informe
+   - getHtmlContentFromStorage(): Descarga HTML
+   - getUserWorkflowOutputs(): Lista informes del usuario
+   - deleteWorkflowOutput(): Elimina informe
+
+E) Base de Datos
+   - Tabla: workflow_outputs
+   - Campos: id, user_id, property_id, workflow_type, output_storage_path, file_size_bytes, created_at
+   - RLS habilitado con políticas de seguridad
+   - Índices optimizados para consultas
+
+E) Storage
+   - Bucket: workflow-outputs (privado)
+   - MIME types permitidos: text/html
+   - Límite de tamaño: 5MB por archivo
+   - Estructura: {user_id}/{filename}.html
+
+================================================================================
+4. TIPOS DE WORKFLOW SOPORTADOS
+================================================================================
+
+WORKFLOW_TYPES DEFINIDOS:
+- INFORME_MENSUAL_PROPIEDAD: 'informe_mensual_propiedad'
+- REPORTE_FINANCIERO: 'reporte_financiero'
+- ANALISIS_MERCADO: 'analisis_mercado'
+- ESTADO_CUENTA: 'estado_cuenta'
+- HISTORIAL_TRANSACCIONES: 'historial_transacciones'
+
+CADA WORKFLOW GENERA:
+- HTML personalizado con datos del usuario
+- Estilos CSS embebidos
+- Información contextual (fechas, usuario, propiedad)
+- Formato responsive para impresión
+
+================================================================================
+5. INTEGRACIÓN CON N8N
+================================================================================
+
+PUNTOS DE INTEGRACIÓN POSIBLES:
+
+A) WEBHOOKS DE ACTIVACIÓN
+   - N8N puede llamar a Edge Function directamente
+   - Endpoint: supabase.functions.invoke('get-workflow-html')
+   - Autenticación: Bearer token del usuario
+
+B) DATOS DE ENTRADA PARA N8N
+   - workflowId: Tipo de informe a generar
+   - propertyId: ID de propiedad relacionada (opcional)
+   - userId: Usuario que solicita el informe
+
+C) DATOS DE SALIDA DE N8N
+   - storagePath: Ruta del archivo HTML generado
+   - fileSize: Tamaño del archivo
+   - workflowId: ID del workflow ejecutado
+   - success: Booleano de confirmación
+
+D) ESCENARIOS DE USO EN N8N
+   1. Automatización mensual: Generar informes automáticamente
+   2. Eventos triggers: Generar informes por eventos específicos
+   3. Integración con otros sistemas: Enviar informes por email
+   4. Procesamiento batch: Generar múltiples informes
+
+================================================================================
+6. EJEMPLOS DE USO EN N8N
+================================================================================
+
+EJEMPLO 1: AUTOMATIZACIÓN MENSUAL
+1. Trigger: Schedule (primer día del mes)
+2. HTTP Request: Llamar a Edge Function con workflowId="informe_mensual_propiedad"
+3. Storage: Obtener archivo HTML generado
+4. Email: Enviar informe al usuario
+
+EJEMPLO 2: EVENTO DE PROPIEDAD
+1. Trigger: Webhook (cuando se actualiza propiedad)
+2. HTTP Request: Generar reporte financiero
+3. Database: Actualizar metadatos del informe
+4. Notification: Notificar al usuario
+
+EJEMPLO 3: PROCESAMIENTO BATCH
+1. Trigger: Manual o schedule
+2. Query Database: Obtener lista de usuarios
+3. Loop: Por cada usuario
+4. HTTP Request: Generar informe individual
+5. Storage: Verificar archivos generados
+
+================================================================================
+7. SEGURIDAD IMPLEMENTADA
+================================================================================
+
+A) AUTENTICACIÓN
+   - Edge Function requiere Bearer token válido
+   - Usuario debe estar autenticado en Supabase
+
+B) AUTORIZACIÓN (RLS)
+   - Tabla workflow_outputs: Solo propietario ve sus informes
+   - Storage bucket: Solo propietario accede a sus archivos
+   - Políticas granulares por operación (SELECT, INSERT)
+
+C) VALIDACIÓN
+   - Tipos de workflow permitidos
+   - Tamaño máximo de archivos (5MB)
+   - Formatos MIME permitidos (text/html)
+
+================================================================================
+8. ARCHIVOS CREADOS/MODIFICADOS
+================================================================================
+
+NUEVOS ARCHIVOS:
+- src/components/common/HTMLCanvasViewer.tsx
+- src/components/workflow/WorkflowResultPage.tsx
+- src/components/workflow/WorkflowViewer.tsx (NUEVO)
+- src/lib/api/workflow.ts
+- supabase/functions/get-workflow-html/index.ts
+- 20251003150000_create_workflow_outputs_system.sql
+- test_workflow_system.sql
+- INSTRUCCIONES_WORKFLOW_SYSTEM.md
+- EXPLICACION_SISTEMA_WORKFLOW_N8N.txt (este archivo)
+- ejemplo-uso-WorkflowViewer.tsx
+
+DEPENDENCIAS AGREGADAS:
+- html2canvas: ^1.4.1 (para conversión HTML a canvas)
+
+================================================================================
+9. PRUEBAS Y VERIFICACIÓN
+================================================================================
+
+A) VERIFICACIÓN TÉCNICA
+   - Build de TypeScript: ✅ Exitosa
+   - Migración SQL: ✅ Lista para aplicar
+   - Edge Function: ✅ Lista para desplegar
+
+B) SCRIPT DE PRUEBA
+   - test_workflow_system.sql: Verifica instalación completa
+   - Incluye pruebas de tabla, RLS, storage y índices
+
+C) PRUEBA FUNCIONAL
+   - Componente WorkflowResultPage: Prueba end-to-end
+   - Generación → Almacenamiento → Visualización
+
+================================================================================
+10. SIGUIENTE PASOS PARA N8N
+================================================================================
+
+ACCIONES RECOMENDADAS:
+
+1. REVISAR ENDPOINTS
+   - Analizar la Edge Function get-workflow-html
+   - Entender parámetros de entrada y salida
+
+2. DISEÑAR WORKFLOWS N8N
+   - Identificar triggers (schedule, eventos, manual)
+   - Definir flujo de datos entre nodos
+
+3. PROBAR INTEGRACIÓN
+   - Crear workflow de prueba simple
+   - Verificar autenticación y autorización
+   - Validar formato de datos
+
+4. IMPLEMENTAR AUTOMATIZACIONES
+   - Workflows mensuales
+   - Procesamiento de eventos
+   - Integraciones con otros sistemas
+
+================================================================================
+11. CONTACTO Y SOPORTE
+================================================================================
+
+PARA SOPORTE TÉCNICO:
+- Revisar logs de Supabase Functions
+- Verificar políticas RLS en base de datos
+- Consultar documentación en INSTRUCCIONES_WORKFLOW_SYSTEM.md
+
+PUNTOS DE ATENCIÓN:
+- Autenticación Bearer token
+- Formato de parámetros JSON
+- Manejo de errores HTTP
+- Límites de tamaño de archivos
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

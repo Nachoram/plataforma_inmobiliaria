@@ -23,6 +23,10 @@ const TestCanvasEditor: React.FC = () => {
         titulo: "CUARTO: GARANTÍA",
         contenido: "A fin de garantizar la conservación de la propiedad, la Arrendataria entrega en este acto al Arrendador a título de garantía la suma de $500.000, equivalente a un mes de renta, la cual será devuelta dentro de los 30 días siguientes a la restitución del inmueble, una vez verificado el estado del mismo y el pago total de las cuentas de servicios y gastos comunes."
       }
+    ],
+    firmantes: [
+      { nombre: "Juan Pérez González", rut: "12.345.678-9", rol: "ARRENDADOR" },
+      { nombre: "María González López", rut: "98.765.432-1", rol: "ARRENDATARIO" }
     ]
   };
 
@@ -39,12 +43,13 @@ const TestCanvasEditor: React.FC = () => {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-semibold text-blue-900 mb-2">✨ Lienzo de Documento Dinámico - Características:</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Apariencia A4:</strong> Documento con formato profesional (max-w-4xl, p-12 sm:p-16)</li>
+              <li>• <strong>Apariencia A4:</strong> Documento con formato profesional (max-w-4xl, p-12 sm:pt-16 sm:px-16)</li>
               <li>• <strong>Fuente Serif:</strong> Tipografía formal y clásica (font-serif)</li>
               <li>• <strong>Texto Justificado:</strong> Párrafos alineados a izquierda y derecha (text-justify)</li>
               <li>• <strong>Altura de Línea:</strong> Espaciado cómodo (leading-relaxed)</li>
               <li>• <strong>Espaciado Generoso:</strong> Cláusulas separadas con space-y-8</li>
-              <li>• <strong>Manipulación Dinámica:</strong> Añadir/eliminar cláusulas con confirmación</li>
+              <li>• <strong>Manipulación Dinámica:</strong> Añadir/eliminar cláusulas y firmantes con confirmación</li>
+              <li>• <strong>Firmantes Escalables:</strong> Sistema dinámico de firmantes (rol, nombre, RUT)</li>
               <li>• <strong>Edición Directa:</strong> Campos editables con estados visuales intuitivos</li>
               <li>• <strong>Export PDF:</strong> Documento final listo para impresión</li>
             </ul>

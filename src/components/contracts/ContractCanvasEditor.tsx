@@ -4,13 +4,20 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import CustomButton from '../common/CustomButton';
 
+interface Firmante {
+  nombre: string;
+  rut: string;
+  rol: string;
+}
+
 interface ContractContent {
   titulo: string;
   comparecencia: string;
-    clausulas?: Array<{
-      titulo: string;
-      contenido: string;
-    }>;
+  clausulas?: Array<{
+    titulo: string;
+    contenido: string;
+  }>;
+  firmantes?: Firmante[];
 }
 
 interface ContractCanvasEditorProps {
@@ -152,7 +159,11 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
     setContract(prev => ({
       titulo: prev.titulo || 'CONTRATO DE ARRENDAMIENTO',
       comparecencia: prev.comparecencia || '',
-      clausulas: prev.clausulas || []
+      clausulas: prev.clausulas || [],
+      firmantes: prev.firmantes || [
+        { nombre: '', rut: '', rol: 'ARRENDADOR' },
+        { nombre: '', rut: '', rol: 'ARRENDATARIO' }
+      ]
     }));
   }, []);
 
@@ -214,6 +225,32 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
       newSet.delete(index);
       return newSet;
     });
+  };
+
+  const updateFirmante = (index: number, field: 'nombre' | 'rut' | 'rol', value: string) => {
+    setContract(prev => ({
+      ...prev,
+      firmantes: prev.firmantes?.map((firmante, i) =>
+        i === index ? { ...firmante, [field]: value } : firmante
+      )
+    }));
+  };
+
+  const addFirmante = () => {
+    setContract(prev => ({
+      ...prev,
+      firmantes: [
+        ...(prev.firmantes || []),
+        { nombre: '', rut: '', rol: 'AVAL' }
+      ]
+    }));
+  };
+
+  const deleteFirmante = (index: number) => {
+    setContract(prev => ({
+      ...prev,
+      firmantes: prev.firmantes?.filter((_, i) => i !== index)
+    }));
   };
 
   const handleDownloadPDF = async () => {
@@ -304,7 +341,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
         {/* Documento A4-like */}
         <div
           ref={documentRef}
-          className="max-w-4xl mx-auto bg-white p-12 sm:p-16 shadow-lg border border-gray-200 font-serif"
+          className="max-w-4xl mx-auto bg-white p-12 sm:pt-16 sm:px-16 shadow-lg border border-gray-200 font-serif"
           style={{ minHeight: '800px' }}
         >
             {/* Título Principal */}
@@ -336,7 +373,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
             <div className="space-y-8">
               {contract.clausulas?.map((clause, index) => (
                 <div key={index}>
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start justify-between mb-1">
                     <EditableField
                       value={clause.titulo.replace(/:$/, '')}
                       onChange={(value) => updateClause(index, 'titulo', value)}
@@ -400,24 +437,56 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                 </p>
               </div>
 
-              <div className="flex justify-between mt-16">
-                <div className="text-center flex-1">
-                  <div className="border-t border-black pt-2">
-                    <p className="font-bold text-sm">ARRENDADOR</p>
-                    <p className="text-xs mt-2">[Nombre]</p>
-                    <p className="text-xs">[RUT]</p>
-            </div>
-          </div>
-
-                <div className="text-center flex-1">
-                  <div className="border-t border-black pt-2">
-                    <p className="font-bold text-sm">ARRENDATARIO</p>
-                    <p className="text-xs mt-2">[Nombre]</p>
-                    <p className="text-xs">[RUT]</p>
+              {/* Firmantes Dinámicos */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
+                {contract.firmantes?.map((firmante, index) => (
+                  <div key={index} className="text-center">
+                    <div className="border-t border-black pt-2 relative">
+                      <EditableField
+                        value={firmante.rol}
+                        onChange={(value) => updateFirmante(index, 'rol', value)}
+                        placeholder="ROL"
+                        className="font-bold text-sm uppercase text-center"
+                      />
+                      <div className="mt-4 space-y-2">
+                        <EditableField
+                          value={firmante.nombre}
+                          onChange={(value) => updateFirmante(index, 'nombre', value)}
+                          placeholder="Nombre completo"
+                          className="text-sm text-center"
+                        />
+                        <EditableField
+                          value={firmante.rut}
+                          onChange={(value) => updateFirmante(index, 'rut', value)}
+                          placeholder="RUT"
+                          className="text-sm text-center"
+                        />
+                      </div>
+                      {contract.firmantes && contract.firmantes.length > 1 && (
+                        <button
+                          onClick={() => deleteFirmante(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                          title="Eliminar firmante"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-          </div>
-          </div>
+                ))}
+              </div>
+
+              {/* Botón para añadir firmante */}
+              <div className="text-center mt-12">
+                <button
+                  onClick={addFirmante}
+                  className="inline-flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Añadir Firmante</span>
+                </button>
+              </div>
+            </div>
         </div>
       </div>
 

@@ -1,95 +1,132 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Save, Eye, AlertCircle, CheckCircle, Edit3, FileText, Users, Shield, FileCheck } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import CustomButton from '../common/CustomButton';
-import { supabase } from '../../lib/supabase';
 
-interface ContractData {
-  id: string;
-  contract_content: {
-    arrendador?: {
-      nombre: string;
-      rut: string;
-      domicilio: string;
-    };
-    arrendatario?: {
-      nombre: string;
-      rut: string;
-      domicilio: string;
-    };
-    aval?: {
-      nombre: string;
-      rut: string;
-      domicilio: string;
-    };
+interface ContractContent {
+    titulo: string;
+    comparecencia: string;
     clausulas?: Array<{
       titulo: string;
       contenido: string;
     }>;
-  };
-  contract_number?: string;
-  status?: string;
 }
 
 interface ContractCanvasEditorProps {
-  contractId: string;
-  contractData: ContractData;
-  onClose: () => void;
-  onSave: () => void;
+  initialContract: ContractContent;
 }
 
-const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
-  contractId,
-  contractData,
-  onClose,
-  onSave
-}) => {
-  const [data, setData] = useState(contractData.contract_content || {});
-  const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'parties' | 'clauses'>('parties');
+// EditableField sub-component
+interface EditableFieldProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  className?: string;
+}
 
-  // Inicializar datos por defecto
+const EditableField: React.FC<EditableFieldProps> = ({
+  value,
+  onChange,
+  placeholder = '',
+  multiline = false,
+  className = ''
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
-    if (!data.arrendador) {
-      setData(prev => ({
-        ...prev,
-        arrendador: { nombre: '', rut: '', domicilio: '' }
-      }));
+    if (isEditing && multiline && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
-    if (!data.arrendatario) {
-      setData(prev => ({
-        ...prev,
-        arrendatario: { nombre: '', rut: '', domicilio: '' }
-      }));
+  }, [value, isEditing, multiline]);
+
+  const handleBlur = () => {
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !multiline) {
+      e.preventDefault();
+      setIsEditing(false);
     }
-    if (!data.aval) {
-      setData(prev => ({
-        ...prev,
-        aval: { nombre: '', rut: '', domicilio: '' }
-      }));
+    if (e.key === 'Escape') {
+      setIsEditing(false);
     }
-    if (!data.clausulas) {
-      setData(prev => ({
-        ...prev,
-        clausulas: []
-      }));
-    }
+  };
+
+  if (multiline) {
+    return (
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsEditing(true)}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className={`bg-transparent border-0 outline-none resize-none overflow-hidden text-justify leading-relaxed ${className} ${
+          isEditing
+            ? 'border-b-2 border-blue-500 bg-blue-50 px-2 py-1 rounded'
+            : 'hover:border-b hover:border-gray-300 cursor-text px-0 py-0'
+        }`}
+        rows={1}
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onFocus={() => setIsEditing(true)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      placeholder={placeholder}
+      className={`bg-transparent border-0 outline-none text-justify ${className} ${
+        isEditing
+          ? 'border-b-2 border-blue-500 bg-blue-50 px-2 py-1 rounded'
+          : 'hover:border-b hover:border-gray-300 cursor-text px-0 py-0'
+      }`}
+    />
+  );
+};
+
+const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
+  initialContract
+}) => {
+  const [contract, setContract] = useState<ContractContent>(initialContract);
+  const documentRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+  // Initialize default data
+  useEffect(() => {
+    setContract(prev => ({
+      titulo: prev.titulo || 'CONTRATO DE ARRENDAMIENTO',
+      comparecencia: prev.comparecencia || '',
+      clausulas: prev.clausulas || []
+    }));
   }, []);
 
-  const updateField = (section: string, field: string, value: string) => {
-    setData(prev => ({
+  const updateTitle = (value: string) => {
+    setContract(prev => ({
       ...prev,
-      [section]: {
-        ...prev[section as keyof typeof prev],
-        [field]: value
-      }
+      titulo: value
+    }));
+  };
+
+  const updateComparecencia = (value: string) => {
+    setContract(prev => ({
+      ...prev,
+      comparecencia: value
     }));
   };
 
   const updateClause = (index: number, field: 'titulo' | 'contenido', value: string) => {
-    setData(prev => ({
+    setContract(prev => ({
       ...prev,
       clausulas: prev.clausulas?.map((clause, i) =>
         i === index ? { ...clause, [field]: value } : clause
@@ -98,23 +135,6 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   const addClause = () => {
-    setData(prev => ({
-      ...prev,
-      clausulas: [
-        ...(prev.clausulas || []),
-        { titulo: `CLÁUSULA ${romanize((prev.clausulas?.length || 0) + 1)}`, contenido: '' }
-      ]
-    }));
-  };
-
-  const removeClause = (index: number) => {
-    setData(prev => ({
-      ...prev,
-      clausulas: prev.clausulas?.filter((_, i) => i !== index)
-    }));
-  };
-
-  const romanize = (num: number): string => {
     const romanNumerals = [
       { value: 10, symbol: 'X' },
       { value: 9, symbol: 'IX' },
@@ -123,6 +143,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
       { value: 1, symbol: 'I' }
     ];
 
+    const romanize = (num: number): string => {
     let result = '';
     for (const { value, symbol } of romanNumerals) {
       while (num >= value) {
@@ -133,101 +154,184 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
     return result;
   };
 
-  const handleSave = async () => {
+    setContract(prev => ({
+      ...prev,
+      clausulas: [
+        ...(prev.clausulas || []),
+        { titulo: `CLÁUSULA ${romanize((prev.clausulas?.length || 0) + 1)}`, contenido: '' }
+      ]
+    }));
+  };
+
+  const removeClause = (index: number) => {
+    setContract(prev => ({
+      ...prev,
+      clausulas: prev.clausulas?.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!documentRef.current) return;
+
     try {
-      setSaving(true);
-      setError(null);
+      setIsGeneratingPDF(true);
 
-      const { error: updateError } = await supabase
-        .from('rental_contracts')
-        .update({
-          contract_content: data,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', contractId);
+      // Apply print-mode class to hide borders and focus indicators
+      documentRef.current.classList.add('print-mode');
 
-      if (updateError) throw updateError;
+      // Generate canvas with high resolution
+      const canvas = await html2canvas(documentRef.current, {
+        scale: 2, // Higher resolution for better quality
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        width: documentRef.current.offsetWidth,
+        height: documentRef.current.offsetHeight
+      });
 
-      setSaveSuccess(true);
-      setTimeout(() => {
-        setSaveSuccess(false);
-        onSave();
-        onClose();
-      }, 1500);
+      // Restore normal appearance
+      documentRef.current.classList.remove('print-mode');
 
-    } catch (err: any) {
-      console.error('Error al guardar el contrato:', err);
-      setError(err.message || 'Error al guardar los cambios');
+      // Create PDF with A4 dimensions and professional margins
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20; // 20mm margin
+
+      const imgWidth = pdfWidth - (margin * 2);
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Center the content with margins
+      const x = margin;
+      const y = margin;
+
+      // Add the image to PDF
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+
+      // Download the PDF
+      pdf.save('contrato-de-arrendamiento.pdf');
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error al generar el PDF. Por favor, inténtelo nuevamente.');
     } finally {
-      setSaving(false);
+      setIsGeneratingPDF(false);
     }
   };
 
-  const renderPreview = () => (
-    <div className="bg-white p-8 shadow-lg rounded-lg max-h-[80vh] overflow-y-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold uppercase mb-4 text-black">
-          CONTRATO DE ARRENDAMIENTO<br/>DE BIEN RAÍZ URBANO
-        </h1>
-        <p className="text-sm text-gray-600">
-          Santiago, Chile - {new Date().toLocaleDateString('es-CL', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-          })}
-        </p>
-      </div>
-
-      {/* Partes */}
-      <div className="mb-8">
-        <h2 className="text-lg font-bold uppercase mb-4 text-black border-b-2 border-black pb-2">
-          PARTES CONTRATANTES
-        </h2>
-
-        <div className="mb-6">
-          <p className="font-bold text-black mb-2">ARRENDADOR:</p>
-          <p className="text-sm leading-relaxed text-black">
-            {data.arrendador?.nombre || '[Nombre del Arrendador]'}, RUT {data.arrendador?.rut || '[RUT]'},<br/>
-            domiciliado en {data.arrendador?.domicilio || '[Domicilio]'}
-          </p>
+  return (
+    <div className="min-h-screen bg-gray-100 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Action Bar */}
+        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">Editor de Contrato Canvas</h1>
+            <p className="text-sm text-gray-600 mt-1">Edición directa en el documento</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={addClause}
+              className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
+            >
+              <FileText className="h-4 w-4" />
+              <span>Añadir Cláusula</span>
+            </button>
+            <CustomButton
+              onClick={handleDownloadPDF}
+              disabled={isGeneratingPDF}
+              className="flex items-center space-x-2"
+            >
+              <Download className="h-4 w-4" />
+              <span>{isGeneratingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
+            </CustomButton>
+          </div>
         </div>
 
-        <div className="mb-6">
-          <p className="font-bold text-black mb-2">ARRENDATARIO:</p>
-          <p className="text-sm leading-relaxed text-black">
-            {data.arrendatario?.nombre || '[Nombre del Arrendatario]'}, RUT {data.arrendatario?.rut || '[RUT]'},<br/>
-            domiciliado en {data.arrendatario?.domicilio || '[Domicilio]'}
-          </p>
-        </div>
+        {/* Document View */}
+        <div
+          ref={documentRef}
+          className="bg-white shadow-lg border mx-auto max-w-3xl"
+          style={{ minHeight: '800px' }}
+        >
+          <div className="p-20 font-serif">
+            {/* Header */}
+            <div className="text-center mb-12">
+              <h1 className="text-3xl font-bold uppercase mb-8 text-black leading-tight text-center">
+                <EditableField
+                  value={contract.titulo}
+                  onChange={updateTitle}
+                  placeholder="TÍTULO DEL CONTRATO"
+                  className="text-3xl font-bold uppercase text-center"
+                />
+              </h1>
+            </div>
 
-        {data.aval?.nombre && (
-          <div className="mb-6">
-            <p className="font-bold text-black mb-2">CODEUDOR SOLIDARIO (AVAL):</p>
-            <p className="text-sm leading-relaxed text-black">
-              {data.aval.nombre}, RUT {data.aval.rut},<br/>
-              domiciliado en {data.aval.domicilio}
-            </p>
-          </div>
-        )}
-      </div>
+            {/* Comparecencia Section */}
+            <div className="mb-16">
+              <div className="text-sm leading-relaxed text-black text-justify">
+                <EditableField
+                  value={contract.comparecencia}
+                  onChange={updateComparecencia}
+                  placeholder="Escribe aquí la comparecencia de las partes..."
+                  multiline={true}
+                  className="text-sm leading-relaxed text-justify min-h-[80px]"
+                />
+              </div>
+            </div>
 
-      {/* Cláusulas */}
-      <div>
-        {data.clausulas?.map((clause, index) => (
-          <div key={index} className="mb-6">
-            <h3 className="font-bold text-black mb-3 uppercase">
-              {clause.titulo}:
-            </h3>
-            <p className="text-sm leading-relaxed text-justify text-black">
-              {clause.contenido}
-            </p>
-          </div>
-        ))}
-      </div>
+            {/* Clauses Section */}
+            <div className="space-y-8">
+              {contract.clausulas?.map((clause, index) => (
+                <div key={index} className="mb-8">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-black text-base uppercase">
+                      <EditableField
+                        value={clause.titulo}
+                        onChange={(value) => updateClause(index, 'titulo', value)}
+                        placeholder={`CLÁUSULA ${index + 1}`}
+                        className="text-base font-bold uppercase"
+                      />
+                      :
+                    </h3>
+                    {contract.clausulas && contract.clausulas.length > 0 && (
+                      <button
+                        onClick={() => removeClause(index)}
+                        className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-sm leading-relaxed text-justify text-black">
+                    <EditableField
+                      value={clause.contenido}
+                      onChange={(value) => updateClause(index, 'contenido', value)}
+                      placeholder="Escribe el contenido de la cláusula..."
+                      multiline={true}
+                      className="text-sm leading-relaxed text-justify min-h-[80px]"
+                    />
+                  </div>
+                </div>
+              ))}
 
-      {/* Firmas */}
-      <div className="mt-12 pt-8 border-t-2 border-black">
-        <div className="text-center mb-8">
+              {(!contract.clausulas || contract.clausulas.length === 0) && (
+                <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-sm">No hay cláusulas definidas</p>
+                  <p className="text-xs mt-2">Haz clic en "Añadir Cláusula" para comenzar</p>
+                </div>
+              )}
+            </div>
+
+            {/* Signatures */}
+            <div className="mt-16 pt-12 border-t-2 border-black">
+        <div className="text-center mb-12">
           <p className="text-sm leading-relaxed text-black">
             En comprobante de lo pactado, se firma el presente contrato en dos ejemplares de igual tenor y fecha,
             declarando las partes haber leído y aceptado todas y cada una de las cláusulas del presente instrumento.
@@ -238,328 +342,50 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
           <div className="text-center flex-1">
             <div className="border-t border-black pt-2">
               <p className="font-bold text-black text-sm">ARRENDADOR</p>
-              <p className="text-xs text-black mt-1">{data.arrendador?.nombre || '[Nombre]'}</p>
-              <p className="text-xs text-black">{data.arrendador?.rut || '[RUT]'}</p>
+                    <p className="text-xs text-black mt-2">{contract.arrendador?.nombre || '[Nombre]'}</p>
+                    <p className="text-xs text-black">{contract.arrendador?.rut || '[RUT]'}</p>
             </div>
           </div>
 
           <div className="text-center flex-1">
             <div className="border-t border-black pt-2">
               <p className="font-bold text-black text-sm">ARRENDATARIO</p>
-              <p className="text-xs text-black mt-1">{data.arrendatario?.nombre || '[Nombre]'}</p>
-              <p className="text-xs text-black">{data.arrendatario?.rut || '[RUT]'}</p>
+                    <p className="text-xs text-black mt-2">{contract.arrendatario?.nombre || '[Nombre]'}</p>
+                    <p className="text-xs text-black">{contract.arrendatario?.rut || '[RUT]'}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b bg-gray-50">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-              <Edit3 className="h-6 w-6 mr-2 text-blue-600" />
-              Editor Canvas de Contrato
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              ID: {contractId}
-              {contractData.contract_number && ` • N° ${contractData.contract_number}`}
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <CustomButton
-              onClick={() => setShowPreview(!showPreview)}
-              variant="outline"
-              size="sm"
-              className="flex items-center space-x-2"
-            >
-              <Eye className="h-4 w-4" />
-              <span>{showPreview ? 'Editor' : 'Vista Previa'}</span>
-            </CustomButton>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
-
-        {/* Mensajes de estado */}
-        {saveSuccess && (
-          <div className="mx-6 mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg flex items-center">
-            <CheckCircle className="h-5 w-5 mr-2" />
-            <span>¡Cambios guardados exitosamente!</span>
-          </div>
-        )}
-
-        {error && (
-          <div className="mx-6 mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {!showPreview ? (
-          <div className="flex-1 overflow-hidden">
-            {/* Tabs */}
-            <div className="border-b px-6">
-              <div className="flex space-x-1">
-                <button
-                  onClick={() => setActiveSection('parties')}
-                  className={`flex items-center space-x-2 px-4 py-3 font-medium text-sm ${
-                    activeSection === 'parties'
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'border-b-2 border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Partes</span>
-                </button>
-                <button
-                  onClick={() => setActiveSection('clauses')}
-                  className={`flex items-center space-x-2 px-4 py-3 font-medium text-sm ${
-                    activeSection === 'clauses'
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'border-b-2 border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <FileCheck className="h-4 w-4" />
-                  <span>Cláusulas</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {activeSection === 'parties' ? (
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Partes Contratantes</h3>
-
-                  {/* Arrendador */}
-                  <div className="bg-gray-50 p-6 rounded-lg border">
-                    <h4 className="font-bold text-gray-900 mb-4 flex items-center">
-                      <Users className="h-5 w-5 mr-2 text-blue-600" />
-                      ARRENDADOR
-                    </h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                        <input
-                          type="text"
-                          value={data.arrendador?.nombre || ''}
-                          onChange={(e) => updateField('arrendador', 'nombre', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: Juan Pérez González"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">RUT</label>
-                        <input
-                          type="text"
-                          value={data.arrendador?.rut || ''}
-                          onChange={(e) => updateField('arrendador', 'rut', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: 12.345.678-9"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Domicilio</label>
-                        <input
-                          type="text"
-                          value={data.arrendador?.domicilio || ''}
-                          onChange={(e) => updateField('arrendador', 'domicilio', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: Av. Providencia 1234, Santiago"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Arrendatario */}
-                  <div className="bg-gray-50 p-6 rounded-lg border">
-                    <h4 className="font-bold text-gray-900 mb-4 flex items-center">
-                      <Users className="h-5 w-5 mr-2 text-green-600" />
-                      ARRENDATARIO
-                    </h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                        <input
-                          type="text"
-                          value={data.arrendatario?.nombre || ''}
-                          onChange={(e) => updateField('arrendatario', 'nombre', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: María González Castro"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">RUT</label>
-                        <input
-                          type="text"
-                          value={data.arrendatario?.rut || ''}
-                          onChange={(e) => updateField('arrendatario', 'rut', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: 98.765.432-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Domicilio</label>
-                        <input
-                          type="text"
-                          value={data.arrendatario?.domicilio || ''}
-                          onChange={(e) => updateField('arrendatario', 'domicilio', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: Las Condes 567, Santiago"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Aval */}
-                  <div className="bg-gray-50 p-6 rounded-lg border">
-                    <h4 className="font-bold text-gray-900 mb-4 flex items-center">
-                      <Shield className="h-5 w-5 mr-2 text-orange-600" />
-                      CODEUDOR SOLIDARIO (AVAL) - <em className="font-normal text-sm">Opcional</em>
-                    </h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                        <input
-                          type="text"
-                          value={data.aval?.nombre || ''}
-                          onChange={(e) => updateField('aval', 'nombre', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: Pedro Rodríguez Silva"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">RUT</label>
-                        <input
-                          type="text"
-                          value={data.aval?.rut || ''}
-                          onChange={(e) => updateField('aval', 'rut', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: 11.222.333-4"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Domicilio</label>
-                        <input
-                          type="text"
-                          value={data.aval?.domicilio || ''}
-                          onChange={(e) => updateField('aval', 'domicilio', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Ej: Ñuñoa 890, Santiago"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Cláusulas del Contrato</h3>
-                    <CustomButton
-                      onClick={addClause}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center space-x-2"
-                    >
-                      <FileText className="h-4 w-4" />
-                      <span>Añadir Cláusula</span>
-                    </CustomButton>
-                  </div>
-
-                  {data.clausulas?.map((clause, index) => (
-                    <div key={index} className="bg-gray-50 p-6 rounded-lg border">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-bold text-gray-900">Cláusula {index + 1}</h4>
-                        <button
-                          onClick={() => removeClause(index)}
-                          className="text-red-500 hover:text-red-700 text-sm"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Título de la Cláusula</label>
-                          <input
-                            type="text"
-                            value={clause.titulo}
-                            onChange={(e) => updateClause(index, 'titulo', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
-                            placeholder="Ej: PRIMERO: PROPIEDAD ARRENDADA"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Contenido</label>
-                          <textarea
-                            value={clause.contenido}
-                            onChange={(e) => updateClause(index, 'contenido', e.target.value)}
-                            rows={4}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            placeholder="Escribe el contenido de la cláusula..."
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {(!data.clausulas || data.clausulas.length === 0) && (
-                    <div className="text-center py-12 text-gray-500">
-                      <FileCheck className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>No hay cláusulas definidas</p>
-                      <p className="text-sm mt-2">Haz clic en "Añadir Cláusula" para comenzar</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* Vista Previa */
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Vista Previa del Contrato</h3>
-                <p className="text-sm text-gray-600 mt-1">Así se verá el contrato final</p>
-              </div>
-
-              {renderPreview()}
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t bg-gray-50">
-          <div className="text-sm text-gray-600">
-            {data.clausulas?.length || 0} cláusulas definidas
-          </div>
-          <div className="flex space-x-3">
-            <CustomButton
-              onClick={onClose}
-              variant="outline"
-            >
-              Cancelar
-            </CustomButton>
-            <CustomButton
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center space-x-2"
-            >
-              <Save className="h-4 w-4" />
-              <span>{saving ? 'Guardando...' : 'Guardar Contrato'}</span>
-            </CustomButton>
-          </div>
-        </div>
-      </div>
+      {/* Print Mode Styles */}
+      <style jsx>{`
+        .print-mode :global(.hover\\:border-b) {
+          border-bottom: none !important;
+        }
+        .print-mode :global(.hover\\:border-gray-300) {
+          border-color: transparent !important;
+        }
+        .print-mode :global(.border-blue-500) {
+          border-color: transparent !important;
+        }
+        .print-mode :global(.bg-blue-50) {
+          background-color: transparent !important;
+        }
+        .print-mode :global(.px-2) {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+        .print-mode :global(.py-1) {
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        .print-mode :global(.rounded) {
+          border-radius: 0 !important;
+        }
+      `}</style>
     </div>
   );
 };

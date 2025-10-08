@@ -20,12 +20,14 @@ import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
 
 // Lazy loaded components for better performance
-const PortfolioPage = React.lazy(() => import('./portfolio/PortfolioPage').then(module => ({ default: module.PortfolioPage })));
-const ApplicationsPage = React.lazy(() => import('./dashboard/ApplicationsPage').then(module => ({ default: module.ApplicationsPage })));
-const ContractManagementPage = React.lazy(() => import('./contracts/ContractManagementPage').then(module => ({ default: module.default })));
-const ContractViewerPage = React.lazy(() => import('./contracts/ContractViewerPage').then(module => ({ default: module.default })));
-const PropertyFormPage = React.lazy(() => import('./properties/PropertyFormPage').then(module => ({ default: module.default })));
-const UserProfile = React.lazy(() => import('./profile/UserProfile').then(module => ({ default: module.UserProfile })));
+const PortfolioPage = React.lazy(() => import('./portfolio/PortfolioPage'));
+const ApplicationsPage = React.lazy(() => import('./dashboard/ApplicationsPage'));
+const ContractManagementPage = React.lazy(() => import('./contracts/ContractManagementPage'));
+const ContractViewerPage = React.lazy(() => import('./contracts/ContractViewerPage'));
+const ContractCanvasEditorPage = React.lazy(() => import('./contracts/ContractCanvasEditorPage'));
+const TestCanvasEditor = React.lazy(() => import('./contracts/TestCanvasEditor'));
+const PropertyFormPage = React.lazy(() => import('./properties/PropertyFormPage'));
+const UserProfile = React.lazy(() => import('./profile/UserProfile'));
 
 // Loading component for lazy loaded routes
 const LoadingSpinner = () => (
@@ -122,6 +124,22 @@ export const AppContent: React.FC = () => {
               <ContractManagementPage />
             </Suspense>
           </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/contracts/:contractId/canvas-editor" element={
+        <ProtectedRoute>
+          <Suspense fallback={<LoadingSpinner />}>
+            <ContractCanvasEditorPage />
+          </Suspense>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/test-canvas-editor" element={
+        <ProtectedRoute>
+          <Suspense fallback={<LoadingSpinner />}>
+            <TestCanvasEditor />
+          </Suspense>
         </ProtectedRoute>
       } />
 

@@ -158,7 +158,7 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Contrato de Arriendo - ${data.arrendatario?.nombre || 'Cliente'}</title>
+          <title>${data.titulo || 'Contrato de Arriendo'} - ${data.arrendatario?.nombre || 'Cliente'}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -292,52 +292,21 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
     // Header
     html += `
       <div class="header">
-        <div class="contract-title">CONTRATO DE ARRENDAMIENTO</div>
-        <div class="contract-subtitle">DE BIEN RAÍZ URBANO</div>
+        <div class="contract-title">${data.titulo || 'CONTRATO DE ARRENDAMIENTO'}</div>
         <div class="contract-date">Santiago, ${new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
       </div>
     `;
 
-    // Partes contratantes
-    html += `<div class="section"><div class="section-title">PARTES CONTRATANTES</div>`;
-
-    if (data.arrendador) {
+    // Comparecencia
+    if (data.comparecencia) {
       html += `
-        <div class="party-section">
-          <div class="party-title">arrendador:</div>
-          <div class="party-content">
-            ${data.arrendador.nombre || '[Nombre]'}, RUT ${data.arrendador.rut || '[RUT]'},<br>
-            Domiciliado en ${data.arrendador.domicilio || '[Domicilio]'}
+        <div class="section">
+          <div class="section-content" style="text-align: justify !important; line-height: 1.9;">
+            ${processContentForJustification(data.comparecencia)}
           </div>
         </div>
       `;
     }
-
-    if (data.arrendatario) {
-      html += `
-        <div class="party-section">
-          <div class="party-title">arrendatario:</div>
-          <div class="party-content">
-            ${data.arrendatario.nombre || '[Nombre]'}, RUT ${data.arrendatario.rut || '[RUT]'},<br>
-            Domiciliado en ${data.arrendatario.domicilio || '[Domicilio]'}
-          </div>
-        </div>
-      `;
-    }
-
-    if (data.aval && data.aval.nombre) {
-      html += `
-        <div class="party-section">
-          <div class="party-title">codeudor solidario (aval):</div>
-          <div class="party-content">
-            ${data.aval.nombre}, RUT ${data.aval.rut},<br>
-            Domiciliado en ${data.aval.domicilio}
-          </div>
-        </div>
-      `;
-    }
-
-    html += `</div>`;
 
     // Cláusulas
     if (data.clausulas && data.clausulas.length > 0) {
@@ -945,7 +914,14 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
   const getEditorType = (contract: any) => {
     if (!contract.contract_content) return 'html';
 
-    // Si tiene la estructura optimizada (arrendador, arrendatario, aval, clausulas)
+    // Si tiene la nueva estructura optimizada (titulo, comparecencia, clausulas)
+    if (contract.contract_content.titulo ||
+        contract.contract_content.comparecencia ||
+        contract.contract_content.clausulas) {
+      return 'canvas';
+    }
+
+    // Si tiene la estructura antigua (arrendador, arrendatario, aval, clausulas)
     if (contract.contract_content.arrendador ||
         contract.contract_content.arrendatario ||
         contract.contract_content.aval ||
@@ -1031,7 +1007,13 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
                 </div>
                 <div className="flex space-x-3">
                   <CustomButton
-                    onClick={() => setShowEditor(true)}
+                    onClick={() => {
+                      if (editorType === 'canvas') {
+                        navigate(`/contracts/${contractId}/canvas-editor`);
+                      } else {
+                        setShowEditor(true);
+                      }
+                    }}
                     variant="outline"
                     size="sm"
                     className="flex items-center space-x-2"
@@ -1082,24 +1064,13 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
       </div>
 
       {/* Modal de Edición */}
-      {showEditor && contract && (
-        <>
-          {editorType === 'canvas' ? (
-            <ContractCanvasEditor
-              contractId={contractId}
-              contractData={contract}
-              onClose={() => setShowEditor(false)}
-              onSave={handleEditorSave}
-            />
-          ) : (
-            <ContractEditor
-              contractId={contractId}
-              contractData={contract}
-              onClose={() => setShowEditor(false)}
-              onSave={handleEditorSave}
-            />
-          )}
-        </>
+      {showEditor && contract && editorType !== 'canvas' && (
+        <ContractEditor
+          contractId={contractId}
+          contractData={contract}
+          onClose={() => setShowEditor(false)}
+          onSave={handleEditorSave}
+        />
       )}
     </div>
   );

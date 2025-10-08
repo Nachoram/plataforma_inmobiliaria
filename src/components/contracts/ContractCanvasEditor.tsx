@@ -7,17 +7,17 @@ import CustomButton from '../common/CustomButton';
 interface ContractContent {
   titulo: string;
   comparecencia: string;
-  clausulas?: Array<{
-    titulo: string;
-    contenido: string;
-  }>;
+    clausulas?: Array<{
+      titulo: string;
+      contenido: string;
+    }>;
 }
 
 interface ContractCanvasEditorProps {
   initialContract: ContractContent;
 }
 
-// EditableField sub-component
+// EditableField sub-component - Implementación de Doble Capa
 interface EditableFieldProps {
   value: string;
   onChange: (value: string) => void;
@@ -35,6 +35,8 @@ const EditableField: React.FC<EditableFieldProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isEditing && multiline && textareaRef.current) {
@@ -57,28 +59,70 @@ const EditableField: React.FC<EditableFieldProps> = ({
     }
   };
 
+  const handleContainerClick = () => {
+    setIsEditing(true);
+    // Dar un pequeño delay para asegurar que el textarea esté listo
+    setTimeout(() => {
+      if (multiline && textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(textareaRef.current.value.length, textareaRef.current.value.length);
+      } else if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length);
+      }
+    }, 0);
+  };
+
   if (multiline) {
+    // Implementación de Doble Capa para textarea
     return (
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setIsEditing(true)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className={`bg-transparent border-0 outline-none resize-none overflow-hidden text-justify leading-relaxed ${className} ${
-          isEditing
-            ? 'border-b-2 border-blue-500 bg-blue-50 px-2 py-1 rounded'
-            : 'hover:border-b hover:border-gray-300 cursor-text px-0 py-0'
-        }`}
-        rows={1}
-      />
+      <div ref={containerRef} className="relative">
+        {/* Capa Visible - Div que muestra el texto justificado */}
+        <div
+          onClick={handleContainerClick}
+          className={`font-serif leading-relaxed text-justify cursor-text select-text whitespace-pre-wrap break-words ${className} ${
+            isEditing
+              ? 'border-b-2 border-blue-500 bg-blue-50 px-2 py-1 rounded'
+              : 'hover:border-b hover:border-gray-300 px-0 py-0'
+          }`}
+          style={{
+            minHeight: '80px',
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word'
+          }}
+        >
+          {value || <span className="text-gray-400 italic">{placeholder}</span>}
+        </div>
+
+        {/* Capa Invisible - Textarea siempre presente pero invisible */}
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setIsEditing(true)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className={`absolute inset-0 font-serif leading-relaxed text-justify bg-transparent border-0 outline-none resize-none overflow-hidden pointer-events-none text-transparent caret-current ${className} ${
+            isEditing ? 'opacity-100 pointer-events-auto' : 'opacity-0'
+          }`}
+          style={{
+            minHeight: '80px',
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+            fontSize: 'inherit',
+            lineHeight: 'inherit'
+          }}
+          rows={1}
+        />
+      </div>
     );
   }
 
+  // Para inputs simples, mantener la implementación original
   return (
     <input
+      ref={inputRef}
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -127,10 +171,13 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   const updateClause = (index: number, field: 'titulo' | 'contenido', value: string) => {
+    // Para títulos, asegurarse de que no contengan ":" al final
+    const processedValue = field === 'titulo' ? value.replace(/:+$/, '') : value;
+
     setContract(prev => ({
       ...prev,
       clausulas: prev.clausulas?.map((clause, i) =>
-        i === index ? { ...clause, [field]: value } : clause
+        i === index ? { ...clause, [field]: processedValue } : clause
       )
     }));
   };
@@ -230,7 +277,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
         {/* Barra de Herramientas Fija */}
         <div className="bg-white rounded-lg shadow-sm border p-4 mb-6 sticky top-4 z-10">
           <div className="flex items-center justify-between">
-            <div>
+      <div>
               <h1 className="text-xl font-semibold text-gray-900">Editor Canvas de Contrato</h1>
               <p className="text-sm text-gray-600 mt-1">Lienzo de Documento Dinámico</p>
             </div>
@@ -261,7 +308,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
           style={{ minHeight: '800px' }}
         >
             {/* Título Principal */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-16">
               <h1 className="text-2xl font-bold text-center uppercase mb-8">
                 <EditableField
                   value={contract.titulo}
@@ -270,7 +317,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                   className="text-2xl font-bold text-center uppercase"
                 />
               </h1>
-            </div>
+        </div>
 
             {/* Comparecencia Section */}
             <div className="mb-16">
@@ -289,16 +336,14 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
             <div className="space-y-8">
               {contract.clausulas?.map((clause, index) => (
                 <div key={index}>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-bold uppercase mb-2">
-                      <EditableField
-                        value={clause.titulo}
-                        onChange={(value) => updateClause(index, 'titulo', value)}
-                        placeholder={`CLÁUSULA ${index + 1}`}
-                        className="font-bold uppercase"
-                      />
-                      :
-                    </h3>
+                  <div className="flex items-start justify-between mb-2">
+                    <EditableField
+                      value={clause.titulo.replace(/:$/, '')}
+                      onChange={(value) => updateClause(index, 'titulo', value)}
+                      placeholder={`CLÁUSULA ${index + 1}`}
+                      multiline={true}
+                      className="flex-grow font-bold uppercase leading-normal min-h-[24px]"
+                    />
                     <div className="flex items-center space-x-2">
                       {clausesToDelete.has(index) ? (
                         <div className="flex items-center space-x-2">
@@ -315,8 +360,8 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                           >
                             No
                           </button>
-                        </div>
-                      ) : (
+                </div>
+              ) : (
                         <button
                           onClick={() => toggleDeleteClause(index)}
                           className="flex items-center space-x-1 text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors"
@@ -325,17 +370,17 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                           <span>Eliminar</span>
                         </button>
                       )}
-                    </div>
-                  </div>
+                      </div>
+                        </div>
                   <EditableField
-                    value={clause.contenido}
+                            value={clause.contenido}
                     onChange={(value) => updateClause(index, 'contenido', value)}
-                    placeholder="Escribe el contenido de la cláusula..."
+                            placeholder="Escribe el contenido de la cláusula..."
                     multiline={true}
                     className="text-sm leading-relaxed text-justify min-h-[80px]"
-                  />
-                </div>
-              ))}
+                          />
+                    </div>
+                  ))}
 
               {(!contract.clausulas || contract.clausulas.length === 0) && (
                 <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
@@ -361,8 +406,8 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                     <p className="font-bold text-sm">ARRENDADOR</p>
                     <p className="text-xs mt-2">[Nombre]</p>
                     <p className="text-xs">[RUT]</p>
-                  </div>
-                </div>
+            </div>
+          </div>
 
                 <div className="text-center flex-1">
                   <div className="border-t border-black pt-2">
@@ -371,7 +416,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                     <p className="text-xs">[RUT]</p>
                   </div>
                 </div>
-              </div>
+          </div>
           </div>
         </div>
       </div>

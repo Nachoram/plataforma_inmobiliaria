@@ -77,7 +77,6 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   initialContract
 }) => {
   const [contract, setContract] = useState<ContractContent>(initialContract);
-  const [clausesToDelete, setClausesToDelete] = useState<Set<number>>(new Set());
   const documentRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
@@ -130,28 +129,11 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
     }));
   };
 
-  const toggleDeleteClause = (index: number) => {
-    setClausesToDelete(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else {
-        newSet.add(index);
-      }
-      return newSet;
-    });
-  };
-
-  const confirmDeleteClause = (index: number) => {
+  const deleteClause = (index: number) => {
     setContract(prev => ({
       ...prev,
       clausulas: prev.clausulas?.filter((_, i) => i !== index)
     }));
-    setClausesToDelete(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(index);
-      return newSet;
-    });
   };
 
   const updateFirmante = (index: number, field: 'nombre' | 'rut' | 'rol', value: string) => {
@@ -181,60 +163,64 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   const handleDownloadPDF = async () => {
+    // 1. Identificar el contenedor principal del documento
+    const documentContainer = document.getElementById('document-canvas');
+    if (!documentContainer) {
+        console.error("El contenedor del documento no fue encontrado.");
+        return;
+    }
+
+    // 2. Aplicar clases de limpieza para la captura
+    const elementsToHide = document.querySelectorAll('.pdf-hide'); // Todos los botones y barras de herramientas
+    documentContainer.classList.add('print-borderless'); // El div del "papel"
+    elementsToHide.forEach(el => el.style.display = 'none');
+
     try {
-      setIsGeneratingPDF(true);
+        // 3. Capturar el DOM con html2canvas
+        const canvas = await html2canvas(documentContainer, {
+            scale: 2, // Alta resolución
+            useCORS: true,
+        });
 
-      // Obtener el elemento del documento
-      const documentElement = document.getElementById('document-canvas');
-      if (!documentElement) {
-        throw new Error('No se encontró el elemento del documento');
-      }
+        // 4. Lógica de PDF y Paginación
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
 
-      // Crear el PDF
-      const doc = new jsPDF('p', 'mm', 'a4');
+        const margin = 15; // 1.5 cm de margen
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const contentWidth = pdfWidth - (margin * 2);
+        const contentHeight = pdfHeight - (margin * 2);
 
-      // Usar html2canvas para capturar el documento como imagen
-      const canvas = await html2canvas(documentElement, {
-        scale: 2, // Mayor resolución
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: documentElement.offsetWidth,
-        height: documentElement.offsetHeight,
-        windowWidth: documentElement.offsetWidth,
-        windowHeight: documentElement.offsetHeight
-      });
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        const imgTotalHeight = contentWidth / ratio;
 
-      // Convertir canvas a imagen
-      const imgData = canvas.toDataURL('image/png');
+        let heightLeft = imgTotalHeight;
+        let position = 0;
 
-      // Calcular dimensiones para ajustar al PDF A4
-      const pdfWidth = doc.internal.pageSize.getWidth();
-      const pdfHeight = doc.internal.pageSize.getHeight();
+        // Bucle de paginación simple y efectivo
+        while (heightLeft > 0) {
+            // Se posiciona la imagen completa en cada página, moviendo la "ventana de visión"
+            pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, imgTotalHeight);
 
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+            heightLeft -= contentHeight;
 
-      // Calcular escala para ajustar al PDF manteniendo proporciones
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const scaledWidth = imgWidth * ratio;
-      const scaledHeight = imgHeight * ratio;
+            if (heightLeft > 0) {
+                pdf.addPage();
+                position -= contentHeight;
+            }
+        }
 
-      // Centrar la imagen en la página
-      const x = (pdfWidth - scaledWidth) / 2;
-      const y = (pdfHeight - scaledHeight) / 2;
-
-      // Añadir la imagen al PDF
-      doc.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
-
-      // Descargar el PDF
-      doc.save('contrato-perfecto.pdf');
+        pdf.save('contrato-final.pdf');
 
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Error al generar el PDF. Por favor, inténtelo nuevamente.');
+        console.error("Error al generar el PDF:", error);
     } finally {
-      setIsGeneratingPDF(false);
+        // 5. Restaurar la UI
+        documentContainer.classList.remove('print-borderless');
+        elementsToHide.forEach(el => el.style.display = '');
     }
   };
 
@@ -301,14 +287,23 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
 
             {/* Cláusulas */}
             {contract.clausulas?.map((clause, index) => (
-              <div key={index} className="mb-8">
-                <EditableField
-                  value={clause.titulo.replace(/:$/, '')}
-                  onChange={(value) => updateClause(index, 'titulo', value)}
-                  placeholder={`CLÁUSULA ${index + 1}`}
-                  multiline={true}
-                  className="font-bold uppercase leading-normal mb-2"
-                />
+              <div key={index} className="mb-8 relative">
+                <div className="flex items-center justify-between mb-2">
+                  <EditableField
+                    value={clause.titulo.replace(/:$/, '')}
+                    onChange={(value) => updateClause(index, 'titulo', value)}
+                    placeholder={`CLÁUSULA ${index + 1}`}
+                    multiline={true}
+                    className="font-bold uppercase leading-normal flex-1"
+                  />
+                  <button
+                    onClick={() => deleteClause(index)}
+                    className="pdf-hide ml-2 p-1 text-red-500 hover:text-red-700 transition-colors"
+                    title="Eliminar cláusula"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
                 <EditableField
                   value={clause.contenido}
                   onChange={(value) => updateClause(index, 'contenido', value)}
@@ -338,38 +333,67 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
             </div>
 
             {/* Firmantes Dinámicos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
-              {contract.firmantes?.map((firmante, index) => (
-                <div key={index} className="text-center">
-                  <div className="border-t border-black pt-2">
-                    <EditableField
-                      value={firmante.rol}
-                      onChange={(value) => updateFirmante(index, 'rol', value)}
-                      placeholder="ROL"
-                      className="font-bold text-sm uppercase text-center mb-4"
-                    />
-                    <EditableField
-                      value={firmante.nombre}
-                      onChange={(value) => updateFirmante(index, 'nombre', value)}
-                      placeholder="Nombre completo"
-                      className="text-sm text-center mb-2"
-                    />
-                    <EditableField
-                      value={firmante.rut}
-                      onChange={(value) => updateFirmante(index, 'rut', value)}
-                      placeholder="RUT"
-                      className="text-sm text-center"
-                    />
+            <div className="mt-16">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {contract.firmantes?.map((firmante, index) => (
+                  <div key={index} className="text-center relative">
+                    <div className="border-t border-black pt-2">
+                      <div className="flex items-center justify-center mb-2">
+                        <EditableField
+                          value={firmante.rol}
+                          onChange={(value) => updateFirmante(index, 'rol', value)}
+                          placeholder="ROL"
+                          className="font-bold text-sm uppercase text-center flex-1"
+                        />
+                        <button
+                          onClick={() => deleteFirmante(index)}
+                          className="pdf-hide ml-2 p-1 text-red-500 hover:text-red-700 transition-colors"
+                          title="Eliminar firmante"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <EditableField
+                        value={firmante.nombre}
+                        onChange={(value) => updateFirmante(index, 'nombre', value)}
+                        placeholder="Nombre completo"
+                        className="text-sm text-center mb-2"
+                      />
+                      <EditableField
+                        value={firmante.rut}
+                        onChange={(value) => updateFirmante(index, 'rut', value)}
+                        placeholder="RUT"
+                        className="text-sm text-center"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Botón para añadir firmante */}
+              <div className="text-center mt-8">
+                <button
+                  onClick={addFirmante}
+                  className="pdf-hide flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200 mx-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Añadir Firmante</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Print Mode Styles */}
-      <style jsx>{`
+      <style>{`
+        .pdf-hide {
+          display: none !important;
+        }
+        .print-borderless {
+          border: none !important;
+          box-shadow: none !important;
+        }
         .print-mode {
           border-color: transparent !important;
           box-shadow: none !important;
@@ -380,10 +404,6 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
           box-shadow: none !important;
           -webkit-box-shadow: none !important;
           outline: none !important;
-        }
-        .print-borderless {
-          border: none !important;
-          box-shadow: none !important;
         }
         /* Mejora del renderizado de fuentes para texto natural */
         .document-paper {

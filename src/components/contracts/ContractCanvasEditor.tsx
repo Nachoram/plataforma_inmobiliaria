@@ -24,7 +24,7 @@ interface ContractCanvasEditorProps {
   initialContract: ContractContent;
 }
 
-// EditableField sub-component - Implementación de Doble Capa
+// EditableField sub-component - Implementación simplificada con solo textarea
 interface EditableFieldProps {
   value: string;
   onChange: (value: string) => void;
@@ -40,107 +40,34 @@ const EditableField: React.FC<EditableFieldProps> = ({
   multiline = false,
   className = ''
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isEditing && multiline && textareaRef.current) {
+    if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
-  }, [value, isEditing, multiline]);
-
-  const handleBlur = () => {
-    setIsEditing(false);
-  };
+  }, [value]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !multiline) {
       e.preventDefault();
-      setIsEditing(false);
     }
     if (e.key === 'Escape') {
-      setIsEditing(false);
+      (e.target as HTMLTextAreaElement).blur();
     }
   };
 
-  const handleContainerClick = () => {
-    setIsEditing(true);
-    // Dar un pequeño delay para asegurar que el textarea esté listo
-    setTimeout(() => {
-      if (multiline && textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(textareaRef.current.value.length, textareaRef.current.value.length);
-      } else if (inputRef.current) {
-        inputRef.current.focus();
-        inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length);
-      }
-    }, 0);
-  };
-
-  if (multiline) {
-    // Implementación de Doble Capa para textarea
-    return (
-      <div ref={containerRef} className="relative">
-        {/* Capa Visible - Div que muestra el texto justificado */}
-        <div
-          onClick={handleContainerClick}
-          className={`font-serif leading-relaxed text-justify cursor-text select-text whitespace-pre-wrap break-words ${className} ${
-            isEditing
-              ? 'border-b-2 border-blue-500 bg-blue-50 px-2 py-1 rounded'
-              : 'hover:border-b hover:border-gray-300 px-0 py-0'
-          }`}
-          style={{
-            minHeight: '80px',
-            wordWrap: 'break-word',
-            overflowWrap: 'break-word'
-          }}
-        >
-          {value || <span className="text-gray-400 italic">{placeholder}</span>}
-        </div>
-
-        {/* Capa Invisible - Textarea siempre presente pero invisible */}
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setIsEditing(true)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className={`absolute inset-0 font-serif leading-relaxed text-justify bg-transparent border-0 outline-none resize-none overflow-hidden pointer-events-none text-transparent caret-current ${className} ${
-            isEditing ? 'opacity-100 pointer-events-auto' : 'opacity-0'
-          }`}
-          style={{
-            minHeight: '80px',
-            wordWrap: 'break-word',
-            overflowWrap: 'break-word',
-            fontSize: 'inherit',
-            lineHeight: 'inherit'
-          }}
-          rows={1}
-        />
-      </div>
-    );
-  }
-
-  // Para inputs simples, mantener la implementación original
   return (
-    <input
-      ref={inputRef}
-      type="text"
+    <textarea
+      ref={textareaRef}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      onFocus={() => setIsEditing(true)}
-      onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
-      className={`bg-transparent border-0 outline-none text-justify ${className} ${
-        isEditing
-          ? 'border-b-2 border-blue-500 bg-blue-50 px-2 py-1 rounded'
-          : 'hover:border-b hover:border-gray-300 cursor-text px-0 py-0'
+      rows={multiline ? 3 : 1}
+      className={`font-serif leading-relaxed text-justify bg-transparent border-none outline-none resize-none w-full p-0 m-0 text-gray-800 ${className} ${
+        multiline ? 'min-h-[80px]' : 'min-h-[24px]'
       }`}
     />
   );
@@ -254,85 +181,54 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   const handleDownloadPDF = async () => {
-    const documentRoot = document.getElementById('canvas-editor-root');
-    if (!documentRoot) return;
-
-    const elementsToHide = documentRoot.querySelectorAll('.pdf-hide');
-    const documentContainer = documentRoot.querySelector('.document-canvas') as HTMLElement;
-    if (!documentContainer) return;
-
     try {
       setIsGeneratingPDF(true);
 
-      // --- Inicio del Bloque de Seguridad ---
-      try {
-        // 1. Ocultar todos los elementos marcados
-        elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
-
-        // 2. Eliminar bordes y sombras de los campos de texto y del contenedor
-        const editableFields = documentContainer.querySelectorAll('input, textarea');
-        editableFields.forEach(el => el.classList.add('print-mode'));
-        documentContainer.classList.add('print-borderless');
-
-        // 3. Generar canvas con html2canvas mejorado
-        const canvas = await html2canvas(documentContainer, {
-          scale: 2, // Aumenta la resolución para mejor calidad de fuente
-          useCORS: true,
-          logging: false,
-          removeContainer: true, // Limpia elementos temporales del DOM
-          backgroundColor: '#ffffff',
-          width: documentContainer.offsetWidth,
-          height: documentContainer.offsetHeight
-        });
-
-        // 4. Crear PDF con paginación robusta y simple
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-
-        // --- Dimensiones y Márgenes ---
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const margin = 15; // Margen uniforme
-        const contentWidth = pdfWidth - (margin * 2);
-        const contentHeight = pdfHeight - (margin * 2); // Altura útil real de la página
-        // ---
-
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
-        const imgTotalHeight = contentWidth / ratio;
-
-        let heightLeft = imgTotalHeight;
-        let position = 0;
-        let page = 1;
-
-        // Bucle de paginación final y corregido
-        while (heightLeft > 0) {
-          if (page > 1) {
-            pdf.addPage();
-          }
-
-          // La imagen se añade completa, pero se posiciona para mostrar la sección correcta
-          pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, imgTotalHeight);
-
-          // El cálculo clave corregido: usar contentHeight para respetar márgenes
-          heightLeft -= contentHeight;
-          position -= contentHeight;
-          page++;
-        }
-
-        // Descargar el PDF
-        pdf.save('contrato-profesional.pdf');
-
-      } finally {
-        // 4. Restaurar la visibilidad de la UI, pase lo que pase
-        elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
-
-        const editableFields = documentContainer.querySelectorAll('input, textarea');
-        editableFields.forEach(el => el.classList.remove('print-mode'));
-        documentContainer.classList.remove('print-borderless');
+      // Obtener el elemento del documento
+      const documentElement = document.getElementById('document-canvas');
+      if (!documentElement) {
+        throw new Error('No se encontró el elemento del documento');
       }
-      // --- Fin del Bloque de Seguridad ---
+
+      // Crear el PDF
+      const doc = new jsPDF('p', 'mm', 'a4');
+
+      // Usar html2canvas para capturar el documento como imagen
+      const canvas = await html2canvas(documentElement, {
+        scale: 2, // Mayor resolución
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: documentElement.offsetWidth,
+        height: documentElement.offsetHeight,
+        windowWidth: documentElement.offsetWidth,
+        windowHeight: documentElement.offsetHeight
+      });
+
+      // Convertir canvas a imagen
+      const imgData = canvas.toDataURL('image/png');
+
+      // Calcular dimensiones para ajustar al PDF A4
+      const pdfWidth = doc.internal.pageSize.getWidth();
+      const pdfHeight = doc.internal.pageSize.getHeight();
+
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      // Calcular escala para ajustar al PDF manteniendo proporciones
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const scaledWidth = imgWidth * ratio;
+      const scaledHeight = imgHeight * ratio;
+
+      // Centrar la imagen en la página
+      const x = (pdfWidth - scaledWidth) / 2;
+      const y = (pdfHeight - scaledHeight) / 2;
+
+      // Añadir la imagen al PDF
+      doc.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
+
+      // Descargar el PDF
+      doc.save('contrato-perfecto.pdf');
 
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -360,163 +256,114 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                 <Plus className="h-4 w-4" />
                 <span>Añadir Cláusula</span>
               </button>
-            <CustomButton
+            <button
                 onClick={handleDownloadPDF}
                 disabled={isGeneratingPDF}
-              className="flex items-center space-x-2"
-            >
+                className="pdf-hide flex items-center space-x-2 px-4 py-2 text-sm bg-green-50 text-green-700 rounded-md hover:bg-green-100 transition-colors border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Download className="h-4 w-4" />
                 <span>{isGeneratingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
-            </CustomButton>
+            </button>
             </div>
           </div>
         </div>
 
-        {/* Documento A4-like */}
+        {/* Documento A4-like con secciones semánticas */}
         <div
           ref={documentRef}
-          className="document-canvas max-w-4xl mx-auto bg-white p-8 sm:p-16 shadow-lg border border-gray-200 font-serif"
+          id="document-canvas"
+          className="document-paper max-w-4xl mx-auto bg-white p-8 sm:p-16 shadow-lg border border-gray-200 font-serif"
           style={{ minHeight: '800px' }}
         >
-            {/* Título Principal */}
+          {/* SECCIÓN 1: CABECERA */}
+          <div id="pdf-header" className="mb-16">
             <EditableField
               value={contract.titulo}
               onChange={updateTitle}
               placeholder="TÍTULO DEL CONTRATO"
               multiline={true}
-              className="text-xl font-bold text-center uppercase resize-none w-full border-none bg-transparent focus:outline-none focus:ring-0 text-gray-800 p-0 m-0 mb-16"
+              className="text-xl font-bold text-center uppercase mb-8"
             />
+          </div>
 
-            {/* Comparecencia Section */}
+          {/* SECCIÓN 2: CUERPO (CLÁUSULAS) */}
+          <div id="pdf-body" className="space-y-8">
+            {/* Comparecencia */}
             <div className="mb-16">
-              <div className="text-sm leading-relaxed text-black text-justify">
+              <EditableField
+                value={contract.comparecencia}
+                onChange={updateComparecencia}
+                placeholder="Escribe aquí la comparecencia de las partes..."
+                multiline={true}
+                className="text-sm leading-relaxed text-justify"
+              />
+            </div>
+
+            {/* Cláusulas */}
+            {contract.clausulas?.map((clause, index) => (
+              <div key={index} className="mb-8">
                 <EditableField
-                  value={contract.comparecencia}
-                  onChange={updateComparecencia}
-                  placeholder="Escribe aquí la comparecencia de las partes..."
+                  value={clause.titulo.replace(/:$/, '')}
+                  onChange={(value) => updateClause(index, 'titulo', value)}
+                  placeholder={`CLÁUSULA ${index + 1}`}
                   multiline={true}
-                  className="text-sm leading-relaxed text-justify min-h-[80px]"
+                  className="font-bold uppercase leading-normal mb-2"
+                />
+                <EditableField
+                  value={clause.contenido}
+                  onChange={(value) => updateClause(index, 'contenido', value)}
+                  placeholder="Escribe el contenido de la cláusula..."
+                  multiline={true}
+                  className="text-sm leading-relaxed text-justify"
                 />
               </div>
+            ))}
+
+            {(!contract.clausulas || contract.clausulas.length === 0) && (
+              <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg pdf-hide">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-sm">No hay cláusulas definidas</p>
+                <p className="text-xs mt-2">Haz clic en "Añadir Cláusula" para comenzar</p>
+              </div>
+            )}
+          </div>
+
+          {/* SECCIÓN 3: PIE DE PÁGINA (FIRMAS) */}
+          <div id="pdf-footer" className="mt-16 pt-12 border-t-2 border-black">
+            <div className="text-center mb-12">
+              <p className="text-sm leading-relaxed text-justify">
+                En comprobante de lo pactado, se firma el presente contrato en dos ejemplares de igual tenor y fecha,
+                declarando las partes haber leído y aceptado todas y cada una de las cláusulas del presente instrumento.
+              </p>
             </div>
 
-            {/* Cláusulas con Espaciado Generoso */}
-            <div className="space-y-8">
-              {contract.clausulas?.map((clause, index) => (
-                <div key={index}>
-                  <div className="flex items-start justify-between mb-1">
+            {/* Firmantes Dinámicos */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
+              {contract.firmantes?.map((firmante, index) => (
+                <div key={index} className="text-center">
+                  <div className="border-t border-black pt-2">
                     <EditableField
-                      value={clause.titulo.replace(/:$/, '')}
-                      onChange={(value) => updateClause(index, 'titulo', value)}
-                      placeholder={`CLÁUSULA ${index + 1}`}
-                      multiline={true}
-                      className="flex-grow font-bold uppercase leading-normal min-h-[24px]"
+                      value={firmante.rol}
+                      onChange={(value) => updateFirmante(index, 'rol', value)}
+                      placeholder="ROL"
+                      className="font-bold text-sm uppercase text-center mb-4"
                     />
-                    <div className="flex items-center space-x-2">
-                      {clausesToDelete.has(index) ? (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-red-600">¿Eliminar?</span>
-                          <button
-                            onClick={() => confirmDeleteClause(index)}
-                            className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                          >
-                            Sí
-                          </button>
-                          <button
-                            onClick={() => toggleDeleteClause(index)}
-                            className="text-xs px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-                          >
-                            No
-                          </button>
+                    <EditableField
+                      value={firmante.nombre}
+                      onChange={(value) => updateFirmante(index, 'nombre', value)}
+                      placeholder="Nombre completo"
+                      className="text-sm text-center mb-2"
+                    />
+                    <EditableField
+                      value={firmante.rut}
+                      onChange={(value) => updateFirmante(index, 'rut', value)}
+                      placeholder="RUT"
+                      className="text-sm text-center"
+                    />
+                  </div>
                 </div>
-              ) : (
-                        <button
-                          onClick={() => toggleDeleteClause(index)}
-                          className="pdf-hide flex items-center space-x-1 text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>Eliminar</span>
-                        </button>
-                      )}
-                      </div>
-                        </div>
-                  <EditableField
-                            value={clause.contenido}
-                    onChange={(value) => updateClause(index, 'contenido', value)}
-                            placeholder="Escribe el contenido de la cláusula..."
-                    multiline={true}
-                    className="text-sm leading-relaxed text-justify min-h-[80px]"
-                          />
-                    </div>
-                  ))}
-
-              {(!contract.clausulas || contract.clausulas.length === 0) && (
-                <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-sm">No hay cláusulas definidas</p>
-                  <p className="text-xs mt-2">Haz clic en "Añadir Cláusula" para comenzar</p>
-                </div>
-              )}
+              ))}
             </div>
-
-            {/* Firmas */}
-            <div className="mt-16 pt-12 border-t-2 border-black">
-              <div className="text-center mb-12">
-                <p className="text-sm leading-relaxed text-justify">
-                  En comprobante de lo pactado, se firma el presente contrato en dos ejemplares de igual tenor y fecha,
-                  declarando las partes haber leído y aceptado todas y cada una de las cláusulas del presente instrumento.
-                </p>
-              </div>
-
-              {/* Firmantes Dinámicos */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
-                {contract.firmantes?.map((firmante, index) => (
-                  <div key={index} className="text-center">
-                    <div className="border-t border-black pt-2 relative">
-                      <EditableField
-                        value={firmante.rol}
-                        onChange={(value) => updateFirmante(index, 'rol', value)}
-                        placeholder="ROL"
-                        className="font-bold text-sm uppercase text-center"
-                      />
-                      <div className="mt-4 space-y-2">
-                        <EditableField
-                          value={firmante.nombre}
-                          onChange={(value) => updateFirmante(index, 'nombre', value)}
-                          placeholder="Nombre completo"
-                          className="text-sm text-center"
-                        />
-                        <EditableField
-                          value={firmante.rut}
-                          onChange={(value) => updateFirmante(index, 'rut', value)}
-                          placeholder="RUT"
-                          className="text-sm text-center"
-                        />
-                      </div>
-                      {contract.firmantes && contract.firmantes.length > 1 && (
-                        <button
-                          onClick={() => deleteFirmante(index)}
-                          className="pdf-hide absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                          title="Eliminar firmante"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      )}
-            </div>
-          </div>
-                ))}
-              </div>
-
-              {/* Botón para añadir firmante */}
-              <div className="text-center mt-12">
-                <button
-                  onClick={addFirmante}
-                  className="pdf-hide inline-flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Añadir Firmante</span>
-                </button>
-          </div>
           </div>
         </div>
       </div>
@@ -538,9 +385,21 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
           border: none !important;
           box-shadow: none !important;
         }
+        /* Mejora del renderizado de fuentes para texto natural */
+        .document-paper {
+          font-kerning: auto;
+          font-variant-ligatures: common-ligatures;
+          text-rendering: optimizeLegibility;
+        }
+        .document-paper textarea {
+          font-kerning: auto;
+          font-variant-ligatures: common-ligatures;
+          text-rendering: optimizeLegibility;
+        }
       `}</style>
     </div>
   );
 };
 
 export default ContractCanvasEditor;
+

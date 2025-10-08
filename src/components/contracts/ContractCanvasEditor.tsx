@@ -5,18 +5,18 @@ import html2canvas from 'html2canvas';
 import CustomButton from '../common/CustomButton';
 
 interface Firmante {
-  nombre: string;
-  rut: string;
+      nombre: string;
+      rut: string;
   rol: string;
 }
 
 interface ContractContent {
   titulo: string;
   comparecencia: string;
-  clausulas?: Array<{
-    titulo: string;
-    contenido: string;
-  }>;
+    clausulas?: Array<{
+      titulo: string;
+      contenido: string;
+    }>;
   firmantes?: Firmante[];
 }
 
@@ -254,51 +254,85 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   const handleDownloadPDF = async () => {
-    if (!documentRef.current) return;
+    const documentRoot = document.getElementById('canvas-editor-root');
+    if (!documentRoot) return;
+
+    const elementsToHide = documentRoot.querySelectorAll('.pdf-hide');
+    const documentContainer = documentRoot.querySelector('.document-canvas') as HTMLElement;
+    if (!documentContainer) return;
 
     try {
       setIsGeneratingPDF(true);
 
-      // Apply print-mode class to hide borders and focus indicators
-      documentRef.current.classList.add('print-mode');
+      // --- Inicio del Bloque de Seguridad ---
+      try {
+        // 1. Ocultar todos los elementos marcados
+        elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
 
-      // Generate canvas with high resolution
-      const canvas = await html2canvas(documentRef.current, {
-        scale: 2, // Higher resolution for better quality
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        width: documentRef.current.offsetWidth,
-        height: documentRef.current.offsetHeight
-      });
+        // 2. Eliminar bordes y sombras de los campos de texto y del contenedor
+        const editableFields = documentContainer.querySelectorAll('input, textarea');
+        editableFields.forEach(el => el.classList.add('print-mode'));
+        documentContainer.classList.add('print-borderless');
 
-      // Restore normal appearance
-      documentRef.current.classList.remove('print-mode');
+        // 3. Generar canvas con html2canvas mejorado
+        const canvas = await html2canvas(documentContainer, {
+          scale: 2, // Aumenta la resolución para mejor calidad de fuente
+          useCORS: true,
+          logging: false,
+          removeContainer: true, // Limpia elementos temporales del DOM
+          backgroundColor: '#ffffff',
+          width: documentContainer.offsetWidth,
+          height: documentContainer.offsetHeight
+        });
 
-      // Create PDF with A4 dimensions and professional margins
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
+        // 4. Crear PDF con paginación robusta y simple
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20; // 20mm margin
+        // --- Dimensiones y Márgenes ---
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15; // Margen uniforme
+        const contentWidth = pdfWidth - (margin * 2);
+        const contentHeight = pdfHeight - (margin * 2); // Altura útil real de la página
+        // ---
 
-      const imgWidth = pdfWidth - (margin * 2);
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        const imgTotalHeight = contentWidth / ratio;
 
-      // Center the content with margins
-      const x = margin;
-      const y = margin;
+        let heightLeft = imgTotalHeight;
+        let position = 0;
+        let page = 1;
 
-      // Add the image to PDF
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        // Bucle de paginación final y corregido
+        while (heightLeft > 0) {
+          if (page > 1) {
+            pdf.addPage();
+          }
 
-      // Download the PDF
-      pdf.save('contrato-de-arrendamiento.pdf');
+          // La imagen se añade completa, pero se posiciona para mostrar la sección correcta
+          pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, imgTotalHeight);
+
+          // El cálculo clave corregido: usar contentHeight para respetar márgenes
+          heightLeft -= contentHeight;
+          position -= contentHeight;
+          page++;
+        }
+
+        // Descargar el PDF
+        pdf.save('contrato-profesional.pdf');
+
+      } finally {
+        // 4. Restaurar la visibilidad de la UI, pase lo que pase
+        elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
+
+        const editableFields = documentContainer.querySelectorAll('input, textarea');
+        editableFields.forEach(el => el.classList.remove('print-mode'));
+        documentContainer.classList.remove('print-borderless');
+      }
+      // --- Fin del Bloque de Seguridad ---
 
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -309,31 +343,31 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
+    <div id="canvas-editor-root" className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Barra de Herramientas Fija */}
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6 sticky top-4 z-10">
+        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6 sticky top-4 z-10 pdf-hide">
           <div className="flex items-center justify-between">
-      <div>
+          <div>
               <h1 className="text-xl font-semibold text-gray-900">Editor Canvas de Contrato</h1>
               <p className="text-sm text-gray-600 mt-1">Lienzo de Documento Dinámico</p>
-            </div>
+          </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={addClause}
-                className="flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
+                className="pdf-hide flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
               >
                 <Plus className="h-4 w-4" />
                 <span>Añadir Cláusula</span>
               </button>
-              <CustomButton
+            <CustomButton
                 onClick={handleDownloadPDF}
                 disabled={isGeneratingPDF}
-                className="flex items-center space-x-2"
-              >
+              className="flex items-center space-x-2"
+            >
                 <Download className="h-4 w-4" />
                 <span>{isGeneratingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
-              </CustomButton>
+            </CustomButton>
             </div>
           </div>
         </div>
@@ -341,20 +375,17 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
         {/* Documento A4-like */}
         <div
           ref={documentRef}
-          className="max-w-4xl mx-auto bg-white p-12 sm:pt-16 sm:px-16 shadow-lg border border-gray-200 font-serif"
+          className="document-canvas max-w-4xl mx-auto bg-white p-8 sm:p-16 shadow-lg border border-gray-200 font-serif"
           style={{ minHeight: '800px' }}
         >
             {/* Título Principal */}
-            <div className="text-center mb-16">
-              <h1 className="text-2xl font-bold text-center uppercase mb-8">
-                <EditableField
-                  value={contract.titulo}
-                  onChange={updateTitle}
-                  placeholder="TÍTULO DEL CONTRATO"
-                  className="text-2xl font-bold text-center uppercase"
-                />
-              </h1>
-        </div>
+            <EditableField
+              value={contract.titulo}
+              onChange={updateTitle}
+              placeholder="TÍTULO DEL CONTRATO"
+              multiline={true}
+              className="text-xl font-bold text-center uppercase resize-none w-full border-none bg-transparent focus:outline-none focus:ring-0 text-gray-800 p-0 m-0 mb-16"
+            />
 
             {/* Comparecencia Section */}
             <div className="mb-16">
@@ -401,7 +432,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
               ) : (
                         <button
                           onClick={() => toggleDeleteClause(index)}
-                          className="flex items-center space-x-1 text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors"
+                          className="pdf-hide flex items-center space-x-1 text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 className="h-3 w-3" />
                           <span>Eliminar</span>
@@ -465,14 +496,14 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                       {contract.firmantes && contract.firmantes.length > 1 && (
                         <button
                           onClick={() => deleteFirmante(index)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                          className="pdf-hide absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                           title="Eliminar firmante"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
                       )}
-                    </div>
-                  </div>
+            </div>
+          </div>
                 ))}
               </div>
 
@@ -480,40 +511,32 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
               <div className="text-center mt-12">
                 <button
                   onClick={addFirmante}
-                  className="inline-flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
+                  className="pdf-hide inline-flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Añadir Firmante</span>
                 </button>
-              </div>
-            </div>
+          </div>
+          </div>
         </div>
       </div>
 
       {/* Print Mode Styles */}
       <style jsx>{`
-        .print-mode :global(.hover\\:border-b) {
-          border-bottom: none !important;
-        }
-        .print-mode :global(.hover\\:border-gray-300) {
+        .print-mode {
           border-color: transparent !important;
+          box-shadow: none !important;
+          -webkit-box-shadow: none !important;
         }
-        .print-mode :global(.border-blue-500) {
+        .print-mode:focus {
           border-color: transparent !important;
+          box-shadow: none !important;
+          -webkit-box-shadow: none !important;
+          outline: none !important;
         }
-        .print-mode :global(.bg-blue-50) {
-          background-color: transparent !important;
-        }
-        .print-mode :global(.px-2) {
-          padding-left: 0 !important;
-          padding-right: 0 !important;
-        }
-        .print-mode :global(.py-1) {
-          padding-top: 0 !important;
-          padding-bottom: 0 !important;
-        }
-        .print-mode :global(.rounded) {
-          border-radius: 0 !important;
+        .print-borderless {
+          border: none !important;
+          box-shadow: none !important;
         }
       `}</style>
     </div>

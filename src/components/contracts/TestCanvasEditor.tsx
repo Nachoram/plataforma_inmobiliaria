@@ -43,7 +43,8 @@ const TestCanvasEditor: React.FC = () => {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-semibold text-blue-900 mb-2">✨ Lienzo de Documento Dinámico - Características:</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Apariencia A4:</strong> Documento con formato profesional (max-w-4xl, p-12 sm:pt-16 sm:px-16)</li>
+              <li>• <strong>Apariencia A4:</strong> Documento con formato profesional (max-w-4xl, p-8 sm:p-16)</li>
+              <li>• <strong>Título Principal:</strong> Encabezado destacado con espaciado generoso (text-xl, mb-16)</li>
               <li>• <strong>Fuente Serif:</strong> Tipografía formal y clásica (font-serif)</li>
               <li>• <strong>Texto Justificado:</strong> Párrafos alineados a izquierda y derecha (text-justify)</li>
               <li>• <strong>Altura de Línea:</strong> Espaciado cómodo (leading-relaxed)</li>
@@ -51,7 +52,7 @@ const TestCanvasEditor: React.FC = () => {
               <li>• <strong>Manipulación Dinámica:</strong> Añadir/eliminar cláusulas y firmantes con confirmación</li>
               <li>• <strong>Firmantes Escalables:</strong> Sistema dinámico de firmantes (rol, nombre, RUT)</li>
               <li>• <strong>Edición Directa:</strong> Campos editables con estados visuales intuitivos</li>
-              <li>• <strong>Export PDF:</strong> Documento final listo para impresión</li>
+              <li>• <strong>Export PDF:</strong> Documento profesional con márgenes perfectos en los cuatro lados (1.5cm), paginación definitiva sin duplicación, renderizado de fuentes optimizado y limpieza automática del DOM</li>
             </ul>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle,
@@ -17,6 +17,29 @@ import { electronicSignatureService } from '../../lib/electronicSignature';
 import CustomButton from '../common/CustomButton';
 import { HTMLCanvasViewer } from '../common/HTMLCanvasViewer';
 
+interface ContractSection {
+  id: string;
+  title: string;
+  content: string;
+  editable: boolean;
+}
+
+interface ContractContent {
+  sections: ContractSection[];
+}
+
+interface ApprovalError {
+  message?: string;
+}
+
+interface SignatureRecord {
+  contract_id: string;
+  signer_type: 'owner' | 'tenant' | 'guarantor';
+  signer_name: string;
+  signer_email: string;
+  signature_status: string;
+}
+
 interface ContractApprovalWorkflowProps {
   contractId: string;
   onContractUpdated?: () => void;
@@ -26,7 +49,7 @@ interface ContractApprovalWorkflowProps {
 interface Contract {
   id: string;
   status: string;
-  contract_content: any;
+  contract_content: ContractContent;
   approved_at: string;
   sent_to_signature_at: string;
   owner_signed_at: string;
@@ -84,11 +107,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
   const [showCanvasViewer, setShowCanvasViewer] = useState(false);
   const [contractHtmlContent, setContractHtmlContent] = useState<string>('');
 
-  useEffect(() => {
-    loadContractData();
-  }, [contractId]);
-
-  const loadContractData = async () => {
+  const loadContractData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -146,14 +165,18 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
       if (signaturesError) throw signaturesError;
       setSignatures(signaturesData || []);
 
-    } catch (error: any) {
+    } catch (error: ApprovalError) {
       console.error('Error loading contract data:', error);
       const errorMessage = error?.message || 'Error desconocido';
       alert(`Error al cargar los datos del contrato:\n\n${errorMessage}\n\nRevisa la consola para más detalles.`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [contractId]);
+
+  useEffect(() => {
+    loadContractData();
+  }, [contractId, loadContractData]);
 
   const handleApproveContract = async () => {
     if (!confirm('¿Estás seguro de que deseas aprobar este contrato? Una vez aprobado, se enviará a firma electrónica.')) {
@@ -184,7 +207,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
       }
 
       alert('Contrato aprobado exitosamente');
-    } catch (error: any) {
+    } catch (error: ApprovalError) {
       console.error('Error approving contract:', error);
       const errorMessage = error?.message || 'Error desconocido';
       alert(`Error al aprobar el contrato:\n\n${errorMessage}\n\nRevisa la consola para más detalles.`);
@@ -268,7 +291,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
       }
 
       alert('Contrato enviado a firma electrónica exitosamente');
-    } catch (error: any) {
+    } catch (error: ApprovalError) {
       console.error('Error sending to signature:', error);
       const errorMessage = error?.message || 'Error desconocido';
       alert(`Error al enviar a firma electrónica:\n\n${errorMessage}\n\nRevisa la consola para más detalles.`);
@@ -278,7 +301,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     }
   };
 
-  const sendElectronicSignatures = async (signatureRecords: any[]) => {
+  const sendElectronicSignatures = async (signatureRecords: SignatureRecord[]) => {
     // Usar el servicio de firma electrónica real
     for (const record of signatureRecords) {
       try {
@@ -334,7 +357,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
         <body>
     `;
 
-    contract.contract_content.sections.forEach((section: any) => {
+    contract.contract_content.sections.forEach((section: ContractSection) => {
       html += `
         <h2>${section.title}</h2>
         ${section.content}
@@ -492,7 +515,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     `;
 
     // Header
-    const headerSection = sections.find((s: any) => s.id === 'header');
+    const headerSection = sections.find((s: ContractSection) => s.id === 'header');
     if (headerSection) {
       html += `
         <div class="header">
@@ -502,7 +525,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     }
 
     // Parties
-    const partiesSection = sections.find((s: any) => s.id === 'parties');
+    const partiesSection = sections.find((s: ContractSection) => s.id === 'parties');
     if (partiesSection) {
       html += `
         <div class="section">
@@ -513,7 +536,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     }
 
     // Property
-    const propertySection = sections.find((s: any) => s.id === 'property');
+    const propertySection = sections.find((s: ContractSection) => s.id === 'property');
     if (propertySection) {
       html += `
         <div class="section">
@@ -529,7 +552,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     }
 
     // Conditions
-    const conditionsSection = sections.find((s: any) => s.id === 'conditions');
+    const conditionsSection = sections.find((s: ContractSection) => s.id === 'conditions');
     if (conditionsSection) {
       html += `
         <div class="section">
@@ -540,7 +563,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     }
 
     // Obligations
-    const obligationsSection = sections.find((s: any) => s.id === 'obligations');
+    const obligationsSection = sections.find((s: ContractSection) => s.id === 'obligations');
     if (obligationsSection) {
       html += `
         <div class="section">
@@ -551,7 +574,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     }
 
     // Termination
-    const terminationSection = sections.find((s: any) => s.id === 'termination');
+    const terminationSection = sections.find((s: ContractSection) => s.id === 'termination');
     if (terminationSection) {
       html += `
         <div class="section">
@@ -562,7 +585,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     }
 
     // Legal
-    const legalSection = sections.find((s: any) => s.id === 'legal');
+    const legalSection = sections.find((s: ContractSection) => s.id === 'legal');
     if (legalSection) {
       html += `
         <div class="section">
@@ -573,7 +596,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
     }
 
     // Signatures
-    const signaturesSection = sections.find((s: any) => s.id === 'signatures');
+    const signaturesSection = sections.find((s: ContractSection) => s.id === 'signatures');
     if (signaturesSection) {
       html += `
         <div class="section">

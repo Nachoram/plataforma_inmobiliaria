@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, DollarSign, Building, Heart, TrendingUp, MessageSquare, Eye, Edit, Trash2 } from 'lucide-react';
-import { Property as SupabaseProperty, formatPriceCLP, isValidPrice } from '../lib/supabase';
+import { SupabaseProperty, formatPriceCLP, isValidPrice } from '../lib/supabase';
 import CustomButton from './common/CustomButton';
 import ImageGallery from './common/ImageGallery';
 
@@ -29,7 +29,7 @@ interface PropertyCardProps {
   isFavorite?: boolean;
 }
 
-const PropertyCard: React.FC<PropertyCardProps> = ({
+const PropertyCard: React.FC<PropertyCardProps> = memo(({
   property,
   context,
   showActions = true,
@@ -339,7 +339,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default PropertyCard;
 

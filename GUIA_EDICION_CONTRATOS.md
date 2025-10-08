@@ -1,8 +1,8 @@
 # 📝 Guía de Edición de Contratos
 
-## ✅ **FUNCIONALIDAD IMPLEMENTADA**
+## ✅ **FUNCIONALIDAD ACTUALIZADA**
 
-Ahora puedes **editar los contratos** directamente desde la aplicación con un editor visual profesional.
+Ahora puedes **editar los contratos** directamente desde la aplicación con un editor visual profesional que funciona tanto con contratos HTML generados por N8N como con contratos estructurados en JSON.
 
 ---
 
@@ -25,15 +25,21 @@ Ahora puedes **editar los contratos** directamente desde la aplicación con un e
    - Alineación de texto
    - Sangrías
 
-3. ✅ **Vista previa en tiempo real**
+3. ✅ **Optimización con contract_content (JSONB)**
+   - Contratos nuevos usan solo `contract_content` para mayor eficiencia
+   - Eliminación de duplicación de datos (HTML + JSON)
+   - Generación on-demand de HTML para visualización
+   - Compatibilidad total con contratos existentes
+
+4. ✅ **Vista previa en tiempo real**
    - Ve cómo quedará el contrato antes de guardar
    - Cambia entre editor y vista previa
 
-4. ✅ **Guardar automático en base de datos**
+5. ✅ **Guardar automático en base de datos**
    - Los cambios se guardan en Supabase
    - Se actualiza automáticamente el contrato
 
-5. ✅ **Interfaz intuitiva**
+6. ✅ **Interfaz intuitiva**
    - Tabs para cada sección
    - Indicador de progreso
    - Mensajes de éxito/error
@@ -45,28 +51,48 @@ Ahora puedes **editar los contratos** directamente desde la aplicación con un e
 ### **Paso 1: Abrir un Contrato**
 1. Ve a **"Contratos"** en el menú
 2. Haz clic en **"Ver"** en el contrato que quieras editar
+3. **Nota:** Ahora funciona con todos los contratos, tanto HTML generados por N8N como contratos estructurados
 
 ### **Paso 2: Abrir el Editor**
-1. En la vista del contrato, verás el botón **"✏️ Editar"**
+1. En la vista del contrato, verás el botón **"Editar"**
 2. Haz clic en **"Editar"**
-3. Se abrirá el modal del editor
+3. El sistema detectará automáticamente el formato del contrato y abrirá el editor visual apropiado
 
-### **Paso 3: Editar las Secciones**
-1. **Selecciona una sección** usando los tabs:
-   - 👥 Comparecientes
-   - 🏠 Propiedad
-   - 📋 Condiciones
-   - ✓ Obligaciones
-   - ⏹ Término
-   - ⚖️ Legal
+### **Sobre el Flujo Optimizado**
+**Para contratos nuevos (de N8N):**
+- Se guarda **solo en `contract_content`** (JSONB) para optimización
+- HTML se genera on-demand para visualización
+- Menos almacenamiento y mejor rendimiento
 
-2. **Edita el contenido** usando las herramientas:
+**Para contratos HTML existentes:**
+- Se mantiene compatibilidad total
+- Conversión automática a formato editable
+- Preservación completa del formato original
+
+**Para contratos estructurados:**
+- Múltiples secciones editables por separado
+- Generación automática de HTML completo al guardar
+
+### **Paso 3: Editar el Contrato**
+1. **Para contratos HTML originales** (como los de N8N):
+   - Verás un solo tab: **📄 Contrato Completo**
+   - El contrato se mantiene **tal cual** sin dividir en secciones
+   - Edita cualquier parte del documento directamente
+
+2. **Para contratos estructurados**:
+   - Selecciona una sección usando los tabs:
+     - 👥 Comparecientes
+     - 🏠 Propiedad
+     - 📋 Condiciones
+     - ✓ Obligaciones
+     - ⏹ Término
+     - ⚖️ Legal
+
+3. **Edita el contenido** usando las herramientas:
    - **Negrita**: Selecciona texto y haz clic en **B**
    - **Listas**: Usa los botones de lista numerada (1,2,3) o viñetas (•)
    - **Encabezados**: Usa los dropdown de encabezados
    - **Alineación**: Centra, justifica o alinea el texto
-
-3. **Navega entre tabs** para editar otras secciones
 
 ### **Paso 4: Vista Previa**
 1. Haz clic en **"👁 Vista Previa"**
@@ -344,15 +370,85 @@ El editor de contratos está **completamente funcional** y listo para que edites
 Contratos → Ver Contrato → Botón "Editar" → Editor
 ```
 
-**Archivos creados:**
-- ✅ `src/components/contracts/ContractEditor.tsx`
-- ✅ Integrado en `ContractViewer.tsx`
+**Archivos creados/modificados:**
+- ✅ `src/components/contracts/ContractCanvasEditor.tsx` - **NUEVO** Editor Canvas tipo Gemini
+- ✅ `src/components/contracts/ContractViewer.tsx` - Optimizado para JSONB estructurado
+- ✅ `src/components/contracts/ContractEditor.tsx` - Guardado inteligente (detecta formato)
+- ✅ `create_canvas_contract_example.js` - Script de ejemplo para N8N
+- ✅ Eliminación completa de dependencia HTML
+- ✅ Sistema puro JSONB con generación on-demand
+- ✅ Interfaz visual intuitiva (letra 12, títulos negrita)
+- ✅ Compatible con contratos existentes
 - ✅ Sin errores de linting
 - ✅ Listo para producción
 
 ---
 
-**Fecha:** Octubre 3, 2025  
-**Versión:** 1.0.0  
-**Estado:** ✅ **IMPLEMENTADO Y FUNCIONAL**
+**Fecha:** Octubre 8, 2025
+**Versión:** 3.0.0
+**Estado:** ✅ **ECOSISTEMA CANVAS COMPLETO - JSONB PURO**
+
+---
+
+## 🎨 **ECOSISTEMA OPTIMIZADO PARA JSONB**
+
+### **Nuevo Formato Estructurado:**
+```json
+{
+  "arrendador": {
+    "nombre": "Martín Ignacio Pérez López",
+    "rut": "20.456.789-1",
+    "domicilio": "Santa Isabel 345 Depto. 1201, Santiago"
+  },
+  "arrendatario": {
+    "nombre": "María José González Castro",
+    "rut": "15.123.456-7",
+    "domicilio": "Providencia 1234, Santiago"
+  },
+  "aval": {
+    "nombre": "Javiera Paz Muñoz Díaz",
+    "rut": "13.054.363-4",
+    "domicilio": "Av. Irarrázaval 3050 Depto. 607, ñuñoa"
+  },
+  "clausulas": [
+    {
+      "titulo": "PRIMERO: PROPIEDAD ARRENDADA",
+      "contenido": "El Arrendador da en arrendamiento al Arrendatario..."
+    }
+  ]
+}
+```
+
+### **Características del Sistema:**
+- ✅ **Editor Canvas tipo Gemini** - Interfaz visual intuitiva
+- ✅ **Letra tamaño 12** - Formato clásico profesional
+- ✅ **Títulos en negrita** - Jerarquía visual clara
+- ✅ **Sin dependencia de HTML** - Trabajo puro con JSONB
+- ✅ **Generación automática** - HTML creado on-demand
+- ✅ **Compatible con N8N** - Fácil integración
+
+---
+
+## 🔄 **INTEGRACIÓN CON N8N**
+
+### **Flujo Optimizado:**
+```javascript
+// N8N solo inserta contract_content
+const contractData = {
+  contract_content: {
+    arrendador: { /* datos */ },
+    arrendatario: { /* datos */ },
+    aval: { /* datos opcional */ },
+    clausulas: [ /* array de cláusulas */ ]
+  },
+  // NO se incluye contract_html - se genera automáticamente
+}
+```
+
+### **Beneficios para N8N:**
+- ✅ **Payload más pequeño** (solo JSONB)
+- ✅ **Menos campos a mapear**
+- ✅ **Mejor rendimiento** en transferencias
+- ✅ **Mantenimiento simplificado**
+- ✅ **Flexibilidad total** para modificar estructura
 

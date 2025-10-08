@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import CustomButton from './common/CustomButton';
 
+interface ConnectionError {
+  message?: string;
+}
+
 export const SupabaseConnectionTest: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<string>('No probado');
   const [loading, setLoading] = useState(false);
@@ -36,7 +40,7 @@ export const SupabaseConnectionTest: React.FC = () => {
       setConnectionStatus('✅ Conexión exitosa a Supabase');
       console.log('✅ Conexión exitosa:', data);
 
-    } catch (error: any) {
+    } catch (error: ConnectionError) {
       console.error('❌ Error de conexión:', error);
       setConnectionStatus('❌ Error de conexión');
 

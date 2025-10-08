@@ -9,7 +9,6 @@ const PropertyFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [selectedProperty, setSelectedProperty] = useState<Property | undefined>();
 
   // Determinar el tipo de formulario basado en la URL y parámetros
   const getFormType = () => {

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import AuthForm from './auth/AuthForm';
 import PropertyPublicationForm from './properties/PropertyPublicationForm';
 import RentalApplicationForm from './properties/RentalApplicationForm';
 import UserProfileForm from './profile/UserProfileForm';
 import PropertyCard from './PropertyCard';
 import CustomButton from './common/CustomButton';
+
+interface DemoProperty {
+  id: string;
+}
 
 const DemoPage: React.FC = () => {
   const { user, loading } = useAuth();
@@ -58,12 +61,12 @@ const DemoPage: React.FC = () => {
   };
 
   // Callbacks para PropertyCard
-  const handleMakeOffer = (property: any) => {
+  const handleMakeOffer = (property: DemoProperty) => {
     console.log('💰 Oferta realizada para propiedad:', property.id);
     alert('💰 ¡Oferta enviada exitosamente!');
   };
 
-  const handleApply = (property: any) => {
+  const handleApply = (property: DemoProperty) => {
     console.log('📝 Postulación realizada para propiedad:', property.id);
     alert('📝 ¡Postulación enviada exitosamente!');
   };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, DollarSign, MessageSquare, Loader2, TrendingUp } from 'lucide-react';
+import { X, DollarSign, TrendingUp } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { webhookClient } from '../../lib/webhook';

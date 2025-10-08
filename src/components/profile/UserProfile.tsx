@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Upload, X, FileText, Check, AlertCircle, Loader2, MapPin, Building, Phone, Mail, Briefcase, DollarSign, Calendar, Users } from 'lucide-react';
+import { User, FileText, Check, AlertCircle, Loader2, MapPin, Phone, Mail, DollarSign, Users } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -130,7 +129,6 @@ interface UserProfileData {
 
 export const UserProfile: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);

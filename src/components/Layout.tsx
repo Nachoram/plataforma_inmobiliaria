@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, LogOut, Mail, DollarSign, UserCircle, ShoppingBag, BarChart3, FileText, Edit3, Menu, X } from 'lucide-react';
+import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, BarChart3, FileText, Menu, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 

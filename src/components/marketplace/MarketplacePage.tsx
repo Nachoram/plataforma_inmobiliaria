@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Building, Heart, MessageSquare, TrendingUp, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Search, Filter, Building, Heart, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { OfferModal } from './OfferModal';
 import RentalApplicationForm from '../properties/RentalApplicationForm';
 import { useAuth } from '../../hooks/useAuth';
 import PropertyCard from '../PropertyCard';
+import { usePropertyRoutePreloader } from '../../hooks/useRoutePreloader';
 
 export const MarketplacePage: React.FC = () => {
   const { user } = useAuth();
+
+  // Preload rutas relacionadas con propiedades para mejor UX
+  usePropertyRoutePreloader();
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,15 +198,6 @@ export const MarketplacePage: React.FC = () => {
     });
   };
 
-  const formatPrice = (price: number | undefined | null) => {
-    if (typeof price !== 'number' || isNaN(price)) {
-      return 'Precio no disponible';
-    }
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP'
-    }).format(price);
-  };
 
   const getUniqueValues = (field: keyof Property) => {
     return [...new Set(

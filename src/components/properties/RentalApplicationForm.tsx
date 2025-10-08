@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, User, AlertCircle, ExternalLink, Building, FileText, MessageSquarePlus, CheckCircle } from 'lucide-react';
-import { supabase, Property, Profile, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, VALIDATION_RULES, validateRUT, getCurrentProfile } from '../../lib/supabase';
+import { supabase, Property, Profile, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, validateRUT, getCurrentProfile } from '../../lib/supabase';
 import { webhookClient } from '../../lib/webhook';
-import CustomButton from '../common/CustomButton';
 
 interface RentalApplicationFormProps {
   property: Property;
@@ -433,8 +432,8 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         // Vamos directo a la estrategia manual que SÍ funciona
         console.log('🔍 DEBUG: Saltando UPSERT (no hay constraint), usando estrategia manual...');
         
-        let upsertApplication = null;
-        let upsertError = { message: 'Usando estrategia manual por falta de constraint' };
+        const upsertApplication = null;
+        const upsertError = { message: 'Usando estrategia manual por falta de constraint' };
 
         if (upsertError) {
           console.log('❌ DEBUG: UPSERT falló:', upsertError);

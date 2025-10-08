@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import CustomButton from './common/CustomButton';
 
+interface AdminError {
+  message: string;
+}
+
 export const AdminSetup: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<string[]>([]);
@@ -16,7 +20,7 @@ export const AdminSetup: React.FC = () => {
       setResults(prev => [...prev, `✅ Buckets existentes: ${existingBuckets?.map(b => b.name).join(', ') || 'ninguno'}`]);
       
       // Crear bucket para imágenes
-      const { data: imgBucket, error: imgError } = await supabase.storage.createBucket('propiedades-imagenes', {
+      const { error: imgError } = await supabase.storage.createBucket('propiedades-imagenes', {
         public: true,
         fileSizeLimit: 52428800, // 50MB
         allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
@@ -29,7 +33,7 @@ export const AdminSetup: React.FC = () => {
       }
       
       // Crear bucket para documentos
-      const { data: docBucket, error: docError } = await supabase.storage.createBucket('documentos-clientes', {
+      const { error: docError } = await supabase.storage.createBucket('documentos-clientes', {
         public: false,
         fileSizeLimit: 52428800, // 50MB
         allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
@@ -47,7 +51,7 @@ export const AdminSetup: React.FC = () => {
       
       setResults(prev => [...prev, `🚀 ¡Configuración completada!`]);
       
-    } catch (error: any) {
+    } catch (error: AdminError) {
       setResults(prev => [...prev, `❌ Error general: ${error.message}`]);
     } finally {
       setLoading(false);
@@ -60,7 +64,7 @@ export const AdminSetup: React.FC = () => {
     
     try {
       // Test de conexión básica
-      const { data, error } = await supabase.from('properties').select('count').limit(1);
+      const { error } = await supabase.from('properties').select('count').limit(1);
       if (error) {
         setResults(prev => [...prev, `❌ Error de conexión: ${error.message}`]);
       } else {
@@ -79,7 +83,7 @@ export const AdminSetup: React.FC = () => {
       const { data: buckets } = await supabase.storage.listBuckets();
       setResults(prev => [...prev, `🗂️ Storage buckets: ${buckets?.length || 0}`]);
       
-    } catch (error: any) {
+    } catch (error: AdminError) {
       setResults(prev => [...prev, `❌ Error de prueba: ${error.message}`]);
     } finally {
       setLoading(false);

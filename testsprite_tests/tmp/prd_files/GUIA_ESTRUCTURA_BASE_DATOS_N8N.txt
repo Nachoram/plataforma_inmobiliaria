@@ -1,0 +1,295 @@
+===============================================================================
+                    GUÍA DE ESTRUCTURA DE BASE DE DATOS PARA N8N
+                    Plataforma Inmobiliaria - Configuración de Automatización
+===============================================================================
+
+📋 RESUMEN EJECUTIVO
+====================
+
+Esta guía explica la estructura de la base de datos optimizada para N8N,
+enfocándose en los IDs característicos que permiten automatización eficiente
+de contratos y procesos inmobiliarios.
+
+🎯 OBJETIVO PRINCIPAL
+=====================
+
+N8N puede automatizar la generación de contratos usando una sola consulta
+que obtiene TODOS los datos necesarios mediante los "characteristic IDs".
+
+🔑 IDS CARACTERÍSTICOS CLAVE
+============================
+
+Los siguientes IDs son los únicos que N8N necesita para funcionar:
+
+1. "application_characteristic_id" - ID único de la aplicación de arriendo
+2. "property_characteristic_id" - ID único de la propiedad
+3. "applicant_characteristic_id" - ID único del arrendatario (opcional, se obtiene automáticamente)
+4. "owner_characteristic_id" - ID único del propietario (se obtiene automáticamente)
+5. "guarantor_characteristic_id" - ID único del garante (opcional)
+6. "rental_contract_conditions_characteristic_id" - ID único de las condiciones del contrato (opcional, se obtiene automáticamente)
+
+📊 ESTRUCTURA DE TABLAS PRINCIPALES
+===================================
+
+🏠 TABLA: properties
+-------------------
+- id (uuid) - ID interno de la base de datos
+- property_characteristic_id (text) - ID para N8N: "PROP_1704067200_a1b2c3d4"
+- owner_id (uuid) - Referencia al propietario en profiles
+- listing_type (enum) - 'venta' o 'arriendo'
+- address_street, address_number, address_commune, address_region
+- price_clp (bigint) - Precio en pesos chilenos
+- bedrooms, bathrooms, surface_m2
+- status (enum) - 'disponible', 'activa', 'arrendada', 'vendida', 'pausada'
+
+📄 TABLA: applications
+---------------------
+- id (uuid) - ID interno de la base de datos
+- application_characteristic_id (text) - ID para N8N: "APP_1704067200_b2c3d4e5"
+- property_id (uuid) - Referencia a la propiedad
+- applicant_id (uuid) - Referencia al arrendatario en profiles
+- guarantor_id (uuid) - Referencia al garante (opcional)
+- status (enum) - 'pendiente', 'aprobada', 'rechazada', 'info_solicitada'
+- message (text) - Mensaje del arrendatario
+- snapshot_applicant_* - Datos preservados al momento de la aplicación
+
+👤 TABLA: profiles
+-----------------
+- id (uuid) - ID interno (referencia a auth.users)
+- first_name, paternal_last_name, maternal_last_name
+- rut (varchar) - RUT chileno único
+- email, phone, profession
+- marital_status (enum) - 'soltero', 'casado', 'divorciado', 'viudo'
+- property_regime (enum) - 'sociedad conyugal', 'separación de bienes', etc.
+- address_* - Dirección completa
+
+🤝 TABLA: guarantors
+-------------------
+- id (uuid) - ID interno de la base de datos
+- guarantor_characteristic_id (text) - ID para N8N: "GUAR_1704067200_c3d4e5f6"
+- first_name, paternal_last_name, maternal_last_name
+- rut (varchar) - RUT chileno único
+- profession, monthly_income_clp
+- address_* - Dirección completa
+
+📋 TABLA: rental_contract_conditions
+-----------------------------------
+- id (uuid) - ID interno de la base de datos
+- application_id (uuid) - Referencia a la aplicación
+- rental_contract_conditions_characteristic_id (text) - ID para N8N: "CONTRACT_COND_1704067200_d4e5f6g7"
+- lease_term_months (integer) - Plazo del contrato en meses
+- payment_day (integer) - Día de pago mensual
+- final_price_clp (integer) - Precio final acordado
+- broker_commission_clp (integer) - Comisión del corredor
+- guarantee_amount_clp (integer) - Monto de garantía
+- official_communication_email (text) - Email oficial para comunicaciones
+- accepts_pets (boolean) - Acepta mascotas
+- dicom_clause (boolean) - Cláusula DICOM
+- additional_conditions (text) - Condiciones adicionales
+
+🏢 TABLAS DE PROPIETARIOS (OPCIONALES)
+======================================
+
+Si existen las tablas rental_owners y sale_owners:
+
+📋 TABLA: rental_owners
+----------------------
+- rental_owner_characteristic_id (text) - ID para N8N: "RENTAL_OWNER_1704067200_d4e5f6g7"
+- Datos específicos para propietarios de propiedades en arriendo
+
+📋 TABLA: sale_owners
+--------------------
+- sale_owner_characteristic_id (text) - ID para N8N: "SALE_OWNER_1704067200_e5f6g7h8"
+- Datos específicos para propietarios de propiedades en venta
+
+🔧 FUNCIÓN PRINCIPAL PARA N8N
+=============================
+
+N8N debe usar esta función para obtener TODOS los datos del contrato:
+
+FUNCIÓN: get_contract_data_by_characteristic_ids()
+
+PARÁMETROS:
+- p_application_characteristic_id (text) - OBLIGATORIO
+- p_property_characteristic_id (text) - OPCIONAL (se obtiene automáticamente)
+- p_guarantor_characteristic_id (text) - OPCIONAL (solo si hay garante)
+
+EJEMPLO DE USO EN N8N:
+```sql
+SELECT * FROM get_contract_data_by_characteristic_ids(
+  '{{ $json.application_characteristic_id }}',
+  '{{ $json.property_characteristic_id }}',
+  '{{ $json.guarantor_characteristic_id }}'
+);
+```
+
+📤 DATOS QUE RETORNA LA FUNCIÓN
+===============================
+
+La función retorna TODOS los datos necesarios para generar un contrato:
+
+📄 DATOS DE APLICACIÓN:
+- application_id, application_characteristic_id
+- application_status, application_message, application_created_at
+
+🏠 DATOS DE PROPIEDAD:
+- property_id, property_characteristic_id
+- property_address_street, property_address_number, property_address_commune
+- property_price_clp, property_listing_type, property_bedrooms, property_bathrooms
+
+👤 DATOS DE PROPIETARIO:
+- owner_id, owner_first_name, owner_paternal_last_name, owner_maternal_last_name
+- owner_rut, owner_email, owner_phone, owner_profession
+
+🏠 DATOS DE ARRENDATARIO:
+- applicant_id, applicant_first_name, applicant_paternal_last_name, applicant_maternal_last_name
+- applicant_rut, applicant_email, applicant_phone, applicant_profession
+- applicant_monthly_income_clp, applicant_address_*
+
+🤝 DATOS DE GARANTE (si existe):
+- guarantor_id, guarantor_characteristic_id
+- guarantor_first_name, guarantor_paternal_last_name, guarantor_maternal_last_name
+- guarantor_rut, guarantor_profession, guarantor_monthly_income_clp
+
+📋 DATOS DE CONDICIONES DEL CONTRATO (si existe):
+- rental_contract_conditions_id, rental_contract_conditions_characteristic_id
+- lease_term_months, payment_day, final_price_clp
+- broker_commission_clp, guarantee_amount_clp
+- official_communication_email, accepts_pets, dicom_clause
+- additional_conditions
+
+📎 DOCUMENTOS E IMÁGENES:
+- property_images (jsonb) - Array de imágenes de la propiedad
+- application_documents (jsonb) - Array de documentos del arrendatario
+- property_documents (jsonb) - Array de documentos legales de la propiedad
+
+🚀 WORKFLOW RECOMENDADO PARA N8N
+================================
+
+1. **WEBHOOK TRIGGER**:
+   - Recibe: application_characteristic_id, property_characteristic_id, guarantor_characteristic_id
+   - Formato JSON: {"application_characteristic_id": "APP_...", "property_characteristic_id": "PROP_...", "guarantor_characteristic_id": "GUAR_..."}
+
+2. **POSTGRESQL QUERY NODE**:
+   ```sql
+   SELECT * FROM get_contract_data_by_characteristic_ids(
+     '{{ $json.application_characteristic_id }}',
+     '{{ $json.property_characteristic_id }}',
+     '{{ $json.guarantor_characteristic_id }}'
+   );
+   ```
+
+3. **FUNCTION NODE** (procesar datos):
+   ```javascript
+   const data = $input.item.json;
+   
+   // Seleccionar propietario correcto según tipo de propiedad
+   if (data.property_listing_type === 'arriendo') {
+     data.owner_name = data.rental_owner_full_name || data.owner_first_name + ' ' + data.owner_paternal_last_name;
+     data.owner_rut = data.rental_owner_rut || data.owner_rut;
+     data.owner_email = data.rental_owner_email || data.owner_email;
+   } else if (data.property_listing_type === 'venta') {
+     data.owner_name = data.sale_owner_full_name || data.owner_first_name + ' ' + data.owner_paternal_last_name;
+     data.owner_rut = data.sale_owner_rut || data.owner_rut;
+     data.owner_email = data.sale_owner_email || data.owner_email;
+   } else {
+     data.owner_name = data.owner_first_name + ' ' + data.owner_paternal_last_name;
+   }
+   
+   // Construir nombre completo del arrendatario
+   data.applicant_name = data.applicant_first_name + ' ' + data.applicant_paternal_last_name;
+   if (data.applicant_maternal_last_name) {
+     data.applicant_name += ' ' + data.applicant_maternal_last_name;
+   }
+   
+   // Construir nombre completo del garante (si existe)
+   if (data.guarantor_first_name) {
+     data.guarantor_name = data.guarantor_first_name + ' ' + data.guarantor_paternal_last_name;
+     if (data.guarantor_maternal_last_name) {
+       data.guarantor_name += ' ' + data.guarantor_maternal_last_name;
+     }
+   }
+   
+   return data;
+   ```
+
+4. **DOCUMENT GENERATION NODE**:
+   - Usar las variables procesadas para generar contrato
+   - Incluir garante si guarantor_name existe
+   - Usar property_images y documents para anexos
+
+📋 FORMATO DE IDs CARACTERÍSTICOS
+=================================
+
+Los IDs característicos siguen este patrón:
+
+- APPLICATION: "APP_" + timestamp + "_" + 8 caracteres del UUID
+- PROPERTY: "PROP_" + timestamp + "_" + 8 caracteres del UUID
+- GUARANTOR: "GUAR_" + timestamp + "_" + 8 caracteres del UUID
+- RENTAL_OWNER: "RENTAL_OWNER_" + timestamp + "_" + 8 caracteres del UUID
+- SALE_OWNER: "SALE_OWNER_" + timestamp + "_" + 8 caracteres del UUID
+- RENTAL_CONTRACT_CONDITIONS: "CONTRACT_COND_" + timestamp + "_" + 8 caracteres del UUID
+
+Ejemplo: "APP_1704067200_b2c3d4e5", "CONTRACT_COND_1704067200_d4e5f6g7"
+
+🔍 CONSULTAS DE VERIFICACIÓN
+============================
+
+Para verificar que las funciones existen:
+
+```sql
+-- Verificar función principal
+SELECT EXISTS(
+  SELECT 1 FROM information_schema.routines
+  WHERE routine_name = 'get_contract_data_by_characteristic_ids'
+) as function_exists;
+
+-- Verificar vista
+SELECT EXISTS(
+  SELECT 1 FROM information_schema.tables
+  WHERE table_name = 'contract_data_view'
+  AND table_type = 'VIEW'
+) as view_exists;
+```
+
+Para obtener IDs reales para testing:
+
+```sql
+-- Obtener IDs de ejemplo
+SELECT application_characteristic_id FROM applications LIMIT 1;
+SELECT property_characteristic_id FROM properties LIMIT 1;
+SELECT guarantor_characteristic_id FROM guarantors LIMIT 1;
+SELECT rental_contract_conditions_characteristic_id FROM rental_contract_conditions LIMIT 1;
+```
+
+⚠️ CONSIDERACIONES IMPORTANTES
+==============================
+
+1. **SEGURIDAD**: Las funciones usan SECURITY DEFINER, por lo que N8N necesita
+   credenciales de base de datos con permisos apropiados.
+
+2. **PERFORMANCE**: Una sola consulta obtiene todos los datos, optimizando
+   el rendimiento y reduciendo costos de base de datos.
+
+3. **FLEXIBILIDAD**: La función maneja casos con y sin garante automáticamente.
+
+4. **COMPATIBILIDAD**: Existe función de respaldo usando UUIDs para casos
+   donde no se dispongan de characteristic IDs.
+
+5. **DOCUMENTOS**: Los arrays JSON de documentos e imágenes contienen
+   toda la información necesaria para generar anexos.
+
+🎯 RESULTADO FINAL
+==================
+
+Con esta estructura, N8N puede:
+✅ Recibir un webhook con 3 IDs característicos
+✅ Ejecutar una sola consulta SQL
+✅ Obtener TODOS los datos del contrato
+✅ Generar documentos automáticamente
+✅ Incluir garante si existe
+✅ Manejar propiedades de venta y arriendo
+
+🚀 ¡AUTOMATIZACIÓN COMPLETA OPERATIVA!
+
+===============================================================================

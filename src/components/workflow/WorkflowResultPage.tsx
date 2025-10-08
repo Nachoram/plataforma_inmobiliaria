@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { generateWorkflowOutput, getHtmlContentFromStorage, WORKFLOW_TYPES } from '@/lib/api/workflow';
 import { HTMLCanvasViewer } from '@/components/common/HTMLCanvasViewer';
 
+interface WorkflowError {
+  message?: string;
+}
+
 interface WorkflowResultPageProps {
   workflowType?: string;
   propertyId?: string;
@@ -64,7 +68,7 @@ export const WorkflowResultPage: React.FC<WorkflowResultPageProps> = ({
 
       updateStatus('¡Informe generado exitosamente!');
 
-    } catch (err: any) {
+    } catch (err: WorkflowError) {
       const errorMessage = err.message || 'Error desconocido al generar el informe';
       const canRetry = !errorMessage.includes('autenticado') && !errorMessage.includes('autorización');
       handleError(errorMessage, canRetry);

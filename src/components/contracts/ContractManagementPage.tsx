@@ -13,7 +13,6 @@ import {
   Building
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import CustomButton from '../common/CustomButton';
 
 interface Contract {
   id: string;

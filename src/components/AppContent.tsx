@@ -1,33 +1,52 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './Layout';
 import { ProtectedRoute } from './ProtectedRoute';
+import { useRoutePreloader } from '../hooks/useRoutePreloader';
+import ErrorBoundary from './common/ErrorBoundary';
+import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
 
-// Auth components
+// Auth components - keep loaded for fast auth
 import { AuthPage } from './auth/AuthPage';
 
-// Main pages
+// Main pages - keep marketplace loaded for fast initial experience
 import { MarketplacePage } from './marketplace/MarketplacePage';
-import { PortfolioPage } from './portfolio/PortfolioPage';
-import { ApplicationsPage } from './dashboard/ApplicationsPage';
-import ContractManagementPage from './contracts/ContractManagementPage';
-import ContractViewerPage from './contracts/ContractViewerPage';
 import { MyActivityPage } from './marketplace/MyActivityPage';
-import { UserProfile } from './profile/UserProfile';
 
-// Property components
+// Property components - keep property details loaded
 import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
-import PropertyFormPage from './properties/PropertyFormPage';
 
-
-// Diagnostic components
+// Diagnostic components - keep loaded
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
+
+// Lazy loaded components for better performance
+const PortfolioPage = React.lazy(() => import('./portfolio/PortfolioPage').then(module => ({ default: module.PortfolioPage })));
+const ApplicationsPage = React.lazy(() => import('./dashboard/ApplicationsPage').then(module => ({ default: module.ApplicationsPage })));
+const ContractManagementPage = React.lazy(() => import('./contracts/ContractManagementPage').then(module => ({ default: module.default })));
+const ContractViewerPage = React.lazy(() => import('./contracts/ContractViewerPage').then(module => ({ default: module.default })));
+const PropertyFormPage = React.lazy(() => import('./properties/PropertyFormPage').then(module => ({ default: module.default })));
+const UserProfile = React.lazy(() => import('./profile/UserProfile').then(module => ({ default: module.UserProfile })));
+
+// Loading component for lazy loaded routes
+const LoadingSpinner = () => (
+  <div className="flex justify-center items-center py-12">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+    <span className="ml-3 text-gray-600">Cargando...</span>
+  </div>
+);
 
 export const AppContent: React.FC = () => {
   console.log('🏠 AppContent renderizado - plataforma completa');
 
+  // Performance monitoring
+  const { markRouteChange } = usePerformanceMonitor()
+
+  // Preload rutas críticas para mejor performance
+  useRoutePreloader();
+
   return (
-    <Routes>
+    <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
+      <Routes>
       {/* Public routes without layout */}
       <Route path="/auth" element={<AuthPage />} />
 
@@ -48,7 +67,9 @@ export const AppContent: React.FC = () => {
       <Route path="/property/new" element={
         <ProtectedRoute>
           <Layout>
-            <PropertyFormPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <PropertyFormPage />
+            </Suspense>
           </Layout>
         </ProtectedRoute>
       } />
@@ -56,7 +77,9 @@ export const AppContent: React.FC = () => {
       <Route path="/property/new/rental" element={
         <ProtectedRoute>
           <Layout>
-            <PropertyFormPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <PropertyFormPage />
+            </Suspense>
           </Layout>
         </ProtectedRoute>
       } />
@@ -64,7 +87,9 @@ export const AppContent: React.FC = () => {
       <Route path="/property/edit/:id" element={
         <ProtectedRoute>
           <Layout>
-            <PropertyFormPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <PropertyFormPage />
+            </Suspense>
           </Layout>
         </ProtectedRoute>
       } />
@@ -73,7 +98,9 @@ export const AppContent: React.FC = () => {
       <Route path="/portfolio" element={
         <ProtectedRoute>
           <Layout>
-            <PortfolioPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <PortfolioPage />
+            </Suspense>
           </Layout>
         </ProtectedRoute>
       } />
@@ -81,7 +108,9 @@ export const AppContent: React.FC = () => {
       <Route path="/applications" element={
         <ProtectedRoute>
           <Layout>
-            <ApplicationsPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <ApplicationsPage />
+            </Suspense>
           </Layout>
         </ProtectedRoute>
       } />
@@ -89,14 +118,18 @@ export const AppContent: React.FC = () => {
       <Route path="/contracts" element={
         <ProtectedRoute>
           <Layout>
-            <ContractManagementPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <ContractManagementPage />
+            </Suspense>
           </Layout>
         </ProtectedRoute>
       } />
 
       <Route path="/contract/:contractId" element={
         <ProtectedRoute>
-          <ContractViewerPage />
+          <Suspense fallback={<LoadingSpinner />}>
+            <ContractViewerPage />
+          </Suspense>
         </ProtectedRoute>
       } />
 
@@ -111,7 +144,9 @@ export const AppContent: React.FC = () => {
       <Route path="/profile" element={
         <ProtectedRoute>
           <Layout>
-            <UserProfile />
+            <Suspense fallback={<LoadingSpinner />}>
+              <UserProfile />
+            </Suspense>
           </Layout>
         </ProtectedRoute>
       } />
@@ -125,6 +160,7 @@ export const AppContent: React.FC = () => {
 
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </ErrorBoundary>
   );
 };

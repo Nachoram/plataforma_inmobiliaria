@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { Building, AlertCircle, Upload, X, User, MapPin, DollarSign } from 'lucide-react';
+import { Building, AlertCircle, User, DollarSign } from 'lucide-react';
 
 const CHILE_REGIONS_COMMUNES = {
   'region-metropolitana': {
@@ -31,7 +31,6 @@ export const SalePublicationForm: React.FC = () => {
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Form data state
@@ -73,10 +72,6 @@ export const SalePublicationForm: React.FC = () => {
       commercial_evaluation: null as File | null,
     }
   });
-
-  // Photo preview state
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
   // Obtener comunas disponibles según la región seleccionada
   const getAvailableCommunes = (regionKey: string) => {

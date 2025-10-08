@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, DollarSign, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X } from 'lucide-react';
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import RentalApplicationForm from './RentalApplicationForm';
@@ -15,7 +15,6 @@ interface PropertyWithImages extends Property {
 export const PropertyDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [property, setProperty] = useState<PropertyWithImages | null>(null);
   const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);

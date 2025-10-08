@@ -123,7 +123,7 @@ export const AdvancedOfferForm: React.FC<AdvancedOfferFormProps> = ({
         return !!(offerData.offerAmount && offerData.financingType);
       case 2:
         return true; // Los servicios son opcionales
-      case 3:
+      case 3: {
         const { buyerInfo } = offerData;
         const basicFieldsValid = !!(
           buyerInfo.fullName &&
@@ -133,13 +133,14 @@ export const AdvancedOfferForm: React.FC<AdvancedOfferFormProps> = ({
           buyerInfo.phone &&
           buyerInfo.maritalStatus
         );
-        
+
         // Si está casado, también debe tener régimen patrimonial
         if (buyerInfo.maritalStatus === 'casado') {
           return basicFieldsValid && !!buyerInfo.propertyRegime;
         }
-        
+
         return basicFieldsValid;
+      }
       default:
         return false;
     }

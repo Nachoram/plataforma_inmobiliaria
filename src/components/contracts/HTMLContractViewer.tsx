@@ -2,12 +2,11 @@ import React, { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import CustomButton from '../common/CustomButton';
-import HTMLEditor from './HTMLEditor';
+import ContractEditor from './ContractEditor';
 import {
   FileText,
   Download,
   Printer,
-  Eye,
   ArrowLeft,
   ZoomIn,
   ZoomOut,
@@ -49,6 +48,45 @@ export const HTMLContractViewer: React.FC<HTMLContractViewerProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+
+  // Función para convertir HTML en formato JSON de secciones
+  const convertHTMLToSections = (htmlContent: string) => {
+    // Si ya hay contenido JSON, devolverlo
+    if (contractData?.contract_content?.sections) {
+      return contractData.contract_content.sections;
+    }
+
+    // Para contratos HTML puros, mantener el contenido completo en una sola sección editable
+    // Esto preserva el formato original y permite edición sin perder estructura
+    const sections = [
+      {
+        id: 'full_contract',
+        title: 'CONTRATO COMPLETO',
+        content: htmlContent || '<p>Contenido del contrato no disponible</p>'
+      }
+    ];
+
+    return sections;
+  };
+
+  // Preparar datos del contrato para el editor
+  const prepareContractDataForEditor = () => {
+    // Si ya tiene contract_content con secciones, usar eso
+    if (contractData?.contract_content?.sections) {
+      return contractData;
+    }
+
+    // Si no, convertir HTML a secciones
+    const sections = convertHTMLToSections(htmlContent);
+
+    return {
+      ...contractData,
+      contract_content: {
+        ...contractData?.contract_content,
+        sections: sections
+      }
+    };
+  };
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
@@ -224,7 +262,7 @@ export const HTMLContractViewer: React.FC<HTMLContractViewerProps> = ({
                     className="flex items-center space-x-2"
                   >
                     <Edit3 className="h-4 w-4" />
-                    <span>Editar HTML</span>
+                    <span>Editar</span>
                   </CustomButton>
                 )}
                 <CustomButton
@@ -303,11 +341,11 @@ export const HTMLContractViewer: React.FC<HTMLContractViewerProps> = ({
           </div>
         )}
 
-        {/* Modal de Edición HTML */}
+        {/* Modal de Edición */}
         {showEditor && contractId && contractData && (
-          <HTMLEditor
+          <ContractEditor
             contractId={contractId}
-            contractData={contractData}
+            contractData={prepareContractDataForEditor()}
             onClose={() => setShowEditor(false)}
             onSave={() => {
               setShowEditor(false);

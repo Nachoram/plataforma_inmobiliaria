@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Building, MessageSquare, DollarSign, Check, X, Clock, Calendar, MapPin } from 'lucide-react';
+import { Plus, Building, MessageSquare, DollarSign, Check, X, Clock, Calendar } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import CustomButton from '../common/CustomButton';
@@ -66,13 +66,7 @@ export const PortfolioPage: React.FC = () => {
   const [receivedOffers, setReceivedOffers] = useState<ReceivedOffer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchPortfolioData();
-    }
-  }, [user?.id]);
-
-  const fetchPortfolioData = async () => {
+  const fetchPortfolioData = useCallback(async () => {
     // Verify user is authenticated before making any database queries
     if (!user || !user.id) {
       console.warn('User not authenticated, cannot fetch portfolio data');
@@ -166,7 +160,13 @@ export const PortfolioPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchPortfolioData();
+    }
+  }, [user, fetchPortfolioData]);
 
   const deleteProperty = async (id: string) => {
     // Verify user is authenticated

@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { HTMLCanvasViewer, HTMLCanvasViewerRef } from '../common/HTMLCanvasViewer';
 import HTMLContractViewer from './HTMLContractViewer';
 import ContractEditor from './ContractEditor';
+import ContractCanvasEditor from './ContractCanvasEditor';
 import { supabase } from '../../lib/supabase';
 import CustomButton from '../common/CustomButton';
 import {
   FileText,
   Download,
   Printer,
-  Eye,
   ArrowLeft,
   AlertTriangle,
   CheckCircle,
@@ -58,11 +58,7 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
 
-  useEffect(() => {
-    loadContract();
-  }, [contractId]);
-
-  const loadContract = async () => {
+  const loadContract = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -96,13 +92,17 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
       if (contractError) throw contractError;
 
       setContract(contractData);
-      
-      // Si el contrato tiene HTML directo, usarlo; si no, generar desde JSON
-      if (contractData.contract_html) {
+
+      // Priorizar contract_content (JSONB) sobre contract_html para optimización
+      if (contractData.contract_content) {
+        // Generar HTML desde JSONB optimizado
+        const html = generateContractHTMLFromJSONB(contractData);
+        setHtmlContent(html);
+      } else if (contractData.contract_html) {
+        // Fallback para contratos antiguos que solo tienen HTML
         setHtmlContent(contractData.contract_html);
       } else {
-        const html = generateContractHTML(contractData);
-        setHtmlContent(html);
+        setHtmlContent('<div class="text-center p-8 text-gray-500">Contenido del contrato no disponible</div>');
       }
 
     } catch (err: any) {
@@ -111,7 +111,11 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [contractId]);
+
+  useEffect(() => {
+    loadContract();
+  }, [contractId, loadContract]);
 
   // Función para procesar y justificar contenido HTML
   const processContentForJustification = (content: string): string => {
@@ -139,6 +143,254 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
     }
     
     return tempDiv.innerHTML;
+  };
+
+  const generateContractHTMLFromJSONB = (contract: ContractData): string => {
+    if (!contract.contract_content) {
+      return '<div class="text-center p-8 text-gray-500">Contenido del contrato no disponible</div>';
+    }
+
+    const data = contract.contract_content;
+
+    let html = `
+      <!DOCTYPE html>
+      <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Contrato de Arriendo - ${data.arrendatario?.nombre || 'Cliente'}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 12px;
+              line-height: 1.6;
+              color: #000;
+              background: white;
+              padding: 40px 60px;
+              max-width: 210mm;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #000;
+            }
+            .contract-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .contract-subtitle {
+              font-size: 12px;
+              font-weight: bold;
+              margin-bottom: 15px;
+              text-transform: uppercase;
+            }
+            .contract-date {
+              font-size: 12px;
+              margin-bottom: 10px;
+            }
+            .section {
+              margin-bottom: 20px;
+            }
+            .section-title {
+              font-size: 14px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              text-transform: uppercase;
+              border-bottom: 1px solid #000;
+              padding-bottom: 5px;
+            }
+            .party-section {
+              margin-bottom: 25px;
+            }
+            .party-title {
+              font-weight: bold;
+              font-size: 12px;
+              margin-bottom: 8px;
+              text-transform: uppercase;
+            }
+            .party-content {
+              font-size: 12px;
+              line-height: 1.6;
+              margin-left: 20px;
+            }
+            .clause {
+              margin-bottom: 18px;
+            }
+            .clause-title {
+              font-weight: bold;
+              font-size: 12px;
+              margin-bottom: 8px;
+              text-transform: uppercase;
+            }
+            .clause-content {
+              font-size: 12px;
+              line-height: 1.6;
+              text-align: justify;
+              text-justify: inter-word;
+            }
+            .signatures {
+              margin-top: 60px;
+              border-top: 1px solid #000;
+              padding-top: 40px;
+            }
+            .signatures-text {
+              font-size: 12px;
+              line-height: 1.6;
+              text-align: justify;
+              margin-bottom: 40px;
+            }
+            .signatures-boxes {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 40px;
+            }
+            .signature-box {
+              flex: 1;
+              text-align: center;
+            }
+            .signature-line {
+              border-top: 1px solid #000;
+              margin-bottom: 5px;
+              padding-top: 20px;
+            }
+            .signature-label {
+              font-weight: bold;
+              font-size: 11px;
+              text-transform: uppercase;
+            }
+            .signature-name {
+              font-size: 11px;
+              margin-top: 5px;
+            }
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #ccc;
+              text-align: center;
+              font-size: 10px;
+              color: #666;
+            }
+            @media print {
+              body {
+                padding: 30px 40px;
+                font-size: 11px;
+              }
+              .contract-title { font-size: 16px; }
+              .section-title { font-size: 12px; }
+            }
+          </style>
+        </head>
+        <body>
+    `;
+
+    // Header
+    html += `
+      <div class="header">
+        <div class="contract-title">CONTRATO DE ARRENDAMIENTO</div>
+        <div class="contract-subtitle">DE BIEN RAÍZ URBANO</div>
+        <div class="contract-date">Santiago, ${new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+      </div>
+    `;
+
+    // Partes contratantes
+    html += `<div class="section"><div class="section-title">PARTES CONTRATANTES</div>`;
+
+    if (data.arrendador) {
+      html += `
+        <div class="party-section">
+          <div class="party-title">arrendador:</div>
+          <div class="party-content">
+            ${data.arrendador.nombre || '[Nombre]'}, RUT ${data.arrendador.rut || '[RUT]'},<br>
+            Domiciliado en ${data.arrendador.domicilio || '[Domicilio]'}
+          </div>
+        </div>
+      `;
+    }
+
+    if (data.arrendatario) {
+      html += `
+        <div class="party-section">
+          <div class="party-title">arrendatario:</div>
+          <div class="party-content">
+            ${data.arrendatario.nombre || '[Nombre]'}, RUT ${data.arrendatario.rut || '[RUT]'},<br>
+            Domiciliado en ${data.arrendatario.domicilio || '[Domicilio]'}
+          </div>
+        </div>
+      `;
+    }
+
+    if (data.aval && data.aval.nombre) {
+      html += `
+        <div class="party-section">
+          <div class="party-title">codeudor solidario (aval):</div>
+          <div class="party-content">
+            ${data.aval.nombre}, RUT ${data.aval.rut},<br>
+            Domiciliado en ${data.aval.domicilio}
+          </div>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+
+    // Cláusulas
+    if (data.clausulas && data.clausulas.length > 0) {
+      data.clausulas.forEach((clause: any, index: number) => {
+        html += `
+          <div class="clause">
+            <div class="clause-title">${clause.titulo || `CLÁUSULA ${index + 1}`}:</div>
+            <div class="clause-content">${clause.contenido || ''}</div>
+          </div>
+        `;
+      });
+    }
+
+    // Firmas
+    html += `
+      <div class="signatures">
+        <div class="signatures-text">
+          En comprobante de lo pactado, se firma el presente contrato en dos ejemplares de igual tenor y fecha,
+          declarando las partes haber leído y aceptado todas y cada una de las cláusulas del presente instrumento.
+        </div>
+
+        <div class="signatures-boxes">
+          <div class="signature-box">
+            <div class="signature-line">
+              <div class="signature-label">arrendador</div>
+              <div class="signature-name">${data.arrendador?.nombre || '[Nombre]'}</div>
+            </div>
+          </div>
+
+          <div class="signature-box">
+            <div class="signature-line">
+              <div class="signature-label">arrendatario</div>
+              <div class="signature-name">${data.arrendatario?.nombre || '[Nombre]'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Footer
+    html += `
+      <div class="footer">
+        <div>Documento generado electrónicamente - ID: ${contract.id}</div>
+        <div>Este contrato se rige por la Ley N° 18.101 sobre Arrendamiento de Bienes Raíces Urbanos</div>
+      </div>
+    `;
+
+    html += `
+        </body>
+      </html>
+    `;
+
+    return html;
   };
 
   const generateContractHTML = (contract: ContractData): string => {
@@ -689,8 +941,35 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
     );
   }
 
-  // Si el contrato tiene HTML directo (formato 'html' o 'hybrid'), usar HTMLContractViewer
-  if (contract.contract_html && (contract.contract_format === 'html' || contract.contract_format === 'hybrid')) {
+  // Determinar el tipo de editor basado en la estructura del contract_content
+  const getEditorType = (contract: any) => {
+    if (!contract.contract_content) return 'html';
+
+    // Si tiene la estructura optimizada (arrendador, arrendatario, aval, clausulas)
+    if (contract.contract_content.arrendador ||
+        contract.contract_content.arrendatario ||
+        contract.contract_content.aval ||
+        contract.contract_content.clausulas) {
+      return 'canvas';
+    }
+
+    // Si tiene sections (formato antiguo estructurado)
+    if (contract.contract_content.sections) {
+      return 'editor';
+    }
+
+    // Si solo tiene contract_html (contratos antiguos)
+    if (contract.contract_html) {
+      return 'html';
+    }
+
+    return 'canvas'; // Default para contratos nuevos
+  };
+
+  const editorType = getEditorType(contract);
+
+  // Usar HTMLContractViewer solo para contratos que solo tienen HTML
+  if (editorType === 'html') {
     return (
       <HTMLContractViewer
         htmlContent={contract.contract_html}
@@ -704,7 +983,7 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
     );
   }
 
-  // Renderizado tradicional para contratos JSON
+  // Renderizado para contratos con contract_content (JSONB) - flujo optimizado
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -804,12 +1083,23 @@ const ContractViewer: React.FC<ContractViewerProps> = ({
 
       {/* Modal de Edición */}
       {showEditor && contract && (
-        <ContractEditor
-          contractId={contractId}
-          contractData={contract}
-          onClose={() => setShowEditor(false)}
-          onSave={handleEditorSave}
-        />
+        <>
+          {editorType === 'canvas' ? (
+            <ContractCanvasEditor
+              contractId={contractId}
+              contractData={contract}
+              onClose={() => setShowEditor(false)}
+              onSave={handleEditorSave}
+            />
+          ) : (
+            <ContractEditor
+              contractId={contractId}
+              contractData={contract}
+              onClose={() => setShowEditor(false)}
+              onSave={handleEditorSave}
+            />
+          )}
+        </>
       )}
     </div>
   );

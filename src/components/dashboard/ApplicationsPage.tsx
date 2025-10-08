@@ -1087,7 +1087,7 @@ export const ApplicationsPage: React.FC = () => {
                       onClick={() => {
                         console.log('🖱️ BOTÓN APROBAR CLICKEADO!');
                         console.log('📋 Application:', application);
-                        setApplicationToApprove(application as any);
+                        setApplicationToApprove(application);
                         setShowContractConditionsModal(true);
                       }}
                       disabled={updating?.startsWith(application.id)}

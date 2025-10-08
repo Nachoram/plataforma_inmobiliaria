@@ -1,0 +1,126 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "React",
+    "Vite",
+    "Supabase",
+    "TailwindCSS",
+    "React Router",
+    "Lucide React",
+    "Quill Editor",
+    "HTML2Canvas",
+    "JSPDF"
+  ],
+  "features": [
+    {
+      "name": "Autenticación de Usuarios",
+      "description": "Sistema completo de autenticación con login, registro, recuperación de contraseña y validación de RUT chileno",
+      "files": [
+        "src/components/auth/AuthPage.tsx",
+        "src/components/auth/AuthForm.tsx",
+        "src/components/auth/AuthErrorHandler.tsx",
+        "src/components/auth/AuthRecoveryGuard.tsx",
+        "src/hooks/useAuth.tsx",
+        "src/hooks/useAuthSession.ts"
+      ]
+    },
+    {
+      "name": "Marketplace de Propiedades",
+      "description": "Plataforma de marketplace con búsqueda avanzada, filtros, favoritos y sistema de ofertas",
+      "files": [
+        "src/components/marketplace/MarketplacePage.tsx",
+        "src/components/marketplace/MyActivityPage.tsx",
+        "src/components/marketplace/OfferModal.tsx",
+        "src/components/PropertyCard.tsx"
+      ]
+    },
+    {
+      "name": "Gestión de Propiedades",
+      "description": "Sistema completo para crear, editar y gestionar propiedades con formularios avanzados, subida de imágenes y validaciones",
+      "files": [
+        "src/components/properties/PropertyForm.tsx",
+        "src/components/properties/PropertyFormPage.tsx",
+        "src/components/properties/PropertyDetailsPage.tsx",
+        "src/components/properties/PropertyPublicationForm.tsx",
+        "src/components/properties/RentalPublicationForm.tsx",
+        "src/components/properties/SalePublicationForm.tsx",
+        "src/components/properties/AdvancedOfferForm.tsx",
+        "src/components/properties/OfferForm.tsx",
+        "src/components/properties/RentalApplicationForm.tsx"
+      ]
+    },
+    {
+      "name": "Sistema de Contratos",
+      "description": "Gestión avanzada de contratos con editor HTML, visualización, workflows de aprobación y generación de PDFs",
+      "files": [
+        "src/components/contracts/ContractManagementPage.tsx",
+        "src/components/contracts/ContractViewer.tsx",
+        "src/components/contracts/ContractViewerPage.tsx",
+        "src/components/contracts/ContractEditor.tsx",
+        "src/components/contracts/HTMLContractViewer.tsx",
+        "src/components/contracts/HTMLEditor.tsx",
+        "src/components/contracts/ContractApprovalWorkflow.tsx",
+        "src/lib/contractGenerator.ts"
+      ]
+    },
+    {
+      "name": "Sistema de Aplicaciones/Postulaciones",
+      "description": "Gestión de postulaciones a propiedades con sistema de garantes, documentos y seguimiento de estado",
+      "files": [
+        "src/components/dashboard/ApplicationsPage.tsx",
+        "src/components/dashboard/RentalContractConditionsForm.tsx"
+      ]
+    },
+    {
+      "name": "Portafolio de Usuario",
+      "description": "Gestión del portafolio personal de propiedades publicadas por el usuario",
+      "files": [
+        "src/components/portfolio/PortfolioPage.tsx"
+      ]
+    },
+    {
+      "name": "Perfiles de Usuario",
+      "description": "Sistema de perfiles con formularios de edición y gestión de información personal",
+      "files": [
+        "src/components/profile/UserProfile.tsx",
+        "src/components/profile/UserProfileForm.tsx"
+      ]
+    },
+    {
+      "name": "Sistema de Workflows",
+      "description": "Integración con N8N para automatización de procesos de aprobación y notificaciones",
+      "files": [
+        "src/components/workflow/WorkflowViewer.tsx",
+        "src/components/workflow/WorkflowResultPage.tsx",
+        "src/lib/api/workflow.ts",
+        "src/lib/webhook.ts"
+      ]
+    },
+    {
+      "name": "Componentes Comunes y Utilidades",
+      "description": "Componentes reutilizables, hooks personalizados y utilidades compartidas",
+      "files": [
+        "src/components/common/CustomButton.tsx",
+        "src/components/common/HTMLCanvasViewer.tsx",
+        "src/components/common/ImageGallery.tsx",
+        "src/components/Layout.tsx",
+        "src/components/ProtectedRoute.tsx",
+        "src/hooks/useSwipe.ts",
+        "src/lib/supabase.ts",
+        "src/lib/electronicSignature.ts"
+      ]
+    },
+    {
+      "name": "Configuración y Diagnóstico",
+      "description": "Herramientas de configuración, validación de entorno y diagnóstico del sistema",
+      "files": [
+        "src/config/envValidator.ts",
+        "src/components/SupabaseDiagnostic.tsx",
+        "src/components/SupabaseConnectionTest.tsx",
+        "src/components/EnvTest.tsx",
+        "src/components/DemoPage.tsx",
+        "src/components/AdminSetup.tsx"
+      ]
+    }
+  ]
+}

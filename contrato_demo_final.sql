@@ -23,8 +23,9 @@
 -- Ejemplo: Si obtuviste 'abc123-def456-ghi789' para carolina.soto@example.com,
 -- reemplaza '[ID_CAROLINA]' con 'abc123-def456-ghi789'
 
--- ID de Carolina Soto (arrendadora): [ID_CAROLINA]
--- ID de Carlos Soto (arrendatario): [ID_CARLOS]
+-- IDs de ejemplo (reemplaza con IDs reales si es necesario):
+-- ID de Carolina Soto (arrendadora): 12345678-1234-1234-1234-123456789abc
+-- ID de Carlos Soto (arrendatario): 87654321-4321-4321-4321-cba987654321
 
 -- =====================================================
 -- 1. INSERTAR PERFILES (reemplaza los IDs)

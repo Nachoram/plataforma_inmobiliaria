@@ -28,7 +28,54 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-ui': ['lucide-react'],
+
+          // Feature chunks
+          'contracts': [
+            './src/components/contracts/ContractManagementPage.tsx',
+            './src/components/contracts/ContractViewerPage.tsx',
+            './src/components/contracts/ContractViewer.tsx',
+            './src/components/contracts/ContractEditor.tsx',
+            './src/components/contracts/HTMLContractViewer.tsx',
+            './src/components/contracts/ContractApprovalWorkflow.tsx'
+          ],
+          'properties': [
+            './src/components/properties/PropertyFormPage.tsx',
+            './src/components/properties/PropertyForm.tsx',
+            './src/components/properties/PropertyDetailsPage.tsx',
+            './src/components/properties/RentalApplicationForm.tsx',
+            './src/components/properties/SalePublicationForm.tsx'
+          ],
+          'dashboard': [
+            './src/components/dashboard/ApplicationsPage.tsx',
+            './src/components/portfolio/PortfolioPage.tsx'
+          ],
+          'auth': [
+            './src/components/auth/AuthPage.tsx',
+            './src/components/auth/AuthForm.tsx'
+          ],
+          'marketplace': [
+            './src/components/marketplace/MarketplacePage.tsx',
+            './src/components/marketplace/MyActivityPage.tsx',
+            './src/components/marketplace/OfferModal.tsx'
+          ],
+          'profile': [
+            './src/components/profile/UserProfile.tsx',
+            './src/components/profile/UserProfileForm.tsx'
+          ]
+        }
+      }
+    },
+    // Optimize chunk size
+    chunkSizeWarningLimit: 600 // Increase warning limit to 600kb
   },
   resolve: {
     alias: [

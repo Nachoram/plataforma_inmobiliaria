@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, MessageSquare, Clock, CheckCircle, XCircle, DollarSign, Calendar } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -50,7 +50,7 @@ export const MyActivityPage: React.FC = () => {
     }
   }, [user]);
 
-  const fetchMyActivity = async () => {
+  const fetchMyActivity = useCallback(async () => {
     setLoading(true);
     try {
       // Fetch my offers using getSentOffers API
@@ -84,7 +84,7 @@ export const MyActivityPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CL', {

@@ -4,13 +4,9 @@ import {
   FileText,
   Eye,
   Download,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
   Search,
   Filter,
   RefreshCw,
-  ExternalLink,
   Zap
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';

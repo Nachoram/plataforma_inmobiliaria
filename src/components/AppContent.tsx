@@ -19,15 +19,15 @@ import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
 // Diagnostic components - keep loaded
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
 
-// Lazy loaded components for better performance
-const PortfolioPage = React.lazy(() => import('./portfolio/PortfolioPage'));
-const ApplicationsPage = React.lazy(() => import('./dashboard/ApplicationsPage'));
-const ContractManagementPage = React.lazy(() => import('./contracts/ContractManagementPage'));
-const ContractViewerPage = React.lazy(() => import('./contracts/ContractViewerPage'));
-const ContractCanvasEditorPage = React.lazy(() => import('./contracts/ContractCanvasEditorPage'));
-const TestCanvasEditor = React.lazy(() => import('./contracts/TestCanvasEditor'));
-const PropertyFormPage = React.lazy(() => import('./properties/PropertyFormPage'));
-const UserProfile = React.lazy(() => import('./profile/UserProfile'));
+// Temporarily disable lazy loading to debug the issue
+import PortfolioPage from './portfolio/PortfolioPage';
+import ApplicationsPage from './dashboard/ApplicationsPage';
+import ContractManagementPage from './contracts/ContractManagementPage';
+import ContractViewerPage from './contracts/ContractViewerPage';
+import ContractCanvasEditorPage from './contracts/ContractCanvasEditorPage';
+import TestCanvasEditor from './contracts/TestCanvasEditor';
+import PropertyFormPage from './properties/PropertyFormPage';
+import UserProfile from './profile/UserProfile';
 
 // Loading component for lazy loaded routes
 const LoadingSpinner = () => (
@@ -69,9 +69,7 @@ export const AppContent: React.FC = () => {
       <Route path="/property/new" element={
         <ProtectedRoute>
           <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <PropertyFormPage />
-            </Suspense>
+            <PropertyFormPage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -79,9 +77,7 @@ export const AppContent: React.FC = () => {
       <Route path="/property/new/rental" element={
         <ProtectedRoute>
           <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <PropertyFormPage />
-            </Suspense>
+            <PropertyFormPage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -89,9 +85,7 @@ export const AppContent: React.FC = () => {
       <Route path="/property/edit/:id" element={
         <ProtectedRoute>
           <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <PropertyFormPage />
-            </Suspense>
+            <PropertyFormPage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -100,9 +94,7 @@ export const AppContent: React.FC = () => {
       <Route path="/portfolio" element={
         <ProtectedRoute>
           <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <PortfolioPage />
-            </Suspense>
+            <PortfolioPage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -110,9 +102,7 @@ export const AppContent: React.FC = () => {
       <Route path="/applications" element={
         <ProtectedRoute>
           <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <ApplicationsPage />
-            </Suspense>
+            <ApplicationsPage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -120,34 +110,26 @@ export const AppContent: React.FC = () => {
       <Route path="/contracts" element={
         <ProtectedRoute>
           <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <ContractManagementPage />
-            </Suspense>
+            <ContractManagementPage />
           </Layout>
         </ProtectedRoute>
       } />
 
       <Route path="/contracts/:contractId/canvas-editor" element={
         <ProtectedRoute>
-          <Suspense fallback={<LoadingSpinner />}>
-            <ContractCanvasEditorPage />
-          </Suspense>
+          <ContractCanvasEditorPage />
         </ProtectedRoute>
       } />
 
       <Route path="/test-canvas-editor" element={
         <ProtectedRoute>
-          <Suspense fallback={<LoadingSpinner />}>
-            <TestCanvasEditor />
-          </Suspense>
+          <TestCanvasEditor />
         </ProtectedRoute>
       } />
 
       <Route path="/contract/:contractId" element={
         <ProtectedRoute>
-          <Suspense fallback={<LoadingSpinner />}>
-            <ContractViewerPage />
-          </Suspense>
+          <ContractViewerPage />
         </ProtectedRoute>
       } />
 
@@ -162,9 +144,7 @@ export const AppContent: React.FC = () => {
       <Route path="/profile" element={
         <ProtectedRoute>
           <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <UserProfile />
-            </Suspense>
+            <UserProfile />
           </Layout>
         </ProtectedRoute>
       } />

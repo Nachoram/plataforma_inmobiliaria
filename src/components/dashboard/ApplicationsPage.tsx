@@ -49,7 +49,7 @@ interface ApplicationWithDetails {
   } | null;
 }
 
-export const ApplicationsPage: React.FC = () => {
+const ApplicationsPage: React.FC = () => {
   console.log('🚀 ApplicationsPage component loaded');
   const { user } = useAuth();
   console.log('👤 Current user:', user);
@@ -1480,3 +1480,5 @@ export const ApplicationsPage: React.FC = () => {
     </div>
   );
 };
+
+export default ApplicationsPage;

@@ -58,7 +58,7 @@ interface ReceivedOffer {
   };
 }
 
-export const PortfolioPage: React.FC = () => {
+const PortfolioPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'properties' | 'applications' | 'offers'>('properties');
   const [properties, setProperties] = useState<PropertyWithImages[]>([]);
@@ -578,3 +578,5 @@ export const PortfolioPage: React.FC = () => {
     </div>
   );
 };
+
+export default PortfolioPage;

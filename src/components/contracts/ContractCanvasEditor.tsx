@@ -1,16 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, Plus, Trash2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import CustomButton from '../common/CustomButton';
 
 interface ContractContent {
+  titulo: string;
+  comparecencia: string;
+  clausulas?: Array<{
     titulo: string;
-    comparecencia: string;
-    clausulas?: Array<{
-      titulo: string;
-      contenido: string;
-    }>;
+    contenido: string;
+  }>;
 }
 
 interface ContractCanvasEditorProps {
@@ -99,6 +99,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   initialContract
 }) => {
   const [contract, setContract] = useState<ContractContent>(initialContract);
+  const [clausesToDelete, setClausesToDelete] = useState<Set<number>>(new Set());
   const documentRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
@@ -135,39 +136,37 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   const addClause = () => {
-    const romanNumerals = [
-      { value: 10, symbol: 'X' },
-      { value: 9, symbol: 'IX' },
-      { value: 5, symbol: 'V' },
-      { value: 4, symbol: 'IV' },
-      { value: 1, symbol: 'I' }
-    ];
-
-    const romanize = (num: number): string => {
-    let result = '';
-    for (const { value, symbol } of romanNumerals) {
-      while (num >= value) {
-        result += symbol;
-        num -= value;
-      }
-    }
-    return result;
-  };
-
     setContract(prev => ({
       ...prev,
       clausulas: [
         ...(prev.clausulas || []),
-        { titulo: `CLÁUSULA ${romanize((prev.clausulas?.length || 0) + 1)}`, contenido: '' }
+        { titulo: 'NUEVA CLÁUSULA', contenido: '...' }
       ]
     }));
   };
 
-  const removeClause = (index: number) => {
+  const toggleDeleteClause = (index: number) => {
+    setClausesToDelete(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const confirmDeleteClause = (index: number) => {
     setContract(prev => ({
       ...prev,
       clausulas: prev.clausulas?.filter((_, i) => i !== index)
     }));
+    setClausesToDelete(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(index);
+      return newSet;
+    });
   };
 
   const handleDownloadPDF = async () => {
@@ -228,46 +227,47 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Action Bar */}
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Editor de Contrato Canvas</h1>
-            <p className="text-sm text-gray-600 mt-1">Edición directa en el documento</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={addClause}
-              className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
-            >
-              <FileText className="h-4 w-4" />
-              <span>Añadir Cláusula</span>
-            </button>
-            <CustomButton
-              onClick={handleDownloadPDF}
-              disabled={isGeneratingPDF}
-              className="flex items-center space-x-2"
-            >
-              <Download className="h-4 w-4" />
-              <span>{isGeneratingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
-            </CustomButton>
+        {/* Barra de Herramientas Fija */}
+        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6 sticky top-4 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Editor Canvas de Contrato</h1>
+              <p className="text-sm text-gray-600 mt-1">Lienzo de Documento Dinámico</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={addClause}
+                className="flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Añadir Cláusula</span>
+              </button>
+              <CustomButton
+                onClick={handleDownloadPDF}
+                disabled={isGeneratingPDF}
+                className="flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>{isGeneratingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
+              </CustomButton>
+            </div>
           </div>
         </div>
 
-        {/* Document View */}
+        {/* Documento A4-like */}
         <div
           ref={documentRef}
-          className="bg-white shadow-lg border mx-auto max-w-3xl"
+          className="max-w-4xl mx-auto bg-white p-12 sm:p-16 shadow-lg border border-gray-200 font-serif"
           style={{ minHeight: '800px' }}
         >
-          <div className="p-20 font-serif">
-            {/* Header */}
-            <div className="text-center mb-12">
-              <h1 className="text-3xl font-bold uppercase mb-8 text-black leading-tight text-center">
+            {/* Título Principal */}
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold text-center uppercase mb-8">
                 <EditableField
                   value={contract.titulo}
                   onChange={updateTitle}
                   placeholder="TÍTULO DEL CONTRATO"
-                  className="text-3xl font-bold uppercase text-center"
+                  className="text-2xl font-bold text-center uppercase"
                 />
               </h1>
             </div>
@@ -285,38 +285,55 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
               </div>
             </div>
 
-            {/* Clauses Section */}
+            {/* Cláusulas con Espaciado Generoso */}
             <div className="space-y-8">
               {contract.clausulas?.map((clause, index) => (
-                <div key={index} className="mb-8">
+                <div key={index}>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-bold text-black text-base uppercase">
+                    <h3 className="font-bold uppercase mb-2">
                       <EditableField
                         value={clause.titulo}
                         onChange={(value) => updateClause(index, 'titulo', value)}
                         placeholder={`CLÁUSULA ${index + 1}`}
-                        className="text-base font-bold uppercase"
+                        className="font-bold uppercase"
                       />
                       :
                     </h3>
-                    {contract.clausulas && contract.clausulas.length > 0 && (
-                      <button
-                        onClick={() => removeClause(index)}
-                        className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors"
-                      >
-                        Eliminar
-                      </button>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      {clausesToDelete.has(index) ? (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-red-600">¿Eliminar?</span>
+                          <button
+                            onClick={() => confirmDeleteClause(index)}
+                            className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                          >
+                            Sí
+                          </button>
+                          <button
+                            onClick={() => toggleDeleteClause(index)}
+                            className="text-xs px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => toggleDeleteClause(index)}
+                          className="flex items-center space-x-1 text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>Eliminar</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-sm leading-relaxed text-justify text-black">
-                    <EditableField
-                      value={clause.contenido}
-                      onChange={(value) => updateClause(index, 'contenido', value)}
-                      placeholder="Escribe el contenido de la cláusula..."
-                      multiline={true}
-                      className="text-sm leading-relaxed text-justify min-h-[80px]"
-                    />
-                  </div>
+                  <EditableField
+                    value={clause.contenido}
+                    onChange={(value) => updateClause(index, 'contenido', value)}
+                    placeholder="Escribe el contenido de la cláusula..."
+                    multiline={true}
+                    className="text-sm leading-relaxed text-justify min-h-[80px]"
+                  />
                 </div>
               ))}
 
@@ -329,33 +346,32 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
               )}
             </div>
 
-            {/* Signatures */}
+            {/* Firmas */}
             <div className="mt-16 pt-12 border-t-2 border-black">
-        <div className="text-center mb-12">
-          <p className="text-sm leading-relaxed text-black">
-            En comprobante de lo pactado, se firma el presente contrato en dos ejemplares de igual tenor y fecha,
-            declarando las partes haber leído y aceptado todas y cada una de las cláusulas del presente instrumento.
-          </p>
-        </div>
+              <div className="text-center mb-12">
+                <p className="text-sm leading-relaxed text-justify">
+                  En comprobante de lo pactado, se firma el presente contrato en dos ejemplares de igual tenor y fecha,
+                  declarando las partes haber leído y aceptado todas y cada una de las cláusulas del presente instrumento.
+                </p>
+              </div>
 
-        <div className="flex justify-between mt-16">
-          <div className="text-center flex-1">
-            <div className="border-t border-black pt-2">
-              <p className="font-bold text-black text-sm">ARRENDADOR</p>
-                    <p className="text-xs text-black mt-2">{contract.arrendador?.nombre || '[Nombre]'}</p>
-                    <p className="text-xs text-black">{contract.arrendador?.rut || '[RUT]'}</p>
-            </div>
-          </div>
+              <div className="flex justify-between mt-16">
+                <div className="text-center flex-1">
+                  <div className="border-t border-black pt-2">
+                    <p className="font-bold text-sm">ARRENDADOR</p>
+                    <p className="text-xs mt-2">[Nombre]</p>
+                    <p className="text-xs">[RUT]</p>
+                  </div>
+                </div>
 
-          <div className="text-center flex-1">
-            <div className="border-t border-black pt-2">
-              <p className="font-bold text-black text-sm">ARRENDATARIO</p>
-                    <p className="text-xs text-black mt-2">{contract.arrendatario?.nombre || '[Nombre]'}</p>
-                    <p className="text-xs text-black">{contract.arrendatario?.rut || '[RUT]'}</p>
+                <div className="text-center flex-1">
+                  <div className="border-t border-black pt-2">
+                    <p className="font-bold text-sm">ARRENDATARIO</p>
+                    <p className="text-xs mt-2">[Nombre]</p>
+                    <p className="text-xs">[RUT]</p>
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
       </div>

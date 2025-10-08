@@ -127,7 +127,7 @@ interface UserProfileData {
   guarantor_commercial_report_url: string;
 }
 
-export const UserProfile: React.FC = () => {
+const UserProfile: React.FC = () => {
   const { user } = useAuth();
   
   const [loading, setLoading] = useState(false);
@@ -1209,3 +1209,5 @@ export const UserProfile: React.FC = () => {
     </div>
   );
 };
+
+export default UserProfile;

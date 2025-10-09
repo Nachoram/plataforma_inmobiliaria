@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, Plus, Trash2 } from 'lucide-react';
+import { Download, Plus, Trash2, Edit2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -33,31 +33,40 @@ interface ContractCanvasEditorProps {
 }
 
 // ============================================================================
-// COMPONENTE EDITABLEFIELD SIMPLIFICADO Y ROBUSTO
+// COMPONENTE EDITABLECONTENT - MODO EDICIÓN/VISTA (SOLUCIÓN DEFINITIVA)
 // ============================================================================
 
-interface EditableFieldProps {
+interface EditableContentProps {
+  id: string;
   value: string;
   onChange: (value: string) => void;
+  isEditing: boolean;
+  onToggleEdit: (id: string | null) => void;
   placeholder?: string;
   className?: string;
+  viewClassName?: string;
 }
 
-const EditableField: React.FC<EditableFieldProps> = ({
+const EditableContent: React.FC<EditableContentProps> = ({
+  id,
   value,
   onChange,
+  isEditing,
+  onToggleEdit,
   placeholder = '',
-  className = ''
+  className = '',
+  viewClassName = ''
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-ajuste de altura al cargar y al escribir
   useEffect(() => {
-    if (textareaRef.current) {
+    if (isEditing && textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+      textareaRef.current.focus();
     }
-  }, [value]);
+  }, [isEditing, value]);
 
   const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
@@ -66,16 +75,29 @@ const EditableField: React.FC<EditableFieldProps> = ({
     onChange(target.value);
   };
 
+  if (isEditing) {
+    return (
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onInput={handleInput}
+        onBlur={() => onToggleEdit(null)}
+        placeholder={placeholder}
+        className={`bg-blue-50 border-2 border-blue-300 rounded-md outline-none resize-none w-full p-2 m-0 overflow-hidden ${className}`}
+        style={{ minHeight: '1.5em' }}
+      />
+    );
+  }
+
   return (
-    <textarea
-      ref={textareaRef}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onInput={handleInput}
-      placeholder={placeholder}
-      className={`bg-transparent border-none outline-none resize-none w-full p-0 m-0 overflow-hidden ${className}`}
-      style={{ minHeight: '1.5em' }}
-    />
+    <div
+      onClick={() => onToggleEdit(id)}
+      className={`cursor-pointer hover:bg-blue-50 hover:ring-2 hover:ring-blue-200 rounded-md transition-all duration-200 p-2 -m-2 relative group ${viewClassName}`}
+    >
+      {value || <span className="text-gray-400 italic">{placeholder}</span>}
+      <Edit2 className="absolute top-2 right-2 h-4 w-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity pdf-hide" />
+    </div>
   );
 };
 
@@ -103,6 +125,9 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
       { id: '2', nombre: '', rut: '', rol: 'ARRENDATARIO' }
     ]
   });
+
+  // Estado de edición (solución definitiva para renderizado perfecto)
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // ============================================================================
   // FUNCIONES DE ACTUALIZACIÓN
@@ -179,6 +204,12 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   // ============================================================================
 
   const handleDownloadPDF = async () => {
+    // PASO 1: Asegurar que no hay elementos en edición (modo vista perfecto)
+    setEditingId(null);
+    
+    // Esperar un tick para que React renderice el cambio
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     const documentContainer = document.getElementById('document-canvas');
     if (!documentContainer) return;
 
@@ -274,21 +305,29 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
           
           {/* TÍTULO PRINCIPAL */}
           <div className="mb-16">
-            <EditableField
+            <EditableContent
+              id="titulo"
               value={contract.titulo}
               onChange={updateTitle}
+              isEditing={editingId === 'titulo'}
+              onToggleEdit={setEditingId}
               placeholder="TÍTULO DEL CONTRATO"
               className="font-serif text-2xl font-bold text-center uppercase text-gray-900"
+              viewClassName="font-serif text-2xl font-bold text-center uppercase text-gray-900"
             />
           </div>
 
           {/* COMPARECENCIA */}
           <div className="mb-12">
-            <EditableField
+            <EditableContent
+              id="comparecencia"
               value={contract.comparecencia}
               onChange={updateComparecencia}
+              isEditing={editingId === 'comparecencia'}
+              onToggleEdit={setEditingId}
               placeholder="Escribe aquí la comparecencia de las partes..."
-              className="font-serif text-base leading-relaxed text-justify text-gray-800"
+              className="font-serif text-base leading-relaxed text-gray-800"
+              viewClassName="font-serif text-base leading-relaxed text-justify text-gray-800"
             />
           </div>
 
@@ -297,11 +336,15 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
             {contract.clausulas.map((clausula) => (
               <div key={clausula.id} className="mb-8">
                 <div className="flex items-start justify-between mb-2">
-                  <EditableField
+                  <EditableContent
+                    id={`clausula-titulo-${clausula.id}`}
                     value={clausula.titulo}
                     onChange={(value) => updateClause(clausula.id, 'titulo', value)}
+                    isEditing={editingId === `clausula-titulo-${clausula.id}`}
+                    onToggleEdit={setEditingId}
                     placeholder="TÍTULO DE LA CLÁUSULA"
-                    className="font-serif font-bold uppercase text-gray-900 flex-1"
+                    className="font-serif font-bold uppercase text-gray-900"
+                    viewClassName="font-serif font-bold uppercase text-gray-900 flex-1"
                   />
                   <button
                     onClick={() => deleteClause(clausula.id)}
@@ -311,11 +354,15 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <EditableField
+                <EditableContent
+                  id={`clausula-contenido-${clausula.id}`}
                   value={clausula.contenido}
                   onChange={(value) => updateClause(clausula.id, 'contenido', value)}
+                  isEditing={editingId === `clausula-contenido-${clausula.id}`}
+                  onToggleEdit={setEditingId}
                   placeholder="Escribe el contenido de la cláusula..."
-                  className="font-serif text-base leading-relaxed text-justify text-gray-800"
+                  className="font-serif text-base leading-relaxed text-gray-800"
+                  viewClassName="font-serif text-base leading-relaxed text-justify text-gray-800"
                 />
               </div>
             ))}
@@ -323,11 +370,15 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
 
           {/* CIERRE */}
           <div className="mt-16 mb-16">
-            <EditableField
+            <EditableContent
+              id="cierre"
               value={contract.cierre}
               onChange={updateCierre}
+              isEditing={editingId === 'cierre'}
+              onToggleEdit={setEditingId}
               placeholder="En comprobante de lo pactado..."
-              className="font-serif text-base leading-relaxed text-justify text-gray-800"
+              className="font-serif text-base leading-relaxed text-gray-800"
+              viewClassName="font-serif text-base leading-relaxed text-justify text-gray-800"
             />
           </div>
 
@@ -338,23 +389,35 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                 <div key={firmante.id} className="border-t border-gray-400 pt-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <EditableField
+                      <EditableContent
+                        id={`firmante-rol-${firmante.id}`}
                         value={firmante.rol}
                         onChange={(value) => updateFirmante(firmante.id, 'rol', value)}
+                        isEditing={editingId === `firmante-rol-${firmante.id}`}
+                        onToggleEdit={setEditingId}
                         placeholder="ROL"
-                        className="font-serif font-bold uppercase text-sm text-gray-900 mb-2"
+                        className="font-serif font-bold uppercase text-sm text-gray-900"
+                        viewClassName="font-serif font-bold uppercase text-sm text-gray-900 mb-2"
                       />
-                      <EditableField
+                      <EditableContent
+                        id={`firmante-nombre-${firmante.id}`}
                         value={firmante.nombre}
                         onChange={(value) => updateFirmante(firmante.id, 'nombre', value)}
+                        isEditing={editingId === `firmante-nombre-${firmante.id}`}
+                        onToggleEdit={setEditingId}
                         placeholder="Nombre completo"
-                        className="font-serif text-sm text-gray-800 mb-1"
+                        className="font-serif text-sm text-gray-800"
+                        viewClassName="font-serif text-sm text-gray-800 mb-1"
                       />
-                      <EditableField
+                      <EditableContent
+                        id={`firmante-rut-${firmante.id}`}
                         value={firmante.rut}
                         onChange={(value) => updateFirmante(firmante.id, 'rut', value)}
+                        isEditing={editingId === `firmante-rut-${firmante.id}`}
+                        onToggleEdit={setEditingId}
                         placeholder="RUT"
                         className="font-serif text-sm text-gray-700"
+                        viewClassName="font-serif text-sm text-gray-700"
                       />
                     </div>
                     <button

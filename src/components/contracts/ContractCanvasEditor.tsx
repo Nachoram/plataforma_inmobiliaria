@@ -200,7 +200,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   // ============================================================================
-  // FUNCIÓN DE EXPORTACIÓN A PDF (VERSIÓN FINAL Y CORRECTA)
+  // FUNCIÓN DE EXPORTACIÓN A PDF (ALGORITMO DE REBANADO DE CANVAS - DEFINITIVO)
   // ============================================================================
 
   const handleDownloadPDF = async () => {
@@ -213,50 +213,74 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
     const documentContainer = document.getElementById('document-canvas');
     if (!documentContainer) return;
 
+    // --- Preparación de la UI ---
     const elementsToHide = document.querySelectorAll('.pdf-hide');
     documentContainer.classList.add('print-borderless');
+    elementsToHide.forEach(el => (el as HTMLElement).style.visibility = 'hidden');
 
     try {
-      elementsToHide.forEach(el => (el as HTMLElement).style.visibility = 'hidden');
-
-      const canvas = await html2canvas(documentContainer, {
+      // --- Captura Única del Canvas ---
+      const originalCanvas = await html2canvas(documentContainer, { 
         scale: 2,
         useCORS: true,
-        logging: false,
+        logging: false
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      // --- Configuración del PDF y Dimensiones ---
       const pdf = new jsPDF('p', 'mm', 'a4');
-
-      const margin = 15;
+      const margin = 15; // 1.5 cm
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const contentWidth = pdfWidth - (margin * 2);
-      const contentHeight = pdfHeight - (margin * 2);
+      const contentWidth = pdfWidth - margin * 2;
+      const contentHeight = pdfHeight - margin * 2;
 
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-      const ratio = canvasWidth / canvasHeight;
-      const imgTotalHeight = contentWidth / ratio;
+      const originalCanvasWidth = originalCanvas.width;
+      const originalCanvasHeight = originalCanvas.height;
+      const ratio = originalCanvasWidth / contentWidth;
+      const originalImgTotalHeight = originalCanvasHeight / ratio;
 
-      let heightLeft = imgTotalHeight;
-      let position = 0;
+      const numPages = Math.ceil(originalImgTotalHeight / contentHeight);
 
-      while (heightLeft > 0) {
-        pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, imgTotalHeight);
-        heightLeft -= contentHeight;
-
-        if (heightLeft > 0) {
+      // --- Bucle de "Rebanado" y Creación de Páginas ---
+      for (let i = 0; i < numPages; i++) {
+        if (i > 0) {
           pdf.addPage();
-          position -= contentHeight;
         }
+
+        // Crear un canvas temporal para la rebanada de esta página
+        const pageCanvas = document.createElement('canvas');
+        const pageContext = pageCanvas.getContext('2d');
+        
+        // Altura de la rebanada en el canvas original
+        const sliceHeight = contentHeight * ratio;
+        
+        pageCanvas.width = originalCanvasWidth;
+        pageCanvas.height = sliceHeight;
+
+        // Cortar la rebanada del canvas original y pegarla en el canvas temporal
+        pageContext?.drawImage(
+          originalCanvas,
+          0, // sourceX
+          i * sliceHeight, // sourceY
+          originalCanvasWidth, // sourceWidth
+          sliceHeight, // sourceHeight
+          0, // destX
+          0, // destY
+          originalCanvasWidth, // destWidth
+          sliceHeight // destHeight
+        );
+
+        // Añadir la rebanada (canvas temporal) al PDF
+        const pageDataUrl = pageCanvas.toDataURL('image/png', 1.0);
+        pdf.addImage(pageDataUrl, 'PNG', margin, margin, contentWidth, contentHeight);
       }
 
-      pdf.save('contrato-final.pdf');
+      pdf.save('contrato-final-profesional.pdf');
 
     } catch (error) {
       console.error("Error al generar el PDF:", error);
     } finally {
+      // --- Restauración de la UI ---
       documentContainer.classList.remove('print-borderless');
       elementsToHide.forEach(el => (el as HTMLElement).style.visibility = 'visible');
     }

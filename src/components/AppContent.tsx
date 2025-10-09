@@ -25,7 +25,6 @@ import ApplicationsPage from './dashboard/ApplicationsPage';
 import ContractManagementPage from './contracts/ContractManagementPage';
 import ContractViewerPage from './contracts/ContractViewerPage';
 import ContractCanvasEditorPage from './contracts/ContractCanvasEditorPage';
-import TestCanvasEditor from './contracts/TestCanvasEditor';
 import PropertyFormPage from './properties/PropertyFormPage';
 import UserProfile from './profile/UserProfile';
 
@@ -118,12 +117,6 @@ export const AppContent: React.FC = () => {
       <Route path="/contracts/:contractId/canvas-editor" element={
         <ProtectedRoute>
           <ContractCanvasEditorPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/test-canvas-editor" element={
-        <ProtectedRoute>
-          <TestCanvasEditor />
         </ProtectedRoute>
       } />
 

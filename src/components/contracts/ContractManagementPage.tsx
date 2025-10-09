@@ -213,6 +213,10 @@ const ContractManagementPage: React.FC = () => {
     navigate(`/contract/${contract.id}`);
   };
 
+  const handleEditContract = (contract: Contract) => {
+    navigate(`/contracts/${contract.id}/canvas-editor`);
+  };
+
   const handleViewWorkflowContract = (contract: Contract) => {
     // URL del webhook de N8N (esto debería venir de configuración o variables de entorno)
     const webhookUrl = import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_URL ||
@@ -399,6 +403,16 @@ const ContractManagementPage: React.FC = () => {
                     >
                       <Eye className="h-4 w-4" />
                       <span>Ver Contrato</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditContract(contract);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                      <span>Editar Contrato</span>
                     </button>
                   </div>
                 </div>

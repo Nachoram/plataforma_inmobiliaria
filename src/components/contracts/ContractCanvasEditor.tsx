@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Download, Plus, Trash2, Edit2, Save, CheckCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { supabase } from '../../lib/supabase';
 
 // ============================================================================
 // INTERFACES DE TYPESCRIPT
@@ -30,6 +31,10 @@ interface ContractData {
 
 interface ContractCanvasEditorProps {
   initialContract: Partial<ContractData>;
+  contractId?: string;
+  onSave?: (contract: ContractData) => void;
+  onChange?: (contract: ContractData) => void;
+  showSaveButton?: boolean;
 }
 
 // ============================================================================
@@ -106,7 +111,11 @@ const EditableContent: React.FC<EditableContentProps> = ({
 // ============================================================================
 
 const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
-  initialContract
+  initialContract,
+  contractId,
+  onSave,
+  onChange,
+  showSaveButton = true
 }) => {
   // Estado del contrato
   const [contract, setContract] = useState<ContractData>({
@@ -128,6 +137,17 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
 
   // Estado de edición (solución definitiva para renderizado perfecto)
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Estado de guardado
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // Notificar cambios al componente padre
+  useEffect(() => {
+    if (onChange) {
+      onChange(contract);
+    }
+  }, [contract]);
 
   // ============================================================================
   // FUNCIONES DE ACTUALIZACIÓN
@@ -200,7 +220,58 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   // ============================================================================
-  // FUNCIÓN DE EXPORTACIÓN A PDF (ALGORITMO DE REBANADO DE CANVAS - DEFINITIVO)
+  // FUNCIÓN DE GUARDADO EN BASE DE DATOS
+  // ============================================================================
+  
+  const handleSaveChanges = async () => {
+    if (!contractId) {
+      console.error('No se puede guardar: contractId no proporcionado');
+      alert('Error: No se puede guardar el contrato sin un ID válido');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setSaveSuccess(false);
+
+      // Llamar al callback onSave si existe
+      if (onSave) {
+        await onSave(contract);
+      } else {
+        // Guardar directamente en la base de datos
+        const { error } = await supabase
+          .from('rental_contracts')
+          .update({ 
+            contract_content: contract,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', contractId);
+
+        if (error) throw error;
+      }
+
+      // Mostrar feedback de éxito
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+
+      console.log('✅ Contrato guardado exitosamente');
+      
+    } catch (error: any) {
+      console.error('❌ Error al guardar el contrato:', error);
+      alert('Error al guardar los cambios: ' + (error.message || 'Error desconocido'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ============================================================================
+  // FUNCIÓN DE EXPORTACIÓN A PDF - ALGORITMO DEFINITIVO DE "REBANADO" DE CANVAS
+  // ============================================================================
+  // Esta versión garantiza márgenes perfectos en todas las páginas mediante:
+  // 1. Cálculo preciso: Convierte contentHeight (mm) a píxeles exactos del canvas
+  // 2. Rebanado por página: Crea canvas individuales para cada página
+  // 3. Manejo del final: Solo rebana el contenido restante en la última página
+  // 4. Respeto por márgenes: 15mm en los 4 lados de todas las páginas
   // ============================================================================
 
   const handleDownloadPDF = async () => {
@@ -234,27 +305,52 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
       const contentWidth = pdfWidth - margin * 2;
       const contentHeight = pdfHeight - margin * 2;
 
-      // --- Convertir el canvas a imagen ---
-      const imgData = originalCanvas.toDataURL('image/png', 1.0);
-      const ratio = originalCanvas.width / contentWidth;
-      const imgTotalHeight = originalCanvas.height / ratio;
-      
-      // --- Bucle de Paginación Final y Corregido ---
-      let heightLeft = imgTotalHeight;
-      let position = 0;
+      // --- Dimensiones del Canvas Original ---
+      const originalCanvasWidth = originalCanvas.width;
+      const originalCanvasHeight = originalCanvas.height;
 
-      while (heightLeft > 0) {
-        if (position > 0) { // Añade una nueva página solo a partir de la segunda iteración
+      // Convertir contentHeight (en mm) a la altura equivalente en píxeles del canvas original
+      const sliceHeightInPixels = (contentHeight * originalCanvasWidth) / contentWidth;
+
+      const numPages = Math.ceil(originalCanvasHeight / sliceHeightInPixels);
+      let renderedHeight = 0;
+
+      // --- Bucle de "Rebanado" Final y Corregido ---
+      for (let i = 0; i < numPages; i++) {
+        if (i > 0) {
           pdf.addPage();
         }
+
+        const pageCanvas = document.createElement('canvas');
+        const pageContext = pageCanvas.getContext('2d');
+        if (!pageContext) continue;
+
+        pageCanvas.width = originalCanvasWidth;
+        pageCanvas.height = sliceHeightInPixels;
+
+        // Altura restante en el canvas original
+        const remainingHeight = originalCanvasHeight - renderedHeight;
+        // La altura a cortar es la menor entre una página completa o lo que quede
+        const heightToDraw = Math.min(sliceHeightInPixels, remainingHeight);
+
+        // Cortar la rebanada del canvas original
+        pageContext.drawImage(
+          originalCanvas,
+          0, // sourceX
+          renderedHeight, // sourceY
+          originalCanvasWidth, // sourceWidth
+          heightToDraw, // sourceHeight
+          0, // destX
+          0, // destY
+          originalCanvasWidth, // destWidth
+          heightToDraw // destHeight
+        );
+
+        // Añadir la rebanada al PDF
+        const pageDataUrl = pageCanvas.toDataURL('image/png', 1.0);
+        pdf.addImage(pageDataUrl, 'PNG', margin, margin, contentWidth, contentHeight);
         
-        // Se posiciona la imagen completa en cada página, moviendo la "ventana de visión" hacia arriba.
-        // El 'position' negativo desplaza la imagen.
-        pdf.addImage(imgData, 'PNG', margin, -position + margin, contentWidth, imgTotalHeight);
-        
-        // El cálculo clave corregido:
-        heightLeft -= contentHeight; 
-        position += contentHeight; // Incrementa la posición para el siguiente corte
+        renderedHeight += sliceHeightInPixels;
       }
 
       pdf.save('contrato-final-profesional.pdf');
@@ -283,7 +379,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
               <h1 className="text-xl font-semibold text-gray-900">Editor Canvas de Contrato</h1>
               <p className="text-sm text-gray-600 mt-1">Lienzo de Documento Dinámico</p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={addClause}
                 className="pdf-hide flex items-center space-x-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
@@ -291,6 +387,33 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                 <Plus className="h-4 w-4" />
                 <span>Añadir Cláusula</span>
               </button>
+              
+              {showSaveButton && contractId && (
+                <button
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className={`pdf-hide flex items-center space-x-2 px-4 py-2 text-sm rounded-md transition-colors border ${
+                    saveSuccess 
+                      ? 'bg-green-50 text-green-700 border-green-300' 
+                      : isSaving
+                      ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                  }`}
+                >
+                  {saveSuccess ? (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Guardado ✓</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
+                    </>
+                  )}
+                </button>
+              )}
+              
               <button
                 onClick={handleDownloadPDF}
                 className="pdf-hide flex items-center space-x-2 px-4 py-2 text-sm bg-green-50 text-green-700 rounded-md hover:bg-green-100 transition-colors border border-green-200"

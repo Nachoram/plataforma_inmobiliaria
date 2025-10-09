@@ -393,17 +393,7 @@ const ContractManagementPage: React.FC = () => {
                   </div>
 
                   {/* Actions mejoradas */}
-                  <div className="space-y-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewContract(contract);
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
-                    >
-                      <Eye className="h-4 w-4" />
-                      <span>Ver Contrato</span>
-                    </button>
+                  <div className="mt-4">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -412,7 +402,7 @@ const ContractManagementPage: React.FC = () => {
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
                     >
                       <Edit3 className="h-4 w-4" />
-                      <span>Editar Contrato</span>
+                      <span>Abrir Editor</span>
                     </button>
                   </div>
                 </div>

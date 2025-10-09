@@ -234,45 +234,27 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
       const contentWidth = pdfWidth - margin * 2;
       const contentHeight = pdfHeight - margin * 2;
 
-      const originalCanvasWidth = originalCanvas.width;
-      const originalCanvasHeight = originalCanvas.height;
-      const ratio = originalCanvasWidth / contentWidth;
-      const originalImgTotalHeight = originalCanvasHeight / ratio;
+      // --- Convertir el canvas a imagen ---
+      const imgData = originalCanvas.toDataURL('image/png', 1.0);
+      const ratio = originalCanvas.width / contentWidth;
+      const imgTotalHeight = originalCanvas.height / ratio;
+      
+      // --- Bucle de Paginación Final y Corregido ---
+      let heightLeft = imgTotalHeight;
+      let position = 0;
 
-      const numPages = Math.ceil(originalImgTotalHeight / contentHeight);
-
-      // --- Bucle de "Rebanado" y Creación de Páginas ---
-      for (let i = 0; i < numPages; i++) {
-        if (i > 0) {
+      while (heightLeft > 0) {
+        if (position > 0) { // Añade una nueva página solo a partir de la segunda iteración
           pdf.addPage();
         }
-
-        // Crear un canvas temporal para la rebanada de esta página
-        const pageCanvas = document.createElement('canvas');
-        const pageContext = pageCanvas.getContext('2d');
         
-        // Altura de la rebanada en el canvas original
-        const sliceHeight = contentHeight * ratio;
+        // Se posiciona la imagen completa en cada página, moviendo la "ventana de visión" hacia arriba.
+        // El 'position' negativo desplaza la imagen.
+        pdf.addImage(imgData, 'PNG', margin, -position + margin, contentWidth, imgTotalHeight);
         
-        pageCanvas.width = originalCanvasWidth;
-        pageCanvas.height = sliceHeight;
-
-        // Cortar la rebanada del canvas original y pegarla en el canvas temporal
-        pageContext?.drawImage(
-          originalCanvas,
-          0, // sourceX
-          i * sliceHeight, // sourceY
-          originalCanvasWidth, // sourceWidth
-          sliceHeight, // sourceHeight
-          0, // destX
-          0, // destY
-          originalCanvasWidth, // destWidth
-          sliceHeight // destHeight
-        );
-
-        // Añadir la rebanada (canvas temporal) al PDF
-        const pageDataUrl = pageCanvas.toDataURL('image/png', 1.0);
-        pdf.addImage(pageDataUrl, 'PNG', margin, margin, contentWidth, contentHeight);
+        // El cálculo clave corregido:
+        heightLeft -= contentHeight; 
+        position += contentHeight; // Incrementa la posición para el siguiente corte
       }
 
       pdf.save('contrato-final-profesional.pdf');

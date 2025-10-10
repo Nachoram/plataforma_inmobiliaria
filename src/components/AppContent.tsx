@@ -26,7 +26,6 @@ import ContractManagementPage from './contracts/ContractManagementPage';
 import ContractViewerPage from './contracts/ContractViewerPage';
 import ContractCanvasEditorPage from './contracts/ContractCanvasEditorPage';
 import PropertyFormPage from './properties/PropertyFormPage';
-import UserProfile from './profile/UserProfile';
 
 // Loading component for lazy loaded routes
 const LoadingSpinner = () => (
@@ -134,13 +133,6 @@ export const AppContent: React.FC = () => {
         </ProtectedRoute>
       } />
 
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <Layout>
-            <UserProfile />
-          </Layout>
-        </ProtectedRoute>
-      } />
 
       {/* Diagnostic routes */}
       <Route path="/diagnostic" element={

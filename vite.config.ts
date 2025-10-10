@@ -66,10 +66,6 @@ export default defineConfig({
             './src/components/marketplace/MarketplacePage.tsx',
             './src/components/marketplace/MyActivityPage.tsx',
             './src/components/marketplace/OfferModal.tsx'
-          ],
-          'profile': [
-            './src/components/profile/UserProfile.tsx',
-            './src/components/profile/UserProfileForm.tsx'
           ]
         }
       }

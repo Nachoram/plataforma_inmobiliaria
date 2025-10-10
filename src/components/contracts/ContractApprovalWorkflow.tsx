@@ -737,7 +737,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
               contract.status === 'draft' ? 'bg-blue-100 text-blue-800' :
               contract.status === 'approved' ? 'bg-green-100 text-green-800' :
               contract.status === 'sent_to_signature' ? 'bg-yellow-100 text-yellow-800' :
-              contract.status === 'fully_signed' ? 'bg-purple-100 text-purple-800' :
+              contract.status === 'fully_signed' ? 'bg-orange-100 text-orange-800' :
               'bg-gray-100 text-gray-800'
             }`}>
               {getStatusIcon(contract.status)}
@@ -765,7 +765,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
                     <div className="flex items-center space-x-2">
                       {signature.signer_type === 'owner' && <User className="h-4 w-4 text-blue-500" />}
                       {signature.signer_type === 'tenant' && <User className="h-4 w-4 text-green-500" />}
-                      {signature.signer_type === 'guarantor' && <Shield className="h-4 w-4 text-purple-500" />}
+                      {signature.signer_type === 'guarantor' && <Shield className="h-4 w-4 text-orange-500" />}
                       <span className="font-medium capitalize">
                         {signature.signer_type === 'owner' ? 'Propietario' :
                          signature.signer_type === 'tenant' ? 'Arrendatario' :
@@ -870,7 +870,7 @@ const ContractApprovalWorkflow: React.FC<ContractApprovalWorkflowProps> = ({
       {showCanvasViewer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
           <div className="w-full max-w-6xl max-h-[95vh] overflow-hidden bg-white rounded-lg">
-            <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg">
+            <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-500 to-orange-600 text-white rounded-t-lg">
               <h2 className="text-xl font-bold flex items-center">
                 <Eye className="h-6 w-6 mr-2" />
                 Vista Previa del Contrato

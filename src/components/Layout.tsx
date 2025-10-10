@@ -66,7 +66,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { path: '/portfolio', icon: Home, label: 'Portafolio', shortLabel: 'Prop.' },
     { path: '/applications', icon: Mail, label: 'Postulaciones', shortLabel: 'Post.' },
     { path: '/contracts', icon: FileText, label: 'Contratos', shortLabel: 'Cont.' },
-    { path: '/profile', icon: UserCircle, label: 'Perfil', shortLabel: 'Perfil' },
   ] : [
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
   ];
@@ -212,17 +211,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   >
                     <BarChart3 className="h-4 w-4 flex-shrink-0" />
                     <span className="hidden xl:inline">Mi Actividad</span>
-                  </Link>
-                  <Link
-                    to="/profile"
-                    className={`px-2 lg:px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center space-x-1.5 flex-shrink-0 ${
-                      isActive('/profile')
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
-                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm'
-                    }`}
-                  >
-                    <UserCircle className="h-4 w-4 flex-shrink-0" />
-                    <span className="hidden xl:inline">Mi Perfil</span>
                   </Link>
                 </>
               )}

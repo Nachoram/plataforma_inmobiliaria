@@ -28,7 +28,6 @@ export const useRoutePreloader = () => {
       setTimeout(() => {
         // Prefetch de contratos (menos frecuente pero importante)
         import('../components/contracts/ContractManagementPage');
-        import('../components/profile/UserProfile');
       }, 5000); // Delay de 5 segundos
     };
 
@@ -89,9 +88,6 @@ export const preloadRoute = async (routeName: string) => {
         break;
       case 'contracts':
         await import('../components/contracts/ContractManagementPage');
-        break;
-      case 'profile':
-        await import('../components/profile/UserProfile');
         break;
       case 'property-form':
         await import('../components/properties/PropertyFormPage');

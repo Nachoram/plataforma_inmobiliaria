@@ -966,7 +966,7 @@ const ApplicationsPage: React.FC = () => {
               {/* Applicant Information con diseño mejorado */}
               <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 p-4 sm:p-5 rounded-xl mb-4 border border-gray-200/50">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <h4 className="font-bold text-gray-900 text-sm sm:text-base">Información del Postulante</h4>

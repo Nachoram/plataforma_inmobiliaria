@@ -255,7 +255,7 @@ export const MarketplacePage: React.FC = () => {
       <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl shadow-soft text-white padding-mobile">
         <div className="text-center">
           <h1 className="text-2xl xs:text-3xl md:text-4xl font-bold mb-3 xs:mb-4">
-            🏠 Marketplace Inmobiliario
+            Marketplace Inmobiliario
           </h1>
           <p className="text-base xs:text-lg md:text-xl text-blue-100 mb-4 xs:mb-6">
             Encuentra, oferta y postula por propiedades en toda Chile

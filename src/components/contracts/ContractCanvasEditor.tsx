@@ -397,7 +397,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                       ? 'bg-green-50 text-green-700 border-green-300' 
                       : isSaving
                       ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                      : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                      : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'
                   }`}
                 >
                   {saveSuccess ? (

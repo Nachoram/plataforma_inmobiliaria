@@ -187,7 +187,7 @@ const ContractManagementPage: React.FC = () => {
       case 'partially_signed':
         return 'bg-gradient-to-r from-amber-400 to-orange-500 text-white';
       case 'fully_signed':
-        return 'bg-gradient-to-r from-purple-500 to-pink-600 text-white';
+        return 'bg-gradient-to-r from-orange-500 to-amber-600 text-white';
       default:
         return 'bg-gradient-to-r from-red-500 to-red-600 text-white';
     }
@@ -242,10 +242,10 @@ const ContractManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-orange-50/20">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         {/* Header mejorado con gradiente */}
-        <div className="bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-2xl shadow-lg border border-blue-100/50 p-5 sm:p-8 mb-6 backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-blue-50 via-white to-orange-50 rounded-2xl shadow-lg border border-blue-100/50 p-5 sm:p-8 mb-6 backdrop-blur-sm">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
@@ -260,7 +260,7 @@ const ContractManagementPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 sm:p-6 shadow-lg text-white">
+            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl p-4 sm:p-6 shadow-lg text-white">
               <p className="text-3xl sm:text-4xl font-extrabold">{contracts.length}</p>
               <p className="text-xs sm:text-sm opacity-90 font-medium">Contratos activos</p>
             </div>
@@ -359,9 +359,9 @@ const ContractManagementPage: React.FC = () => {
                   </div>
 
                   {/* Applicant Info mejorado */}
-                  <div className="mb-4 bg-gradient-to-br from-purple-50 to-pink-50/30 p-4 rounded-xl">
+                  <div className="mb-4 bg-gradient-to-br from-orange-50 to-amber-50/30 p-4 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
                         <User className="h-4 w-4 text-white" />
                       </div>
                       <h4 className="text-xs sm:text-sm font-bold text-gray-900">Arrendatario</h4>
@@ -399,7 +399,7 @@ const ContractManagementPage: React.FC = () => {
                         e.stopPropagation();
                         handleEditContract(contract);
                       }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-lg hover:from-orange-700 hover:to-amber-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
                     >
                       <Edit3 className="h-4 w-4" />
                       <span>Abrir Editor</span>

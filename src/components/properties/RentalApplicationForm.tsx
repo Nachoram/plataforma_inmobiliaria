@@ -17,6 +17,8 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showGuarantor, setShowGuarantor] = useState(false);
+  const [showIndependentWorker, setShowIndependentWorker] = useState(false);
+  const [showGuarantorIndependent, setShowGuarantorIndependent] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
@@ -57,8 +59,30 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   });
 
   const [message, setMessage] = useState('');
-  const [applicantDocuments, setApplicantDocuments] = useState<File[]>([]);
-  const [guarantorDocuments, setGuarantorDocuments] = useState<File[]>([]);
+
+  // Documentos individuales del postulante
+  const [applicantDocuments, setApplicantDocuments] = useState({
+    cedula: null as File | null,
+    contrato: null as File | null,
+    liquidaciones: null as File | null,
+    cotizaciones: null as File | null,
+    dicom: null as File | null,
+    // Campos opcionales para trabajadores independientes
+    formulario22: null as File | null,
+    resumenBoletas: null as File | null,
+  });
+
+  // Documentos individuales del aval
+  const [guarantorDocuments, setGuarantorDocuments] = useState({
+    cedula: null as File | null,
+    contrato: null as File | null,
+    liquidaciones: null as File | null,
+    cotizaciones: null as File | null,
+    dicom: null as File | null,
+    // Campos opcionales para trabajadores independientes del aval
+    formulario22: null as File | null,
+    resumenBoletas: null as File | null,
+  });
 
   // Estados para validación en tiempo real
   const [rutValidation, setRutValidation] = useState<{
@@ -173,7 +197,9 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     }
   };
 
-  const uploadDocuments = async (files: File[], entityId: string, entityType: 'application_applicant' | 'application_guarantor') => {
+  const uploadDocuments = async (documents: { [key: string]: File | null }, entityId: string, entityType: 'application_applicant' | 'application_guarantor') => {
+    // Convertir el objeto de documentos a un array de archivos válidos
+    const files = Object.values(documents).filter((file): file is File => file !== null);
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       throw new Error('Usuario no autenticado o sesión expirada');
@@ -501,13 +527,195 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       }
 
       // PASO 4: Subir documentos del postulante
-      if (applicantDocuments.length > 0) {
-        await uploadDocuments(applicantDocuments, application.id, 'application_applicant');
+      const hasApplicantDocuments = Object.values(applicantDocuments).some(file => file !== null);
+      if (hasApplicantDocuments) {
+        const uploadedApplicantDocs = await uploadDocuments(applicantDocuments, application.id, 'application_applicant');
+
+        // Actualizar rutas de todos los documentos del postulante en la aplicación
+        const updateData: any = {};
+
+        // Documentos tradicionales del postulante
+        if (applicantDocuments.cedula) {
+          const cedulaDoc = uploadedApplicantDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('cedula') ||
+            doc.fileName.toLowerCase().includes('identidad')
+          );
+          if (cedulaDoc) {
+            updateData.ruta_cedula_postulante = cedulaDoc.storagePath;
+          }
+        }
+
+        if (applicantDocuments.contrato) {
+          const contratoDoc = uploadedApplicantDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('contrato') ||
+            doc.fileName.toLowerCase().includes('trabajo')
+          );
+          if (contratoDoc) {
+            updateData.ruta_contrato_postulante = contratoDoc.storagePath;
+          }
+        }
+
+        if (applicantDocuments.liquidaciones) {
+          const liquidacionesDoc = uploadedApplicantDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('liquidacion') ||
+            doc.fileName.toLowerCase().includes('sueldo')
+          );
+          if (liquidacionesDoc) {
+            updateData.ruta_liquidaciones_postulante = liquidacionesDoc.storagePath;
+          }
+        }
+
+        if (applicantDocuments.cotizaciones) {
+          const cotizacionesDoc = uploadedApplicantDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('cotizacion') ||
+            doc.fileName.toLowerCase().includes('previsional')
+          );
+          if (cotizacionesDoc) {
+            updateData.ruta_cotizaciones_postulante = cotizacionesDoc.storagePath;
+          }
+        }
+
+        if (applicantDocuments.dicom) {
+          const dicomDoc = uploadedApplicantDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('dicom') ||
+            doc.fileName.toLowerCase().includes('certificado')
+          );
+          if (dicomDoc) {
+            updateData.ruta_dicom_postulante = dicomDoc.storagePath;
+          }
+        }
+
+        // Documentos de trabajadores independientes del postulante
+        if (applicantDocuments.formulario22) {
+          const formulario22Doc = uploadedApplicantDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('formulario') ||
+            doc.fileName.toLowerCase().includes('22')
+          );
+          if (formulario22Doc) {
+            updateData.ruta_formulario22 = formulario22Doc.storagePath;
+          }
+        }
+
+        if (applicantDocuments.resumenBoletas) {
+          const resumenBoletasDoc = uploadedApplicantDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('resumen') ||
+            doc.fileName.toLowerCase().includes('boleta') ||
+            doc.fileName.toLowerCase().includes('sii')
+          );
+          if (resumenBoletasDoc) {
+            updateData.ruta_resumen_boletas = resumenBoletasDoc.storagePath;
+          }
+        }
+
+        // Actualizar la aplicación con las rutas opcionales si existen
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateError } = await supabase
+            .from('applications')
+            .update(updateData)
+            .eq('id', application.id);
+
+          if (updateError) {
+            console.warn('⚠️ Error updating optional document paths for applicant:', updateError);
+          } else {
+            console.log('✅ Updated optional document paths for applicant');
+          }
+        }
       }
 
       // PASO 5: Subir documentos del aval
-      if (showGuarantor && guarantorDocuments.length > 0) {
-        await uploadDocuments(guarantorDocuments, application.id, 'application_guarantor');
+      const hasGuarantorDocuments = Object.values(guarantorDocuments).some(file => file !== null);
+      if (showGuarantor && hasGuarantorDocuments) {
+        const uploadedGuarantorDocs = await uploadDocuments(guarantorDocuments, application.id, 'application_guarantor');
+
+        // Actualizar rutas de todos los documentos del aval en la aplicación
+        const updateData: any = {};
+
+        // Documentos tradicionales del aval
+        if (guarantorDocuments.cedula) {
+          const cedulaDoc = uploadedGuarantorDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('cedula') ||
+            doc.fileName.toLowerCase().includes('identidad')
+          );
+          if (cedulaDoc) {
+            updateData.ruta_cedula_aval = cedulaDoc.storagePath;
+          }
+        }
+
+        if (guarantorDocuments.contrato) {
+          const contratoDoc = uploadedGuarantorDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('contrato') ||
+            doc.fileName.toLowerCase().includes('trabajo')
+          );
+          if (contratoDoc) {
+            updateData.ruta_contrato_aval = contratoDoc.storagePath;
+          }
+        }
+
+        if (guarantorDocuments.liquidaciones) {
+          const liquidacionesDoc = uploadedGuarantorDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('liquidacion') ||
+            doc.fileName.toLowerCase().includes('sueldo')
+          );
+          if (liquidacionesDoc) {
+            updateData.ruta_liquidaciones_aval = liquidacionesDoc.storagePath;
+          }
+        }
+
+        if (guarantorDocuments.cotizaciones) {
+          const cotizacionesDoc = uploadedGuarantorDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('cotizacion') ||
+            doc.fileName.toLowerCase().includes('previsional')
+          );
+          if (cotizacionesDoc) {
+            updateData.ruta_cotizaciones_aval = cotizacionesDoc.storagePath;
+          }
+        }
+
+        if (guarantorDocuments.dicom) {
+          const dicomDoc = uploadedGuarantorDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('dicom') ||
+            doc.fileName.toLowerCase().includes('certificado')
+          );
+          if (dicomDoc) {
+            updateData.ruta_dicom_aval = dicomDoc.storagePath;
+          }
+        }
+
+        // Documentos de trabajadores independientes del aval
+        if (guarantorDocuments.formulario22) {
+          const formulario22Doc = uploadedGuarantorDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('formulario') ||
+            doc.fileName.toLowerCase().includes('22')
+          );
+          if (formulario22Doc) {
+            updateData.ruta_formulario22_aval = formulario22Doc.storagePath;
+          }
+        }
+
+        if (guarantorDocuments.resumenBoletas) {
+          const resumenBoletasDoc = uploadedGuarantorDocs.find((doc: any) =>
+            doc.fileName.toLowerCase().includes('resumen') ||
+            doc.fileName.toLowerCase().includes('boleta') ||
+            doc.fileName.toLowerCase().includes('sii')
+          );
+          if (resumenBoletasDoc) {
+            updateData.ruta_resumen_boletas_aval = resumenBoletasDoc.storagePath;
+          }
+        }
+
+        // Actualizar la aplicación con las rutas opcionales del aval si existen
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateError } = await supabase
+            .from('applications')
+            .update(updateData)
+            .eq('id', application.id);
+
+          if (updateError) {
+            console.warn('⚠️ Error updating optional document paths for guarantor:', updateError);
+          } else {
+            console.log('✅ Updated optional document paths for guarantor');
+          }
+        }
       }
 
       // PASO 6: Enviar webhook de notificación de nueva postulación
@@ -1195,39 +1403,275 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             />
           </div>
 
+          {/* Documentos individuales del Postulante */}
           <div className="mb-4 sm:mb-6">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-              📎 Documentos del Postulante
+            <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-4">📄 Documentación del Postulante</h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mb-3">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  🆔 Cédula de Identidad
             </label>
             <input
               type="file"
-              multiple
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={(e) => setApplicantDocuments(Array.from(e.target.files || []))}
+                  onChange={(e) => setApplicantDocuments(prev => ({ ...prev, cedula: e.target.files?.[0] || null }))}
               className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              📋 Cédula de identidad, certificado de ingresos, contrato de trabajo, referencias laborales, etc.
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  📋 Contrato de Trabajo
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => setApplicantDocuments(prev => ({ ...prev, contrato: e.target.files?.[0] || null }))}
+                  className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  💰 Liquidaciones de Sueldo
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => setApplicantDocuments(prev => ({ ...prev, liquidaciones: e.target.files?.[0] || null }))}
+                  className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  📊 Cotizaciones Previsionales
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => setApplicantDocuments(prev => ({ ...prev, cotizaciones: e.target.files?.[0] || null }))}
+                  className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="mb-3 md:col-span-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  🏦 Certificado DICOM
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => setApplicantDocuments(prev => ({ ...prev, dicom: e.target.files?.[0] || null }))}
+                  className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN OPCIONAL: Documentos para Trabajadores Independientes */}
+          <div className="mb-6 sm:mb-8">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                📄 Si eres Trabajador Independiente (Honorarios)
+              </h3>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50/50 p-5 sm:p-6 rounded-2xl shadow-lg border border-amber-200">
+              <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+                <input
+                  type="checkbox"
+                  id="showIndependentWorker"
+                  checked={showIndependentWorker}
+                  onChange={(e) => setShowIndependentWorker(e.target.checked)}
+                  className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 focus:ring-amber-500 border-gray-300 rounded touch-manipulation"
+                />
+                <label htmlFor="showIndependentWorker" className="text-xs sm:text-sm font-medium text-gray-700">
+                  Trabajo con boletas de honorarios (no tengo contrato ni liquidaciones)
+                </label>
+              </div>
+
+              <p className="text-xs sm:text-sm text-amber-700 mb-4">
+                Si trabajas de manera independiente, adjunta estos documentos tributarios en lugar del contrato y las liquidaciones tradicionales.
+              </p>
+
+              {showIndependentWorker && (
+                <div className="space-y-4 pt-4 border-t border-amber-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="mb-3">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        📊 Declaración Anual de Renta (Formulario 22)
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => setApplicantDocuments(prev => ({ ...prev, formulario22: e.target.files?.[0] || null }))}
+                        className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">
+                        Declaración jurada del año anterior
             </p>
           </div>
 
+                    <div className="mb-3">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        🧾 Resumen Anual de Boletas de Honorarios (SII)
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => setApplicantDocuments(prev => ({ ...prev, resumenBoletas: e.target.files?.[0] || null }))}
+                        className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">
+                        Certificado emitido por el Servicio de Impuestos Internos
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Documentos individuales del Aval */}
           {showGuarantor && (
             <div className="mb-4 sm:mb-6">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                📎 Documentos del Aval
+              <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-4">👥 Documentación del Aval</h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="mb-3">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    🆔 Cédula de Identidad del Aval
               </label>
               <input
                 type="file"
-                multiple
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                onChange={(e) => setGuarantorDocuments(Array.from(e.target.files || []))}
-                className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                📋 Cédula de identidad del aval, certificado de ingresos, referencias, etc.
-              </p>
+                    onChange={(e) => setGuarantorDocuments(prev => ({ ...prev, cedula: e.target.files?.[0] || null }))}
+                    className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    📋 Contrato de Trabajo del Aval
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => setGuarantorDocuments(prev => ({ ...prev, contrato: e.target.files?.[0] || null }))}
+                    className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    💰 Liquidaciones de Sueldo del Aval
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => setGuarantorDocuments(prev => ({ ...prev, liquidaciones: e.target.files?.[0] || null }))}
+                    className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    📊 Cotizaciones Previsionales del Aval
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => setGuarantorDocuments(prev => ({ ...prev, cotizaciones: e.target.files?.[0] || null }))}
+                    className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="mb-3 md:col-span-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    🏦 Certificado DICOM del Aval
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => setGuarantorDocuments(prev => ({ ...prev, dicom: e.target.files?.[0] || null }))}
+                    className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
             </div>
           )}
+
+          {/* SECCIÓN OPCIONAL: Documentos para Trabajador Independiente del Aval */}
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-gray-900">
+                📄 Si el Aval es Trabajador Independiente (Honorarios)
+              </h4>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50/50 p-5 rounded-2xl shadow-lg border border-amber-200">
+              <div className="flex items-center space-x-2 sm:space-x-3 mb-3">
+                <input
+                  type="checkbox"
+                  id="showGuarantorIndependent"
+                  checked={showGuarantorIndependent}
+                  onChange={(e) => setShowGuarantorIndependent(e.target.checked)}
+                  className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 focus:ring-amber-500 border-gray-300 rounded touch-manipulation"
+                />
+                <label htmlFor="showGuarantorIndependent" className="text-xs sm:text-sm font-medium text-gray-700">
+                  El aval trabaja con boletas de honorarios (no tiene contrato ni liquidaciones)
+                </label>
+              </div>
+
+              <p className="text-xs sm:text-sm text-amber-700 mb-4">
+                Si el aval trabaja de manera independiente, adjunta sus documentos tributarios en lugar del contrato y las liquidaciones tradicionales.
+              </p>
+
+              {showGuarantorIndependent && (
+                <div className="space-y-4 pt-4 border-t border-amber-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="mb-3">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        📊 Declaración Anual de Renta del Aval (Formulario 22)
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => setGuarantorDocuments(prev => ({ ...prev, formulario22: e.target.files?.[0] || null }))}
+                        className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">
+                        Declaración jurada del aval del año anterior
+                      </p>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        🧾 Resumen Anual de Boletas de Honorarios del Aval (SII)
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => setGuarantorDocuments(prev => ({ ...prev, resumenBoletas: e.target.files?.[0] || null }))}
+                        className="w-full p-2 sm:p-3 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">
+                        Certificado del SII del aval
+                      </p>
+                    </div>
+                  </div>
+            </div>
+          )}
+            </div>
+          </div>
         </div>
       </div>
 

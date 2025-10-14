@@ -56,8 +56,30 @@ export const RentalPublicationForm: React.FC = () => {
     common_expenses: '',
     bedrooms: '1',
     bathrooms: '1',
-    area_sqm: '',
+    estacionamientos: '0',
+    metrosUtiles: '',
+    metrosTotales: '',
+    tieneTerraza: 'No',
+    anoConstruccion: '',
     description: '',
+
+    // Características Internas
+    sistemaAguaCaliente: 'Calefón',
+    tipoCocina: 'Cerrada',
+    tieneSalaEstar: 'No',
+
+    // Amenidades
+    amenidades: {
+      conserje: false,
+      condominio: false,
+      piscina: false,
+      salonEventos: false,
+      gimnasio: false,
+      cowork: false,
+      quincho: false,
+      salaCine: false,
+      areasVerdes: false,
+    },
 
     // Datos del Propietario
     owner_first_name: '',
@@ -69,6 +91,7 @@ export const RentalPublicationForm: React.FC = () => {
     owner_region: '',
     owner_commune: '',
     marital_status: '',
+    asesorAsignado: 'Sin Asignar',
     property_regime: '',
 
     // Archivos
@@ -168,7 +191,8 @@ export const RentalPublicationForm: React.FC = () => {
     if (!formData.region) newErrors.region = 'La región es requerida';
     if (!formData.commune) newErrors.commune = 'La comuna es requerida';
     if (!formData.price.trim()) newErrors.price = 'El precio de arriendo es requerido';
-    if (!formData.area_sqm.trim()) newErrors.area_sqm = 'La superficie es requerida';
+    if (!formData.metrosUtiles.trim()) newErrors.metrosUtiles = 'Los metros útiles son requeridos';
+    if (!formData.metrosTotales.trim()) newErrors.metrosTotales = 'Los metros totales son requeridos';
     if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
     if (!formData.owner_first_name.trim()) newErrors.owner_first_name = 'El nombre del propietario es requerido';
     if (!formData.owner_paternal_last_name.trim()) newErrors.owner_paternal_last_name = 'El apellido paterno del propietario es requerido';
@@ -191,7 +215,7 @@ export const RentalPublicationForm: React.FC = () => {
   };
 
   // Upload files to Supabase Storage with fallback buckets
-  const uploadFiles = async (tempPropertyId: string) => {
+  const uploadFiles = async (propertyId: string) => {
     console.log('🚀 Iniciando upload de archivos...');
     
     // Upload photos with fallback buckets
@@ -235,7 +259,7 @@ export const RentalPublicationForm: React.FC = () => {
         const { error: dbError } = await supabase
           .from('property_images')
           .insert({
-            property_id: tempPropertyId,
+            property_id: propertyId,
             image_url: publicUrl,
             storage_path: uploadResult.data.path,
             created_at: new Date().toISOString()
@@ -298,7 +322,7 @@ export const RentalPublicationForm: React.FC = () => {
             .from('documents')
             .insert({
               uploader_id: user?.id,
-              related_entity_id: tempPropertyId,
+              related_entity_id: propertyId,
               related_entity_type: 'property_legal',
               document_type: key,
               storage_path: uploadResult.data.path,
@@ -343,66 +367,29 @@ export const RentalPublicationForm: React.FC = () => {
 
     setLoading(true);
 
-    // Generate a temporary UUID for this transaction
-    const tempPropertyId = crypto.randomUUID();
-
     try {
-      // Ensure the user's profile exists (opcional, no crítico)
-      try {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            first_name: formData.owner_first_name,
-            paternal_last_name: formData.owner_paternal_last_name,
-            maternal_last_name: formData.owner_maternal_last_name,
-            email: user.email || '',
-            phone: null,
-            address_street: formData.owner_address_street,
-            address_number: formData.owner_address_number,
-            address_commune: formData.owner_commune,
-            address_region: formData.owner_region,
-            profession: null,
-            marital_status: formData.marital_status,
-            property_regime: formData.marital_status === 'casado' ? formData.property_regime : null,
-          }, {
-            onConflict: 'id'
-          });
-
-        if (profileError) {
-          console.warn('Warning upserting profile:', profileError);
-          // Continue anyway - profile creation is not critical
-        }
-      } catch (error) {
-        console.warn('Profile upsert failed, continuing anyway:', error);
-      }
-
-      // Upload files only if they exist (optional)
-      if (photoFiles.length > 0 || Object.values(formData.documents).some(doc => doc !== null)) {
-        setUploading(true);
-        try {
-          await uploadFiles(tempPropertyId);
-        } catch (error) {
-          console.warn('File upload failed, continuing without files:', error);
-          // Continue without files - they are optional
-        } finally {
-          setUploading(false);
-        }
-      }
+      // Note: Owner profile data is stored in rental_owners table, not in the user's profile
+      // The property owner_id points to the advisor who created the property
 
       // Parse numeric values with validation
       const price = parseFloat(formData.price);
-      const areaSqm = parseInt(formData.area_sqm);
+      const metrosUtiles = parseInt(formData.metrosUtiles);
+      const metrosTotales = parseInt(formData.metrosTotales);
+      const anoConstruccion = formData.anoConstruccion ? parseInt(formData.anoConstruccion) : null;
       const commonExpenses = formData.common_expenses ? parseFloat(formData.common_expenses) : 0;
       const bedrooms = parseInt(formData.bedrooms);
       const bathrooms = parseInt(formData.bathrooms);
-      
-      if (isNaN(price) || isNaN(areaSqm) || isNaN(bedrooms) || isNaN(bathrooms)) {
+      const parkingSpaces = formData.estacionamientos === '5+' ? 5 : parseInt(formData.estacionamientos);
+
+      if (isNaN(price) || isNaN(metrosUtiles) || isNaN(metrosTotales) || isNaN(bedrooms) || isNaN(bathrooms) || isNaN(parkingSpaces)) {
         throw new Error('Valores numéricos inválidos');
       }
 
+      // TODO: Implement proper owner assignment logic
+      // Currently assigning to the advisor (user.id), but should assign to actual property owner
+      // This requires either finding existing user by RUT or creating new user account for owner
       const propertyData = {
-        owner_id: user.id,
+        owner_id: user.id, // FIXME: This should be the actual owner's user ID, not the advisor's
         listing_type: 'arriendo' as const,
         status: 'disponible' as const,
         address_street: formData.address_street,
@@ -414,11 +401,30 @@ export const RentalPublicationForm: React.FC = () => {
         common_expenses_clp: commonExpenses,
         bedrooms: bedrooms,
         bathrooms: bathrooms,
-        surface_m2: areaSqm,
+        estacionamientos: parkingSpaces,
+        surface_m2: metrosTotales, // Use existing column temporarily
         description: formData.description,
         created_at: new Date().toISOString()
+        // Note: New columns will be added once migration is applied:
+        // metros_utiles: metrosUtiles,
+        // metros_totales: metrosTotales,
+        // tiene_terraza: formData.tieneTerraza === 'Sí',
+        // ano_construccion: anoConstruccion,
+        // sistema_agua_caliente: formData.sistemaAguaCaliente,
+        // tipo_cocina: formData.tipoCocina,
+        // tiene_sala_estar: formData.tieneSalaEstar === 'Sí',
+        // has_doorman: formData.amenidades.conserje,
+        // has_condominium: formData.amenidades.condominio,
+        // has_pool: formData.amenidades.piscina,
+        // has_event_room: formData.amenidades.salonEventos,
+        // has_gym: formData.amenidades.gimnasio,
+        // has_cowork: formData.amenidades.cowork,
+        // has_bbq_area: formData.amenidades.quincho,
+        // has_cinema: formData.amenidades.salaCine,
+        // has_green_areas: formData.amenidades.areasVerdes,
       };
 
+      // Insert property first
       const { data: propertyResult, error } = await supabase
         .from('properties')
         .insert(propertyData)
@@ -426,6 +432,19 @@ export const RentalPublicationForm: React.FC = () => {
         .single();
 
       if (error) throw error;
+
+      // Upload files only if they exist (optional) - now with real property ID
+      if (photoFiles.length > 0 || Object.values(formData.documents).some(doc => doc !== null)) {
+        setUploading(true);
+        try {
+          await uploadFiles(propertyResult.id);
+        } catch (error) {
+          console.warn('File upload failed, continuing without files:', error);
+          // Continue without files - they are optional
+        } finally {
+          setUploading(false);
+        }
+      }
 
       // Insert rental owner information with specific ID capture
       if (propertyResult?.id) {
@@ -464,28 +483,6 @@ export const RentalPublicationForm: React.FC = () => {
         }
       }
 
-      // Update property_id references in images and documents
-      if (propertyResult?.id) {
-        // Update property_images with correct property_id
-        if (photoFiles.length > 0) {
-          const { error: imageUpdateError } = await supabase
-            .from('property_images')
-            .update({ property_id: propertyResult.id })
-            .eq('property_id', tempPropertyId);
-
-          if (imageUpdateError) console.warn('Warning: Could not update property images:', imageUpdateError);
-        }
-
-        // Update documents with correct property_id
-        if (Object.values(formData.documents).some(doc => doc !== null)) {
-          const { error: docUpdateError } = await supabase
-            .from('documents')
-            .update({ related_entity_id: propertyResult.id })
-            .eq('related_entity_id', tempPropertyId);
-
-          if (docUpdateError) console.warn('Warning: Could not update property documents:', docUpdateError);
-        }
-      }
 
       alert('Propiedad publicada exitosamente!');
       navigate('/portfolio');
@@ -738,28 +735,103 @@ export const RentalPublicationForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Superficie */}
+              {/* Estacionamientos */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Superficie (m²) *
+                  Estacionamientos
+                </label>
+                <select
+                  value={formData.estacionamientos}
+                  onChange={(e) => setFormData({ ...formData, estacionamientos: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                >
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5+">5+</option>
+                </select>
+              </div>
+
+              {/* Metros Cuadrados Útiles y Totales */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    M² Útiles *
                 </label>
                 <input
                   type="number"
                   required
                   min="0"
-                  value={formData.area_sqm}
-                  onChange={(e) => setFormData({ ...formData, area_sqm: e.target.value })}
+                    value={formData.metrosUtiles}
+                    onChange={(e) => setFormData({ ...formData, metrosUtiles: e.target.value })}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                    errors.area_sqm ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      errors.metrosUtiles ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="120"
+                    placeholder="Ej: 85"
                 />
-                {errors.area_sqm && (
+                  {errors.metrosUtiles && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
                     <AlertCircle className="h-4 w-4 mr-1" />
-                    {errors.area_sqm}
+                      {errors.metrosUtiles}
                   </p>
                 )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    M² Totales *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={formData.metrosTotales}
+                    onChange={(e) => setFormData({ ...formData, metrosTotales: e.target.value })}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      errors.metrosTotales ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: 95"
+                  />
+                  {errors.metrosTotales && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.metrosTotales}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Terraza */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  ¿Tiene Terraza?
+                </label>
+                <select
+                  value={formData.tieneTerraza}
+                  onChange={(e) => setFormData({ ...formData, tieneTerraza: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                >
+                  <option value="No">No</option>
+                  <option value="Sí">Sí</option>
+                </select>
+              </div>
+
+              {/* Año de Construcción */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Año de Construcción
+                </label>
+                <input
+                  type="number"
+                  min="1800"
+                  max={new Date().getFullYear()}
+                  value={formData.anoConstruccion}
+                  onChange={(e) => setFormData({ ...formData, anoConstruccion: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  placeholder="Ej: 2020"
+                />
               </div>
 
               {/* Descripción */}
@@ -787,7 +859,228 @@ export const RentalPublicationForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Sección 2: Datos del Propietario */}
+          {/* Sección 2: Características Internas */}
+          <div className="space-y-6">
+            <div className="border-b pb-2">
+              <h2 className="text-xl font-bold text-gray-900">Características Internas</h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              {/* Sistema de Agua Caliente */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Agua Caliente
+                </label>
+                <select
+                  value={formData.sistemaAguaCaliente}
+                  onChange={(e) => setFormData({ ...formData, sistemaAguaCaliente: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                >
+                  <option value="Calefón">Calefón</option>
+                  <option value="Termo Eléctrico">Termo Eléctrico</option>
+                  <option value="Caldera Central">Caldera Central</option>
+                </select>
+              </div>
+
+              {/* Tipo de Cocina */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tipo de Cocina
+                </label>
+                <select
+                  value={formData.tipoCocina}
+                  onChange={(e) => setFormData({ ...formData, tipoCocina: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                >
+                  <option value="Cerrada">Cerrada</option>
+                  <option value="Americana">Americana</option>
+                  <option value="Integrada">Integrada</option>
+                </select>
+              </div>
+
+              {/* Sala de Estar */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  ¿Cuenta con Sala de Estar?
+                </label>
+                <select
+                  value={formData.tieneSalaEstar}
+                  onChange={(e) => setFormData({ ...formData, tieneSalaEstar: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                >
+                  <option value="No">No</option>
+                  <option value="Sí">Sí</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección 3: Amenidades y Equipamiento */}
+          <div className="space-y-6">
+            <div className="border-b pb-2">
+              <h2 className="text-xl font-bold text-gray-900">Amenidades y Equipamiento</h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              {/* Checkboxes en grilla 3x4 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Conserje */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="conserje"
+                    checked={formData.amenidades.conserje}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, conserje: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="conserje" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Conserje
+                  </label>
+                </div>
+
+                {/* Condominio */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="condominio"
+                    checked={formData.amenidades.condominio}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, condominio: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="condominio" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Condominio
+                  </label>
+                </div>
+
+                {/* Piscina */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="piscina"
+                    checked={formData.amenidades.piscina}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, piscina: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="piscina" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Piscina
+                  </label>
+                </div>
+
+                {/* Salón de Eventos */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="salonEventos"
+                    checked={formData.amenidades.salonEventos}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, salonEventos: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="salonEventos" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Salón de Eventos
+                  </label>
+                </div>
+
+                {/* Gimnasio */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="gimnasio"
+                    checked={formData.amenidades.gimnasio}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, gimnasio: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="gimnasio" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Gimnasio
+                  </label>
+                </div>
+
+                {/* Cowork */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="cowork"
+                    checked={formData.amenidades.cowork}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, cowork: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="cowork" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Cowork
+                  </label>
+                </div>
+
+                {/* Quincho */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="quincho"
+                    checked={formData.amenidades.quincho}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, quincho: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="quincho" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Quincho
+                  </label>
+                </div>
+
+                {/* Sala de Cine */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="salaCine"
+                    checked={formData.amenidades.salaCine}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, salaCine: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="salaCine" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Sala de Cine
+                  </label>
+                </div>
+
+                {/* Áreas Verdes */}
+                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="areasVerdes"
+                    checked={formData.amenidades.areasVerdes}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      amenidades: { ...formData.amenidades, areasVerdes: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="areasVerdes" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Áreas Verdes
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección 4: Datos del Propietario */}
           <div className="space-y-6">
             <div className="border-b pb-2">
               <h2 className="text-xl font-bold text-gray-900">Datos del Propietario</h2>
@@ -1014,6 +1307,24 @@ export const RentalPublicationForm: React.FC = () => {
                     {errors.marital_status}
                   </p>
                 )}
+              </div>
+
+              {/* Asesor Asignado */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Asesor Asignado
+                </label>
+                <select
+                  value={formData.asesorAsignado}
+                  onChange={(e) => setFormData({ ...formData, asesorAsignado: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                >
+                  <option value="Sin Asignar">Sin Asignar</option>
+                  <option value="Asesor 1">Asesor 1</option>
+                  <option value="Asesor 2">Asesor 2</option>
+                  <option value="Asesor 3">Asesor 3</option>
+                  <option value="Asesor 4">Asesor 4</option>
+                </select>
               </div>
 
               {/* Régimen Patrimonial (condicional) */}

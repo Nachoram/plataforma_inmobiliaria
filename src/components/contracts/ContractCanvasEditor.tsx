@@ -466,6 +466,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
               <div key={clausula.id} className="mb-8">
                 <div className="flex items-start justify-between mb-2">
                   <EditableContent
+                    key={`clausula-titulo-${clausula.id}`}
                     id={`clausula-titulo-${clausula.id}`}
                     value={clausula.titulo}
                     onChange={(value) => updateClause(clausula.id, 'titulo', value)}
@@ -484,6 +485,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                   </button>
                 </div>
                 <EditableContent
+                  key={`clausula-contenido-${clausula.id}`}
                   id={`clausula-contenido-${clausula.id}`}
                   value={clausula.contenido}
                   onChange={(value) => updateClause(clausula.id, 'contenido', value)}
@@ -519,6 +521,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <EditableContent
+                        key={`firmante-rol-${firmante.id}`}
                         id={`firmante-rol-${firmante.id}`}
                         value={firmante.rol}
                         onChange={(value) => updateFirmante(firmante.id, 'rol', value)}
@@ -529,6 +532,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                         viewClassName="font-serif font-bold uppercase text-sm text-gray-900 mb-2"
                       />
                       <EditableContent
+                        key={`firmante-nombre-${firmante.id}`}
                         id={`firmante-nombre-${firmante.id}`}
                         value={firmante.nombre}
                         onChange={(value) => updateFirmante(firmante.id, 'nombre', value)}
@@ -539,6 +543,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
                         viewClassName="font-serif text-sm text-gray-800 mb-1"
                       />
                       <EditableContent
+                        key={`firmante-rut-${firmante.id}`}
                         id={`firmante-rut-${firmante.id}`}
                         value={firmante.rut}
                         onChange={(value) => updateFirmante(firmante.id, 'rut', value)}

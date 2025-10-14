@@ -145,35 +145,8 @@ export const SalePublicationForm: React.FC = () => {
     const tempPropertyId = crypto.randomUUID();
 
     try {
-      // Ensure the user's profile exists (opcional, no crítico)
-      try {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            first_name: formData.owner_first_name,
-            paternal_last_name: formData.owner_paternal_last_name,
-            maternal_last_name: formData.owner_maternal_last_name,
-            email: user.email || '',
-            phone: null,
-            address_street: formData.owner_address_street,
-            address_number: formData.owner_address_number,
-            address_commune: formData.owner_commune,
-            address_region: formData.owner_region,
-            profession: null,
-            marital_status: formData.marital_status,
-            property_regime: formData.marital_status === 'casado' ? formData.property_regime : null,
-          }, {
-            onConflict: 'id'
-          });
-
-        if (profileError) {
-          console.warn('Warning upserting profile:', profileError);
-          // Continue anyway - profile creation is not critical
-        }
-      } catch (error) {
-        console.warn('Profile upsert failed, continuing anyway:', error);
-      }
+      // Note: Owner profile data is stored in sale_owners table, not in the user's profile
+      // The property owner_id points to the advisor who created the property
 
       // Parse numeric values with validation
       const price = parseFloat(formData.price);
@@ -186,8 +159,11 @@ export const SalePublicationForm: React.FC = () => {
         throw new Error('Valores numéricos inválidos');
       }
 
+      // TODO: Implement proper owner assignment logic
+      // Currently assigning to the advisor (user.id), but should assign to actual property owner
+      // This requires either finding existing user by RUT or creating new user account for owner
       const propertyData = {
-        owner_id: user.id,
+        owner_id: user.id, // FIXME: This should be the actual owner's user ID, not the advisor's
         listing_type: 'venta' as const,
         status: 'disponible' as const,
         address_street: formData.address_street,

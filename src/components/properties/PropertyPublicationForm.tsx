@@ -36,6 +36,8 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
     bedrooms: '',
     bathrooms: '',
     surface_m2: '',
+    tiene_bodega: 'No' as 'Sí' | 'No',
+    metros_bodega: '',
     description: '',
   });
 
@@ -147,6 +149,8 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             bedrooms: property.bedrooms.toString(),
             bathrooms: property.bathrooms.toString(),
             surface_m2: property.surface_m2.toString(),
+            tiene_bodega: (property.tiene_bodega ? 'Sí' : 'No') as 'Sí' | 'No',
+            metros_bodega: property.metros_bodega?.toString() || '',
             description: property.description,
           };
 
@@ -405,6 +409,8 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         bedrooms: parseInt(formData.bedrooms),
         bathrooms: parseInt(formData.bathrooms),
         surface_m2: parseInt(formData.surface_m2),
+        tiene_bodega: formData.tiene_bodega === 'Sí',
+        metros_bodega: formData.metros_bodega ? parseInt(formData.metros_bodega) : null,
         description: formData.description,
       };
 
@@ -730,6 +736,41 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
               min="0"
             />
           </div>
+        </div>
+
+        {/* Bodega */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Bodega
+            </label>
+            <select
+              name="tiene_bodega"
+              value={formData.tiene_bodega}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="No">No</option>
+              <option value="Sí">Sí</option>
+            </select>
+          </div>
+
+          {formData.tiene_bodega === 'Sí' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                M² Bodega
+              </label>
+              <input
+                type="number"
+                name="metros_bodega"
+                value={formData.metros_bodega}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Ej: 5"
+                min="0"
+              />
+            </div>
+          )}
         </div>
 
         {/* Descripción */}

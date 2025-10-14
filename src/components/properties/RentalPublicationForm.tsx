@@ -67,6 +67,8 @@ export const RentalPublicationForm: React.FC = () => {
     sistemaAguaCaliente: 'Calefón',
     tipoCocina: 'Cerrada',
     tieneSalaEstar: 'No',
+    tieneBodega: 'No',
+    metrosBodega: '',
 
     // Amenidades
     amenidades: {
@@ -375,6 +377,7 @@ export const RentalPublicationForm: React.FC = () => {
       const price = parseFloat(formData.price);
       const metrosUtiles = parseInt(formData.metrosUtiles);
       const metrosTotales = parseInt(formData.metrosTotales);
+      const metrosBodega = formData.metrosBodega ? parseInt(formData.metrosBodega) : null;
       const anoConstruccion = formData.anoConstruccion ? parseInt(formData.anoConstruccion) : null;
       const commonExpenses = formData.common_expenses ? parseFloat(formData.common_expenses) : 0;
       const bedrooms = parseInt(formData.bedrooms);
@@ -404,15 +407,17 @@ export const RentalPublicationForm: React.FC = () => {
         estacionamientos: parkingSpaces,
         surface_m2: metrosTotales, // Use existing column temporarily
         description: formData.description,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
         // Note: New columns will be added once migration is applied:
-        // metros_utiles: metrosUtiles,
-        // metros_totales: metrosTotales,
-        // tiene_terraza: formData.tieneTerraza === 'Sí',
-        // ano_construccion: anoConstruccion,
-        // sistema_agua_caliente: formData.sistemaAguaCaliente,
-        // tipo_cocina: formData.tipoCocina,
-        // tiene_sala_estar: formData.tieneSalaEstar === 'Sí',
+        metros_utiles: metrosUtiles,
+        metros_totales: metrosTotales,
+        tiene_terraza: formData.tieneTerraza === 'Sí',
+        ano_construccion: anoConstruccion,
+        sistema_agua_caliente: formData.sistemaAguaCaliente,
+        tipo_cocina: formData.tipoCocina,
+        tiene_sala_estar: formData.tieneSalaEstar === 'Sí',
+        tiene_bodega: formData.tieneBodega === 'Sí',
+        metros_bodega: metrosBodega,
         // has_doorman: formData.amenidades.conserje,
         // has_condominium: formData.amenidades.condominio,
         // has_pool: formData.amenidades.piscina,
@@ -911,6 +916,39 @@ export const RentalPublicationForm: React.FC = () => {
                   <option value="No">No</option>
                   <option value="Sí">Sí</option>
                 </select>
+              </div>
+
+              {/* Bodega */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    ¿Tiene Bodega?
+                  </label>
+                  <select
+                    value={formData.tieneBodega}
+                    onChange={(e) => setFormData({ ...formData, tieneBodega: e.target.value, metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  >
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                  </select>
+                </div>
+
+                {formData.tieneBodega === 'Sí' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      M² Bodega
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.metrosBodega}
+                      onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                      placeholder="Ej: 5"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>

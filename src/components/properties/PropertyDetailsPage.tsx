@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X, Home, ChefHat, Droplets, Sofa, Check } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X, Home, ChefHat, Droplets, Sofa, Check, Car, DollarSign } from 'lucide-react';
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import RentalApplicationForm from './RentalApplicationForm';
@@ -60,6 +60,7 @@ export const PropertyDetailsPage: React.FC = () => {
           common_expenses_clp,
           bedrooms,
           bathrooms,
+          estacionamientos,
           metros_utiles,
           metros_totales,
           ano_construccion,
@@ -293,31 +294,36 @@ export const PropertyDetailsPage: React.FC = () => {
               </div>
 
               {/* Property Features */}
-              <div className="flex justify-around items-center text-center p-4 border-y">
-                <div>
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 py-4 border-y">
+                <div className="text-center">
                   <Bed className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                  <p className="text-lg font-semibold text-gray-900">{property.bedrooms}</p>
-                  <p className="text-sm text-gray-500">Dormitorios</p>
+                  <div className="text-lg font-semibold text-gray-900">{property.bedrooms}</div>
+                  <div className="text-sm text-gray-500">Dormitorios</div>
                 </div>
-                <div>
+                <div className="text-center">
                   <Bath className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                  <p className="text-lg font-semibold text-gray-900">{property.bathrooms}</p>
-                  <p className="text-sm text-gray-500">Baños</p>
+                  <div className="text-lg font-semibold text-gray-900">{property.bathrooms}</div>
+                  <div className="text-sm text-gray-500">Baños</div>
                 </div>
-                <div>
+                <div className="text-center">
+                  <Car className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+                  <div className="text-lg font-semibold text-gray-900">{property.estacionamientos || 0}</div>
+                  <div className="text-sm text-gray-500">Estacionamientos</div>
+                </div>
+                <div className="text-center">
                   <Square className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                  <p className="text-lg font-semibold text-gray-900">{property.metros_utiles || 'N/A'}</p>
-                  <p className="text-sm text-gray-500">M² Útiles</p>
+                  <div className="text-lg font-semibold text-gray-900">{property.metros_utiles || 'N/A'}</div>
+                  <div className="text-sm text-gray-500">m² Útiles</div>
                 </div>
-                <div>
+                <div className="text-center">
                   <Square className="h-6 w-6 text-emerald-600 mx-auto mb-2" />
-                  <p className="text-lg font-semibold text-gray-900">{property.metros_totales || 'N/A'}</p>
-                  <p className="text-sm text-gray-500">M² Totales</p>
+                  <div className="text-lg font-semibold text-gray-900">{property.metros_totales || 'N/A'}</div>
+                  <div className="text-sm text-gray-500">m² Totales</div>
                 </div>
-                <div>
+                <div className="text-center">
                   <Calendar className="h-6 w-6 text-orange-600 mx-auto mb-2" />
-                  <p className="text-lg font-semibold text-gray-900">{property.ano_construccion || 'N/A'}</p>
-                  <p className="text-sm text-gray-500">Construcción</p>
+                  <div className="text-lg font-semibold text-gray-900">{property.ano_construccion || 'N/A'}</div>
+                  <div className="text-sm text-gray-500">Construcción</div>
                 </div>
               </div>
             </div>
@@ -368,6 +374,17 @@ export const PropertyDetailsPage: React.FC = () => {
                     <div className="font-medium text-gray-900">{property.tiene_sala_estar ? 'Sí' : 'No'}</div>
                   </div>
                 </div>
+                {property.common_expenses_clp && property.common_expenses_clp > 0 && (
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    <div>
+                      <div className="text-sm text-gray-500">Gastos Comunes</div>
+                      <div className="font-medium text-gray-900">
+                        {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(property.common_expenses_clp)}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

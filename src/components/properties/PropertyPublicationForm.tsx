@@ -38,6 +38,8 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
     surface_m2: '',
     tiene_bodega: 'No' as 'Sí' | 'No',
     metros_bodega: '',
+    ubicacion_bodega: '',
+    ubicacion_estacionamiento: '',
     description: '',
   });
 
@@ -151,6 +153,8 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             surface_m2: property.surface_m2.toString(),
             tiene_bodega: (property.tiene_bodega ? 'Sí' : 'No') as 'Sí' | 'No',
             metros_bodega: property.metros_bodega?.toString() || '',
+            ubicacion_bodega: property.ubicacion_bodega || '',
+            ubicacion_estacionamiento: property.ubicacion_estacionamiento || '',
             description: property.description,
           };
 
@@ -411,6 +415,8 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         surface_m2: parseInt(formData.surface_m2),
         tiene_bodega: formData.tiene_bodega === 'Sí',
         metros_bodega: formData.metros_bodega ? parseInt(formData.metros_bodega) : null,
+        ubicacion_bodega: formData.ubicacion_bodega || null,
+        ubicacion_estacionamiento: formData.ubicacion_estacionamiento || null,
         description: formData.description,
       };
 
@@ -738,6 +744,22 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           </div>
         </div>
 
+        {/* Ubicación de Estacionamientos */}
+        <div>
+          <label htmlFor="ubicacion_estacionamiento" className="block text-sm font-medium text-gray-700 mb-2">
+            Ubicación/Nº Estacionamiento(s) (Opcional)
+          </label>
+          <input
+            type="text"
+            id="ubicacion_estacionamiento"
+            name="ubicacion_estacionamiento"
+            value={formData.ubicacion_estacionamiento}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Ej: E-21, E-22 (piso -2)"
+          />
+        </div>
+
         {/* Bodega */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -756,20 +778,36 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           </div>
 
           {formData.tiene_bodega === 'Sí' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                M² Bodega
-              </label>
-              <input
-                type="number"
-                name="metros_bodega"
-                value={formData.metros_bodega}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: 5"
-                min="0"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  M² Bodega
+                </label>
+                <input
+                  type="number"
+                  name="metros_bodega"
+                  value={formData.metros_bodega}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: 5"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label htmlFor="ubicacion_bodega" className="block text-sm font-medium text-gray-700 mb-2">
+                  Ubicación/Nº Bodega (Opcional)
+                </label>
+                <input
+                  type="text"
+                  id="ubicacion_bodega"
+                  name="ubicacion_bodega"
+                  value={formData.ubicacion_bodega}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: B-115 (piso -1)"
+                />
+              </div>
+            </>
           )}
         </div>
 

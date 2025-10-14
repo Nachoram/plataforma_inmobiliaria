@@ -69,6 +69,8 @@ export const RentalPublicationForm: React.FC = () => {
     tieneSalaEstar: 'No',
     tieneBodega: 'No',
     metrosBodega: '',
+    ubicacionBodega: '',
+    ubicacionEstacionamiento: '',
 
     // Amenidades
     amenidades: {
@@ -418,6 +420,8 @@ export const RentalPublicationForm: React.FC = () => {
         tiene_sala_estar: formData.tieneSalaEstar === 'Sí',
         tiene_bodega: formData.tieneBodega === 'Sí',
         metros_bodega: metrosBodega,
+        ubicacion_bodega: formData.ubicacionBodega || null,
+        ubicacion_estacionamiento: formData.ubicacionEstacionamiento || null,
         // has_doorman: formData.amenidades.conserje,
         // has_condominium: formData.amenidades.condominio,
         // has_pool: formData.amenidades.piscina,
@@ -759,6 +763,20 @@ export const RentalPublicationForm: React.FC = () => {
                 </select>
               </div>
 
+              {/* Ubicación de Estacionamientos */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ubicación/Nº Estacionamiento(s) (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.ubicacionEstacionamiento}
+                  onChange={(e) => setFormData({ ...formData, ubicacionEstacionamiento: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  placeholder="Ej: E-21, E-22 (piso -2)"
+                />
+              </div>
+
               {/* Metros Cuadrados Útiles y Totales */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -935,19 +953,33 @@ export const RentalPublicationForm: React.FC = () => {
                 </div>
 
                 {formData.tieneBodega === 'Sí' && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      M² Bodega
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.metrosBodega}
-                      onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                      placeholder="Ej: 5"
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        M² Bodega
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.metrosBodega}
+                        onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        placeholder="Ej: 5"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Ubicación/Nº Bodega (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.ubicacionBodega}
+                        onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        placeholder="Ej: B-115 (piso -1)"
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             </div>

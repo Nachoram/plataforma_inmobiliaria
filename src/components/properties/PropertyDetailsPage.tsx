@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X, Home, ChefHat, Droplets, Sofa, Check } from 'lucide-react';
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import RentalApplicationForm from './RentalApplicationForm';
@@ -10,6 +10,19 @@ interface PropertyWithImages extends Property {
     image_url: string;
     storage_path: string;
   }>;
+  propiedad_amenidades?: Array<{
+    amenidades: {
+      nombre: string;
+    };
+  }>;
+  asesor?: {
+    id: string;
+    first_name: string;
+    paternal_last_name: string;
+    maternal_last_name: string;
+    email: string;
+    phone: string;
+  };
 }
 
 export const PropertyDetailsPage: React.FC = () => {
@@ -30,7 +43,7 @@ export const PropertyDetailsPage: React.FC = () => {
 
   const fetchPropertyDetails = async () => {
     try {
-      // Fetch property with images
+      // Fetch property with images, amenities and advisor info
       const { data: propertyData, error: propertyError } = await supabase
         .from('properties')
         .select(`
@@ -38,6 +51,19 @@ export const PropertyDetailsPage: React.FC = () => {
           property_images (
             image_url,
             storage_path
+          ),
+          propiedad_amenidades (
+            amenidades (
+              nombre
+            )
+          ),
+          asesor:profiles!asesor_id (
+            id,
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            email,
+            phone
           )
         `)
         .eq('id', id)
@@ -46,7 +72,7 @@ export const PropertyDetailsPage: React.FC = () => {
       if (propertyError) throw propertyError;
       setProperty(propertyData);
 
-      // Fetch owner profile
+      // Fetch owner profile (still needed for backward compatibility)
       const { data: ownerData, error: ownerError } = await supabase
         .from('profiles')
         .select('*')
@@ -58,8 +84,17 @@ export const PropertyDetailsPage: React.FC = () => {
         // Continue without owner data if profile doesn't exist
       }
       setOwner(ownerData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching property details:', error);
+      if (error?.message) {
+        console.error('Error message:', error.message);
+      }
+      if (error?.details) {
+        console.error('Error details:', error.details);
+      }
+      if (error?.hint) {
+        console.error('Error hint:', error.hint);
+      }
     } finally {
       setLoading(false);
     }
@@ -233,7 +268,7 @@ export const PropertyDetailsPage: React.FC = () => {
               </div>
 
               {/* Property Features */}
-              <div className="grid grid-cols-3 gap-6 py-4 border-y">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-6 py-4 border-y">
                 <div className="text-center">
                   <Bed className="h-6 w-6 text-blue-600 mx-auto mb-2" />
                   <div className="text-lg font-semibold text-gray-900">{property.bedrooms}</div>
@@ -244,11 +279,25 @@ export const PropertyDetailsPage: React.FC = () => {
                   <div className="text-lg font-semibold text-gray-900">{property.bathrooms}</div>
                   <div className="text-sm text-gray-500">Baños</div>
                 </div>
-                {property.surface_m2 && (
+                {property.metros_utiles && (
                   <div className="text-center">
                     <Square className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                    <div className="text-lg font-semibold text-gray-900">{property.surface_m2}</div>
-                    <div className="text-sm text-gray-500">m²</div>
+                    <div className="text-lg font-semibold text-gray-900">{property.metros_utiles}</div>
+                    <div className="text-sm text-gray-500">m² Útiles</div>
+                  </div>
+                )}
+                {property.metros_totales && (
+                  <div className="text-center">
+                    <Square className="h-6 w-6 text-emerald-600 mx-auto mb-2" />
+                    <div className="text-lg font-semibold text-gray-900">{property.metros_totales}</div>
+                    <div className="text-sm text-gray-500">m² Totales</div>
+                  </div>
+                )}
+                {property.ano_construccion && (
+                  <div className="text-center">
+                    <Calendar className="h-6 w-6 text-orange-600 mx-auto mb-2" />
+                    <div className="text-lg font-semibold text-gray-900">{property.ano_construccion}</div>
+                    <div className="text-sm text-gray-500">Construcción</div>
                   </div>
                 )}
               </div>
@@ -264,6 +313,60 @@ export const PropertyDetailsPage: React.FC = () => {
               </div>
             )}
 
+            {/* Características Principales */}
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Características Principales</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {property.tipo_cocina && (
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <ChefHat className="h-5 w-5 text-orange-600" />
+                    <div>
+                      <div className="text-sm text-gray-500">Tipo de Cocina</div>
+                      <div className="font-medium text-gray-900">{property.tipo_cocina}</div>
+                    </div>
+                  </div>
+                )}
+                {property.sistema_agua_caliente && (
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Droplets className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <div className="text-sm text-gray-500">Agua Caliente</div>
+                      <div className="font-medium text-gray-900">{property.sistema_agua_caliente}</div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <Home className="h-5 w-5 text-green-600" />
+                  <div>
+                    <div className="text-sm text-gray-500">Terraza</div>
+                    <div className="font-medium text-gray-900">{property.tiene_terraza ? 'Sí' : 'No'}</div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <Sofa className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <div className="text-sm text-gray-500">Sala de Estar</div>
+                    <div className="font-medium text-gray-900">{property.tiene_sala_estar ? 'Sí' : 'No'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Equipamiento y Amenidades */}
+            {property.propiedad_amenidades && property.propiedad_amenidades.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Equipamiento y Amenidades</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {property.propiedad_amenidades.map((item, index) => (
+                    <div key={index} className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
+                      <Check className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-gray-900">{item.amenidades.nombre}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Publication Date */}
             <div className="flex items-center text-sm text-gray-500">
               <Calendar className="h-4 w-4 mr-2" />
@@ -274,31 +377,58 @@ export const PropertyDetailsPage: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Owner Information */}
+          {/* Advisor Information */}
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <User className="h-5 w-5 mr-2" />
-              Información del Contacto
+              Información del Asesor
             </h3>
-            
-            {owner && (
+
+            {property.asesor ? (
               <div className="space-y-3">
                 <div>
                   <div className="text-sm text-gray-500">Nombre</div>
-                  <div className="font-medium text-gray-900">{owner.full_name || 'Usuario'}</div>
+                  <div className="font-medium text-gray-900">
+                    {property.asesor.first_name && property.asesor.paternal_last_name
+                      ? `${property.asesor.first_name} ${property.asesor.paternal_last_name}${property.asesor.maternal_last_name ? ` ${property.asesor.maternal_last_name}` : ''}`
+                      : 'Asesor asignado'}
+                  </div>
                 </div>
-                {owner.contact_email && (
+                {property.asesor.email && (
                   <div>
                     <div className="text-sm text-gray-500">Email</div>
-                    <div className="font-medium text-gray-900">{owner.contact_email}</div>
+                    <div className="font-medium text-gray-900">{property.asesor.email}</div>
                   </div>
                 )}
-                {owner.contact_phone && (
-                  <div>
-                    <div className="text-sm text-gray-500">Teléfono</div>
-                    <div className="font-medium text-gray-900">{owner.contact_phone}</div>
+                {property.asesor.phone && (
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-sm text-gray-500">Teléfono</div>
+                      <div className="font-medium text-gray-900">{property.asesor.phone}</div>
+                    </div>
+                    {/* Contact Buttons */}
+                    <div className="flex space-x-2 mt-3">
+                      <a
+                        href={`https://wa.me/${property.asesor.phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 bg-green-600 text-white text-center py-2 px-3 rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
+                      >
+                        📱 WhatsApp
+                      </a>
+                      <a
+                        href={`tel:${property.asesor.phone}`}
+                        className="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        📞 Llamar
+                      </a>
+                    </div>
                   </div>
                 )}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">
+                No hay asesor asignado a esta propiedad
               </div>
             )}
           </div>

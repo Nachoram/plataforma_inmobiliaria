@@ -97,6 +97,16 @@ export interface Property {
   updated_at?: string; // Database: timestamptz, nullable
   is_visible?: boolean; // Database: boolean DEFAULT true
   is_featured?: boolean; // Database: boolean DEFAULT false
+  // Nuevos campos agregados en 20251015000000_update_property_form_fields.sql
+  metros_utiles?: number | null; // Database: numeric(8,2), nullable
+  metros_totales?: number | null; // Database: numeric(8,2), nullable
+  tiene_terraza?: boolean; // Database: boolean DEFAULT false
+  ano_construccion?: number | null; // Database: integer, nullable
+  tiene_sala_estar?: boolean; // Database: boolean DEFAULT false
+  sistema_agua_caliente?: 'Calefón' | 'Termo Eléctrico' | 'Caldera Central' | null; // Database: tipo_agua_caliente, nullable
+  tipo_cocina?: 'Cerrada' | 'Americana' | 'Integrada' | null; // Database: tipo_cocina, nullable
+  asesor_id?: string | null; // Database: uuid REFERENCES profiles(id), nullable
+  estacionamientos?: number; // Database: integer DEFAULT 0
 }
 
 // Interface para datos transformados/calculados en el frontend

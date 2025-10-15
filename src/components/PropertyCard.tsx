@@ -1,6 +1,6 @@
 import React, { useState, memo } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, DollarSign, Building, Heart, TrendingUp, MessageSquare, Eye, Edit, Trash2 } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, Building, Heart, TrendingUp, MessageSquare, Eye, Edit, Trash2 } from 'lucide-react';
 import { SupabaseProperty, formatPriceCLP, isValidPrice } from '../lib/supabase';
 import CustomButton from './common/CustomButton';
 import ImageGallery from './common/ImageGallery';
@@ -261,11 +261,8 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
 
         {/* Price and additional info */}
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center text-lg xs:text-xl font-bold text-gray-900">
-            <DollarSign className="h-4 w-4 xs:h-5 xs:w-5 mr-1 text-green-600 flex-shrink-0" />
-            <span className="text-mobile-lg font-bold">
-              {formatPriceCLP(isValidPrice(property.price_clp) ? property.price_clp : 0)}
-            </span>
+          <div className="text-lg xs:text-xl font-bold text-green-600">
+            {formatPriceCLP(isValidPrice(property.price_clp) ? property.price_clp : 0)}
           </div>
           {context === 'marketplace' && isValidPrice(property.common_expenses_clp) && property.common_expenses_clp > 0 && (
             <div className="text-mobile-xs text-gray-500 text-right">

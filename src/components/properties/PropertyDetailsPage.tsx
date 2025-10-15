@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X, Home, ChefHat, Droplets, Sofa, Check, Car, DollarSign } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X, Home, ChefHat, Droplets, Sofa, Check, Car } from 'lucide-react';
 import { supabase, Property, Profile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import RentalApplicationForm from './RentalApplicationForm';
@@ -386,13 +386,10 @@ export const PropertyDetailsPage: React.FC = () => {
                   </div>
                 </div>
                 {property.common_expenses_clp && property.common_expenses_clp > 0 && (
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-green-600" />
-                    <div>
-                      <div className="text-sm text-gray-500">Gastos Comunes</div>
-                      <div className="font-medium text-gray-900">
-                        {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(property.common_expenses_clp)}
-                      </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-gray-500">Gastos Comunes</div>
+                    <div className="font-medium text-green-600">
+                      {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(property.common_expenses_clp)}
                     </div>
                   </div>
                 )}

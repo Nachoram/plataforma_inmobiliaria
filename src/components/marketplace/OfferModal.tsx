@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, DollarSign, TrendingUp } from 'lucide-react';
+import { X, TrendingUp } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { webhookClient } from '../../lib/webhook';
@@ -231,9 +231,8 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
         <div className="p-6 bg-gray-50 border-b">
           <h3 className="font-medium text-gray-900 mb-1">{property.address_street} {property.address_number}</h3>
           <p className="text-sm text-gray-600 mb-2">{property.address_commune}, {property.address_region}</p>
-          <div className="flex items-center text-lg font-bold text-gray-900">
-            <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-            <span>Precio: {formatPrice(property.price_clp)}</span>
+          <div className="text-lg font-bold text-green-600">
+            Precio: {formatPrice(property.price_clp)}
           </div>
         </div>
 

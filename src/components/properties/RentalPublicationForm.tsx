@@ -105,28 +105,20 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     owner_paternal_last_name: '',
     owner_maternal_last_name: '',
     owner_rut: '',
-    owner_email: '',
-    owner_phone: '',
     // Campos para persona jurídica
     owner_company_name: '',
     owner_company_rut: '',
-    owner_company_business: '',
-    owner_company_email: '',
-    owner_company_phone: '',
     // Campos para representante legal
     owner_representative_first_name: '',
     owner_representative_paternal_last_name: '',
     owner_representative_maternal_last_name: '',
     owner_representative_rut: '',
-    owner_representative_email: '',
-    owner_representative_phone: '',
     // Dirección del propietario (común para ambos tipos)
     owner_address_street: '',
     owner_address_number: '',
     owner_region: '',
     owner_commune: '',
     marital_status: '',
-    asesorAsignado: 'Sin Asignar',
     property_regime: '',
 
     // Archivos
@@ -200,25 +192,17 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         owner_paternal_last_name: '',
         owner_maternal_last_name: '',
         owner_rut: '',
-        owner_email: '',
-        owner_phone: '',
         owner_company_name: '',
         owner_company_rut: '',
-        owner_company_business: '',
-        owner_company_email: '',
-        owner_company_phone: '',
         owner_representative_first_name: '',
         owner_representative_paternal_last_name: '',
         owner_representative_maternal_last_name: '',
         owner_representative_rut: '',
-        owner_representative_email: '',
-        owner_representative_phone: '',
         owner_address_street: '',
         owner_address_number: '',
         owner_region: '',
         owner_commune: '',
         marital_status: '',
-        asesorAsignado: 'Sin Asignar',
         property_regime: '',
 
         // Archivos - las fotos existentes se manejarán por separado
@@ -329,19 +313,15 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       if (!formData.owner_paternal_last_name.trim()) newErrors.owner_paternal_last_name = 'El apellido paterno del propietario es requerido';
       if (!formData.owner_maternal_last_name.trim()) newErrors.owner_maternal_last_name = 'El apellido materno del propietario es requerido';
       if (!formData.owner_rut.trim()) newErrors.owner_rut = 'El RUT del propietario es requerido';
-      if (!formData.owner_email.trim()) newErrors.owner_email = 'El email del propietario es requerido';
       if (!formData.marital_status) newErrors.marital_status = 'El estado civil es requerido';
     } else if (formData.owner_type === 'juridica') {
       if (!formData.owner_company_name.trim()) newErrors.owner_company_name = 'La razón social es requerida';
       if (!formData.owner_company_rut.trim()) newErrors.owner_company_rut = 'El RUT de la empresa es requerido';
-      if (!formData.owner_company_business.trim()) newErrors.owner_company_business = 'El giro de la empresa es requerido';
-      if (!formData.owner_company_email.trim()) newErrors.owner_company_email = 'El email de la empresa es requerido';
 
       // Validaciones para el representante legal
       if (!formData.owner_representative_first_name.trim()) newErrors.owner_representative_first_name = 'El nombre del representante legal es requerido';
       if (!formData.owner_representative_paternal_last_name.trim()) newErrors.owner_representative_paternal_last_name = 'El apellido paterno del representante legal es requerido';
       if (!formData.owner_representative_rut.trim()) newErrors.owner_representative_rut = 'El RUT del representante legal es requerido';
-      if (!formData.owner_representative_email.trim()) newErrors.owner_representative_email = 'El email del representante legal es requerido';
     }
 
     // Validaciones comunes para ambos tipos
@@ -629,8 +609,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           address_department: null,
           address_commune: formData.owner_commune,
           address_region: formData.owner_region,
-          phone: formData.owner_type === 'natural' ? formData.owner_phone : formData.owner_company_phone,
-          email: formData.owner_type === 'natural' ? formData.owner_email : formData.owner_company_email,
         };
 
         // Agregar campos específicos según el tipo de propietario
@@ -648,13 +626,10 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           Object.assign(ownerData, {
             company_name: formData.owner_company_name,
             company_rut: formData.owner_company_rut,
-            company_business: formData.owner_company_business,
             representative_first_name: formData.owner_representative_first_name,
             representative_paternal_last_name: formData.owner_representative_paternal_last_name,
             representative_maternal_last_name: formData.owner_representative_maternal_last_name,
             representative_rut: formData.owner_representative_rut,
-            representative_email: formData.owner_representative_email,
-            representative_phone: formData.owner_representative_phone,
             owner_type: 'juridica',
           });
         }
@@ -1490,43 +1465,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     )}
                   </div>
 
-                  {/* Email del Propietario */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email del Propietario *
-                    </label>
-                    <input
-                      type="email"
-                      required={formData.owner_type === 'natural'}
-                      value={formData.owner_email}
-                      onChange={(e) => setFormData({ ...formData, owner_email: e.target.value })}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                        errors.owner_email ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      placeholder="Ej: juan.perez@email.com"
-                    />
-                    {errors.owner_email && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors.owner_email}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Teléfono del Propietario */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Teléfono del Propietario
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.owner_phone}
-                      onChange={(e) => setFormData({ ...formData, owner_phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                      placeholder="Ej: +56 9 1234 5678"
-                    />
-                  </div>
-
                   {/* Estado Civil */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1635,66 +1573,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     )}
                   </div>
 
-                  {/* Giro */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Giro *
-                    </label>
-                    <input
-                      type="text"
-                      required={formData.owner_type === 'juridica'}
-                      value={formData.owner_company_business}
-                      onChange={(e) => setFormData({ ...formData, owner_company_business: e.target.value })}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                        errors.owner_company_business ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      placeholder="Ej: Actividades inmobiliarias"
-                    />
-                    {errors.owner_company_business && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors.owner_company_business}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Email de la Empresa */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email de la Empresa *
-                    </label>
-                    <input
-                      type="email"
-                      required={formData.owner_type === 'juridica'}
-                      value={formData.owner_company_email}
-                      onChange={(e) => setFormData({ ...formData, owner_company_email: e.target.value })}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                        errors.owner_company_email ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      placeholder="Ej: contacto@inmobiliariaxyz.cl"
-                    />
-                    {errors.owner_company_email && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors.owner_company_email}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Teléfono de la Empresa */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Teléfono de la Empresa
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.owner_company_phone}
-                      onChange={(e) => setFormData({ ...formData, owner_company_phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                      placeholder="Ej: +56 2 2345 6789"
-                    />
-                  </div>
-
                   <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mt-6">Datos del Representante Legal</h3>
 
                   {/* Nombres del Representante Legal */}
@@ -1780,42 +1658,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     )}
                   </div>
 
-                  {/* Email del Representante Legal */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email del Representante Legal *
-                    </label>
-                    <input
-                      type="email"
-                      required={formData.owner_type === 'juridica'}
-                      value={formData.owner_representative_email}
-                      onChange={(e) => setFormData({ ...formData, owner_representative_email: e.target.value })}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                        errors.owner_representative_email ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      placeholder="Ej: maria.silva@inmobiliariaxyz.cl"
-                    />
-                    {errors.owner_representative_email && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors.owner_representative_email}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Teléfono del Representante Legal */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Teléfono del Representante Legal
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.owner_representative_phone}
-                      onChange={(e) => setFormData({ ...formData, owner_representative_phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                      placeholder="Ej: +56 9 8765 4321"
-                    />
-                  </div>
                 </>
               )}
 
@@ -1922,24 +1764,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     </p>
                   )}
                 </div>
-              </div>
-
-              {/* Asesor Asignado */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Asesor Asignado
-                </label>
-                <select
-                  value={formData.asesorAsignado}
-                  onChange={(e) => setFormData({ ...formData, asesorAsignado: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                >
-                  <option value="Sin Asignar">Sin Asignar</option>
-                  <option value="Asesor 1">Asesor 1</option>
-                  <option value="Asesor 2">Asesor 2</option>
-                  <option value="Asesor 3">Asesor 3</option>
-                  <option value="Asesor 4">Asesor 4</option>
-                </select>
               </div>
             </div>
           </div>

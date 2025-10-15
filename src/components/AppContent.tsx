@@ -11,7 +11,6 @@ import { AuthPage } from './auth/AuthPage';
 
 // Main pages - keep marketplace loaded for fast initial experience
 import { MarketplacePage } from './marketplace/MarketplacePage';
-import { MyActivityPage } from './marketplace/MyActivityPage';
 
 // Property components - keep property details loaded
 import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
@@ -125,13 +124,6 @@ export const AppContent: React.FC = () => {
         </ProtectedRoute>
       } />
 
-      <Route path="/my-activity" element={
-        <ProtectedRoute>
-          <Layout>
-            <MyActivityPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
 
 
       {/* Diagnostic routes */}

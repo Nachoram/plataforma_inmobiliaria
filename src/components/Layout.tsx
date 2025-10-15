@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, BarChart3, FileText, Menu, X } from 'lucide-react';
+import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, FileText, Menu, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
@@ -201,17 +201,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <FileText className="h-4 w-4 flex-shrink-0" />
                     <span className="hidden xl:inline">Contratos</span>
                   </Link>
-                  <Link
-                    to="/my-activity"
-                    className={`px-2 lg:px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center space-x-1.5 flex-shrink-0 ${
-                      isActive('/my-activity')
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
-                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm'
-                    }`}
-                  >
-                    <BarChart3 className="h-4 w-4 flex-shrink-0" />
-                    <span className="hidden xl:inline">Mi Actividad</span>
-                  </Link>
                 </>
               )}
             </nav>
@@ -386,14 +375,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               <FileText className="h-4 w-4" />
               <span>Contratos</span>
-            </Link>
-            <Link
-              to="/my-activity"
-              className="flex items-center space-x-2 px-2 py-1.5 text-xs font-medium rounded-lg text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <BarChart3 className="h-4 w-4" />
-              <span>Mi Actividad</span>
             </Link>
             <button
               onClick={() => {

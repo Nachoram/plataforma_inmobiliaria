@@ -64,7 +64,6 @@ export default defineConfig({
           ],
           'marketplace': [
             './src/components/marketplace/MarketplacePage.tsx',
-            './src/components/marketplace/MyActivityPage.tsx',
             './src/components/marketplace/OfferModal.tsx'
           ]
         }

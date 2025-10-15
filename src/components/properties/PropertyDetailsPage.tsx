@@ -290,6 +290,17 @@ export const PropertyDetailsPage: React.FC = () => {
                   <div className="text-sm text-gray-500">
                     {property.type === 'arriendo' ? 'por mes' : 'precio total'}
                   </div>
+                  {/* Botón de editar - solo visible para el dueño */}
+                  {isOwner && (
+                    <div className="mt-2">
+                      <Link
+                        to={`/property/edit/${property.id}`}
+                        className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white font-medium rounded-md hover:bg-yellow-600 transition-colors"
+                      >
+                        ✏️ Modificar Publicación
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import PropertyPublicationForm from './PropertyPublicationForm';
 import { RentalPublicationForm } from './RentalPublicationForm';
 import { SalePublicationForm } from './SalePublicationForm';
-import { Property } from '../../lib/supabase';
+import { Property, supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 const PropertyFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [loadingProperty, setLoadingProperty] = useState(false);
 
   // Determinar el tipo de formulario basado en la URL y parámetros
   const getFormType = () => {
@@ -39,24 +43,109 @@ const PropertyFormPage: React.FC = () => {
     navigate('/portfolio');
   };
 
-  // Si es edición, necesitamos cargar la propiedad
-  // Por ahora, mostrar un mensaje de que la edición no está implementada
+  // Cargar propiedad para edición
+  useEffect(() => {
+    if (formType === 'edit' && id && user) {
+      loadPropertyForEdit();
+    }
+  }, [formType, id, user]);
+
+  const loadPropertyForEdit = async () => {
+    if (!id || !user) return;
+
+    setLoadingProperty(true);
+    try {
+      const { data: property, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      // Verificar que el usuario actual es el dueño
+      if (property.owner_id !== user.id) {
+        alert('No tienes permiso para editar esta propiedad');
+        navigate('/portfolio');
+        return;
+      }
+
+      setEditingProperty(property);
+    } catch (error: any) {
+      console.error('Error loading property for edit:', error);
+      alert('Error al cargar la propiedad: ' + error.message);
+      navigate('/portfolio');
+    } finally {
+      setLoadingProperty(false);
+    }
+  };
+
+  // Si es edición, mostrar loading o el formulario correspondiente
   if (formType === 'edit') {
-    return (
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Editar Propiedad</h2>
-          <p className="text-gray-600 mb-6">
-            La funcionalidad de edición de propiedades estará disponible próximamente.
-          </p>
-          <button
-            onClick={() => navigate('/portfolio')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Volver al Portafolio
-          </button>
+    if (loadingProperty) {
+      return (
+        <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando propiedad...</p>
+          </div>
         </div>
-      </div>
+      );
+    }
+
+    if (!editingProperty) {
+      return (
+        <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Propiedad no encontrada</h2>
+            <p className="text-gray-600 mb-6">
+              No se pudo cargar la propiedad para editar.
+            </p>
+            <button
+              onClick={() => navigate('/portfolio')}
+              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Volver al Portafolio
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Determinar qué formulario usar basado en el tipo de propiedad
+    const editFormType = editingProperty.listing_type === 'arriendo' ? 'arriendo' : 'venta';
+
+    // Renderizar formulario correspondiente con datos de edición
+    if (editFormType === 'arriendo') {
+      return (
+        <RentalPublicationForm
+          initialData={editingProperty}
+          isEditing={true}
+          onSuccess={() => navigate(`/property/${editingProperty.id}`)}
+          onCancel={() => navigate(`/property/${editingProperty.id}`)}
+        />
+      );
+    }
+
+    if (editFormType === 'venta') {
+      return (
+        <SalePublicationForm
+          initialData={editingProperty}
+          isEditing={true}
+          onSuccess={() => navigate(`/property/${editingProperty.id}`)}
+          onCancel={() => navigate(`/property/${editingProperty.id}`)}
+        />
+      );
+    }
+
+    // Fallback - formulario genérico
+    return (
+      <PropertyPublicationForm
+        initialData={editingProperty}
+        isEditing={true}
+        onSuccess={() => navigate(`/property/${editingProperty.id}`)}
+        onCancel={() => navigate(`/property/${editingProperty.id}`)}
+      />
     );
   }
 

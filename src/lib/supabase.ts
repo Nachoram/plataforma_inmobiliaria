@@ -107,6 +107,29 @@ export interface Property {
   tipo_cocina?: 'Cerrada' | 'Americana' | 'Integrada' | null; // Database: tipo_cocina, nullable
   asesor_id?: string | null; // Database: uuid REFERENCES profiles(id), nullable
   estacionamientos?: number; // Database: integer DEFAULT 0
+
+  // Campos del propietario agregados en 20251015130000_add_owner_fields_to_properties.sql
+  owner_type?: 'natural' | 'juridica'; // Database: owner_type_enum DEFAULT 'natural'
+  // Campos para persona natural
+  owner_first_name?: string | null;
+  owner_paternal_last_name?: string | null;
+  owner_maternal_last_name?: string | null;
+  owner_rut?: string | null;
+  owner_email?: string | null;
+  owner_phone?: string | null;
+  // Campos para persona jurídica
+  owner_company_name?: string | null;
+  owner_company_rut?: string | null;
+  owner_company_business?: string | null;
+  owner_company_email?: string | null;
+  owner_company_phone?: string | null;
+  // Campos para representante legal
+  owner_representative_first_name?: string | null;
+  owner_representative_paternal_last_name?: string | null;
+  owner_representative_maternal_last_name?: string | null;
+  owner_representative_rut?: string | null;
+  owner_representative_email?: string | null;
+  owner_representative_phone?: string | null;
 }
 
 // Interface para datos transformados/calculados en el frontend

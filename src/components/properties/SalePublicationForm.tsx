@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { Building, AlertCircle, User, DollarSign } from 'lucide-react';
 
@@ -26,7 +26,19 @@ const CHILE_REGIONS_COMMUNES = {
   }
 };
 
-export const SalePublicationForm: React.FC = () => {
+interface SalePublicationFormProps {
+  initialData?: Property;
+  isEditing?: boolean;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
+  initialData,
+  isEditing = false,
+  onSuccess,
+  onCancel
+}) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
@@ -72,6 +84,48 @@ export const SalePublicationForm: React.FC = () => {
       commercial_evaluation: null as File | null,
     }
   });
+
+  // Inicializar formulario con datos existentes cuando está en modo edición
+  useEffect(() => {
+    if (isEditing && initialData) {
+      setFormData({
+        // Información de la Propiedad
+        address_street: initialData.address_street || '',
+        address_number: initialData.address_number || '',
+        address_department: initialData.address_department || '',
+        region: initialData.address_region || '',
+        commune: initialData.address_commune || '',
+        price: initialData.price_clp?.toString() || '',
+        common_expenses: initialData.common_expenses_clp?.toString() || '',
+        bedrooms: initialData.bedrooms?.toString() || '1',
+        bathrooms: initialData.bathrooms?.toString() || '1',
+        area_sqm: initialData.metros_utiles?.toString() || '',
+        description: initialData.description || '',
+
+        // Datos del Propietario - estos vendrían de la sesión del usuario
+        owner_first_name: '',
+        owner_paternal_last_name: '',
+        owner_maternal_last_name: '',
+        owner_rut: '',
+        owner_address_street: '',
+        owner_address_number: '',
+        owner_region: '',
+        owner_commune: '',
+        marital_status: '',
+        property_regime: '',
+
+        // Archivos - las fotos existentes se manejarán por separado
+        photos_urls: [],
+        documents: {
+          ownership_certificate: null,
+          tax_assessment: null,
+          owner_id_copy: null,
+          power_of_attorney: null,
+          commercial_evaluation: null,
+        }
+      });
+    }
+  }, [isEditing, initialData]);
 
   // Obtener comunas disponibles según la región seleccionada
   const getAvailableCommunes = (regionKey: string) => {
@@ -180,16 +234,33 @@ export const SalePublicationForm: React.FC = () => {
         created_at: new Date().toISOString()
       };
 
-      const { data: propertyResult, error } = await supabase
-        .from('properties')
-        .insert(propertyData)
-        .select()
-        .single();
+      // Insert or update property
+      let propertyResult;
+      if (isEditing && initialData) {
+        // Update existing property
+        const { data: updateResult, error } = await supabase
+          .from('properties')
+          .update(propertyData)
+          .eq('id', initialData.id)
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
+        propertyResult = updateResult;
+      } else {
+        // Insert new property
+        const { data: insertResult, error } = await supabase
+          .from('properties')
+          .insert(propertyData)
+          .select()
+          .single();
 
-      // Insert sale owner information with specific ID capture
-      if (propertyResult?.id) {
+        if (error) throw error;
+        propertyResult = insertResult;
+      }
+
+      // Insert sale owner information with specific ID capture (only for new properties)
+      if (propertyResult?.id && !isEditing) {
         const { data: ownerResult, error: ownerError } = await supabase
           .from('sale_owners')
           .insert({
@@ -225,8 +296,13 @@ export const SalePublicationForm: React.FC = () => {
         }
       }
 
-      alert('Propiedad publicada exitosamente!');
-      navigate('/portfolio');
+      alert(isEditing ? 'Propiedad actualizada exitosamente!' : 'Propiedad publicada exitosamente!');
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/portfolio');
+      }
     } catch (error) {
       console.error('Error saving sale property:', error);
       setErrors({ submit: 'Error al publicar la propiedad. Intente nuevamente.' });
@@ -241,10 +317,13 @@ export const SalePublicationForm: React.FC = () => {
         {/* Header */}
         <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Publicar Propiedad en Venta
+            {isEditing ? 'Modificar Propiedad en Venta' : 'Publicar Propiedad en Venta'}
           </h1>
           <p className="text-gray-600">
-            Completa todos los campos para publicar tu propiedad en venta
+            {isEditing
+              ? 'Actualiza la información de tu propiedad en venta'
+              : 'Completa todos los campos para publicar tu propiedad en venta'
+            }
           </p>
         </div>
 

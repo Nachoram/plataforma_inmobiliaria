@@ -41,6 +41,29 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
     ubicacion_bodega: '',
     ubicacion_estacionamiento: '',
     description: '',
+
+    // Información del propietario
+    owner_type: 'natural' as 'natural' | 'juridica',
+    // Campos para persona natural
+    owner_first_name: '',
+    owner_paternal_last_name: '',
+    owner_maternal_last_name: '',
+    owner_rut: '',
+    owner_email: '',
+    owner_phone: '',
+    // Campos para persona jurídica
+    owner_company_name: '',
+    owner_company_rut: '',
+    owner_company_business: '',
+    owner_company_email: '',
+    owner_company_phone: '',
+    // Campos para representante legal
+    owner_representative_first_name: '',
+    owner_representative_paternal_last_name: '',
+    owner_representative_maternal_last_name: '',
+    owner_representative_rut: '',
+    owner_representative_email: '',
+    owner_representative_phone: '',
   });
 
   const [images, setImages] = useState<File[]>([]);
@@ -156,6 +179,26 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             ubicacion_bodega: property.ubicacion_bodega || '',
             ubicacion_estacionamiento: property.ubicacion_estacionamiento || '',
             description: property.description,
+
+            // Información del propietario
+            owner_type: (property.owner_type as 'natural' | 'juridica') || 'natural',
+            owner_first_name: property.owner_first_name || '',
+            owner_paternal_last_name: property.owner_paternal_last_name || '',
+            owner_maternal_last_name: property.owner_maternal_last_name || '',
+            owner_rut: property.owner_rut || '',
+            owner_email: property.owner_email || '',
+            owner_phone: property.owner_phone || '',
+            owner_company_name: property.owner_company_name || '',
+            owner_company_rut: property.owner_company_rut || '',
+            owner_company_business: property.owner_company_business || '',
+            owner_company_email: property.owner_company_email || '',
+            owner_company_phone: property.owner_company_phone || '',
+            owner_representative_first_name: property.owner_representative_first_name || '',
+            owner_representative_paternal_last_name: property.owner_representative_paternal_last_name || '',
+            owner_representative_maternal_last_name: property.owner_representative_maternal_last_name || '',
+            owner_representative_rut: property.owner_representative_rut || '',
+            owner_representative_email: property.owner_representative_email || '',
+            owner_representative_phone: property.owner_representative_phone || '',
           };
 
           setFormData(propertyFormData);
@@ -386,6 +429,20 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         throw new Error('Por favor, completa todos los campos obligatorios de la propiedad.');
       }
 
+      // Validar campos del propietario
+      if (formData.owner_type === 'natural') {
+        if (!formData.owner_first_name || !formData.owner_paternal_last_name || !formData.owner_rut || !formData.owner_email) {
+          throw new Error('Por favor, completa todos los campos obligatorios del propietario (Persona Natural).');
+        }
+      } else if (formData.owner_type === 'juridica') {
+        if (!formData.owner_company_name || !formData.owner_company_rut || !formData.owner_company_business || !formData.owner_company_email) {
+          throw new Error('Por favor, completa todos los campos obligatorios de la empresa.');
+        }
+        if (!formData.owner_representative_first_name || !formData.owner_representative_paternal_last_name || !formData.owner_representative_rut || !formData.owner_representative_email) {
+          throw new Error('Por favor, completa todos los campos obligatorios del representante legal.');
+        }
+      }
+
       // Verificar si ya existe una propiedad en esta dirección (solo para nuevas propiedades)
       if (!property) {
         const addressExists = await checkAddressExists(
@@ -418,6 +475,29 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         ubicacion_bodega: formData.ubicacion_bodega || null,
         ubicacion_estacionamiento: formData.ubicacion_estacionamiento || null,
         description: formData.description,
+
+        // Información del propietario
+        owner_type: formData.owner_type,
+        // Campos para persona natural
+        owner_first_name: formData.owner_first_name || null,
+        owner_paternal_last_name: formData.owner_paternal_last_name || null,
+        owner_maternal_last_name: formData.owner_maternal_last_name || null,
+        owner_rut: formData.owner_rut || null,
+        owner_email: formData.owner_email || null,
+        owner_phone: formData.owner_phone || null,
+        // Campos para persona jurídica
+        owner_company_name: formData.owner_company_name || null,
+        owner_company_rut: formData.owner_company_rut || null,
+        owner_company_business: formData.owner_company_business || null,
+        owner_company_email: formData.owner_company_email || null,
+        owner_company_phone: formData.owner_company_phone || null,
+        // Campos para representante legal
+        owner_representative_first_name: formData.owner_representative_first_name || null,
+        owner_representative_paternal_last_name: formData.owner_representative_paternal_last_name || null,
+        owner_representative_maternal_last_name: formData.owner_representative_maternal_last_name || null,
+        owner_representative_rut: formData.owner_representative_rut || null,
+        owner_representative_email: formData.owner_representative_email || null,
+        owner_representative_phone: formData.owner_representative_phone || null,
       };
 
       let propertyId: string;
@@ -826,48 +906,328 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
           />
         </div>
 
-        {/* Información del Propietario Actual - Solo Lectura */}
-        {ownerProfile && (
-          <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-6">
-            <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              Información del Propietario Actual
-            </h3>
+        {/* Información del Propietario */}
+        <div className="bg-gray-50 border border-gray-200 p-6 rounded-lg mb-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Datos del Propietario
+          </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white p-4 rounded-md border">
-                <p className="text-sm text-gray-600">Nombre Completo</p>
-                <p className="font-medium text-gray-900">
-                  {ownerProfile.first_name || 'No especificado'} {ownerProfile.paternal_last_name || ''} {ownerProfile.maternal_last_name || ''}
-                </p>
+          {/* Selector de Tipo de Persona */}
+          <div className="mb-6">
+            <label htmlFor="owner_type" className="block text-sm font-medium text-gray-700 mb-2">
+              Tipo de Propietario *
+            </label>
+            <select
+              id="owner_type"
+              name="owner_type"
+              value={formData.owner_type || 'natural'}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="natural">Persona Natural</option>
+              <option value="juridica">Persona Jurídica</option>
+            </select>
+          </div>
+
+          {/* Campos para Persona Natural */}
+          {formData.owner_type === 'natural' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="owner_first_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombres *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_first_name"
+                    name="owner_first_name"
+                    value={formData.owner_first_name || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={formData.owner_type === 'natural'}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="owner_paternal_last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Apellido Paterno *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_paternal_last_name"
+                    name="owner_paternal_last_name"
+                    value={formData.owner_paternal_last_name || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={formData.owner_type === 'natural'}
+                  />
+                </div>
               </div>
 
-              <div className="bg-white p-4 rounded-md border">
-                <p className="text-sm text-gray-600">RUT</p>
-                <p className="font-medium text-gray-900">{ownerProfile.rut || 'No especificado'}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="owner_maternal_last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Apellido Materno
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_maternal_last_name"
+                    name="owner_maternal_last_name"
+                    value={formData.owner_maternal_last_name || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="owner_rut" className="block text-sm font-medium text-gray-700 mb-2">
+                    RUT *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_rut"
+                    name="owner_rut"
+                    value={formData.owner_rut || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="12.345.678-9"
+                    required={formData.owner_type === 'natural'}
+                  />
+                </div>
               </div>
 
-              <div className="bg-white p-4 rounded-md border">
-                <p className="text-sm text-gray-600">Email</p>
-                <p className="font-medium text-gray-900">{ownerProfile.email || 'No especificado'}</p>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="owner_email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    id="owner_email"
+                    name="owner_email"
+                    value={formData.owner_email || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={formData.owner_type === 'natural'}
+                  />
+                </div>
 
-              <div className="bg-white p-4 rounded-md border">
-                <p className="text-sm text-gray-600">Teléfono</p>
-                <p className="font-medium text-gray-900">{ownerProfile.phone || 'No especificado'}</p>
+                <div>
+                  <label htmlFor="owner_phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    Teléfono
+                  </label>
+                  <input
+                    type="tel"
+                    id="owner_phone"
+                    name="owner_phone"
+                    value={formData.owner_phone || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
+          )}
 
-            <div className="mt-4 p-3 bg-blue-100 rounded-md">
+          {/* Campos para Persona Jurídica */}
+          {formData.owner_type === 'juridica' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="owner_company_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Razón Social *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_company_name"
+                    name="owner_company_name"
+                    value={formData.owner_company_name || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nombre de la empresa Ltda."
+                    required={formData.owner_type === 'juridica'}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="owner_company_rut" className="block text-sm font-medium text-gray-700 mb-2">
+                    RUT de la Empresa *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_company_rut"
+                    name="owner_company_rut"
+                    value={formData.owner_company_rut || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="76.123.456-7"
+                    required={formData.owner_type === 'juridica'}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="owner_company_business" className="block text-sm font-medium text-gray-700 mb-2">
+                    Giro *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_company_business"
+                    name="owner_company_business"
+                    value={formData.owner_company_business || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Actividades inmobiliarias"
+                    required={formData.owner_type === 'juridica'}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="owner_company_email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email de la Empresa *
+                  </label>
+                  <input
+                    type="email"
+                    id="owner_company_email"
+                    name="owner_company_email"
+                    value={formData.owner_company_email || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={formData.owner_type === 'juridica'}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="owner_company_phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  Teléfono de la Empresa
+                </label>
+                <input
+                  type="tel"
+                  id="owner_company_phone"
+                  name="owner_company_phone"
+                  value={formData.owner_company_phone || ''}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <h4 className="text-md font-semibold pt-4 border-t border-gray-300 mt-6">
+                Datos del Representante Legal
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="owner_representative_first_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombres del Representante *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_representative_first_name"
+                    name="owner_representative_first_name"
+                    value={formData.owner_representative_first_name || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={formData.owner_type === 'juridica'}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="owner_representative_paternal_last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Apellido Paterno del Representante *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_representative_paternal_last_name"
+                    name="owner_representative_paternal_last_name"
+                    value={formData.owner_representative_paternal_last_name || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={formData.owner_type === 'juridica'}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="owner_representative_maternal_last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Apellido Materno del Representante
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_representative_maternal_last_name"
+                    name="owner_representative_maternal_last_name"
+                    value={formData.owner_representative_maternal_last_name || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="owner_representative_rut" className="block text-sm font-medium text-gray-700 mb-2">
+                    RUT del Representante *
+                  </label>
+                  <input
+                    type="text"
+                    id="owner_representative_rut"
+                    name="owner_representative_rut"
+                    value={formData.owner_representative_rut || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="12.345.678-9"
+                    required={formData.owner_type === 'juridica'}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="owner_representative_email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email del Representante *
+                  </label>
+                  <input
+                    type="email"
+                    id="owner_representative_email"
+                    name="owner_representative_email"
+                    value={formData.owner_representative_email || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={formData.owner_type === 'juridica'}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="owner_representative_phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    Teléfono del Representante
+                  </label>
+                  <input
+                    type="tel"
+                    id="owner_representative_phone"
+                    name="owner_representative_phone"
+                    value={formData.owner_representative_phone || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Información del Usuario Publicador */}
+          {ownerProfile && (
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
-                <strong>Nota:</strong> Esta es la información registrada en tu perfil. Si necesitas actualizar estos datos,
-                puedes hacerlo desde la sección de <a href="/profile" className="underline hover:text-blue-600">Mi Perfil</a>.
+                <strong>Nota:</strong> Tú eres el publicador de esta propiedad. La información del propietario se almacenará
+                por separado y no afectará tu perfil personal.
               </p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
 
         {/* Imágenes */}
@@ -903,6 +1263,28 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             Dominio vigente, escrituras, etc. Formatos: PDF, DOC, DOCX
           </p>
         </div>
+
+        {/* Certificado de Personería (solo para persona jurídica) */}
+        {formData.owner_type === 'juridica' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Certificado de Personería
+            </label>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  setDocuments(prev => [...prev, ...Array.from(e.target.files)]);
+                }
+              }}
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="text-sm text-gray-600 mt-1">
+              Documento requerido para personas jurídicas. Formato: PDF
+            </p>
+          </div>
+        )}
 
         {/* Botones */}
         <div className="flex justify-end space-x-4">

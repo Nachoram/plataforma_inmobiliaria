@@ -6,12 +6,29 @@ import { useAuth } from '../../hooks/useAuth';
 import CustomButton from '../common/CustomButton';
 import PropertyCard from '../PropertyCard';
 
+interface Postulation {
+  id: string;
+  applicant_id: string;
+  status: string;
+  created_at: string;
+  message: string | null;
+  application_characteristic_id: string | null;
+  applicant_name: string;
+  applicant_email: string | null;
+  applicant_phone: string | null;
+  guarantor_name: string | null;
+  guarantor_email: string | null;
+  guarantor_phone: string | null;
+  guarantor_characteristic_id: string | null;
+}
+
 interface PropertyWithImages extends Property {
   property_images?: Array<{
     image_url: string;
     storage_path: string;
   }>;
   postulation_count?: number;
+  postulations?: Postulation[];
 }
 
 
@@ -33,33 +50,11 @@ const PortfolioPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // Fetch properties using a direct query with LEFT JOIN for postulation count
+      // Use the new RPC function to get properties with postulations
       const { data: propertiesData, error: propertiesError } = await supabase
-        .from('properties')
-        .select(`
-          id,
-          owner_id,
-          status,
-          listing_type,
-          address_street,
-          address_number,
-          address_department,
-          address_commune,
-          address_region,
-          price_clp,
-          common_expenses_clp,
-          bedrooms,
-          bathrooms,
-          surface_m2,
-          description,
-          created_at,
-          property_images (
-            image_url,
-            storage_path
-          )
-        `)
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+        .rpc('get_portfolio_with_postulations', {
+          user_id_param: user.id
+        });
 
       if (propertiesError) {
         if (propertiesError.message.includes('permission denied') || propertiesError.message.includes('RLS')) {
@@ -70,41 +65,7 @@ const PortfolioPage: React.FC = () => {
           setProperties([]);
         }
       } else {
-        // Get postulation counts for each property
-        let propertiesWithCounts = propertiesData || [];
-
-        if (propertiesWithCounts.length > 0) {
-          const propertyIds = propertiesWithCounts.map(p => p.id);
-
-          // Fetch postulation counts
-          const { data: countsData, error: countsError } = await supabase
-            .from('applications')
-            .select('property_id')
-            .in('property_id', propertyIds);
-
-          if (!countsError && countsData) {
-            // Count applications per property
-            const countsByPropertyId = countsData.reduce((acc, app) => {
-              acc[app.property_id] = (acc[app.property_id] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>);
-
-            // Add postulation count to each property
-            propertiesWithCounts = propertiesWithCounts.map(property => ({
-              ...property,
-              postulation_count: countsByPropertyId[property.id] || 0
-            }));
-          } else if (countsError) {
-            console.warn('Error fetching postulation counts:', countsError);
-            // Continue with count = 0 for all properties
-            propertiesWithCounts = propertiesWithCounts.map(property => ({
-              ...property,
-              postulation_count: 0
-            }));
-          }
-        }
-
-        setProperties(propertiesWithCounts);
+        setProperties(propertiesData || []);
       }
 
     } catch (error) {
@@ -275,6 +236,7 @@ const PortfolioPage: React.FC = () => {
                 context="portfolio"
                 isExpanded={expandedPropertyId === property.id}
                 onToggleExpand={() => handleToggleExpand(property.id)}
+                postulations={property.postulations}
                 onEdit={(property) => {
                   // Navigate to edit page
                   window.location.href = `/property/edit/${property.id}`;

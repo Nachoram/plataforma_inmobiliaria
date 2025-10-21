@@ -9,12 +9,29 @@ import PostulationsList from './portfolio/PostulationsList';
 // Usar la interfaz Property de supabase.ts para consistencia
 type Property = SupabaseProperty;
 
+interface Postulation {
+  id: string;
+  applicant_id: string;
+  status: string;
+  created_at: string;
+  message: string | null;
+  application_characteristic_id: string | null;
+  applicant_name: string;
+  applicant_email: string | null;
+  applicant_phone: string | null;
+  guarantor_name: string | null;
+  guarantor_email: string | null;
+  guarantor_phone: string | null;
+  guarantor_characteristic_id: string | null;
+}
+
 interface PropertyWithImages extends SupabaseProperty {
   property_images?: Array<{
     image_url: string;
     storage_path: string;
   }>;
   postulation_count?: number;
+  postulations?: Postulation[];
 }
 
 type PropertyCardContext = 'panel' | 'portfolio';
@@ -31,6 +48,7 @@ interface PropertyCardProps {
   isFavorite?: boolean;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  postulations?: Postulation[];
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = memo(({
@@ -44,7 +62,8 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
   onDelete,
   isFavorite = false,
   isExpanded = false,
-  onToggleExpand
+  onToggleExpand,
+  postulations = []
 }) => {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -360,7 +379,7 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
       {/* Postulations List - Only show when expanded and in portfolio context */}
       {isExpanded && context === 'portfolio' && (
         <div className="mt-4 px-4 py-4 bg-gray-50 rounded-lg border border-gray-200">
-          <PostulationsList propertyId={property.id} />
+          <PostulationsList postulations={postulations} />
         </div>
       )}
     </div>

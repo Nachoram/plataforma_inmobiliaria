@@ -64,7 +64,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const mobileNavItems = user ? [
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
     { path: '/portfolio', icon: Home, label: 'Portafolio', shortLabel: 'Prop.' },
-    { path: '/applications', icon: Mail, label: 'Postulaciones', shortLabel: 'Post.' },
+    { path: '/my-applications', icon: Mail, label: 'Mis Postulaciones', shortLabel: 'Post.' },
     { path: '/contracts', icon: FileText, label: 'Contratos', shortLabel: 'Cont.' },
   ] : [
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
@@ -180,15 +180,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <span className="hidden xl:inline">Mi Portafolio</span>
                   </Link>
                   <Link
-                    to="/applications"
+                    to="/my-applications"
                     className={`px-2 lg:px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center space-x-1.5 flex-shrink-0 ${
-                      isActive('/applications')
+                      isActive('/my-applications')
                         ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
                         : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm'
                     }`}
                   >
                     <Mail className="h-4 w-4 flex-shrink-0" />
-                    <span className="hidden xl:inline">Postulaciones</span>
+                    <span className="hidden xl:inline">Mis Postulaciones</span>
                   </Link>
                   <Link
                     to="/contracts"
@@ -361,12 +361,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span>Mi Portafolio</span>
             </Link>
             <Link
-              to="/applications"
+              to="/my-applications"
               className="flex items-center space-x-2 px-2 py-1.5 text-xs font-medium rounded-lg text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               <Mail className="h-4 w-4" />
-              <span>Postulaciones</span>
+              <span>Mis Postulaciones</span>
             </Link>
             <Link
               to="/contracts"

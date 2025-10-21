@@ -21,7 +21,7 @@ import { SupabaseDiagnostic } from './SupabaseDiagnostic';
 
 // Temporarily disable lazy loading to debug the issue
 import PortfolioPage from './portfolio/PortfolioPage';
-import ApplicationsPage from './dashboard/ApplicationsPage';
+import MyApplicationsPage from './dashboard/MyApplicationsPage';
 import ContractManagementPage from './contracts/ContractManagementPage';
 import ContractViewerPage from './contracts/ContractViewerPage';
 import ContractCanvasEditorPage from './contracts/ContractCanvasEditorPage';
@@ -111,10 +111,10 @@ export const AppContent: React.FC = () => {
         </ProtectedRoute>
       } />
 
-      <Route path="/applications" element={
+      <Route path="/my-applications" element={
         <ProtectedRoute>
           <Layout>
-            <ApplicationsPage />
+            <MyApplicationsPage />
           </Layout>
         </ProtectedRoute>
       } />

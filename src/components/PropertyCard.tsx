@@ -15,7 +15,7 @@ interface PropertyWithImages extends SupabaseProperty {
   }>;
 }
 
-type PropertyCardContext = 'marketplace' | 'portfolio';
+type PropertyCardContext = 'panel' | 'portfolio';
 
 interface PropertyCardProps {
   property: PropertyWithImages;
@@ -144,7 +144,7 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
         <div className="absolute inset-0 p-3 flex justify-between items-start pointer-events-none">
           <div className="flex flex-col space-y-2">
             {/* Type Badge */}
-            {context === 'marketplace' && (
+            {context === 'panel' && (
               <span className={`px-2 py-1 text-xs font-medium rounded-full pointer-events-auto ${
                 property.listing_type === 'venta'
                   ? 'bg-blue-100 text-blue-800'
@@ -163,8 +163,8 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
           </div>
 
           <div className="flex flex-col space-y-2 items-end">
-            {/* Favorite Button - Only show in marketplace context */}
-            {context === 'marketplace' && onToggleFavorite && (
+            {/* Favorite Button - Only show in panel context */}
+            {context === 'panel' && onToggleFavorite && (
               <button
                 onClick={handleToggleFavorite}
                 className="p-2 rounded-full bg-white/90 hover:bg-white shadow-sm transition-colors pointer-events-auto mobile-btn"
@@ -280,8 +280,8 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
           )}
         </div>
 
-        {/* Action Buttons - Only for marketplace context */}
-        {context === 'marketplace' && showActions && (
+        {/* Action Buttons - Only for panel context */}
+        {context === 'panel' && showActions && (
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               {property.listing_type === 'venta' ? (

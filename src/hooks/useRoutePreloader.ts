@@ -11,12 +11,12 @@ export const useRoutePreloader = () => {
     import('../components/auth/AuthForm');
 
     // Preload importante: Marketplace (página principal después del login)
-    import('../components/marketplace/MarketplacePage');
+    import('../components/panel/PanelPage');
 
     // Prefetch de rutas comunes (con delay para no bloquear)
     const prefetchCommonRoutes = () => {
       setTimeout(() => {
-        // Prefetch de formularios (probablemente visitados después del marketplace)
+        // Prefetch de formularios (probablemente visitados después del panel)
         import('../components/properties/PropertyFormPage');
         import('../components/properties/PropertyDetailsPage');
 
@@ -42,7 +42,7 @@ export const usePropertyRoutePreloader = () => {
   useEffect(() => {
     // Preload inmediato de componentes relacionados con propiedades
     import('../components/properties/RentalApplicationForm');
-    import('../components/marketplace/OfferModal');
+    import('../components/panel/OfferModal');
 
     // Prefetch de formularios de publicación
     setTimeout(() => {
@@ -77,8 +77,8 @@ export const preloadRoute = async (routeName: string) => {
       case 'auth':
         await import('../components/auth/AuthPage');
         break;
-      case 'marketplace':
-        await import('../components/marketplace/MarketplacePage');
+      case 'panel':
+        await import('../components/panel/PanelPage');
         break;
       case 'portfolio':
         await import('../components/portfolio/PortfolioPage');

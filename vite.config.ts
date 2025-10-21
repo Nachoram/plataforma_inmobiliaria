@@ -63,8 +63,8 @@ export default defineConfig({
             './src/components/auth/AuthForm.tsx'
           ],
           'marketplace': [
-            './src/components/marketplace/MarketplacePage.tsx',
-            './src/components/marketplace/OfferModal.tsx'
+            './src/components/panel/PanelPage.tsx',
+            './src/components/panel/OfferModal.tsx'
           ]
         }
       }

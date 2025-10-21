@@ -7,7 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import PropertyCard from '../PropertyCard';
 import { usePropertyRoutePreloader } from '../../hooks/useRoutePreloader';
 
-export const MarketplacePage: React.FC = () => {
+export const PanelPage: React.FC = () => {
   const { user } = useAuth();
 
   // Preload rutas relacionadas con propiedades para mejor UX
@@ -71,7 +71,7 @@ export const MarketplacePage: React.FC = () => {
         // Handle RLS policy violations specifically
         if (error.message.includes('permission denied') || error.message.includes('RLS')) {
           console.error('RLS Policy violation: Cannot access public properties');
-          // For marketplace, this shouldn't happen with public properties, but log it
+          // For panel, this shouldn't happen with public properties, but log it
         } else {
           throw error;
         }
@@ -255,7 +255,7 @@ export const MarketplacePage: React.FC = () => {
       <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl shadow-soft text-white padding-mobile">
         <div className="text-center">
           <h1 className="text-2xl xs:text-3xl md:text-4xl font-bold mb-3 xs:mb-4">
-            Marketplace Inmobiliario
+            Panel de Propiedades
           </h1>
           <p className="text-base xs:text-lg md:text-xl text-blue-100 mb-4 xs:mb-6">
             Encuentra, oferta y postula por propiedades en toda Chile
@@ -427,7 +427,7 @@ export const MarketplacePage: React.FC = () => {
             <PropertyCard
               key={property.id}
               property={property}
-              context="marketplace"
+              context="panel"
               onMakeOffer={handleMakeOffer}
               onApply={handleApply}
               onToggleFavorite={toggleFavorite}

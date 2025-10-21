@@ -9,8 +9,8 @@ import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
 // Auth components - keep loaded for fast auth
 import { AuthPage } from './auth/AuthPage';
 
-// Main pages - keep marketplace loaded for fast initial experience
-import { MarketplacePage } from './marketplace/MarketplacePage';
+// Main pages - keep panel loaded for fast initial experience
+import { PanelPage } from './panel/PanelPage';
 
 // Property components - keep property details loaded
 import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
@@ -52,7 +52,13 @@ export const AppContent: React.FC = () => {
       {/* Routes with layout */}
       <Route path="/" element={
         <Layout>
-          <MarketplacePage />
+          <PanelPage />
+        </Layout>
+      } />
+
+      <Route path="/panel" element={
+        <Layout>
+          <PanelPage />
         </Layout>
       } />
 

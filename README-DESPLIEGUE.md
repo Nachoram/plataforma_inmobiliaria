@@ -474,8 +474,8 @@ export const PropertiesPage = lazy(() =>
 );
 
 export const MarketplacePage = lazy(() => 
-  import('@/components/marketplace/MarketplacePage')
-    .then(module => ({ default: module.MarketplacePage }))
+  import('@/components/panel/PanelPage')
+    .then(module => ({ default: module.PanelPage }))
 );
 
 export const AdminDashboard = lazy(() => 

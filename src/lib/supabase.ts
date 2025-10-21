@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// 1. Obtener las variables de entorno
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// 1. Obtener las variables de entorno con valores por defecto para desarrollo
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://phnkervuiijqmapgswkc.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNzQ2MjUsImV4cCI6MjA3MjY1MDYyNX0.va6jOCJN6MnbHSbbDFJaO2rN_3oCSVQlaYaPkPmXS2w';
 
 // Validación mejorada de variables de entorno
 const validateEnvironmentVariables = () => {
@@ -27,10 +27,16 @@ const validateEnvironmentVariables = () => {
         VITE_SUPABASE_URL: supabaseUrl ? '✓ Presente' : '✗ Faltante',
         VITE_SUPABASE_ANON_KEY: supabaseAnonKey ? '✓ Presente' : '✗ Faltante',
       });
+
+      console.log('🔍 Estado actual de import.meta.env:');
+      console.log('import.meta.env.VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+      console.log('import.meta.env.VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Presente (oculto por seguridad)' : 'No presente');
     }
 
     throw new Error(errorMessage);
   }
+
+  console.log('✅ Variables de entorno de Supabase cargadas correctamente');
 };
 
 validateEnvironmentVariables();

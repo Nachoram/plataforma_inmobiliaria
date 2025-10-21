@@ -164,7 +164,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 }`}
               >
                 <ShoppingBag className="h-4 w-4 flex-shrink-0" />
-                <span className="hidden xl:inline">Marketplace</span>
+                <span className="hidden xl:inline">Panel</span>
               </Link>
               {user && (
                 <>

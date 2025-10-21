@@ -23,7 +23,7 @@ const mockProperty = {
 describe('PropertyCard', () => {
   const defaultProps = {
     property: mockProperty,
-    context: 'marketplace' as const,
+    context: 'panel' as const,
     showActions: true,
     onMakeOffer: vi.fn(),
     onApply: vi.fn(),
@@ -49,7 +49,7 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Hermosa propiedad para arriendo')).toBeInTheDocument()
   })
 
-  it('shows marketplace actions when context is marketplace', () => {
+  it('shows panel actions when context is panel', () => {
     render(<PropertyCard {...defaultProps} />)
 
     expect(screen.getByText('Hacer Oferta')).toBeInTheDocument()

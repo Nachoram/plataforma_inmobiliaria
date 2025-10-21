@@ -100,7 +100,6 @@ export interface Property {
   description: string | null; // Database: text, nullable
   created_at: string; // Database: timestamptz
   // Campos opcionales agregados en migraciones recientes
-  updated_at?: string; // Database: timestamptz, nullable
   is_visible?: boolean; // Database: boolean DEFAULT true
   is_featured?: boolean; // Database: boolean DEFAULT false
   // Nuevos campos agregados en 20251015000000_update_property_form_fields.sql

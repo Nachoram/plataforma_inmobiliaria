@@ -1,0 +1,213 @@
+/* Estilos personalizados para el calendario de disponibilidad */
+
+.custom-calendar {
+  width: 100%;
+  border: 2px solid #e5e7eb;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Eliminar cualquier estilo rojo del calendario */
+.custom-calendar abbr[aria-label] {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Sobrescribir estilos por defecto de react-calendar que puedan ser rojos */
+.custom-calendar .react-calendar__tile--active,
+.custom-calendar .react-calendar__tile--hasActive {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Resaltar fechas seleccionadas */
+.custom-calendar .selected-date {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  transform: scale(1.05);
+}
+
+.custom-calendar .selected-date::after {
+  content: '✓';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.custom-calendar .selected-date:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+}
+
+/* Mejorar el hover de las fechas */
+.custom-calendar .react-calendar__tile:enabled:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-radius: 0.5rem;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+
+/* Deshabilitar fechas pasadas visualmente */
+.custom-calendar .react-calendar__tile:disabled {
+  background-color: #fafafa;
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+/* Eliminar estilo del día actual */
+.custom-calendar .today-no-style {
+  background: transparent !important;
+  border: none !important;
+  font-weight: 600 !important;
+  color: inherit !important;
+}
+
+.custom-calendar .today-no-style:enabled:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  border-radius: 0.5rem !important;
+  transform: scale(1.05) !important;
+}
+
+/* Sobrescribir el estilo por defecto del día actual de react-calendar */
+.custom-calendar .react-calendar__tile--now {
+  background: transparent !important;
+  border: none !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important; /* Color gris oscuro normal */
+}
+
+.custom-calendar .react-calendar__tile--now:enabled:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  border-radius: 0.5rem;
+  transform: scale(1.05);
+}
+
+/* Eliminar TODOS los estilos rojos del día actual */
+.custom-calendar .react-calendar__tile--now abbr {
+  color: inherit !important;
+  background: none !important;
+  border: none !important;
+}
+
+/* Asegurar que no haya fondo o borde rojo en ninguna parte */
+.custom-calendar .react-calendar__tile--now::before,
+.custom-calendar .react-calendar__tile--now::after {
+  display: none !important;
+}
+
+/* Navegación del calendario */
+.custom-calendar .react-calendar__navigation {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  margin-bottom: 0;
+  padding: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.custom-calendar .react-calendar__navigation button {
+  color: #1f2937;
+  font-weight: 700;
+  font-size: 1rem;
+  min-width: 44px;
+  transition: all 0.2s ease;
+}
+
+.custom-calendar .react-calendar__navigation button:enabled:hover,
+.custom-calendar .react-calendar__navigation button:enabled:focus {
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  border-radius: 0.5rem;
+  transform: scale(1.05);
+}
+
+.custom-calendar .react-calendar__navigation__label {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.custom-calendar .react-calendar__navigation__label:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+/* Días de la semana */
+.custom-calendar .react-calendar__month-view__weekdays {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  padding: 0.75rem 0;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.custom-calendar .react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+}
+
+/* Ajustes generales de tiles */
+.custom-calendar .react-calendar__tile {
+  padding: 1rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Separadores */
+.custom-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #d1d5db;
+  opacity: 0.5;
+}
+
+/* Animación de fadeIn para el modal */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* REGLAS FINALES: Eliminar COMPLETAMENTE cualquier elemento rojo del calendario */
+.custom-calendar .react-calendar__tile,
+.custom-calendar .react-calendar__tile *,
+.custom-calendar .react-calendar__month-view__days__day {
+  /* Forzar que NO haya estilos rojos en ningún elemento */
+  border-color: transparent !important;
+}
+
+/* Sobrescribir específicamente el estilo del día actual de react-calendar */
+.custom-calendar .react-calendar__month-view__days__day--now,
+.custom-calendar .react-calendar__tile--now,
+.custom-calendar button.react-calendar__tile--now {
+  background: white !important;
+  color: #1f2937 !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.custom-calendar .react-calendar__month-view__days__day--now:hover,
+.custom-calendar .react-calendar__tile--now:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+}
+
+/* Asegurar que los abbr dentro del calendario no tengan decoraciones rojas */
+.custom-calendar abbr {
+  text-decoration: none !important;
+  border: none !important;
+  color: inherit !important;
+}
+

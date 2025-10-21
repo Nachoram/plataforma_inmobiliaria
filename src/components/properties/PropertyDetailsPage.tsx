@@ -23,6 +23,7 @@ interface PropertyWithImages extends Property {
     email: string;
     phone: string;
   };
+  postulation_count?: number;
 }
 
 export const PropertyDetailsPage: React.FC = () => {

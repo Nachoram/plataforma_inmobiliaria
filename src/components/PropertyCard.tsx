@@ -4,6 +4,7 @@ import { MapPin, Bed, Bath, Square, Building, Heart, TrendingUp, MessageSquare, 
 import { SupabaseProperty, formatPriceCLP, isValidPrice } from '../lib/supabase';
 import CustomButton from './common/CustomButton';
 import ImageGallery from './common/ImageGallery';
+import PostulationsList from './portfolio/PostulationsList';
 
 // Usar la interfaz Property de supabase.ts para consistencia
 type Property = SupabaseProperty;
@@ -13,6 +14,7 @@ interface PropertyWithImages extends SupabaseProperty {
     image_url: string;
     storage_path: string;
   }>;
+  postulation_count?: number;
 }
 
 type PropertyCardContext = 'panel' | 'portfolio';
@@ -27,6 +29,8 @@ interface PropertyCardProps {
   onEdit?: (property: PropertyWithImages) => void;
   onDelete?: (propertyId: string) => void;
   isFavorite?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = memo(({
@@ -38,7 +42,9 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
   onToggleFavorite,
   onEdit,
   onDelete,
-  isFavorite = false
+  isFavorite = false,
+  isExpanded = false,
+  onToggleExpand
 }) => {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -113,7 +119,8 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
   };
 
   return (
-    <div className="mobile-card overflow-hidden hover:shadow-medium transition-all duration-300 hover:-translate-y-0.5 active:scale-98">
+    <div className="property-card-wrapper">
+      <div className="mobile-card overflow-hidden hover:shadow-medium transition-all duration-300 hover:-translate-y-0.5 active:scale-98" onClick={onToggleExpand}>
       {/* Property Image */}
       <div className="h-40 xs:h-48 bg-gray-200 relative overflow-hidden">
         {property.property_images && property.property_images.length > 0 ? (
@@ -272,7 +279,7 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
           )}
           {context === 'portfolio' && (
             <Link
-              to={`/property/${property.id}`}
+              to={`/portfolio/property/${property.id}`}
               className="text-blue-600 hover:text-blue-800 text-mobile-sm font-medium mobile-btn px-3 py-1"
             >
               Ver detalles
@@ -324,6 +331,20 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
         )}
       </div>
 
+      {/* Metrics Footer - Only show in portfolio context */}
+      {context === 'portfolio' && (
+        <div className="card-footer px-3 xs:px-4 py-2 bg-gray-50 border-t border-gray-100">
+          <div className="flex items-center justify-between text-mobile-sm">
+            <span className="metric text-gray-600">
+              Postulaciones: <strong className="text-gray-900">{property.postulation_count || 0}</strong>
+            </span>
+            <span className={`status-badge px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
+              {getStatusLabel(property.status)}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Image Gallery Modal */}
       {showGallery && property.property_images && (
         <ImageGallery
@@ -333,6 +354,14 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
           onNext={handleGalleryNext}
           onPrevious={handleGalleryPrevious}
         />
+      )}
+      </div>
+
+      {/* Postulations List - Only show when expanded and in portfolio context */}
+      {isExpanded && context === 'portfolio' && (
+        <div className="mt-4 px-4 py-4 bg-gray-50 rounded-lg border border-gray-200">
+          <PostulationsList propertyId={property.id} />
+        </div>
       )}
     </div>
   );

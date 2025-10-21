@@ -11,6 +11,7 @@ interface PropertyWithImages extends Property {
     image_url: string;
     storage_path: string;
   }>;
+  postulation_count?: number;
 }
 
 
@@ -19,6 +20,7 @@ const PortfolioPage: React.FC = () => {
   const { user } = useAuth();
   const [properties, setProperties] = useState<PropertyWithImages[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedPropertyId, setExpandedPropertyId] = useState<string | null>(null);
 
   const fetchPortfolioData = useCallback(async () => {
     // Verify user is authenticated before making any database queries
@@ -31,11 +33,26 @@ const PortfolioPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // Fetch properties
+      // Fetch properties using a direct query with LEFT JOIN for postulation count
       const { data: propertiesData, error: propertiesError } = await supabase
         .from('properties')
         .select(`
-          *,
+          id,
+          owner_id,
+          status,
+          listing_type,
+          address_street,
+          address_number,
+          address_department,
+          address_commune,
+          address_region,
+          price_clp,
+          common_expenses_clp,
+          bedrooms,
+          bathrooms,
+          surface_m2,
+          description,
+          created_at,
           property_images (
             image_url,
             storage_path
@@ -49,10 +66,45 @@ const PortfolioPage: React.FC = () => {
           console.error('RLS Policy violation: User does not have permission to view properties');
           setProperties([]);
         } else {
-          throw propertiesError;
+          console.error('Error fetching portfolio:', propertiesError);
+          setProperties([]);
         }
       } else {
-        setProperties(propertiesData || []);
+        // Get postulation counts for each property
+        let propertiesWithCounts = propertiesData || [];
+
+        if (propertiesWithCounts.length > 0) {
+          const propertyIds = propertiesWithCounts.map(p => p.id);
+
+          // Fetch postulation counts
+          const { data: countsData, error: countsError } = await supabase
+            .from('applications')
+            .select('property_id')
+            .in('property_id', propertyIds);
+
+          if (!countsError && countsData) {
+            // Count applications per property
+            const countsByPropertyId = countsData.reduce((acc, app) => {
+              acc[app.property_id] = (acc[app.property_id] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>);
+
+            // Add postulation count to each property
+            propertiesWithCounts = propertiesWithCounts.map(property => ({
+              ...property,
+              postulation_count: countsByPropertyId[property.id] || 0
+            }));
+          } else if (countsError) {
+            console.warn('Error fetching postulation counts:', countsError);
+            // Continue with count = 0 for all properties
+            propertiesWithCounts = propertiesWithCounts.map(property => ({
+              ...property,
+              postulation_count: 0
+            }));
+          }
+        }
+
+        setProperties(propertiesWithCounts);
       }
 
     } catch (error) {
@@ -112,7 +164,11 @@ const PortfolioPage: React.FC = () => {
     }).format(price);
   };
 
-
+  const handleToggleExpand = (propertyId: string) => {
+    setExpandedPropertyId(currentId =>
+      currentId === propertyId ? null : propertyId
+    );
+  };
 
   // Check authentication before showing any content
   if (!user) {
@@ -217,6 +273,8 @@ const PortfolioPage: React.FC = () => {
                 key={property.id}
                 property={property}
                 context="portfolio"
+                isExpanded={expandedPropertyId === property.id}
+                onToggleExpand={() => handleToggleExpand(property.id)}
                 onEdit={(property) => {
                   // Navigate to edit page
                   window.location.href = `/property/edit/${property.id}`;

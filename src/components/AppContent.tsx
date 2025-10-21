@@ -14,6 +14,7 @@ import { PanelPage } from './panel/PanelPage';
 
 // Property components - keep property details loaded
 import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
+import { AdminPropertyDetailView } from './properties/AdminPropertyDetailView';
 
 // Diagnostic components - keep loaded
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
@@ -98,6 +99,14 @@ export const AppContent: React.FC = () => {
         <ProtectedRoute>
           <Layout>
             <PortfolioPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/portfolio/property/:id" element={
+        <ProtectedRoute>
+          <Layout>
+            <AdminPropertyDetailView />
           </Layout>
         </ProtectedRoute>
       } />

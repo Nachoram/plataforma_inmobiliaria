@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, Check, X, Mail, Phone, DollarSign, Briefcase, UserCheck, FileText } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 interface Postulation {
   id: string;
@@ -18,12 +19,94 @@ interface Postulation {
 }
 
 interface PostulationsListProps {
-  postulations: Postulation[];
+  postulations?: Postulation[];
+  propertyId?: string;
 }
 
-const PostulationsList: React.FC<PostulationsListProps> = ({ postulations }) => {
+const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propPostulations, propertyId }) => {
+  const [postulations, setPostulations] = useState<Postulation[]>(propPostulations || []);
+  const [loading, setLoading] = useState(!propPostulations && !!propertyId);
   const [selectedPostulation, setSelectedPostulation] = useState<Postulation | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Si no se pasaron postulaciones pero sí un propertyId, cargarlas
+  React.useEffect(() => {
+    console.log('🔍 [PostulationsList] Props recibidos:', { propPostulations, propertyId });
+    
+    if (!propPostulations && propertyId) {
+      console.log('🔍 [PostulationsList] Cargando postulaciones para property:', propertyId);
+      const fetchPostulations = async () => {
+        setLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('applications')
+            .select(`
+              id,
+              applicant_id,
+              status,
+              created_at,
+              message,
+              application_characteristic_id,
+              profiles!applicant_id (
+                first_name,
+                paternal_last_name,
+                maternal_last_name,
+                email,
+                phone
+              ),
+              guarantors!guarantor_id (
+                first_name,
+                paternal_last_name,
+                maternal_last_name,
+                rut,
+                guarantor_characteristic_id
+              )
+            `)
+            .eq('property_id', propertyId)
+            .order('created_at', { ascending: false });
+
+          console.log('🔍 [PostulationsList] Respuesta DB:', { data, error });
+
+          if (!error && data) {
+            const formattedPostulations: Postulation[] = data.map((app: any) => ({
+              id: app.id,
+              applicant_id: app.applicant_id,
+              status: app.status,
+              created_at: app.created_at,
+              message: app.message,
+              application_characteristic_id: app.application_characteristic_id,
+              applicant_name: app.profiles
+                ? `${app.profiles.first_name} ${app.profiles.paternal_last_name} ${app.profiles.maternal_last_name || ''}`.trim()
+                : 'Sin nombre',
+              applicant_email: app.profiles?.email || null,
+              applicant_phone: app.profiles?.phone || null,
+              guarantor_name: app.guarantors
+                ? `${app.guarantors.first_name} ${app.guarantors.paternal_last_name} ${app.guarantors.maternal_last_name || ''}`.trim()
+                : null,
+              guarantor_email: null, // La tabla guarantors no tiene email
+              guarantor_phone: null, // La tabla guarantors no tiene phone
+              guarantor_characteristic_id: app.guarantors?.guarantor_characteristic_id || null,
+            }));
+            console.log('✅ [PostulationsList] Postulaciones formateadas:', formattedPostulations);
+            setPostulations(formattedPostulations);
+          } else {
+            console.error('❌ [PostulationsList] Error o sin datos:', error);
+          }
+        } catch (error) {
+          console.error('❌ [PostulationsList] Error en catch:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchPostulations();
+    } else if (propPostulations) {
+      console.log('✅ [PostulationsList] Usando postulaciones de props:', propPostulations);
+      setPostulations(propPostulations);
+    } else {
+      console.warn('⚠️ [PostulationsList] Sin postulaciones ni propertyId');
+    }
+  }, [propPostulations, propertyId]);
 
   const handleViewDetails = (postulation: Postulation) => {
     setSelectedPostulation(postulation);
@@ -53,6 +136,15 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations }) => 
         return 'Pendiente';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+        <span className="ml-3 text-gray-600">Cargando postulaciones...</span>
+      </div>
+    );
+  }
 
   if (postulations.length === 0) {
     return (
@@ -266,29 +358,15 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations }) => 
                         </div>
                       </div>
                       
-                      {selectedPostulation.guarantor_email && (
-                        <div className="bg-white rounded-lg p-3 shadow-sm">
-                          <div className="flex items-center space-x-2">
-                            <Mail className="h-4 w-4 text-blue-600" />
-                            <div className="flex-1">
-                              <label className="text-xs font-semibold text-gray-500 uppercase block">Email</label>
-                              <p className="text-sm text-gray-900 mt-1">{selectedPostulation.guarantor_email}</p>
-                            </div>
-                          </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-start space-x-2">
+                        <FileText className="h-4 w-4 text-gray-600 mt-1" />
+                        <div className="flex-1">
+                          <label className="text-xs font-semibold text-gray-500 uppercase block">Nota</label>
+                          <p className="text-sm text-gray-700 mt-1">Datos de contacto del aval disponibles en documentación adjunta</p>
                         </div>
-                      )}
-                      
-                      {selectedPostulation.guarantor_phone && (
-                        <div className="bg-white rounded-lg p-3 shadow-sm">
-                          <div className="flex items-center space-x-2">
-                            <Phone className="h-4 w-4 text-green-600" />
-                            <div className="flex-1">
-                              <label className="text-xs font-semibold text-gray-500 uppercase block">Teléfono</label>
-                              <p className="text-sm text-gray-900 mt-1">{selectedPostulation.guarantor_phone}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      </div>
+                    </div>
                     </div>
                   </div>
                 )}

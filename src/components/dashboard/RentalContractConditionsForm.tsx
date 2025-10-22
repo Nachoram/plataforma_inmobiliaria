@@ -22,6 +22,7 @@ export interface RentalContractConditions {
   accepts_pets: boolean;
   dicom_clause: boolean;
   additional_conditions: string;
+  payment_method?: string;
   bank_name: string;
   bank_account_type: string;
   bank_account_number: string;
@@ -50,6 +51,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
     accepts_pets: false,
     dicom_clause: true, // Default true para protección del arrendatario
     additional_conditions: '',
+    payment_method: 'transferencia',
     bank_name: '',
     bank_account_type: '',
     bank_account_number: '',
@@ -64,6 +66,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState<RentalContractConditionsErrors>({});
+  const [paymentMethod, setPaymentMethod] = useState('transferencia');
 
   // Load existing conditions when component mounts
   React.useEffect(() => {
@@ -98,6 +101,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
             accepts_pets: data.accepts_pets || false,
             dicom_clause: data.dicom_clause || false,
             additional_conditions: data.additional_conditions || '',
+            payment_method: data.payment_method || 'transferencia',
             bank_name: data.bank_name || '',
             bank_account_type: data.bank_account_type || '',
             bank_account_number: data.bank_account_number || '',
@@ -107,6 +111,12 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
             termination_clause_non_payment: data.termination_clause_non_payment || 'En caso de no pago, el arrendador podrá terminar el contrato previo aviso de 15 días.',
             contract_start_date: data.contract_start_date || new Date().toISOString().split('T')[0]
           });
+          
+          // También actualizar el estado del método de pago
+          if (data.payment_method) {
+            setPaymentMethod(data.payment_method);
+          }
+          
           setIsEditing(true);
         }
       } catch (error) {
@@ -147,24 +157,27 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
       newErrors.official_communication_email = 'Debe ingresar un email válido';
     }
 
-    if (!formData.bank_name || formData.bank_name.trim().length < 3) {
-      newErrors.bank_name = 'Debe ingresar el nombre del banco';
-    }
+    // Validar datos bancarios solo si el método de pago es transferencia
+    if (paymentMethod === 'transferencia') {
+      if (!formData.bank_name || formData.bank_name.trim().length < 3) {
+        newErrors.bank_name = 'Debe ingresar el nombre del banco';
+      }
 
-    if (!formData.bank_account_type) {
-      newErrors.bank_account_type = 'Debe seleccionar el tipo de cuenta';
-    }
+      if (!formData.bank_account_type) {
+        newErrors.bank_account_type = 'Debe seleccionar el tipo de cuenta';
+      }
 
-    if (!formData.bank_account_number || formData.bank_account_number.trim().length < 5) {
-      newErrors.bank_account_number = 'Debe ingresar un número de cuenta válido';
-    }
+      if (!formData.bank_account_number || formData.bank_account_number.trim().length < 5) {
+        newErrors.bank_account_number = 'Debe ingresar un número de cuenta válido';
+      }
 
-    if (!formData.bank_account_rut || formData.bank_account_rut.trim().length < 9) {
-      newErrors.bank_account_rut = 'Debe ingresar un RUT válido';
-    }
+      if (!formData.bank_account_rut || formData.bank_account_rut.trim().length < 9) {
+        newErrors.bank_account_rut = 'Debe ingresar un RUT válido';
+      }
 
-    if (!formData.bank_account_holder || formData.bank_account_holder.trim().length < 3) {
-      newErrors.bank_account_holder = 'Debe ingresar el nombre del titular';
+      if (!formData.bank_account_holder || formData.bank_account_holder.trim().length < 3) {
+        newErrors.bank_account_holder = 'Debe ingresar el nombre del titular';
+      }
     }
 
     if (!formData.termination_clause_non_payment || formData.termination_clause_non_payment.trim().length < 10) {
@@ -234,6 +247,12 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
     setSaving(true);
 
     try {
+      // Preparar los datos incluyendo el método de pago
+      const dataToSave = {
+        ...formData,
+        payment_method: paymentMethod
+      };
+
       // First, check if conditions already exist for this application
       const { data: existingConditions, error: checkError } = await supabase
         .from('rental_contract_conditions')
@@ -251,7 +270,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
         // Update existing conditions
         const { data, error } = await supabase
           .from('rental_contract_conditions')
-          .update(formData)
+          .update(dataToSave)
           .eq('application_id', applicationId)
           .select('*, rental_contract_conditions_characteristic_id')
           .single();
@@ -264,7 +283,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
           .from('rental_contract_conditions')
           .insert({
             application_id: applicationId,
-            ...formData
+            ...dataToSave
           })
           .select('*, rental_contract_conditions_characteristic_id')
           .single();
@@ -463,27 +482,6 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Comisión del Corredor (CLP)
-                </label>
-                <input
-                  type="number"
-                  value={formData.broker_commission_clp}
-                  onChange={(e) => handleInputChange('broker_commission_clp', parseInt(e.target.value) || 0)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
-                    errors.broker_commission_clp ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Comisión acordada"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Formateado: {formatPrice(formData.broker_commission_clp)}
-                </p>
-                {errors.broker_commission_clp && (
-                  <p className="text-red-500 text-xs mt-1">{errors.broker_commission_clp}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Monto de Garantía (CLP) *
                 </label>
                 <input
@@ -531,123 +529,6 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
               {errors.official_communication_email && (
                 <p className="text-red-500 text-xs mt-1">{errors.official_communication_email}</p>
               )}
-            </div>
-          </div>
-
-          {/* Sección: Información de Pago */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Building2 className="h-5 w-5 mr-2 text-emerald-600" />
-              Información de Pago
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Banco *
-                </label>
-                <select
-                  value={formData.bank_name}
-                  onChange={(e) => handleInputChange('bank_name', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
-                    errors.bank_name ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Seleccione un banco</option>
-                  <option value="Banco de Chile">Banco de Chile</option>
-                  <option value="Banco Santander">Banco Santander</option>
-                  <option value="Banco Estado">Banco Estado</option>
-                  <option value="BCI">BCI - Banco de Crédito e Inversiones</option>
-                  <option value="Scotiabank">Scotiabank</option>
-                  <option value="Banco Itaú">Banco Itaú</option>
-                  <option value="Banco Security">Banco Security</option>
-                  <option value="Banco Falabella">Banco Falabella</option>
-                  <option value="Banco Ripley">Banco Ripley</option>
-                  <option value="Banco Consorcio">Banco Consorcio</option>
-                  <option value="Banco BICE">Banco BICE</option>
-                  <option value="Coopeuch">Coopeuch</option>
-                  <option value="Otro">Otro</option>
-                </select>
-                {errors.bank_name && (
-                  <p className="text-red-500 text-xs mt-1">{errors.bank_name}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Cuenta *
-                </label>
-                <select
-                  value={formData.bank_account_type}
-                  onChange={(e) => handleInputChange('bank_account_type', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
-                    errors.bank_account_type ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Seleccione tipo de cuenta</option>
-                  <option value="Cuenta Corriente">Cuenta Corriente</option>
-                  <option value="Cuenta Vista">Cuenta Vista</option>
-                  <option value="Cuenta de Ahorro">Cuenta de Ahorro</option>
-                  <option value="Cuenta RUT">Cuenta RUT</option>
-                </select>
-                {errors.bank_account_type && (
-                  <p className="text-red-500 text-xs mt-1">{errors.bank_account_type}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Número de Cuenta *
-                </label>
-                <input
-                  type="text"
-                  value={formData.bank_account_number}
-                  onChange={(e) => handleInputChange('bank_account_number', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
-                    errors.bank_account_number ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Ej: 12345678"
-                />
-                {errors.bank_account_number && (
-                  <p className="text-red-500 text-xs mt-1">{errors.bank_account_number}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  RUT del Titular *
-                </label>
-                <input
-                  type="text"
-                  value={formData.bank_account_rut}
-                  onChange={(e) => handleInputChange('bank_account_rut', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
-                    errors.bank_account_rut ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Ej: 12.345.678-9"
-                />
-                {errors.bank_account_rut && (
-                  <p className="text-red-500 text-xs mt-1">{errors.bank_account_rut}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre del Titular *
-                </label>
-                <input
-                  type="text"
-                  value={formData.bank_account_holder}
-                  onChange={(e) => handleInputChange('bank_account_holder', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
-                    errors.bank_account_holder ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Ej: Juan Pérez González"
-                />
-                {errors.bank_account_holder && (
-                  <p className="text-red-500 text-xs mt-1">{errors.bank_account_holder}</p>
-                )}
-              </div>
             </div>
           </div>
 
@@ -747,6 +628,184 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
             <p className="text-xs text-gray-500 mt-1">
               Aquí puedes agregar cualquier condición especial acordada verbalmente
             </p>
+          </div>
+
+          {/* Sección: Condiciones de Pago */}
+          <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-4 rounded-lg border border-emerald-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <DollarSign className="h-5 w-5 mr-2 text-emerald-600" />
+              Condiciones de Pago
+            </h3>
+
+            {/* Comisión de Corretaje */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Comisión de Corretaje (Opcional)
+              </label>
+              <input
+                type="number"
+                value={formData.broker_commission_clp || ''}
+                onChange={(e) => handleInputChange('broker_commission_clp', parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                placeholder="Ingrese el monto de la comisión"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Dejar en blanco si no aplica
+              </p>
+            </div>
+
+            {/* Modo de Pago del Arriendo */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Modo de Pago del Arriendo
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-white transition-colors">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="transferencia"
+                    checked={paymentMethod === 'transferencia'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    Transferencia Bancaria
+                  </span>
+                </label>
+                <label className="flex items-center p-3 border border-gray-300 rounded-lg opacity-50 cursor-not-allowed bg-gray-50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="plataforma"
+                    disabled
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-500">
+                    Pago a través de la Plataforma (Próximamente)
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Datos para Transferencia (Condicional) */}
+            {paymentMethod === 'transferencia' && (
+              <div className="mt-4 p-4 bg-white rounded-lg border border-emerald-300">
+                <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                  <Building2 className="h-4 w-4 mr-2 text-emerald-600" />
+                  Datos para Transferencia
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombre del Titular *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bank_account_holder}
+                      onChange={(e) => handleInputChange('bank_account_holder', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                        errors.bank_account_holder ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: Juan Pérez González"
+                    />
+                    {errors.bank_account_holder && (
+                      <p className="text-red-500 text-xs mt-1">{errors.bank_account_holder}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      RUT del Titular *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bank_account_rut}
+                      onChange={(e) => handleInputChange('bank_account_rut', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                        errors.bank_account_rut ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 12.345.678-9"
+                    />
+                    {errors.bank_account_rut && (
+                      <p className="text-red-500 text-xs mt-1">{errors.bank_account_rut}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Banco *
+                    </label>
+                    <select
+                      value={formData.bank_name}
+                      onChange={(e) => handleInputChange('bank_name', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                        errors.bank_name ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Seleccione un banco</option>
+                      <option value="Banco de Chile">Banco de Chile</option>
+                      <option value="Banco Santander">Banco Santander</option>
+                      <option value="Banco Estado">Banco Estado</option>
+                      <option value="BCI">BCI - Banco de Crédito e Inversiones</option>
+                      <option value="Scotiabank">Scotiabank</option>
+                      <option value="Banco Itaú">Banco Itaú</option>
+                      <option value="Banco Security">Banco Security</option>
+                      <option value="Banco Falabella">Banco Falabella</option>
+                      <option value="Banco Ripley">Banco Ripley</option>
+                      <option value="Banco Consorcio">Banco Consorcio</option>
+                      <option value="Banco BICE">Banco BICE</option>
+                      <option value="Coopeuch">Coopeuch</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                    {errors.bank_name && (
+                      <p className="text-red-500 text-xs mt-1">{errors.bank_name}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de Cuenta *
+                    </label>
+                    <select
+                      value={formData.bank_account_type}
+                      onChange={(e) => handleInputChange('bank_account_type', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                        errors.bank_account_type ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Seleccione tipo de cuenta</option>
+                      <option value="Cuenta Corriente">Cuenta Corriente</option>
+                      <option value="Cuenta Vista">Cuenta Vista</option>
+                      <option value="Cuenta de Ahorro">Cuenta de Ahorro</option>
+                      <option value="Cuenta RUT">Cuenta RUT</option>
+                    </select>
+                    {errors.bank_account_type && (
+                      <p className="text-red-500 text-xs mt-1">{errors.bank_account_type}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Número de Cuenta *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bank_account_number}
+                      onChange={(e) => handleInputChange('bank_account_number', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                        errors.bank_account_number ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 12345678"
+                    />
+                    {errors.bank_account_number && (
+                      <p className="text-red-500 text-xs mt-1">{errors.bank_account_number}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Botones de Acción */}

@@ -59,7 +59,7 @@ export const PanelPage: React.FC = () => {
         .from('properties')
         .select(`
           *,
-          property_images (
+          property_images!inner (
             image_url,
             storage_path
           )

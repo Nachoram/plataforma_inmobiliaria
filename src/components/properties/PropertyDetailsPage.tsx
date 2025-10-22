@@ -71,7 +71,7 @@ export const PropertyDetailsPage: React.FC = () => {
           tipo_cocina,
           description,
           created_at,
-          property_images (
+          property_images!inner (
             image_url,
             storage_path
           ),

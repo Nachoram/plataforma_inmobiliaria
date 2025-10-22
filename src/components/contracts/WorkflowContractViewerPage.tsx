@@ -1,19 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import WorkflowContractViewer from './WorkflowContractViewer';
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import CustomButton from '../common/CustomButton';
+import { supabase } from '../../lib/supabase';
 
 const WorkflowContractViewerPage: React.FC = () => {
   const { contractId } = useParams<{ contractId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  // Estado para datos de la propiedad
+  const [propertyData, setPropertyData] = useState<{
+    tipo_propiedad?: string;
+    address_street?: string;
+    address_number?: string;
+    address_commune?: string;
+    address_region?: string;
+  } | null>(null);
+
   // Obtener parámetros de la URL
   const webhookUrl = searchParams.get('webhookUrl');
   const workflowId = searchParams.get('workflowId');
   const propertyId = searchParams.get('propertyId');
   const applicationId = searchParams.get('applicationId');
+
+  // Obtener datos de la propiedad cuando propertyId esté disponible
+  useEffect(() => {
+    const fetchPropertyData = async () => {
+      if (!propertyId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('tipo_propiedad, address_street, address_number, address_commune, address_region')
+          .eq('id', propertyId)
+          .single();
+
+        if (error) {
+          console.error('Error obteniendo datos de la propiedad:', error);
+        } else {
+          setPropertyData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching property data:', error);
+      }
+    };
+
+    fetchPropertyData();
+  }, [propertyId]);
 
   // Si no hay webhookUrl, mostrar error
   if (!webhookUrl) {
@@ -50,11 +85,24 @@ const WorkflowContractViewerPage: React.FC = () => {
     applicationId: applicationId,
     action: 'generate_contract',
     timestamp: new Date().toISOString(),
+    // Incluir datos de la propiedad para generación del contrato
+    property: propertyData ? {
+      tipo_propiedad: propertyData.tipo_propiedad,
+      address_street: propertyData.address_street,
+      address_number: propertyData.address_number,
+      address_commune: propertyData.address_commune,
+      address_region: propertyData.address_region,
+      full_address: propertyData.address_street && propertyData.address_number
+        ? `${propertyData.address_street} ${propertyData.address_number}, ${propertyData.address_commune}, ${propertyData.address_region}`
+        : undefined
+    } : undefined,
     // Incluir cualquier otro dato necesario para N8N
     metadata: {
       source: 'plataforma_inmobiliaria',
       userAgent: navigator.userAgent,
-      url: window.location.href
+      url: window.location.href,
+      has_property_data: !!propertyData,
+      property_type_included: !!propertyData?.tipo_propiedad
     }
   };
 

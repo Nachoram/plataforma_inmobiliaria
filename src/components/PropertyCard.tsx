@@ -379,7 +379,13 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
       {/* Postulations List - Only show when expanded and in portfolio context */}
       {isExpanded && context === 'portfolio' && (
         <div className="mt-4 px-4 py-4 bg-gray-50 rounded-lg border border-gray-200">
-          <PostulationsList postulations={postulations} />
+          {(() => {
+            console.log('🔍 [PropertyCard] Mostrando PostulationsList para property:', property.id);
+            console.log('🔍 [PropertyCard] Postulations:', postulations);
+            console.log('🔍 [PropertyCard] Postulation_count:', property.postulation_count);
+            return null;
+          })()}
+          <PostulationsList postulations={postulations} propertyId={property.id} />
         </div>
       )}
     </div>

@@ -51,32 +51,37 @@ export const AdminPropertyDetailView: React.FC = () => {
     'https://propiedadesapp.com/postular/a5b1c8f8-a0d4-425c-865e'
   );
   const [isCopied, setIsCopied] = useState(false);
-  const [postulations, setPostulations] = useState([
-    {
-      id: 1, name: 'Juan Pérez', date: '2025-10-20', score: 750, status: 'En Revisión',
-      profile: { email: 'juan.perez@email.com', phone: '+56 9 1234 5678', income: 1800000, employment: 'Contrato Indefinido' },
-      guarantor: { name: 'Marta Soto', email: 'marta.soto@email.com', income: 1500000 }
-    },
-    {
-      id: 2, name: 'Ana Gómez', date: '2025-10-19', score: 820, status: 'Aprobado',
-      profile: { email: 'ana.gomez@email.com', phone: '+56 9 8765 4321', income: 2200000, employment: 'Funcionario Público' },
-      guarantor: { name: 'Luis Torres', email: 'luis.torres@email.com', income: 1700000 }
-    },
-    {
-      id: 3, name: 'Carlos Soto', date: '2025-10-18', score: 640, status: 'Rechazado',
-      profile: { email: 'carlos.soto@email.com', phone: '+56 9 5555 6666', income: 1200000, employment: 'Trabajador Independiente' },
-      guarantor: { name: 'Rosa Campos', email: 'rosa.campos@email.com', income: 1300000 }
-    },
-    {
-      id: 4, name: 'María López', date: '2025-10-17', score: 790, status: 'En Revisión',
-      profile: { email: 'maria.lopez@email.com', phone: '+56 9 7777 8888', income: 2000000, employment: 'Contrato Plazo Fijo' },
-      guarantor: { name: 'Pedro Ramírez', email: 'pedro.ramirez@email.com', income: 1600000 }
-    },
-  ]);
+  const [postulations, setPostulations] = useState<any[]>([]);
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+  const [isSubmittingContract, setIsSubmittingContract] = useState(false);
+  
+  // Estado para el formulario de condiciones de contrato
+  const [contractForm, setContractForm] = useState({
+    startDate: '',
+    duration: '12',
+    guaranteeAmount: '',
+    paymentDay: '1',
+    // Campos para Casa/Departamento
+    allowsPets: false,
+    sublease: 'No Permitido',
+    maxOccupants: '',
+    // Campos para Bodega/Estacionamiento
+    allowedUse: '',
+    accessClause: '',
+    // Condiciones de Pago
+    brokerCommission: '',
+    paymentMethod: 'transferencia',
+    bankAccountHolder: '',
+    bankAccountRut: '',
+    bankName: '',
+    bankAccountType: '',
+    bankAccountNumber: ''
+  });
 
   useEffect(() => {
     if (id) {
       fetchPropertyDetails();
+      fetchPostulations();
     }
   }, [id]);
 
@@ -89,6 +94,7 @@ export const AdminPropertyDetailView: React.FC = () => {
           owner_id,
           status,
           listing_type,
+          tipo_propiedad,
           address_street,
           address_number,
           address_department,
@@ -103,7 +109,7 @@ export const AdminPropertyDetailView: React.FC = () => {
           metros_totales,
           ano_construccion,
           created_at,
-          property_images (
+          property_images!inner (
             image_url,
             storage_path
           )
@@ -118,6 +124,72 @@ export const AdminPropertyDetailView: React.FC = () => {
       console.error('Error fetching property details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPostulations = async () => {
+    console.log('🔍 [AdminPropertyDetailView] Cargando postulaciones reales para property:', id);
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          applicant_id,
+          status,
+          created_at,
+          message,
+          application_characteristic_id,
+          profiles!applicant_id (
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            email,
+            phone
+          ),
+          guarantors!guarantor_id (
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            rut,
+            guarantor_characteristic_id
+          )
+        `)
+        .eq('property_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ [AdminPropertyDetailView] Error cargando postulaciones:', error);
+        return;
+      }
+
+      console.log('✅ [AdminPropertyDetailView] Postulaciones reales cargadas:', data?.length || 0);
+
+      // Formatear las postulaciones al formato que usa el componente
+      const formattedPostulations = (data || []).map((app: any, index: number) => ({
+        id: index + 1, // ID numérico para la tabla
+        name: app.profiles 
+          ? `${app.profiles.first_name} ${app.profiles.paternal_last_name} ${app.profiles.maternal_last_name || ''}`.trim()
+          : 'Sin nombre',
+        date: new Date(app.created_at).toISOString().split('T')[0],
+        score: 750, // TODO: Calcular score real si existe
+        status: app.status === 'aprobada' ? 'Aprobado' : app.status === 'rechazada' ? 'Rechazado' : 'En Revisión',
+        profile: {
+          email: app.profiles?.email || 'Sin email',
+          phone: app.profiles?.phone || 'Sin teléfono',
+          income: 0, // TODO: Agregar si existe en la BD
+          employment: 'N/A' // TODO: Agregar si existe en la BD
+        },
+        guarantor: app.guarantors ? {
+          name: `${app.guarantors.first_name} ${app.guarantors.paternal_last_name} ${app.guarantors.maternal_last_name || ''}`.trim(),
+          email: 'N/A', // La tabla guarantors no tiene email
+          income: 0 // TODO: Agregar si existe en la BD
+        } : null
+      }));
+
+      console.log('📊 [AdminPropertyDetailView] Postulaciones formateadas:', formattedPostulations);
+      setPostulations(formattedPostulations);
+    } catch (error) {
+      console.error('❌ [AdminPropertyDetailView] Error en catch:', error);
     }
   };
 
@@ -177,6 +249,137 @@ export const AdminPropertyDetailView: React.FC = () => {
       }, 3000); // Vuelve al estado normal después de 3 segundos
     } catch (err) {
       console.error('Error al copiar al portapapeles:', err);
+    }
+  };
+
+  // Función para abrir el modal de condiciones de contrato
+  const handleAcceptClick = () => {
+    setIsProfileModalOpen(false); // Cierra el modal del perfil
+    setIsContractModalOpen(true);  // Abre el modal de contrato
+  };
+
+  // Función para actualizar los campos del formulario
+  const handleContractFormChange = (field: string, value: any) => {
+    setContractForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Función para enviar los datos al webhook
+  const handleSendToWebhook = async () => {
+    if (!selectedProfile || !property) return;
+
+    // Validaciones básicas
+    if (!contractForm.startDate || !contractForm.guaranteeAmount || !contractForm.paymentDay) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
+    }
+
+    // Validar campos de transferencia bancaria si el método de pago es transferencia
+    if (contractForm.paymentMethod === 'transferencia') {
+      if (!contractForm.bankAccountHolder || !contractForm.bankAccountRut || 
+          !contractForm.bankName || !contractForm.bankAccountType || 
+          !contractForm.bankAccountNumber) {
+        alert('Por favor completa todos los datos bancarios para transferencia');
+        return;
+      }
+    }
+
+    setIsSubmittingContract(true);
+
+    const webhookUrl = 'https://producción primaria-bafdc.up.railway.app/prueba-de-webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';
+
+    const payload = {
+      postulant: {
+        name: selectedProfile.name,
+        email: selectedProfile.profile.email,
+        phone: selectedProfile.profile.phone,
+        income: selectedProfile.profile.income,
+        employment: selectedProfile.profile.employment
+      },
+      guarantor: selectedProfile.guarantor ? {
+        name: selectedProfile.guarantor.name,
+        email: selectedProfile.guarantor.email,
+        income: selectedProfile.guarantor.income
+      } : null,
+      property: {
+        id: property.id,
+        address: `${property.address_street} ${property.address_number}`,
+        commune: property.address_commune,
+        region: property.address_region,
+        type: property.tipo_propiedad || 'Casa',
+        price: property.price_clp,
+        bedrooms: property.bedrooms,
+        bathrooms: property.bathrooms
+      },
+      contract: {
+        startDate: contractForm.startDate,
+        duration: `${contractForm.duration} meses`,
+        guaranteeAmount: contractForm.guaranteeAmount,
+        paymentDay: contractForm.paymentDay,
+        // Campos condicionales según el tipo
+        ...(property.tipo_propiedad === 'Casa' || property.tipo_propiedad === 'Departamento' ? {
+          allowsPets: contractForm.allowsPets,
+          sublease: contractForm.sublease,
+          maxOccupants: contractForm.maxOccupants
+        } : {}),
+        ...(property.tipo_propiedad === 'Bodega' || property.tipo_propiedad === 'Estacionamiento' ? {
+          allowedUse: contractForm.allowedUse,
+          accessClause: contractForm.accessClause
+        } : {})
+      },
+      paymentConditions: {
+        brokerCommission: contractForm.brokerCommission || null,
+        paymentMethod: contractForm.paymentMethod,
+        ...(contractForm.paymentMethod === 'transferencia' ? {
+          bankTransferDetails: {
+            accountHolder: contractForm.bankAccountHolder,
+            accountHolderRut: contractForm.bankAccountRut,
+            bankName: contractForm.bankName,
+            accountType: contractForm.bankAccountType,
+            accountNumber: contractForm.bankAccountNumber
+          }
+        } : {})
+      }
+    };
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        alert('¡Contrato enviado exitosamente!');
+        setIsContractModalOpen(false);
+        // Resetear el formulario
+        setContractForm({
+          startDate: '',
+          duration: '12',
+          guaranteeAmount: '',
+          paymentDay: '1',
+          allowsPets: false,
+          sublease: 'No Permitido',
+          maxOccupants: '',
+          allowedUse: '',
+          accessClause: '',
+          brokerCommission: '',
+          paymentMethod: 'transferencia',
+          bankAccountHolder: '',
+          bankAccountRut: '',
+          bankName: '',
+          bankAccountType: '',
+          bankAccountNumber: ''
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('Error del servidor:', errorText);
+        alert('Hubo un error al enviar el contrato. Por favor, intenta de nuevo.');
+      }
+    } catch (error) {
+      console.error('Error en la llamada al webhook:', error);
+      alert('Error de conexión. Inténtalo de nuevo.');
+    } finally {
+      setIsSubmittingContract(false);
     }
   };
 
@@ -846,7 +1049,10 @@ export const AdminPropertyDetailView: React.FC = () => {
                   </button>
 
                   {/* Botón: Aceptar Postulación */}
-                  <button className="group relative bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 transform hover:-translate-y-1">
+                  <button 
+                    onClick={handleAcceptClick}
+                    className="group relative bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 transform hover:-translate-y-1"
+                  >
                     <div className="flex flex-col items-center space-y-2">
                       <Check className="h-8 w-8" />
                       <span className="text-sm">Aceptar Postulación</span>
@@ -878,6 +1084,423 @@ export const AdminPropertyDetailView: React.FC = () => {
                   Cerrar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Condiciones de Contrato */}
+      {isContractModalOpen && selectedProfile && property && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[95vh] overflow-y-auto">
+            {/* Header del Modal */}
+            <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-8 rounded-t-2xl">
+              <button
+                onClick={() => setIsContractModalOpen(false)}
+                className="absolute top-6 right-6 text-white hover:text-gray-200 transition-colors bg-white/10 rounded-full p-2 hover:bg-white/20"
+              >
+                <X className="h-6 w-6" />
+              </button>
+              
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center h-16 w-16 bg-white rounded-full mb-4 shadow-lg">
+                  <FileText className="h-8 w-8 text-blue-600" />
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-2">
+                  Confirmar Condiciones del Contrato de Arriendo
+                </h2>
+                <p className="text-blue-100 text-sm">
+                  Para: {selectedProfile.name}
+                </p>
+              </div>
+            </div>
+
+            {/* Contenido del Formulario */}
+            <div className="p-8">
+              
+              {/* Información del Postulante y Propiedad */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-8 border-b-2 border-gray-200">
+                <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
+                  <h3 className="font-bold text-gray-900 mb-3 flex items-center">
+                    <span className="mr-2">👤</span>
+                    Postulante
+                  </h3>
+                  <p className="text-sm text-gray-700"><strong>Nombre:</strong> {selectedProfile.name}</p>
+                  <p className="text-sm text-gray-700"><strong>Email:</strong> {selectedProfile.profile.email}</p>
+                </div>
+                
+                <div className="bg-green-50 rounded-xl p-5 border border-green-200">
+                  <h3 className="font-bold text-gray-900 mb-3 flex items-center">
+                    <span className="mr-2">🏠</span>
+                    Propiedad
+                  </h3>
+                  <p className="text-sm text-gray-700"><strong>Dirección:</strong> {property.address_street} {property.address_number}</p>
+                  <p className="text-sm text-gray-700"><strong>Tipo:</strong> {property.tipo_propiedad || 'Casa'}</p>
+                </div>
+              </div>
+
+              {/* Formulario de Condiciones */}
+              <div className="space-y-6">
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Condiciones del Contrato</h3>
+                
+                {/* Campos Comunes (Siempre Visibles) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Fecha de Inicio del Contrato */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Fecha de Inicio del Contrato <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={contractForm.startDate}
+                      onChange={(e) => handleContractFormChange('startDate', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  {/* Duración del Contrato */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Duración del Contrato (meses) <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={contractForm.duration}
+                      onChange={(e) => handleContractFormChange('duration', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="3">3 meses</option>
+                      <option value="6">6 meses</option>
+                      <option value="12">12 meses</option>
+                      <option value="18">18 meses</option>
+                      <option value="24">24 meses</option>
+                      <option value="36">36 meses</option>
+                    </select>
+                  </div>
+
+                  {/* Monto de la Garantía */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Monto de la Garantía (CLP) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={contractForm.guaranteeAmount}
+                      onChange={(e) => handleContractFormChange('guaranteeAmount', e.target.value)}
+                      placeholder="Ej: 850000"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  {/* Día de Pago Mensual */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Día de Pago Mensual <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={contractForm.paymentDay}
+                      onChange={(e) => handleContractFormChange('paymentDay', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day}>Día {day}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                </div>
+
+                {/* Campos Condicionales para Casa o Departamento */}
+                {(property.tipo_propiedad === 'Casa' || property.tipo_propiedad === 'Departamento' || !property.tipo_propiedad) && (
+                  <div className="mt-8 p-6 bg-purple-50 rounded-xl border-2 border-purple-200">
+                    <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                      <span className="mr-2">🏘️</span>
+                      Condiciones Especiales para {property.tipo_propiedad || 'Casa/Departamento'}
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      
+                      {/* Permite Mascotas */}
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="allowsPets"
+                          checked={contractForm.allowsPets}
+                          onChange={(e) => handleContractFormChange('allowsPets', e.target.checked)}
+                          className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="allowsPets" className="ml-3 text-sm font-semibold text-gray-700">
+                          Permite Mascotas
+                        </label>
+                      </div>
+
+                      {/* Cláusula de Subarriendo */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Cláusula de Subarriendo
+                        </label>
+                        <select
+                          value={contractForm.sublease}
+                          onChange={(e) => handleContractFormChange('sublease', e.target.value)}
+                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        >
+                          <option value="Permitido">Permitido</option>
+                          <option value="No Permitido">No Permitido</option>
+                        </select>
+                      </div>
+
+                      {/* Número de Ocupantes Máximo */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Número de Ocupantes Máximo
+                        </label>
+                        <input
+                          type="number"
+                          value={contractForm.maxOccupants}
+                          onChange={(e) => handleContractFormChange('maxOccupants', e.target.value)}
+                          placeholder="Ej: 4"
+                          min="1"
+                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* Campos Condicionales para Bodega o Estacionamiento */}
+                {(property.tipo_propiedad === 'Bodega' || property.tipo_propiedad === 'Estacionamiento') && (
+                  <div className="mt-8 p-6 bg-orange-50 rounded-xl border-2 border-orange-200">
+                    <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                      <span className="mr-2">🚗</span>
+                      Condiciones Especiales para {property.tipo_propiedad}
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      
+                      {/* Uso Permitido */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Uso Permitido
+                        </label>
+                        <textarea
+                          value={contractForm.allowedUse}
+                          onChange={(e) => handleContractFormChange('allowedUse', e.target.value)}
+                          placeholder="Ej: Almacenamiento de enseres domésticos"
+                          rows={3}
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+
+                      {/* Cláusula de Acceso */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Cláusula de Acceso
+                        </label>
+                        <textarea
+                          value={contractForm.accessClause}
+                          onChange={(e) => handleContractFormChange('accessClause', e.target.value)}
+                          placeholder="Ej: Acceso 24/7 con llave magnética"
+                          rows={3}
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* Sección: Condiciones de Pago */}
+                <div className="mt-8 p-6 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border-2 border-emerald-300">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <span className="mr-2">💰</span>
+                    Condiciones de Pago
+                  </h4>
+                  
+                  {/* Comisión de Corretaje */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Comisión de Corretaje (Opcional)
+                    </label>
+                    <input
+                      type="number"
+                      value={contractForm.brokerCommission}
+                      onChange={(e) => handleContractFormChange('brokerCommission', e.target.value)}
+                      placeholder="Ingrese el monto de la comisión"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    />
+                    <p className="text-xs text-gray-600 mt-1">
+                      Dejar en blanco si no aplica
+                    </p>
+                  </div>
+
+                  {/* Modo de Pago del Arriendo */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Modo de Pago del Arriendo
+                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center p-3 border-2 border-gray-300 rounded-lg cursor-pointer hover:bg-white transition-colors">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="transferencia"
+                          checked={contractForm.paymentMethod === 'transferencia'}
+                          onChange={(e) => handleContractFormChange('paymentMethod', e.target.value)}
+                          className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
+                        />
+                        <span className="ml-3 text-sm font-semibold text-gray-700">
+                          Transferencia Bancaria
+                        </span>
+                      </label>
+                      <label className="flex items-center p-3 border-2 border-gray-300 rounded-lg opacity-50 cursor-not-allowed bg-gray-100">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="plataforma"
+                          disabled
+                          className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
+                        />
+                        <span className="ml-3 text-sm font-medium text-gray-500">
+                          Pago a través de la Plataforma (Próximamente)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Datos para Transferencia (Condicional) */}
+                  {contractForm.paymentMethod === 'transferencia' && (
+                    <div className="p-5 bg-white rounded-lg border-2 border-emerald-400">
+                      <h5 className="text-md font-bold text-gray-800 mb-4 flex items-center">
+                        <span className="mr-2">🏦</span>
+                        Datos para Transferencia
+                      </h5>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Nombre del Titular */}
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Nombre del Titular <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={contractForm.bankAccountHolder}
+                            onChange={(e) => handleContractFormChange('bankAccountHolder', e.target.value)}
+                            placeholder="Ej: Juan Pérez González"
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                          />
+                        </div>
+
+                        {/* RUT del Titular */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            RUT del Titular <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={contractForm.bankAccountRut}
+                            onChange={(e) => handleContractFormChange('bankAccountRut', e.target.value)}
+                            placeholder="Ej: 12.345.678-9"
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                          />
+                        </div>
+
+                        {/* Banco */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Banco <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={contractForm.bankName}
+                            onChange={(e) => handleContractFormChange('bankName', e.target.value)}
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                          >
+                            <option value="">Seleccione un banco</option>
+                            <option value="Banco de Chile">Banco de Chile</option>
+                            <option value="Banco Santander">Banco Santander</option>
+                            <option value="Banco Estado">Banco Estado</option>
+                            <option value="BCI">BCI - Banco de Crédito e Inversiones</option>
+                            <option value="Scotiabank">Scotiabank</option>
+                            <option value="Banco Itaú">Banco Itaú</option>
+                            <option value="Banco Security">Banco Security</option>
+                            <option value="Banco Falabella">Banco Falabella</option>
+                            <option value="Banco Ripley">Banco Ripley</option>
+                            <option value="Banco Consorcio">Banco Consorcio</option>
+                            <option value="Banco BICE">Banco BICE</option>
+                            <option value="Coopeuch">Coopeuch</option>
+                            <option value="Otro">Otro</option>
+                          </select>
+                        </div>
+
+                        {/* Tipo de Cuenta */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Tipo de Cuenta <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={contractForm.bankAccountType}
+                            onChange={(e) => handleContractFormChange('bankAccountType', e.target.value)}
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                          >
+                            <option value="">Seleccione tipo de cuenta</option>
+                            <option value="Cuenta Corriente">Cuenta Corriente</option>
+                            <option value="Cuenta Vista">Cuenta Vista</option>
+                            <option value="Cuenta de Ahorro">Cuenta de Ahorro</option>
+                            <option value="Cuenta RUT">Cuenta RUT</option>
+                          </select>
+                        </div>
+
+                        {/* Número de Cuenta */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Número de Cuenta <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={contractForm.bankAccountNumber}
+                            onChange={(e) => handleContractFormChange('bankAccountNumber', e.target.value)}
+                            placeholder="Ej: 12345678"
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Botones de Acción */}
+              <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6 border-t-2 border-gray-200">
+                <button
+                  onClick={() => setIsContractModalOpen(false)}
+                  disabled={isSubmittingContract}
+                  className="w-full sm:w-auto px-8 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSendToWebhook}
+                  disabled={isSubmittingContract}
+                  className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {isSubmittingContract ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5 mr-2" />
+                      Generar y Enviar Contrato
+                    </>
+                  )}
+                </button>
+              </div>
+
             </div>
           </div>
         </div>

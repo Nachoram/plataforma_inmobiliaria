@@ -49,27 +49,95 @@ const PortfolioPage: React.FC = () => {
     }
 
     setLoading(true);
+    console.log('🔍 [DEBUG] Fetching portfolio for user:', user.id);
+    
     try {
       // Use the new RPC function to get properties with postulations
+      console.log('🔍 [DEBUG] Calling RPC function: get_portfolio_with_postulations');
       const { data: propertiesData, error: propertiesError } = await supabase
         .rpc('get_portfolio_with_postulations', {
           user_id_param: user.id
         });
 
+      console.log('🔍 [DEBUG] RPC Response:', { data: propertiesData, error: propertiesError });
+
       if (propertiesError) {
-        if (propertiesError.message.includes('permission denied') || propertiesError.message.includes('RLS')) {
-          console.error('RLS Policy violation: User does not have permission to view properties');
-          setProperties([]);
-        } else {
-          console.error('Error fetching portfolio:', propertiesError);
+        console.error('❌ [ERROR] Error fetching portfolio:', propertiesError);
+        console.error('❌ [ERROR] Error completo:', JSON.stringify(propertiesError, null, 2));
+        console.error('❌ [ERROR] Error details:', {
+          message: propertiesError.message,
+          code: propertiesError.code,
+          details: propertiesError.details,
+          hint: propertiesError.hint
+        });
+        
+        // FALLBACK: Usar método anterior si RPC falla
+        console.warn('⚠️ [FALLBACK] La función RPC falló, usando método de respaldo...');
+        
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('properties')
+            .select(`
+              id,
+              owner_id,
+              status,
+              listing_type,
+              address_street,
+              address_number,
+              address_department,
+              address_commune,
+              address_region,
+              price_clp,
+              common_expenses_clp,
+              bedrooms,
+              bathrooms,
+              surface_m2,
+              description,
+              created_at,
+              property_images!inner (
+                image_url,
+                storage_path
+              )
+            `)
+            .eq('owner_id', user.id)
+            .order('created_at', { ascending: false });
+
+          if (fallbackError) {
+            console.error('❌ [FALLBACK ERROR] También falló el método de respaldo:', fallbackError);
+            setProperties([]);
+          } else {
+            console.log('✅ [FALLBACK SUCCESS] Propiedades cargadas con método de respaldo:', fallbackData?.length || 0);
+            
+            // Agregar conteos de postulaciones manualmente
+            const propertiesWithCounts = await Promise.all(
+              (fallbackData || []).map(async (property) => {
+                const { count } = await supabase
+                  .from('applications')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('property_id', property.id);
+                
+                return {
+                  ...property,
+                  postulation_count: count || 0,
+                  postulations: [] // Vacío por ahora, se cargará al expandir
+                };
+              })
+            );
+            
+            setProperties(propertiesWithCounts);
+          }
+        } catch (fallbackError) {
+          console.error('❌ [FALLBACK CATCH] Error en método de respaldo:', fallbackError);
           setProperties([]);
         }
       } else {
+        console.log('✅ [SUCCESS] Properties loaded:', propertiesData?.length || 0, 'properties');
+        console.log('📊 [DATA] Properties:', propertiesData);
         setProperties(propertiesData || []);
       }
 
     } catch (error) {
-      console.error('Error fetching portfolio data:', error);
+      console.error('❌ [CATCH] Error fetching portfolio data:', error);
       setProperties([]);
     } finally {
       setLoading(false);

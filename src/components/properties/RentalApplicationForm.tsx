@@ -726,7 +726,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           .from('properties')
           .select(`
             *,
-            property_images (*)
+            property_images!inner (*)
           `)
           .eq('id', property.id)
           .single();

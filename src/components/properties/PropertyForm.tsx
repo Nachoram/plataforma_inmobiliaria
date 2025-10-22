@@ -86,46 +86,107 @@ const CHILE_REGIONS_COMMUNES = {
   }
 };
 
+// Interface for Property Form Data with conditional fields
+interface PropertyFormData {
+  // Basic fields
+  type: 'venta' | 'arriendo';
+  address: string;
+  street: string;
+  number: string;
+  apartment: string;
+  region: string;
+  comuna: string;
+  description: string;
+  photos_urls: string[];
+
+  // Property type and conditional fields
+  property_type: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela';
+
+  // Measurement fields (conditional based on property type)
+  useful_area?: number; // M² Útiles - not required for Bodega/Estacionamiento
+  total_area?: number; // M² Totales - required except for Estacionamiento
+
+  // Property features (conditional based on property type)
+  bedrooms: number;
+  bathrooms: number;
+  parking_spots: number;
+  parking_location?: string; // Only when parking_spots > 0
+  has_terrace: boolean;
+
+  // Storage-specific field
+  storage_number?: string; // Only for Bodega type
+
+  // Parcela-specific field
+  parcela_number?: string; // Only for Parcela type (optional)
+
+  // Pricing
+  price: string;
+  common_expenses: string;
+
+  // Documents
+  documents: {
+    tax_assessment: File | null;
+    ownership_certificate: File | null;
+    ownership_history: File | null;
+    marriage_certificate: File | null;
+    power_of_attorney: File | null;
+    property_plans: File | null;
+    previous_contracts: File | null;
+    previous_reports: File | null;
+  };
+}
+
 export const PropertyForm: React.FC = () => {
   const { user } = useAuth();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   const isEditing = Boolean(id);
-  const listingType = searchParams.get('type') as 'venta' | 'arriendo' || 'venta';
-  
+  const listingType = searchParams.get('type') as 'venta' | 'arriendo' || 'arriendo'; // Default to arriendo
+
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  // Form data state
-  const [formData, setFormData] = useState({
-    type: listingType, // Cambiado de listing_type a type
+
+  // Form data state with conditional fields
+  const [formData, setFormData] = useState<PropertyFormData>({
+    type: listingType,
     address: '',
     street: '',
     number: '',
-    apartment: '', // Cambiado de apartment_number
+    apartment: '',
     region: '',
-    comuna: '', // Cambiado de commune
-    price: '',
-    common_expenses: '',
-    bedrooms: '1',
-    bathrooms: '1',
-    surface_m2: '', // Surface in square meters
+    comuna: '',
     description: '',
     photos_urls: [] as string[],
+
+    // Property type and conditional fields
+    property_type: 'Casa',
+    useful_area: undefined,
+    total_area: undefined,
+    bedrooms: 1,
+    bathrooms: 1,
+    parking_spots: 0,
+    parking_location: undefined,
+    has_terrace: false,
+    storage_number: undefined,
+    parcela_number: undefined,
+
+    // Pricing
+    price: '',
+    common_expenses: '',
+
+    // Documents
     documents: {
-      // Required documents
-      tax_assessment: null as File | null,
-      ownership_certificate: null as File | null,
-      ownership_history: null as File | null,
-      // Optional documents
-      marriage_certificate: null as File | null,
-      power_of_attorney: null as File | null,
-      property_plans: null as File | null,
-      previous_contracts: null as File | null,
-      previous_reports: null as File | null,
+      tax_assessment: null,
+      ownership_certificate: null,
+      ownership_history: null,
+      marriage_certificate: null,
+      power_of_attorney: null,
+      property_plans: null,
+      previous_contracts: null,
+      previous_reports: null,
     }
   });
 
@@ -150,7 +211,7 @@ export const PropertyForm: React.FC = () => {
         .from('properties')
         .select(`
           *,
-          property_images (
+          property_images!inner (
             id,
             image_url,
             storage_path
@@ -178,14 +239,29 @@ export const PropertyForm: React.FC = () => {
         street: data.address_street || data.street || '',
         number: data.address_number || data.number || '',
         apartment: data.address_department || data.apartment || '',
+
+        // Location fields
         region: data.address_region || '',
         comuna: data.address_commune || '',
+
+        // Property type and conditional fields
+        property_type: data.tipo_propiedad || 'Casa',
+        useful_area: data.metros_utiles || undefined,
+        total_area: data.metros_totales || undefined,
+        bedrooms: data.bedrooms || 1,
+        bathrooms: data.bathrooms || 1,
+        parking_spots: data.estacionamientos || 0,
+        parking_location: data.parking_location || undefined,
+        has_terrace: data.tiene_terraza || false,
+        storage_number: data.storage_number || data.ubicacion_bodega || undefined,
+        parcela_number: data.parcela_number || undefined,
+
+        // Pricing
         description: data.description || '',
         price: data.price_clp?.toString() || data.price?.toString() || '',
         common_expenses: data.common_expenses_clp?.toString() || data.common_expenses?.toString() || '',
-        bedrooms: data.bedrooms?.toString() || '1',
-        bathrooms: data.bathrooms?.toString() || '1',
-        surface_m2: data.surface_m2?.toString() || '',
+
+        // Photos
         photos_urls: data.property_images?.map(img => img.image_url) || [],
       }));
 
@@ -209,6 +285,61 @@ export const PropertyForm: React.FC = () => {
       ...prev,
       region: regionKey,
       comuna: '' // Resetear comuna cuando cambia la región
+    }));
+  };
+
+  // Handle property type change with automatic field cleanup
+  const handlePropertyTypeChange = (newType: string) => {
+    const propertyType = newType as PropertyFormData['property_type'];
+
+    // Base update with new type
+    const updatedData: Partial<PropertyFormData> = {
+      property_type: propertyType
+    };
+
+    // Clean up fields that should be hidden/optional for certain types
+    if (propertyType === 'Bodega') {
+      // For Bodega: clear fields that are not applicable
+      updatedData.apartment = ''; // Departamento / Oficina
+      updatedData.parking_spots = 0; // Estacionamientos
+      updatedData.parking_location = undefined; // Ubicación estacionamiento
+      updatedData.useful_area = undefined; // M² Útiles
+      updatedData.has_terrace = false; // ¿Tiene Terraza?
+      // Keep storage_number if it exists
+    } else if (propertyType === 'Estacionamiento') {
+      // For Estacionamiento: clear most fields
+      updatedData.apartment = ''; // Departamento / Oficina
+      updatedData.has_terrace = false; // ¿Tiene Terraza?
+      updatedData.useful_area = undefined; // M² Útiles
+      updatedData.total_area = undefined; // M² Totales
+      // Keep parking_spots and parking_location
+    } else if (propertyType === 'Parcela') {
+      // For Parcela: clear urban-specific fields
+      updatedData.apartment = ''; // Departamento / Oficina
+      updatedData.has_terrace = false; // ¿Tiene Terraza?
+      updatedData.parking_spots = 0; // Estacionamientos
+      updatedData.parking_location = undefined; // Ubicación estacionamiento
+      // Keep useful_area and total_area
+    }
+
+    // If changing FROM Bodega to another type, clear storage_number
+    if (formData.property_type === 'Bodega' && propertyType !== 'Bodega') {
+      updatedData.storage_number = undefined;
+    }
+
+    // If changing FROM Estacionamiento to another type, clear parking_location
+    if (formData.property_type === 'Estacionamiento' && propertyType !== 'Estacionamiento') {
+      updatedData.parking_location = undefined;
+    }
+
+    // If changing FROM Parcela to another type, clear parcela_number
+    if (formData.property_type === 'Parcela' && propertyType !== 'Parcela') {
+      updatedData.parcela_number = undefined;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      ...updatedData
     }));
   };
 
@@ -264,11 +395,11 @@ export const PropertyForm: React.FC = () => {
     }));
   };
 
-  // Validation
+  // Validation with conditional field requirements
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    // Required fields validation
+    // Basic required fields
     if (!formData.address.trim()) newErrors.address = 'La dirección es requerida';
     if (!formData.street.trim()) newErrors.street = 'La calle es requerida';
     if (!formData.number.trim()) newErrors.number = 'El número es requerido';
@@ -276,7 +407,46 @@ export const PropertyForm: React.FC = () => {
     if (!formData.comuna) newErrors.comuna = 'La comuna es requerida';
     if (!formData.price.trim()) newErrors.price = 'El precio es requerido';
     if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
-    if (!formData.surface_m2.trim()) newErrors.surface_m2 = 'La superficie es requerida';
+
+    // Property type specific validation
+    const isStorage = formData.property_type === 'Bodega';
+    const isParking = formData.property_type === 'Estacionamiento';
+    const isParcela = formData.property_type === 'Parcela';
+    const requiresUsefulArea = !isStorage && !isParking && !isParcela; // Useful area required except for Bodega, Estacionamiento, and Parcela
+    const requiresTotalArea = !isParking; // Total area required for all except parking
+
+    // Storage-specific validation
+    if (isStorage) {
+      if (!formData.storage_number || formData.storage_number.trim() === '') {
+        newErrors.storage_number = 'El número de bodega es requerido';
+      }
+      if (!formData.total_area || formData.total_area <= 0) {
+        newErrors.total_area = 'Los M² de la bodega son requeridos y deben ser mayores a 0';
+      }
+    }
+    // Standard property validation (Casa, Departamento, Oficina, Local Comercial)
+    if (requiresUsefulArea) {
+      if (!formData.useful_area || formData.useful_area <= 0) {
+        newErrors.useful_area = 'Los M² Útiles son requeridos y deben ser mayores a 0';
+      }
+    }
+    // Total area validation for all property types except parking
+    if (requiresTotalArea) {
+      if (!formData.total_area || formData.total_area <= 0) {
+        newErrors.total_area = isParcela
+          ? 'Los M² Totales del Terreno son requeridos y deben ser mayores a 0'
+          : 'Los M² Totales son requeridos y deben ser mayores a 0';
+      }
+    }
+    // Cross-validation between useful and total area (only when both are present)
+    if (formData.useful_area && formData.total_area && formData.useful_area > formData.total_area) {
+      newErrors.useful_area = 'Los M² Útiles no pueden ser mayores que los M² Totales';
+    }
+
+    // Parking location validation (only when parking spots exist)
+    if (formData.parking_spots > 0 && (!formData.parking_location || formData.parking_location.trim() === '')) {
+      newErrors.parking_location = 'La ubicación de estacionamiento es requerida cuando hay estacionamientos';
+    }
 
     // Photos validation
     if (!isEditing && photoFiles.length === 0 && formData.photos_urls.length === 0) {
@@ -385,20 +555,40 @@ export const PropertyForm: React.FC = () => {
         }
       }
 
+      // Prepare property data with conditional fields
+      const isStorage = formData.property_type === 'Bodega';
+      const isParking = formData.property_type === 'Estacionamiento';
+
       const propertyData = {
         owner_id: user.id,
         listing_type: formData.type,
+
+        // Basic address fields
         address_street: formData.street || formData.address.split(' ')[0] || 'Sin especificar',
         address_number: formData.number || 'S/N',
         address_department: formData.apartment || null,
         address_region: formData.region,
         address_commune: formData.comuna,
+
+        // Property type and conditional fields
+        tipo_propiedad: formData.property_type,
+        metros_utiles: formData.useful_area || null,
+        metros_totales: formData.total_area || null,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        estacionamientos: formData.parking_spots,
+        parking_location: formData.parking_location || null,
+        tiene_terraza: formData.has_terrace,
+        storage_number: formData.storage_number || null,
+        ubicacion_bodega: formData.storage_number || null, // Legacy field
+        parcela_number: formData.parcela_number || null,
+
+        // Pricing and description
         description: formData.description || 'Sin descripción',
         price_clp: parseInt(formData.price),
         common_expenses_clp: formData.common_expenses ? parseInt(formData.common_expenses) : 0,
-        bedrooms: parseInt(formData.bedrooms),
-        bathrooms: parseInt(formData.bathrooms),
-        surface_m2: formData.surface_m2 ? parseInt(formData.surface_m2) : 50,
+
+        // Status
         status: 'disponible'
       };
 
@@ -681,124 +871,368 @@ export const PropertyForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Fila 5: Precio y Gastos Comunes */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Precio ({formData.type === 'venta' ? 'Venta' : 'Arriendo mensual'}) *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-3.5 text-gray-500 font-medium">$</span>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                        errors.price ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      placeholder="1000000"
-                    />
-                  </div>
-                  {errors.price && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.price}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Gastos Comunes (mensual)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-3.5 text-gray-500 font-medium">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.common_expenses}
-                      onChange={(e) => setFormData({ ...formData, common_expenses: e.target.value })}
-                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="50000"
-                    />
-                  </div>
-                </div>
+              {/* Fila 5: Tipo de Propiedad */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tipo de Propiedad *
+                </label>
+                <select
+                  required
+                  value={formData.property_type}
+                  onChange={(e) => handlePropertyTypeChange(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Seleccionar tipo</option>
+                  <option value="Casa">Casa</option>
+                  <option value="Departamento">Departamento</option>
+                  <option value="Oficina">Oficina</option>
+                  <option value="Local Comercial">Local Comercial</option>
+                  <option value="Estacionamiento">Estacionamiento</option>
+                  <option value="Bodega">Bodega</option>
+                  <option value="Parcela">Parcela</option>
+                </select>
               </div>
 
-              {/* Fila 6: Dormitorios, Baños y Superficie */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Dormitorios *
-                  </label>
-                  <select
-                    required
-                    value={formData.bedrooms}
-                    onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  >
-                    {[0, 1, 2, 3, 4, 5, 6].map(num => (
-                      <option key={num} value={num}>{num}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Conditional fields based on property type */}
+              {(() => {
+                const isStorage = formData.property_type === 'Bodega';
+                const isParking = formData.property_type === 'Estacionamiento';
+                const isParcela = formData.property_type === 'Parcela';
+                const showStandardFields = !isStorage && !isParking && !isParcela;
+                const requiresUsefulArea = !isStorage && !isParking;
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Baños *
-                  </label>
-                  <select
-                    required
-                    value={formData.bathrooms}
-                    onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  >
-                    {[1, 2, 3, 4, 5, 6].map(num => (
-                      <option key={num} value={num}>{num}</option>
-                    ))}
-                  </select>
-                </div>
+                return (
+                  <>
+                    {/* Campo específico: Número de Bodega - SOLO PARA BODEGA */}
+                    {isStorage && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 transition-all duration-300">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+                          <span className="mr-2">📦</span>
+                          Información de la Bodega
+                        </h3>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Superficie (m²) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.surface_m2}
-                    onChange={(e) => setFormData({ ...formData, surface_m2: e.target.value })}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      errors.surface_m2 ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    }`}
-                    placeholder="120"
-                  />
-                  {errors.surface_m2 && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.surface_m2}
-                    </p>
-                  )}
-                </div>
-              </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Número de Bodega *
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.storage_number || ''}
+                            onChange={(e) => setFormData({...formData, storage_number: e.target.value})}
+                            placeholder="Ej: B-115 (piso -1)"
+                            maxLength={50}
+                            required={isStorage}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                              errors.storage_number ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                            }`}
+                          />
+                          {errors.storage_number && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <AlertCircle className="h-4 w-4 mr-1" />
+                              {errors.storage_number}
+                            </p>
+                          )}
+                          <p className="mt-2 text-xs text-gray-600">
+                            Ingrese el número o ubicación específica de la bodega
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Campo específico: Número de Parcela - SOLO PARA PARCELA */}
+                    {isParcela && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 transition-all duration-300">
+                        <h3 className="text-sm font-semibold text-green-900 mb-3 flex items-center">
+                          <span className="mr-2">🏡</span>
+                          Información de la Parcela
+                        </h3>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Número de Parcela (Opcional)
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.parcela_number || ''}
+                            onChange={(e) => setFormData({...formData, parcela_number: e.target.value})}
+                            placeholder="Ej: Parcela 21"
+                            maxLength={30}
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                          />
+                          <p className="mt-2 text-xs text-green-700">
+                            Indique el número o ubicación de la parcela si aplica
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Campo: Departamento / Oficina - OCULTAR PARA BODEGA, ESTACIONAMIENTO Y PARCELA */}
+                    {showStandardFields && (
+                      <div className="transition-all duration-300">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Departamento / Oficina / Casa N° (Opcional)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.apartment}
+                          onChange={(e) => setFormData({ ...formData, apartment: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          placeholder="Ej: Depto 501, Casa 15, Oficina 302"
+                        />
+                      </div>
+                    )}
+
+                    {/* Campos de área condicionales */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Campo: M² Útiles - OCULTAR PARA BODEGA Y ESTACIONAMIENTO */}
+                      {requiresUsefulArea && (
+                        <div className="transition-all duration-300">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            M² Útiles {isParcela ? '(Opcional)' : '*'}
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.useful_area || ''}
+                            onChange={(e) => setFormData({...formData, useful_area: parseFloat(e.target.value) || undefined})}
+                            placeholder="Ej: 45.5"
+                            min="0"
+                            step="0.1"
+                            required={requiresUsefulArea && !isParcela}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                              errors.useful_area ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                            }`}
+                          />
+                          {errors.useful_area && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <AlertCircle className="h-4 w-4 mr-1" />
+                              {errors.useful_area}
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-gray-500">
+                            Superficie útil de la propiedad en metros cuadrados
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Campo: M² Totales / M² de la Bodega - VISIBLE PARA TODOS EXCEPTO ESTACIONAMIENTO */}
+                      {!isParking && (
+                        <div className="transition-all duration-300">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            {isStorage ? 'M² de la Bodega' : isParcela ? 'M² Totales del Terreno' : 'M² Totales'} *
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.total_area || ''}
+                            onChange={(e) => setFormData({...formData, total_area: parseFloat(e.target.value) || undefined})}
+                            placeholder={isStorage ? "Ej: 8.5" : "Ej: 55.0"}
+                            min="0"
+                            step="0.1"
+                            required={!isParking}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                              errors.total_area ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                            }`}
+                          />
+                          {errors.total_area && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <AlertCircle className="h-4 w-4 mr-1" />
+                              {errors.total_area}
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-gray-500">
+                            {isStorage
+                              ? 'Superficie de la bodega en metros cuadrados'
+                              : 'Superficie total incluyendo áreas comunes'
+                            }
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Campos estándar: Dormitorios, Baños, Estacionamientos - OCULTAR PARA BODEGA Y ESTACIONAMIENTO */}
+                    {showStandardFields && (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Dormitorios *
+                            </label>
+                            <select
+                              required
+                              value={formData.bedrooms}
+                              onChange={(e) => setFormData({ ...formData, bedrooms: parseInt(e.target.value) })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            >
+                              {[0, 1, 2, 3, 4, 5, 6].map(num => (
+                                <option key={num} value={num}>{num}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Baños *
+                            </label>
+                            <select
+                              required
+                              value={formData.bathrooms}
+                              onChange={(e) => setFormData({ ...formData, bathrooms: parseInt(e.target.value) })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            >
+                              {[1, 2, 3, 4, 5, 6].map(num => (
+                                <option key={num} value={num}>{num}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Estacionamientos
+                            </label>
+                            <input
+                              type="number"
+                              value={formData.parking_spots}
+                              onChange={(e) => setFormData({...formData, parking_spots: parseInt(e.target.value) || 0})}
+                              placeholder="Ej: 1"
+                              min="0"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            />
+                            <p className="mt-1 text-xs text-gray-500">
+                              Número de estacionamientos incluidos
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Campo: Ubicación Estacionamiento - SOLO CUANDO HAY ESTACIONAMIENTOS */}
+                        {formData.parking_spots > 0 && (
+                          <div className="transition-all duration-300">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Ubicación/Nº Estacionamiento(s) *
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.parking_location || ''}
+                              onChange={(e) => setFormData({...formData, parking_location: e.target.value})}
+                              placeholder="Ej: E-23, E-24"
+                              maxLength={100}
+                              required={formData.parking_spots > 0}
+                              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                                errors.parking_location ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                              }`}
+                            />
+                            {errors.parking_location && (
+                              <p className="mt-1 text-sm text-red-600 flex items-center">
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                {errors.parking_location}
+                              </p>
+                            )}
+                            <p className="mt-1 text-xs text-gray-500">
+                              Número(s) o ubicación de los estacionamientos
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Campo: ¿Tiene Terraza? - OCULTAR PARA BODEGA, ESTACIONAMIENTO, OFICINA Y PARCELA */}
+                        {formData.property_type !== 'Oficina' && !isParcela && (
+                          <div className="transition-all duration-300">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              ¿Tiene Terraza?
+                            </label>
+                            <select
+                              value={formData.has_terrace ? 'Sí' : 'No'}
+                              onChange={(e) => setFormData({...formData, has_terrace: e.target.value === 'Sí'})}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            >
+                              <option value="No">No</option>
+                              <option value="Sí">Sí</option>
+                            </select>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Mensaje informativo para Estacionamiento */}
+                    {isParking && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 transition-all duration-300">
+                        <h3 className="text-sm font-semibold text-amber-900 mb-2 flex items-center">
+                          <span className="mr-2">🚗</span>
+                          Información del Estacionamiento
+                        </h3>
+                        <p className="text-xs text-amber-700">
+                          Para estacionamientos no se requieren datos de superficie ni unidad.
+                          Complete los demás campos del formulario.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Fila: Precio y Gastos Comunes */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Precio ({formData.type === 'venta' ? 'Venta' : 'Arriendo mensual'}) *
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-3.5 text-gray-500 font-medium">$</span>
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            value={formData.price}
+                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                              errors.price ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                            }`}
+                            placeholder={isStorage ? "50000" : "1000000"}
+                          />
+                        </div>
+                        {errors.price && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            {errors.price}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Gastos Comunes (mensual)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-3.5 text-gray-500 font-medium">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.common_expenses}
+                            onChange={(e) => setFormData({ ...formData, common_expenses: e.target.value })}
+                            className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            placeholder="50000"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
 
               {/* Fila 7: Descripción */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Descripción *
+                  Descripción {formData.property_type === 'Bodega' && '(Opcional)'}
                 </label>
                 <textarea
                   rows={4}
-                  required
+                  required={formData.property_type !== 'Bodega'}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                     errors.description ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Describe las características principales de la propiedad, ubicación, amenidades, etc."
+                  placeholder={
+                    formData.property_type === 'Bodega'
+                      ? "Ej: Bodega amplia en subterráneo, acceso por ascensor, ideal para almacenamiento"
+                      : "Describe las características principales de la propiedad, ubicación, amenidades, etc."
+                  }
                 />
                 {errors.description && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -807,8 +1241,6 @@ export const PropertyForm: React.FC = () => {
                   </p>
                 )}
               </div>
-            </div>
-          </div>
 
 
           {/* Sección: Fotos de la Propiedad */}
@@ -1046,7 +1478,14 @@ export const PropertyForm: React.FC = () => {
                   <span>Procesando...</span>
                 </>
               ) : (
-                <span>{isEditing ? 'Actualizar Propiedad' : 'Publicar Propiedad'}</span>
+                <span>
+                  {isEditing
+                    ? 'Actualizar Propiedad'
+                    : formData.property_type === 'Bodega'
+                      ? 'Publicar Bodega en Arriendo'
+                      : 'Publicar Propiedad'
+                  }
+                </span>
               )}
             </button>
           </div>

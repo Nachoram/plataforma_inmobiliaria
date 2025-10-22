@@ -55,6 +55,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Estado para el tipo de propiedad seleccionado (para lógica de campos dinámicos)
+  const [propertyType, setPropertyType] = useState('Casa');
+
+  // Constante para verificar si es estacionamiento
+  const isParking = propertyType === 'Estacionamiento';
   
   // Form data state
   const [formData, setFormData] = useState({
@@ -84,6 +90,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     metrosBodega: '',
     ubicacionBodega: '',
     ubicacionEstacionamiento: '',
+
+    // Campo específico para Bodega
+    numeroBodega: '',
+
+    // Campo específico para Parcela
+    parcela_number: '',
 
     // Amenidades
     amenidades: {
@@ -172,6 +184,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         metrosBodega: initialData.metros_bodega?.toString() || '',
         ubicacionBodega: initialData.ubicacion_bodega || '',
         ubicacionEstacionamiento: initialData.ubicacion_estacionamiento || '',
+
+        // Campo específico para Bodega
+        numeroBodega: initialData.storage_number || initialData.ubicacion_bodega || '',
+
+        // Campo específico para Parcela
+        parcela_number: initialData.parcela_number || '',
 
         // Amenidades (estas necesitarán ser cargadas desde una tabla relacionada)
         amenidades: {
@@ -304,9 +322,20 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     if (!formData.region) newErrors.region = 'La región es requerida';
     if (!formData.commune) newErrors.commune = 'La comuna es requerida';
     if (!formData.price.trim()) newErrors.price = 'El precio de arriendo es requerido';
-    if (!formData.metrosUtiles.trim()) newErrors.metrosUtiles = 'Los metros útiles son requeridos';
-    if (!formData.metrosTotales.trim()) newErrors.metrosTotales = 'Los metros totales son requeridos';
-    if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
+
+    // Validación específica para Bodega
+    if (propertyType === 'Bodega') {
+      if (!formData.numeroBodega || formData.numeroBodega.trim() === '') {
+        newErrors.numeroBodega = 'El número de bodega es requerido';
+      }
+      if (!formData.metrosTotales.trim()) newErrors.metrosTotales = 'Los M² de la bodega son requeridos';
+      // Descripción opcional para bodegas
+    } else {
+      // M² son requeridos solo si NO es estacionamiento, NO es bodega y NO es Parcela
+      if (!isParking && propertyType !== 'Parcela' && !formData.metrosUtiles.trim()) newErrors.metrosUtiles = 'Los metros útiles son requeridos';
+      if (!isParking && !formData.metrosTotales.trim()) newErrors.metrosTotales = 'Los metros totales son requeridos';
+      if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
+    }
     // Validaciones condicionales según el tipo de propietario
     if (formData.owner_type === 'natural') {
       if (!formData.owner_first_name.trim()) newErrors.owner_first_name = 'El nombre del propietario es requerido';
@@ -338,6 +367,16 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     // Validate personería certificate for legal entities
     if (formData.owner_type === 'juridica' && !formData.documents.personeria_certificate) {
       newErrors.personeria_certificate = 'El certificado de personería es requerido para personas jurídicas';
+    }
+
+    // Validaciones específicas para oficinas
+    if (propertyType === 'Oficina') {
+      // Validar M² Bodega si tiene bodega
+      if (formData.tieneBodega === 'Sí') {
+        if (!formData.metrosBodega || parseFloat(formData.metrosBodega) <= 0) {
+          newErrors.metrosBodega = 'Los metros cuadrados de bodega son requeridos y deben ser mayor a 0';
+        }
+      }
     }
 
     // Photos and documents are now OPTIONAL - no validation required
@@ -550,6 +589,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         metros_bodega: metrosBodega,
         ubicacion_bodega: formData.ubicacionBodega || null,
         ubicacion_estacionamiento: formData.ubicacionEstacionamiento || null,
+        storage_number: formData.numeroBodega || null,
+        parcela_number: formData.parcela_number || null,
         // has_doorman: formData.amenidades.conserje,
         // has_condominium: formData.amenidades.condominio,
         // has_pool: formData.amenidades.piscina,
@@ -727,15 +768,93 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 </label>
                 <select
                   required
-                  value={formData.tipoPropiedad}
-                  onChange={(e) => setFormData({ ...formData, tipoPropiedad: e.target.value })}
+                  value={propertyType}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    setPropertyType(newType);
+
+                    // Limpiar valores específicos según el tipo de propiedad
+                    const updatedFormData = { ...formData, tipoPropiedad: newType };
+
+                    if (newType === 'Bodega') {
+                      // Para Bodega: limpiar campos que no aplican
+                      updatedFormData.address_department = '';
+                      updatedFormData.estacionamientos = '0';
+                      updatedFormData.ubicacionEstacionamiento = '';
+                      updatedFormData.metrosUtiles = '';
+                      updatedFormData.tieneTerraza = 'No';
+                      // Mantener metrosTotales (será M² de la Bodega)
+                    } else if (newType === 'Estacionamiento') {
+                      // Limpiar campos que no aplican para estacionamientos
+                      updatedFormData.address_department = '';
+                      updatedFormData.tieneTerraza = 'No';
+                      updatedFormData.metrosUtiles = '';
+                      updatedFormData.metrosTotales = '';
+                    } else if (newType === 'Oficina') {
+                      // Limpiar terraza cuando se selecciona oficina
+                      updatedFormData.tieneTerraza = 'No';
+                    } else if (newType === 'Parcela') {
+                      // Para Parcela: limpiar campos que no aplican
+                      updatedFormData.tieneTerraza = 'No';
+                      updatedFormData.estacionamientos = '0';
+                      updatedFormData.ubicacionEstacionamiento = '';
+                      updatedFormData.address_department = '';
+                      // Nota: parcela_number se mantiene, no se limpia
+                    } else {
+                      // Limpiar campos de bodega cuando NO es oficina
+                      updatedFormData.tieneBodega = 'No';
+                      updatedFormData.metrosBodega = '';
+                      updatedFormData.ubicacionBodega = '';
+                    }
+
+                    setFormData(updatedFormData);
+                  }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 >
                   <option value="Casa">Casa</option>
                   <option value="Departamento">Departamento</option>
                   <option value="Oficina">Oficina</option>
+                  <option value="Estacionamiento">Estacionamiento</option>
+                  <option value="Bodega">Bodega</option>
+                  <option value="Parcela">Parcela</option>
                 </select>
               </div>
+
+              {/* Campo específico: Número de Bodega - SOLO PARA BODEGA */}
+              {propertyType === 'Bodega' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 transition-all duration-300">
+                  <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+                    <span className="mr-2">📦</span>
+                    Información de la Bodega
+                  </h3>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Número de Bodega *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.numeroBodega}
+                      onChange={(e) => setFormData({ ...formData, numeroBodega: e.target.value })}
+                      placeholder="Ej: B-115 (piso -1)"
+                      maxLength={50}
+                      required={propertyType === 'Bodega'}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                        errors.numeroBodega ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.numeroBodega && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.numeroBodega}
+                      </p>
+                    )}
+                    <p className="mt-2 text-xs text-gray-600">
+                      Ingrese el número o ubicación específica de la bodega
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Calle */}
               <div>
@@ -783,19 +902,21 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 )}
               </div>
 
-              {/* Departamento (Opcional) */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Departamento / Oficina (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.address_department}
-                  onChange={(e) => setFormData({ ...formData, address_department: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                  placeholder="Ej: 45A"
-                />
-              </div>
+              {/* Departamento / Oficina - Ocultar si es Estacionamiento, Bodega o Parcela */}
+              {!isParking && propertyType !== 'Bodega' && propertyType !== 'Parcela' && (
+                <div className="transition-all duration-300">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Departamento / Oficina (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address_department}
+                    onChange={(e) => setFormData({ ...formData, address_department: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    placeholder="Ej: 45A"
+                  />
+                </div>
+              )}
 
               {/* Región y Comuna */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -898,17 +1019,57 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 </div>
               </div>
 
-              {/* Dormitorios y Baños */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Dormitorios y Baños - Solo para Casa y Departamento */}
+              {['Casa', 'Departamento'].includes(propertyType) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Dormitorios
+                    </label>
+                    <select
+                      value={formData.bedrooms}
+                      onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    >
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5+">5+</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Baños
+                    </label>
+                    <select
+                      value={formData.bathrooms}
+                      onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    >
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5+">5+</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Estacionamientos - Ocultar para Bodega, Estacionamiento y Parcela */}
+              {propertyType !== 'Bodega' && !isParking && propertyType !== 'Parcela' && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Dormitorios
+                    Estacionamientos
                   </label>
                   <select
-                    value={formData.bedrooms}
-                    onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
+                    value={formData.estacionamientos}
+                    onChange={(e) => setFormData({ ...formData, estacionamientos: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   >
+                    <option value="0">0</option>
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -916,121 +1077,121 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <option value="5+">5+</option>
                   </select>
                 </div>
+              )}
 
+              {/* Ubicación de Estacionamientos - Ocultar para Bodega, Estacionamiento y Parcela */}
+              {propertyType !== 'Bodega' && !isParking && propertyType !== 'Parcela' && formData.estacionamientos !== '0' && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Baños
-                  </label>
-                  <select
-                    value={formData.bathrooms}
-                    onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                  >
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5+">5+</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Estacionamientos */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Estacionamientos
-                </label>
-                <select
-                  value={formData.estacionamientos}
-                  onChange={(e) => setFormData({ ...formData, estacionamientos: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                >
-                  <option value="0">0</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5+">5+</option>
-                </select>
-              </div>
-
-              {/* Ubicación de Estacionamientos */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Ubicación/Nº Estacionamiento(s) (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.ubicacionEstacionamiento}
-                  onChange={(e) => setFormData({ ...formData, ubicacionEstacionamiento: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                  placeholder="Ej: E-21, E-22 (piso -2)"
-                />
-              </div>
-
-              {/* Metros Cuadrados Útiles y Totales */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    M² Útiles *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                    value={formData.metrosUtiles}
-                    onChange={(e) => setFormData({ ...formData, metrosUtiles: e.target.value })}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                      errors.metrosUtiles ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                    placeholder="Ej: 85"
-                />
-                  {errors.metrosUtiles && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.metrosUtiles}
-                  </p>
-                )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    M² Totales *
+                    Ubicación/Nº Estacionamiento(s) (Opcional)
                   </label>
                   <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.metrosTotales}
-                    onChange={(e) => setFormData({ ...formData, metrosTotales: e.target.value })}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                      errors.metrosTotales ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    }`}
-                    placeholder="Ej: 95"
+                    type="text"
+                    value={formData.ubicacionEstacionamiento}
+                    onChange={(e) => setFormData({ ...formData, ubicacionEstacionamiento: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    placeholder="Ej: E-21, E-22 (piso -2)"
                   />
-                  {errors.metrosTotales && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.metrosTotales}
-                    </p>
-                  )}
                 </div>
+              )}
+
+              {/* Campos de área condicionales */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-300">
+                {/* M² Útiles - Ocultar si es Estacionamiento o Bodega */}
+                {!isParking && propertyType !== 'Bodega' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      M² Útiles *
+                    </label>
+                    <input
+                      type="number"
+                      required={!isParking && propertyType !== 'Bodega'}
+                      min="0"
+                      value={formData.metrosUtiles}
+                      onChange={(e) => setFormData({ ...formData, metrosUtiles: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.metrosUtiles ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 85"
+                    />
+                    {errors.metrosUtiles && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.metrosUtiles}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* M² Totales / M² de la Bodega - Siempre visible excepto Estacionamiento */}
+                {!isParking && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {propertyType === 'Bodega' ? 'M² de la Bodega' : 'M² Totales'} *
+                    </label>
+                    <input
+                      type="number"
+                      required={!isParking}
+                      min="0"
+                      value={formData.metrosTotales}
+                      onChange={(e) => setFormData({ ...formData, metrosTotales: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.metrosTotales ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder={propertyType === 'Bodega' ? "Ej: 8.5" : "Ej: 95"}
+                    />
+                    {errors.metrosTotales && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.metrosTotales}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      {propertyType === 'Bodega'
+                        ? 'Superficie de la bodega en metros cuadrados'
+                        : 'Superficie total incluyendo áreas comunes'
+                      }
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Terraza */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  ¿Tiene Terraza?
-                </label>
-                <select
-                  value={formData.tieneTerraza}
-                  onChange={(e) => setFormData({ ...formData, tieneTerraza: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                >
-                  <option value="No">No</option>
-                  <option value="Sí">Sí</option>
-                </select>
-              </div>
+              {/* Campo específico: Número de Parcela - SOLO PARA PARCELA */}
+              {propertyType === 'Parcela' && (
+                <div className="transition-all duration-300">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Número de Parcela (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.parcela_number}
+                    onChange={(e) => setFormData({ ...formData, parcela_number: e.target.value })}
+                    placeholder="Ej: Parcela 21"
+                    maxLength={30}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  />
+                  <p className="mt-2 text-xs text-gray-600">
+                    Indique el número o ubicación específica de la parcela si aplica
+                  </p>
+                </div>
+              )}
+
+              {/* Terraza - Ocultar para Bodega, Estacionamiento, Oficina y Parcela */}
+              {!isParking && propertyType !== 'Oficina' && propertyType !== 'Bodega' && propertyType !== 'Parcela' && (
+                <div className="transition-all duration-300 ease-in-out">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    ¿Tiene Terraza?
+                  </label>
+                  <select
+                    value={formData.tieneTerraza}
+                    onChange={(e) => setFormData({ ...formData, tieneTerraza: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  >
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                  </select>
+                </div>
+              )}
 
               {/* Año de Construcción */}
               <div>
@@ -1048,20 +1209,50 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 />
               </div>
 
+              {/* Mensaje informativo según el tipo de propiedad */}
+              {isParking && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 transition-all duration-300">
+                  <h3 className="text-sm font-semibold text-amber-900 mb-2">
+                    🚗 Información del Estacionamiento
+                  </h3>
+                  <p className="text-xs text-amber-700">
+                    Para estacionamientos no se requieren datos de superficie ni unidad.
+                    Complete los demás campos del formulario.
+                  </p>
+                </div>
+              )}
+
+              {/* Mensaje informativo para Bodega */}
+              {propertyType === 'Bodega' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 transition-all duration-300">
+                  <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                    📦 Información de la Bodega
+                  </h3>
+                  <p className="text-xs text-blue-700">
+                    Complete el número de bodega y los metros cuadrados. La descripción es opcional.
+                    Complete los demás campos del formulario.
+                  </p>
+                </div>
+              )}
+
               {/* Descripción */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Descripción *
+                  Descripción {propertyType === 'Bodega' && '(Opcional)'}
                 </label>
                 <textarea
-                  required
+                  required={propertyType !== 'Bodega'}
                   rows={4}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                     errors.description ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Describe las características principales de la propiedad, ubicación, amenidades, etc."
+                  placeholder={
+                    propertyType === 'Bodega'
+                      ? "Ej: Bodega amplia en subterráneo, acceso por ascensor, ideal para almacenamiento"
+                      : "Describe las características principales de la propiedad, ubicación, amenidades, etc."
+                  }
                 />
                 {errors.description && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -1073,69 +1264,54 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             </div>
           </div>
 
-          {/* Sección 2: Características Internas */}
-          <div className="space-y-6">
-            <div className="border-b pb-2">
-              <h2 className="text-xl font-bold text-gray-900">Características Internas</h2>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-              {/* Sistema de Agua Caliente */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Agua Caliente
-                </label>
-                <select
-                  value={formData.sistemaAguaCaliente}
-                  onChange={(e) => setFormData({ ...formData, sistemaAguaCaliente: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                >
-                  <option value="Calefón">Calefón</option>
-                  <option value="Termo Eléctrico">Termo Eléctrico</option>
-                  <option value="Caldera Central">Caldera Central</option>
-                </select>
+          {/* Sección 2: Características Internas - Solo para Casa y Departamento */}
+          {['Casa', 'Departamento'].includes(propertyType) && (
+            <div className="space-y-6">
+              <div className="border-b pb-2">
+                <h2 className="text-xl font-bold text-gray-900">Características Internas</h2>
               </div>
 
-              {/* Tipo de Cocina */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Tipo de Cocina
-                </label>
-                <select
-                  value={formData.tipoCocina}
-                  onChange={(e) => setFormData({ ...formData, tipoCocina: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                >
-                  <option value="Cerrada">Cerrada</option>
-                  <option value="Americana">Americana</option>
-                  <option value="Integrada">Integrada</option>
-                </select>
-              </div>
-
-              {/* Sala de Estar */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  ¿Cuenta con Sala de Estar?
-                </label>
-                <select
-                  value={formData.tieneSalaEstar}
-                  onChange={(e) => setFormData({ ...formData, tieneSalaEstar: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                >
-                  <option value="No">No</option>
-                  <option value="Sí">Sí</option>
-                </select>
-              </div>
-
-              {/* Bodega */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
+                {/* Sistema de Agua Caliente */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    ¿Tiene Bodega?
+                    Agua Caliente
                   </label>
                   <select
-                    value={formData.tieneBodega}
-                    onChange={(e) => setFormData({ ...formData, tieneBodega: e.target.value, metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega })}
+                    value={formData.sistemaAguaCaliente}
+                    onChange={(e) => setFormData({ ...formData, sistemaAguaCaliente: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  >
+                    <option value="Calefón">Calefón</option>
+                    <option value="Termo Eléctrico">Termo Eléctrico</option>
+                    <option value="Caldera Central">Caldera Central</option>
+                  </select>
+                </div>
+
+                {/* Tipo de Cocina */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tipo de Cocina
+                  </label>
+                  <select
+                    value={formData.tipoCocina}
+                    onChange={(e) => setFormData({ ...formData, tipoCocina: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  >
+                    <option value="Cerrada">Cerrada</option>
+                    <option value="Americana">Americana</option>
+                    <option value="Integrada">Integrada</option>
+                  </select>
+                </div>
+
+                {/* Sala de Estar */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    ¿Cuenta con Sala de Estar?
+                  </label>
+                  <select
+                    value={formData.tieneSalaEstar}
+                    onChange={(e) => setFormData({ ...formData, tieneSalaEstar: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   >
                     <option value="No">No</option>
@@ -1143,203 +1319,296 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   </select>
                 </div>
 
-                {formData.tieneBodega === 'Sí' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        M² Bodega
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.metrosBodega}
-                        onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                        placeholder="Ej: 5"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Ubicación/Nº Bodega (Opcional)
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.ubicacionBodega}
-                        onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                        placeholder="Ej: B-115 (piso -1)"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+                {/* Bodega - Solo para Casa y Departamento */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      ¿Tiene Bodega?
+                    </label>
+                    <select
+                      value={formData.tieneBodega}
+                      onChange={(e) => setFormData({ ...formData, tieneBodega: e.target.value, metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    >
+                      <option value="No">No</option>
+                      <option value="Sí">Sí</option>
+                    </select>
+                  </div>
 
-          {/* Sección 3: Amenidades y Equipamiento */}
-          <div className="space-y-6">
-            <div className="border-b pb-2">
-              <h2 className="text-xl font-bold text-gray-900">Amenidades y Equipamiento</h2>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-              {/* Checkboxes en grilla 3x4 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Conserje */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="conserje"
-                    checked={formData.amenidades.conserje}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, conserje: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="conserje" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Conserje
-                  </label>
-                </div>
-
-                {/* Condominio */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="condominio"
-                    checked={formData.amenidades.condominio}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, condominio: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="condominio" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Condominio
-                  </label>
-                </div>
-
-                {/* Piscina */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="piscina"
-                    checked={formData.amenidades.piscina}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, piscina: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="piscina" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Piscina
-                  </label>
-                </div>
-
-                {/* Salón de Eventos */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="salonEventos"
-                    checked={formData.amenidades.salonEventos}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, salonEventos: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="salonEventos" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Salón de Eventos
-                  </label>
-                </div>
-
-                {/* Gimnasio */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="gimnasio"
-                    checked={formData.amenidades.gimnasio}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, gimnasio: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="gimnasio" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Gimnasio
-                  </label>
-                </div>
-
-                {/* Cowork */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="cowork"
-                    checked={formData.amenidades.cowork}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, cowork: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="cowork" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Cowork
-                  </label>
-                </div>
-
-                {/* Quincho */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="quincho"
-                    checked={formData.amenidades.quincho}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, quincho: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="quincho" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Quincho
-                  </label>
-                </div>
-
-                {/* Sala de Cine */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="salaCine"
-                    checked={formData.amenidades.salaCine}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, salaCine: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="salaCine" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Sala de Cine
-                  </label>
-                </div>
-
-                {/* Áreas Verdes */}
-                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    id="areasVerdes"
-                    checked={formData.amenidades.areasVerdes}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      amenidades: { ...formData.amenidades, areasVerdes: e.target.checked }
-                    })}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="areasVerdes" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Áreas Verdes
-                  </label>
+                  {formData.tieneBodega === 'Sí' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          M² Bodega
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.metrosBodega}
+                          onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          placeholder="Ej: 5"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Ubicación/Nº Bodega (Opcional)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.ubicacionBodega}
+                          onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          placeholder="Ej: B-115 (piso -1)"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Sección 3: Amenidades y Equipamiento - Solo para Casa y Departamento */}
+          {['Casa', 'Departamento'].includes(propertyType) && (
+            <div className="space-y-6">
+              <div className="border-b pb-2">
+                <h2 className="text-xl font-bold text-gray-900">Amenidades y Equipamiento</h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                {/* Checkboxes en grilla 3x4 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Conserje */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="conserje"
+                      checked={formData.amenidades.conserje}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, conserje: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="conserje" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Conserje
+                    </label>
+                  </div>
+
+                  {/* Condominio */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="condominio"
+                      checked={formData.amenidades.condominio}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, condominio: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="condominio" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Condominio
+                    </label>
+                  </div>
+
+                  {/* Piscina */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="piscina"
+                      checked={formData.amenidades.piscina}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, piscina: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="piscina" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Piscina
+                    </label>
+                  </div>
+
+                  {/* Salón de Eventos */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="salonEventos"
+                      checked={formData.amenidades.salonEventos}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, salonEventos: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="salonEventos" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Salón de Eventos
+                    </label>
+                  </div>
+
+                  {/* Gimnasio */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="gimnasio"
+                      checked={formData.amenidades.gimnasio}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, gimnasio: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="gimnasio" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Gimnasio
+                    </label>
+                  </div>
+
+                  {/* Cowork */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="cowork"
+                      checked={formData.amenidades.cowork}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, cowork: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="cowork" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Cowork
+                    </label>
+                  </div>
+
+                  {/* Quincho */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="quincho"
+                      checked={formData.amenidades.quincho}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, quincho: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="quincho" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Quincho
+                    </label>
+                  </div>
+
+                  {/* Sala de Cine */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="salaCine"
+                      checked={formData.amenidades.salaCine}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, salaCine: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="salaCine" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Sala de Cine
+                    </label>
+                  </div>
+
+                  {/* Áreas Verdes */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="areasVerdes"
+                      checked={formData.amenidades.areasVerdes}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        amenidades: { ...formData.amenidades, areasVerdes: e.target.checked }
+                      })}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="areasVerdes" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Áreas Verdes
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sección 3.5: Características de Oficina - Solo para Oficinas */}
+          {propertyType === 'Oficina' && (
+            <div className="space-y-6">
+              <div className="border-b pb-2">
+                <h2 className="text-xl font-bold text-gray-900">Características de Oficina</h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                {/* Bodega para Oficinas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      ¿Tiene Bodega?
+                    </label>
+                    <select
+                      value={formData.tieneBodega}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        tieneBodega: e.target.value,
+                        metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega,
+                        ubicacionBodega: e.target.value === 'No' ? '' : formData.ubicacionBodega
+                      })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    >
+                      <option value="No">No</option>
+                      <option value="Sí">Sí</option>
+                    </select>
+                  </div>
+
+                  {formData.tieneBodega === 'Sí' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          M² Bodega <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          required={formData.tieneBodega === 'Sí'}
+                          value={formData.metrosBodega}
+                          onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.metrosBodega ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="Ej: 5"
+                        />
+                        {errors.metrosBodega && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            {errors.metrosBodega}
+                          </p>
+                        )}
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Ubicación/Nº Bodega (Opcional)
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={50}
+                          value={formData.ubicacionBodega}
+                          onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          placeholder="Ej: B-115 (piso -1)"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Sección 4: Datos del Propietario */}
           <div className="space-y-6">

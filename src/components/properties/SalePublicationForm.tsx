@@ -102,11 +102,11 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
         area_sqm: initialData.metros_utiles?.toString() || '',
         description: initialData.description || '',
 
-        // Datos del Propietario - estos vendrían de la sesión del usuario
-        owner_first_name: '',
-        owner_paternal_last_name: '',
-        owner_maternal_last_name: '',
-        owner_rut: '',
+        // Datos del Propietario - cargar desde initialData
+        owner_first_name: initialData.owner_first_name || '',
+        owner_paternal_last_name: initialData.owner_paternal_last_name || '',
+        owner_maternal_last_name: initialData.owner_maternal_last_name || '',
+        owner_rut: initialData.owner_rut || '',
         owner_address_street: '',
         owner_address_number: '',
         owner_region: '',

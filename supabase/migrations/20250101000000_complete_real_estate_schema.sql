@@ -308,7 +308,7 @@ CREATE POLICY "Users can view guarantors for their applications"
   TO authenticated
   USING (
     id IN (
-      SELECT guarantor_id FROM applications 
+      SELECT guarantor_id FROM applications
       WHERE applicant_id = auth.uid() OR property_id IN (
         SELECT id FROM properties WHERE owner_id = auth.uid()
       )

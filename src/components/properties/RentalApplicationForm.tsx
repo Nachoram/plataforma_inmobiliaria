@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, User, AlertCircle, ExternalLink, Building, FileText, MessageSquarePlus, CheckCircle } from 'lucide-react';
-import { supabase, Property, Profile, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, validateRUT, getCurrentProfile } from '../../lib/supabase';
+import { X, Send, User, AlertCircle, ExternalLink, Building, FileText, MessageSquarePlus, CheckCircle, Home } from 'lucide-react';
+import { supabase, Property, Profile, formatPriceCLP, formatRUT, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, validateRUT, getCurrentProfile, getPropertyTypeInfo } from '../../lib/supabase';
 import { webhookClient } from '../../lib/webhook';
 
 interface RentalApplicationFormProps {
@@ -320,6 +320,23 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       // PASO 1: Asegurar que existe el profile del usuario (requerido por FK)
       console.log('🔍 DEBUG: Verificando/creando profile del usuario...');
       try {
+        // Primero validar que el RUT no esté siendo usado por otro usuario
+        const { data: existingProfileWithRUT, error: rutCheckError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('rut', applicantData.rut)
+          .neq('id', user.id) // Excluir el propio perfil del usuario
+          .maybeSingle();
+
+        if (rutCheckError) {
+          throw new Error(`Error verificando RUT: ${rutCheckError.message}`);
+        }
+
+        if (existingProfileWithRUT) {
+          throw new Error('El RUT ingresado ya está registrado para otro usuario. Por favor, verifica tus datos.');
+        }
+
+        // Ahora hacer el upsert del perfil
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -354,26 +371,11 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
       // PASO 2: Crear o encontrar aval si existe
       if (showGuarantor) {
-        // Primero verificar si ya existe un guarantor con este RUT
-        const { data: existingGuarantor, error: fetchError } = await supabase
-          .from('guarantors')
-          .select('id')
-          .eq('rut', guarantorData.rut)
-          .maybeSingle();
-
-        if (fetchError) {
-          throw new Error(`Error verificando aval existente: ${fetchError.message}`);
-        }
-
-        if (existingGuarantor) {
-          // Si ya existe, usar el ID existente
-          guarantorId = existingGuarantor.id;
-          console.log('Usando guarantor existente con RUT:', guarantorData.rut);
-        } else {
-          // Si no existe, crear nuevo registro del aval
+        // Intentar crear el guarantor directamente (maneja duplicados automáticamente)
+        try {
           const { data: guarantor, error: guarantorError } = await supabase
             .from('guarantors')
-            .insert([{
+            .upsert({
               first_name: guarantorData.first_name,
               paternal_last_name: guarantorData.paternal_last_name,
               maternal_last_name: guarantorData.maternal_last_name,
@@ -385,33 +387,23 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               address_number: guarantorData.address_number,
               address_department: guarantorData.address_department,
               address_commune: guarantorData.address_commune,
-              address_region: guarantorData.address_region
-            }])
+              address_region: guarantorData.address_region,
+              created_by: user.id // Track who created this guarantor
+            }, {
+              onConflict: 'rut'
+            })
             .select()
             .single();
 
           if (guarantorError) {
-            // Si aún hay error de conflicto, intentar buscar el registro nuevamente
-            if (guarantorError.code === '23505' || guarantorError.message.includes('duplicate')) {
-              const { data: retryGuarantor, error: retryError } = await supabase
-                .from('guarantors')
-                .select('id')
-                .eq('rut', guarantorData.rut)
-                .single();
-              
-              if (retryError) {
-                throw new Error(`Error crítico con aval: ${guarantorError.message}`);
-              }
-              
-              guarantorId = retryGuarantor.id;
-              console.log('Guarantor creado por otro proceso, usando ID:', guarantorId);
-            } else {
-              throw new Error(`Error creando aval: ${guarantorError.message}`);
-            }
-          } else {
-            guarantorId = guarantor?.id || null;
-            console.log('Nuevo guarantor creado con ID:', guarantorId);
+            throw new Error(`Error creando aval: ${guarantorError.message}`);
           }
+
+          guarantorId = guarantor?.id || null;
+          console.log('Guarantor procesado con ID:', guarantorId);
+        } catch (error) {
+          console.error('Error en upsert de guarantor:', error);
+          throw error;
         }
       }
 
@@ -827,6 +819,17 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               <h3 className="text-lg sm:text-xl font-bold mb-1">
                 {property.address_street} {property.address_number}
               </h3>
+              
+              {/* Property Type Badge */}
+              {property.property_type && (
+                <div className="flex items-center gap-2 mb-2">
+                  <Home className="h-4 w-4 text-white/90" />
+                  <span className="text-xs sm:text-sm bg-white/20 px-2 py-0.5 rounded-lg backdrop-blur-sm font-medium">
+                    {getPropertyTypeInfo(property.property_type).label}
+                  </span>
+                </div>
+              )}
+              
               <p className="text-sm sm:text-base text-blue-100">
                 📍 {property.address_commune}, {property.address_region}
               </p>

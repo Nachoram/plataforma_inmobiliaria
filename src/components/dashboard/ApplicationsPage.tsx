@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2, User } from 'lucide-react';
-import { supabase, updateApplicationStatus, approveApplicationWithWebhook } from '../../lib/supabase';
+import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, AlertTriangle, CheckCircle2, XCircle, FileStack, MessageSquarePlus, Undo2, User, Home } from 'lucide-react';
+import { supabase, updateApplicationStatus, approveApplicationWithWebhook, getPropertyTypeInfo } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { webhookClient } from '../../lib/webhook';
 import CustomButton from '../common/CustomButton';
@@ -21,6 +21,7 @@ interface ApplicationWithDetails {
     address_commune: string;
     price_clp: number;
     listing_type: string;
+    property_type?: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela';
     property_characteristic_id?: string;
     owner_id: string;
     property_images?: { image_url: string }[];
@@ -176,6 +177,7 @@ const ApplicationsPage: React.FC = () => {
             address_commune,
             price_clp,
             listing_type,
+            property_type,
             owner_id,
             property_characteristic_id
           ),
@@ -227,7 +229,8 @@ const ApplicationsPage: React.FC = () => {
             address_street,
             address_commune,
             price_clp,
-            listing_type
+            listing_type,
+            property_type
           ),
           profiles!applicant_id(
             first_name,
@@ -950,6 +953,15 @@ const ApplicationsPage: React.FC = () => {
                           <span className="font-bold text-emerald-700">{formatPrice(application.properties.price_clp)}</span>
                           <span className="text-emerald-600 text-xs">/mes</span>
                         </div>
+                        {/* Property Type Badge */}
+                        {application.properties.property_type && (
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${getPropertyTypeInfo(application.properties.property_type).bgColor}`}>
+                            <Home className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span className={`font-semibold ${getPropertyTypeInfo(application.properties.property_type).color}`}>
+                              {getPropertyTypeInfo(application.properties.property_type).label}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1163,6 +1175,15 @@ const ApplicationsPage: React.FC = () => {
                           <span className="font-bold text-indigo-700">{formatPrice(application.properties.price_clp)}</span>
                           <span className="text-indigo-600 text-xs">/mes</span>
                         </div>
+                        {/* Property Type Badge */}
+                        {application.properties.property_type && (
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${getPropertyTypeInfo(application.properties.property_type).bgColor}`}>
+                            <Home className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span className={`font-semibold ${getPropertyTypeInfo(application.properties.property_type).color}`}>
+                              {getPropertyTypeInfo(application.properties.property_type).label}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

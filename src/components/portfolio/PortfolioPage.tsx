@@ -82,6 +82,7 @@ const PortfolioPage: React.FC = () => {
               owner_id,
               status,
               listing_type,
+              property_type,
               address_street,
               address_number,
               address_department,

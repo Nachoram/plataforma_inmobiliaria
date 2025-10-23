@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X, Home, ChefHat, Droplets, Sofa, Check, Car } from 'lucide-react';
-import { supabase, Property, Profile } from '../../lib/supabase';
+import { supabase, Property, Profile, getPropertyTypeInfo } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import RentalApplicationForm from './RentalApplicationForm';
 
@@ -57,6 +57,7 @@ export const PropertyDetailsPage: React.FC = () => {
           address_department,
           address_commune,
           address_region,
+          property_type,
           price_clp,
           common_expenses_clp,
           bedrooms,
@@ -277,8 +278,19 @@ export const PropertyDetailsPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <div className="mb-6">
               <div className="flex items-start justify-between mb-4">
-                <div>
+                <div className="flex-1">
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.address_street} {property.address_number}</h1>
+                  
+                  {/* Property Type Badge */}
+                  {property.property_type && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <Home className="h-5 w-5 text-gray-600" />
+                      <span className={`text-sm font-semibold px-3 py-1.5 rounded-lg ${getPropertyTypeInfo(property.property_type).bgColor} ${getPropertyTypeInfo(property.property_type).color}`}>
+                        {getPropertyTypeInfo(property.property_type).label}
+                      </span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center text-gray-600">
                     <MapPin className="h-5 w-5 mr-1" />
                     <span>{property.address_commune}, {property.address_region}</span>

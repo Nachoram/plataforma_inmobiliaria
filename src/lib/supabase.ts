@@ -87,6 +87,7 @@ export interface Property {
   status: 'disponible' | 'arrendada' | 'vendida' | 'pausada' | 'activa';
   // Note: 'disponible' is the default status for new properties
   listing_type: 'venta' | 'arriendo';
+  property_type?: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela'; // Database: property_type_enum
   address_street: string;
   address_number: string;
   address_department: string | null;
@@ -96,7 +97,7 @@ export interface Property {
   common_expenses_clp: number | null; // Database: integer, nullable
   bedrooms: number; // Database: integer NOT NULL DEFAULT 0
   bathrooms: number; // Database: integer NOT NULL DEFAULT 0
-  surface_m2: number | null; // Database: integer, nullable
+  surface_m2: number | null; // Database: integer, nullable (deprecated, use metros_totales)
   description: string | null; // Database: text, nullable
   created_at: string; // Database: timestamptz
   // Campos opcionales agregados en migraciones recientes
@@ -135,6 +136,13 @@ export interface Property {
   owner_representative_rut?: string | null;
   owner_representative_email?: string | null;
   owner_representative_phone?: string | null;
+
+  // Campos adicionales agregados en migraciones posteriores
+  tiene_bodega?: boolean; // Database: boolean DEFAULT false
+  metros_bodega?: number | null; // Database: integer, nullable
+  storage_number?: string | null; // Database: varchar(50), nullable
+  parking_location?: string | null; // Database: varchar(100), nullable
+  parcela_number?: string | null; // Database: varchar(30), nullable
 }
 
 // Interface para datos transformados/calculados en el frontend
@@ -797,6 +805,16 @@ export const APPLICATION_STATUS_OPTIONS = [
   { value: 'info_solicitada', label: 'Información Solicitada' }
 ] as const;
 
+export const PROPERTY_TYPE_OPTIONS = [
+  { value: 'Casa', label: 'Casa' },
+  { value: 'Departamento', label: 'Departamento' },
+  { value: 'Oficina', label: 'Oficina' },
+  { value: 'Local Comercial', label: 'Local Comercial' },
+  { value: 'Estacionamiento', label: 'Estacionamiento' },
+  { value: 'Bodega', label: 'Bodega' },
+  { value: 'Parcela', label: 'Parcela' }
+] as const;
+
 // Tipos para las constantes
 export type ChileRegion = typeof CHILE_REGIONS[number];
 export type MaritalStatus = typeof MARITAL_STATUS_OPTIONS[number]['value'];
@@ -804,6 +822,22 @@ export type PropertyRegime = typeof PROPERTY_REGIME_OPTIONS[number]['value'];
 export type ListingType = typeof LISTING_TYPE_OPTIONS[number]['value'];
 export type PropertyStatus = typeof PROPERTY_STATUS_OPTIONS[number]['value'];
 export type ApplicationStatus = typeof APPLICATION_STATUS_OPTIONS[number]['value'];
+export type PropertyType = typeof PROPERTY_TYPE_OPTIONS[number]['value'];
+
+// Utility function to get property type display name and badge color
+export const getPropertyTypeInfo = (propertyType?: string) => {
+  const type = propertyType || 'Casa';
+  const typeMap: Record<string, { label: string; color: string; bgColor: string }> = {
+    'Casa': { label: 'Casa', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+    'Departamento': { label: 'Departamento', color: 'text-purple-700', bgColor: 'bg-purple-100' },
+    'Oficina': { label: 'Oficina', color: 'text-gray-700', bgColor: 'bg-gray-100' },
+    'Local Comercial': { label: 'Local Comercial', color: 'text-orange-700', bgColor: 'bg-orange-100' },
+    'Estacionamiento': { label: 'Estacionamiento', color: 'text-green-700', bgColor: 'bg-green-100' },
+    'Bodega': { label: 'Bodega', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+    'Parcela': { label: 'Parcela', color: 'text-emerald-700', bgColor: 'bg-emerald-100' }
+  };
+  return typeMap[type] || typeMap['Casa'];
+};
 
 // API function to update application status
 export const updateApplicationStatus = async (

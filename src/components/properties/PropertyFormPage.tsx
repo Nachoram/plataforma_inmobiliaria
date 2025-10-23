@@ -57,7 +57,15 @@ const PropertyFormPage: React.FC = () => {
     try {
       const { data: property, error } = await supabase
         .from('properties')
-        .select('*')
+        .select(`
+          *,
+          property_images (
+            id,
+            image_url,
+            storage_path,
+            created_at
+          )
+        `)
         .eq('id', id)
         .single();
 

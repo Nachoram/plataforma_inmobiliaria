@@ -159,7 +159,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     if (isEditing && initialData) {
       setFormData({
         // Información de la Propiedad
-        tipoPropiedad: initialData.type || 'Casa',
+        tipoPropiedad: initialData.property_type || 'Casa',
         address_street: initialData.address_street || '',
         address_number: initialData.address_number || '',
         address_department: initialData.address_department || '',
@@ -181,16 +181,16 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         tipoCocina: initialData.tipo_cocina || 'Cerrada',
         tieneSalaEstar: initialData.tiene_sala_estar ? 'Sí' : 'No',
         // Campos opcionales - usar defaults si no existen en BD
-        tieneBodega: (initialData as any).tiene_bodega ? 'Sí' : 'No',
-        metrosBodega: (initialData as any).metros_bodega?.toString() || '',
-        ubicacionBodega: (initialData as any).ubicacion_bodega || '',
-        ubicacionEstacionamiento: (initialData as any).ubicacion_estacionamiento || '',
+        tieneBodega: initialData.tiene_bodega ? 'Sí' : 'No',
+        metrosBodega: initialData.metros_bodega?.toString() || '',
+        ubicacionBodega: '',
+        ubicacionEstacionamiento: initialData.parking_location || '',
 
         // Campo específico para Bodega - COMPATIBLE CON BD ACTUAL
-        numeroBodega: (initialData as any).numero_bodega || (initialData as any).storage_number || '',
+        numeroBodega: initialData.storage_number || '',
 
         // Campo específico para Parcela - COMPATIBLE CON BD ACTUAL
-        parcela_number: (initialData as any).parcela_number || '',
+        parcela_number: initialData.parcela_number || '',
 
         // Amenidades (estas necesitarán ser cargadas desde una tabla relacionada)
         amenidades: {
@@ -205,18 +205,25 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           areasVerdes: false,
         },
 
-        // Datos del Propietario - estos vendrían de la sesión del usuario
-        owner_type: 'natural' as 'natural' | 'juridica',
-        owner_first_name: '',
-        owner_paternal_last_name: '',
-        owner_maternal_last_name: '',
-        owner_rut: '',
-        owner_company_name: '',
-        owner_company_rut: '',
-        owner_representative_first_name: '',
-        owner_representative_paternal_last_name: '',
-        owner_representative_maternal_last_name: '',
-        owner_representative_rut: '',
+        // Datos del Propietario - cargar desde initialData
+        owner_type: initialData.owner_type || 'natural',
+        owner_first_name: initialData.owner_first_name || '',
+        owner_paternal_last_name: initialData.owner_paternal_last_name || '',
+        owner_maternal_last_name: initialData.owner_maternal_last_name || '',
+        owner_rut: initialData.owner_rut || '',
+        owner_email: initialData.owner_email || '',
+        owner_phone: initialData.owner_phone || '',
+        owner_company_name: initialData.owner_company_name || '',
+        owner_company_rut: initialData.owner_company_rut || '',
+        owner_company_business: initialData.owner_company_business || '',
+        owner_company_email: initialData.owner_company_email || '',
+        owner_company_phone: initialData.owner_company_phone || '',
+        owner_representative_first_name: initialData.owner_representative_first_name || '',
+        owner_representative_paternal_last_name: initialData.owner_representative_paternal_last_name || '',
+        owner_representative_maternal_last_name: initialData.owner_representative_maternal_last_name || '',
+        owner_representative_rut: initialData.owner_representative_rut || '',
+        owner_representative_email: initialData.owner_representative_email || '',
+        owner_representative_phone: initialData.owner_representative_phone || '',
         owner_address_street: '',
         owner_address_number: '',
         owner_region: '',
@@ -242,6 +249,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       if (initialData.property_images) {
         setPhotoPreviews(initialData.property_images.map(img => img.image_url));
       }
+
+      // Set property type state for the select field
+      setPropertyType(initialData.property_type || 'Casa');
     }
   }, [isEditing, initialData]);
 

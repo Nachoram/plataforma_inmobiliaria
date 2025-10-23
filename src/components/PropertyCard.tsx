@@ -1,7 +1,7 @@
 import React, { useState, memo } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Building, Heart, TrendingUp, MessageSquare, Eye, Edit, Trash2 } from 'lucide-react';
-import { SupabaseProperty, formatPriceCLP, isValidPrice } from '../lib/supabase';
+import { MapPin, Bed, Bath, Square, Building, Heart, TrendingUp, MessageSquare, Eye, Edit, Trash2, Home } from 'lucide-react';
+import { SupabaseProperty, formatPriceCLP, isValidPrice, getPropertyTypeInfo } from '../lib/supabase';
 import CustomButton from './common/CustomButton';
 import ImageGallery from './common/ImageGallery';
 import PostulationsList from './portfolio/PostulationsList';
@@ -208,10 +208,10 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
               </button>
             )}
 
-            {/* Type Badge - Portfolio context (right side) */}
-            {context === 'portfolio' && (
-              <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 pointer-events-auto">
-                {property.type?.charAt(0).toUpperCase() + property.type?.slice(1) || 'Tipo no especificado'}
+            {/* Property Type Badge */}
+            {property.property_type && (
+              <span className={`px-2 py-1 text-xs font-medium rounded-full pointer-events-auto ${getPropertyTypeInfo(property.property_type).bgColor} ${getPropertyTypeInfo(property.property_type).color}`}>
+                {getPropertyTypeInfo(property.property_type).label}
               </span>
             )}
           </div>
@@ -251,6 +251,16 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
             </div>
           )}
         </div>
+
+        {/* Property Type (visible on all contexts) */}
+        {property.property_type && (
+          <div className="flex items-center gap-2 mb-2">
+            <Home className="h-3 w-3 xs:h-4 xs:w-4 flex-shrink-0 text-gray-600" />
+            <span className={`text-xs xs:text-sm font-semibold px-2 py-0.5 rounded ${getPropertyTypeInfo(property.property_type).bgColor} ${getPropertyTypeInfo(property.property_type).color}`}>
+              {getPropertyTypeInfo(property.property_type).label}
+            </span>
+          </div>
+        )}
 
         {/* Location */}
         <div className="flex items-center text-mobile-sm text-gray-500 mb-2">

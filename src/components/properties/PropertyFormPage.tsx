@@ -78,6 +78,11 @@ const PropertyFormPage: React.FC = () => {
         return;
       }
 
+      console.log('🔍 Property data loaded for edit:', property);
+      console.log('🔍 Property fields:', Object.keys(property));
+      console.log('🔍 Property type:', property.property_type);
+      console.log('🔍 Property images:', property.property_images);
+
       setEditingProperty(property);
     } catch (error: any) {
       console.error('Error loading property for edit:', error);

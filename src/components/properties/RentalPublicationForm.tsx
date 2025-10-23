@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, X, FileText, Image, Check, AlertCircle, Loader2, Building } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
@@ -51,113 +51,35 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
+  console.log('🏗️ RENTAL FORM: Component rendered - isEditing:', isEditing, 'initialData exists:', !!initialData);
+  console.log('🏗️ RENTAL FORM: initialData content:', initialData);
+
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(isEditing);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Estado para el tipo de propiedad seleccionado (para lógica de campos dinámicos)
-  const [propertyType, setPropertyType] = useState('Casa');
+  // Función para inicializar formData
+  const getInitialFormData = useMemo(() => {
+    console.log('🎯 GET INITIAL FORM DATA: isEditing:', isEditing, 'initialData:', !!initialData);
 
-  // Constante para verificar si es estacionamiento
-  const isParking = propertyType === 'Estacionamiento';
-  
-  // Form data state
-  const [formData, setFormData] = useState({
-    // Información de la Propiedad
-    tipoPropiedad: 'Casa', // Valor por defecto
-    address_street: '',
-    address_number: '',
-    address_department: '',
-    region: '',
-    commune: '',
-    price: '',
-    common_expenses: '',
-    bedrooms: '1',
-    bathrooms: '1',
-    estacionamientos: '0',
-    metrosUtiles: '',
-    metrosTotales: '',
-    tieneTerraza: 'No',
-    anoConstruccion: '',
-    description: '',
-
-    // Características Internas
-    sistemaAguaCaliente: 'Calefón',
-    tipoCocina: 'Cerrada',
-    tieneSalaEstar: 'No',
-    tieneBodega: 'No',
-    metrosBodega: '',
-    ubicacionBodega: '',
-    ubicacionEstacionamiento: '',
-
-    // Campo específico para Bodega
-    numeroBodega: '',
-
-    // Campo específico para Parcela
-    parcela_number: '',
-
-    // Amenidades
-    amenidades: {
-      conserje: false,
-      condominio: false,
-      piscina: false,
-      salonEventos: false,
-      gimnasio: false,
-      cowork: false,
-      quincho: false,
-      salaCine: false,
-      areasVerdes: false,
-    },
-
-    // Datos del Propietario
-    owner_type: 'natural' as 'natural' | 'juridica',
-    // Campos para persona natural
-    owner_first_name: '',
-    owner_paternal_last_name: '',
-    owner_maternal_last_name: '',
-    owner_rut: '',
-    // Campos para persona jurídica
-    owner_company_name: '',
-    owner_company_rut: '',
-    // Campos para representante legal
-    owner_representative_first_name: '',
-    owner_representative_paternal_last_name: '',
-    owner_representative_maternal_last_name: '',
-    owner_representative_rut: '',
-    // Dirección del propietario (común para ambos tipos)
-    owner_address_street: '',
-    owner_address_number: '',
-    owner_region: '',
-    owner_commune: '',
-    marital_status: '',
-    property_regime: '',
-
-    // Archivos
-    photos_urls: [] as string[],
-    availableDays: [] as string[],
-    availableTimeSlots: [] as string[],
-    documents: {
-      // Documentos Requeridos
-      ownership_certificate: null as File | null,
-      tax_assessment: null as File | null,
-      owner_id_copy: null as File | null,
-      // Documentos Opcionales
-      power_of_attorney: null as File | null,
-      commercial_evaluation: null as File | null,
-      // Certificado de Personería (solo para persona jurídica)
-      personeria_certificate: null as File | null,
-    }
-  });
-
-  // Photo preview state
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-
-  // Inicializar formulario con datos existentes cuando está en modo edición
-  useEffect(() => {
     if (isEditing && initialData) {
-      setFormData({
+      console.log('🎯 GET INITIAL FORM DATA: Using initialData for editing');
+
+      // Función helper para convertir boolean a Sí/No con null check
+      const boolToYesNo = (value: boolean | null | undefined): string => {
+        if (value === null || value === undefined) return 'No';
+        return value ? 'Sí' : 'No';
+      };
+
+      // Función helper para convertir number a string con null check
+      const numberToString = (value: number | null | undefined, defaultValue: string = ''): string => {
+        if (value === null || value === undefined) return defaultValue;
+        return value.toString();
+      };
+
+      const formData = {
         // Información de la Propiedad
         tipoPropiedad: initialData.property_type || 'Casa',
         address_street: initialData.address_street || '',
@@ -165,34 +87,31 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         address_department: initialData.address_department || '',
         region: initialData.address_region || '',
         commune: initialData.address_commune || '',
-        price: initialData.price_clp?.toString() || '',
-        common_expenses: initialData.common_expenses_clp?.toString() || '',
-        bedrooms: initialData.bedrooms?.toString() || '1',
-        bathrooms: initialData.bathrooms?.toString() || '1',
-        estacionamientos: initialData.estacionamientos?.toString() || '0',
-        metrosUtiles: initialData.metros_utiles?.toString() || '',
-        metrosTotales: initialData.metros_totales?.toString() || '',
-        tieneTerraza: initialData.tiene_terraza ? 'Sí' : 'No',
-        anoConstruccion: initialData.ano_construccion?.toString() || '',
+        price: numberToString(initialData.price_clp, ''),
+        common_expenses: numberToString(initialData.common_expenses_clp, ''),
+        bedrooms: numberToString(initialData.bedrooms, '1'),
+        bathrooms: numberToString(initialData.bathrooms, '1'),
+        estacionamientos: numberToString(initialData.estacionamientos, '0'),
+        metrosUtiles: numberToString(initialData.metros_utiles, ''),
+        metrosTotales: numberToString(initialData.metros_totales, ''),
+        tieneTerraza: boolToYesNo(initialData.tiene_terraza),
+        anoConstruccion: numberToString(initialData.ano_construccion, ''),
         description: initialData.description || '',
 
-        // Características Internas - COMPATIBLE CON BD ACTUAL
+        // Características Internas
         sistemaAguaCaliente: initialData.sistema_agua_caliente || 'Calefón',
         tipoCocina: initialData.tipo_cocina || 'Cerrada',
-        tieneSalaEstar: initialData.tiene_sala_estar ? 'Sí' : 'No',
-        // Campos opcionales - usar defaults si no existen en BD
-        tieneBodega: initialData.tiene_bodega ? 'Sí' : 'No',
-        metrosBodega: initialData.metros_bodega?.toString() || '',
-        ubicacionBodega: '',
+        tieneSalaEstar: boolToYesNo(initialData.tiene_sala_estar),
+
+        // Campos condicionales - SIEMPRE inicializar con datos existentes
+        tieneBodega: boolToYesNo(initialData.tiene_bodega),
+        metrosBodega: numberToString(initialData.metros_bodega, ''),
+        ubicacionBodega: '', // Este campo no existe en BD, mantener vacío
         ubicacionEstacionamiento: initialData.parking_location || '',
-
-        // Campo específico para Bodega - COMPATIBLE CON BD ACTUAL
         numeroBodega: initialData.storage_number || '',
-
-        // Campo específico para Parcela - COMPATIBLE CON BD ACTUAL
         parcela_number: initialData.parcela_number || '',
 
-        // Amenidades (estas necesitarán ser cargadas desde una tabla relacionada)
+        // Amenidades - TODO: Cargar desde tabla relacionada propiedad_amenidades
         amenidades: {
           conserje: false,
           condominio: false,
@@ -205,7 +124,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           areasVerdes: false,
         },
 
-        // Datos del Propietario - cargar desde initialData
+        // Datos del Propietario - TODOS los campos con fallbacks robustos
         owner_type: initialData.owner_type || 'natural',
         owner_first_name: initialData.owner_first_name || '',
         owner_paternal_last_name: initialData.owner_paternal_last_name || '',
@@ -224,6 +143,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         owner_representative_rut: initialData.owner_representative_rut || '',
         owner_representative_email: initialData.owner_representative_email || '',
         owner_representative_phone: initialData.owner_representative_phone || '',
+
+        // Campos de dirección del propietario (no se usan en edición)
         owner_address_street: '',
         owner_address_number: '',
         owner_region: '',
@@ -231,10 +152,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         marital_status: '',
         property_regime: '',
 
-        // Archivos - las fotos existentes se manejarán por separado
+        // Arrays - inicializar vacíos, se manejarán por separado
         photos_urls: [],
         availableDays: [],
         availableTimeSlots: [],
+
+        // Documentos - inicializar null, se manejarán por separado
         documents: {
           ownership_certificate: null,
           tax_assessment: null,
@@ -243,17 +166,154 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           commercial_evaluation: null,
           personeria_certificate: null,
         }
+      };
+
+      console.log('✅ GET INITIAL FORM DATA: Final initialized formData:', {
+        tipoPropiedad: formData.tipoPropiedad,
+        address_street: formData.address_street,
+        price: formData.price,
+        bedrooms: formData.bedrooms,
+        tieneBodega: formData.tieneBodega,
+        numeroBodega: formData.numeroBodega,
+        owner_type: formData.owner_type
       });
 
-      // Si hay fotos existentes, cargar sus URLs
-      if (initialData.property_images) {
-        setPhotoPreviews(initialData.property_images.map(img => img.image_url));
-      }
-
-      // Set property type state for the select field
-      setPropertyType(initialData.property_type || 'Casa');
+      return formData;
     }
+
+    console.log('🎯 GET INITIAL FORM DATA: Using default values for new property');
+    // Valores por defecto para nueva propiedad
+    return {
+      // Información de la Propiedad
+      tipoPropiedad: 'Casa',
+      address_street: '',
+      address_number: '',
+      address_department: '',
+      region: '',
+      commune: '',
+      price: '',
+      common_expenses: '',
+      bedrooms: '1',
+      bathrooms: '1',
+      estacionamientos: '0',
+      metrosUtiles: '',
+      metrosTotales: '',
+      tieneTerraza: 'No',
+      anoConstruccion: '',
+      description: '',
+
+      // Características Internas
+      sistemaAguaCaliente: 'Calefón',
+      tipoCocina: 'Cerrada',
+      tieneSalaEstar: 'No',
+      tieneBodega: 'No',
+      metrosBodega: '',
+      ubicacionBodega: '',
+      ubicacionEstacionamiento: '',
+
+      // Campo específico para Bodega
+      numeroBodega: '',
+
+      // Campo específico para Parcela
+      parcela_number: '',
+
+      // Amenidades
+      amenidades: {
+        conserje: false,
+        condominio: false,
+        piscina: false,
+        salonEventos: false,
+        gimnasio: false,
+        cowork: false,
+        quincho: false,
+        salaCine: false,
+        areasVerdes: false,
+      },
+
+      // Datos del Propietario
+      owner_type: 'natural' as 'natural' | 'juridica',
+      owner_first_name: '',
+      owner_paternal_last_name: '',
+      owner_maternal_last_name: '',
+      owner_rut: '',
+      owner_company_name: '',
+      owner_company_rut: '',
+      owner_representative_first_name: '',
+      owner_representative_paternal_last_name: '',
+      owner_representative_maternal_last_name: '',
+      owner_representative_rut: '',
+      owner_address_street: '',
+      owner_address_number: '',
+      owner_region: '',
+      owner_commune: '',
+      marital_status: '',
+      property_regime: '',
+
+      // Archivos
+      photos_urls: [] as string[],
+      availableDays: [] as string[],
+      availableTimeSlots: [] as string[],
+      documents: {
+        ownership_certificate: null as File | null,
+        tax_assessment: null as File | null,
+        owner_id_copy: null as File | null,
+        power_of_attorney: null as File | null,
+        commercial_evaluation: null as File | null,
+        personeria_certificate: null as File | null,
+      }
+    };
   }, [isEditing, initialData]);
+
+  // Estado para el tipo de propiedad seleccionado (para lógica de campos dinámicos)
+  const [propertyType, setPropertyType] = useState(() => {
+    return isEditing && initialData ? initialData.property_type || 'Casa' : 'Casa';
+  });
+
+  // Constante para verificar si es estacionamiento
+  const isParking = propertyType === 'Estacionamiento';
+
+  // Form data state - inicializar con useMemo
+  const [formData, setFormData] = useState(getInitialFormData);
+
+  // Photo preview state
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+
+  // Actualizar formData cuando cambie getInitialFormData y cargar fotos
+  useEffect(() => {
+    console.log('🔄 RENTAL FORM: Updating formData with getInitialFormData');
+    setFormData(getInitialFormData);
+
+    // Si hay fotos existentes, cargar sus URLs
+    if (isEditing && initialData?.property_images) {
+      console.log('🖼️ RENTAL FORM: Loading existing photos:', initialData.property_images.length);
+      setPhotoPreviews(initialData.property_images.map(img => img.image_url));
+    }
+
+    // Marcar como inicializado después de un breve delay para asegurar que el DOM se actualice
+    if (isEditing) {
+      setTimeout(() => {
+        console.log('✅ RENTAL FORM: Initialization complete');
+        setInitializing(false);
+      }, 100);
+    } else {
+      setInitializing(false);
+    }
+  }, [getInitialFormData, isEditing, initialData]);
+
+  // Debug: Monitorear cambios en formData
+  useEffect(() => {
+    if (isEditing) {
+      console.log('📊 RENTAL FORM: formData changed:', {
+        tipoPropiedad: formData.tipoPropiedad,
+        address_street: formData.address_street,
+        price: formData.price,
+        bedrooms: formData.bedrooms,
+        tieneBodega: formData.tieneBodega,
+        owner_type: formData.owner_type
+      });
+    }
+  }, [formData, isEditing]);
 
   // Obtener comunas disponibles según la región seleccionada
   const getAvailableCommunes = (regionKey: string) => {
@@ -806,6 +866,28 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     { key: 'personeria_certificate', label: 'Certificado de Personería', conditional: true },
   ];
 
+  // Mostrar loading mientras se inicializa el formulario en modo edición
+  if (initializing && isEditing) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white rounded-xl shadow-sm border">
+          <div className="p-6 border-b bg-gradient-to-r from-emerald-50 to-green-50">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Modificar Propiedad en Arriendo
+            </h1>
+            <p className="text-gray-600">
+              Cargando información de la propiedad...
+            </p>
+          </div>
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando datos del formulario...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="bg-white rounded-xl shadow-sm border">
@@ -840,7 +922,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 </label>
                 <select
                   required
-                  value={propertyType}
+                  value={formData.tipoPropiedad}
                   onChange={(e) => {
                     const newType = e.target.value;
                     setPropertyType(newType);

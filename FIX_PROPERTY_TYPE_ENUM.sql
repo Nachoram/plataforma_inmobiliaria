@@ -32,3 +32,4 @@ FROM pg_enum
 WHERE enumtypid = 'tipo_propiedad_enum'::regtype
 ORDER BY enumsortorder;
 
+

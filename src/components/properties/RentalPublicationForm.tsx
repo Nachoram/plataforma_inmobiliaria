@@ -176,20 +176,21 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         anoConstruccion: initialData.ano_construccion?.toString() || '',
         description: initialData.description || '',
 
-        // Características Internas
+        // Características Internas - COMPATIBLE CON BD ACTUAL
         sistemaAguaCaliente: initialData.sistema_agua_caliente || 'Calefón',
         tipoCocina: initialData.tipo_cocina || 'Cerrada',
         tieneSalaEstar: initialData.tiene_sala_estar ? 'Sí' : 'No',
-        tieneBodega: initialData.tiene_bodega ? 'Sí' : 'No',
-        metrosBodega: initialData.metros_bodega?.toString() || '',
-        ubicacionBodega: initialData.ubicacion_bodega || '',
-        ubicacionEstacionamiento: initialData.ubicacion_estacionamiento || '',
+        // Campos opcionales - usar defaults si no existen en BD
+        tieneBodega: (initialData as any).tiene_bodega ? 'Sí' : 'No',
+        metrosBodega: (initialData as any).metros_bodega?.toString() || '',
+        ubicacionBodega: (initialData as any).ubicacion_bodega || '',
+        ubicacionEstacionamiento: (initialData as any).ubicacion_estacionamiento || '',
 
-        // Campo específico para Bodega
-        numeroBodega: initialData.storage_number || initialData.ubicacion_bodega || '',
+        // Campo específico para Bodega - COMPATIBLE CON BD ACTUAL
+        numeroBodega: (initialData as any).numero_bodega || (initialData as any).storage_number || '',
 
-        // Campo específico para Parcela
-        parcela_number: initialData.parcela_number || '',
+        // Campo específico para Parcela - COMPATIBLE CON BD ACTUAL
+        parcela_number: (initialData as any).parcela_number || '',
 
         // Amenidades (estas necesitarán ser cargadas desde una tabla relacionada)
         amenidades: {
@@ -541,25 +542,50 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       // Note: Owner profile data is stored in rental_owners table, not in the user's profile
       // The property owner_id points to the advisor who created the property
 
-      // Parse numeric values with validation
-      const price = parseFloat(formData.price);
-      const metrosUtiles = parseInt(formData.metrosUtiles);
-      const metrosTotales = parseInt(formData.metrosTotales);
-      const metrosBodega = formData.metrosBodega ? parseInt(formData.metrosBodega) : null;
-      const anoConstruccion = formData.anoConstruccion ? parseInt(formData.anoConstruccion) : null;
-      const commonExpenses = formData.common_expenses ? parseFloat(formData.common_expenses) : 0;
-      const bedrooms = parseInt(formData.bedrooms);
-      const bathrooms = parseInt(formData.bathrooms);
-      const parkingSpaces = formData.estacionamientos === '5+' ? 5 : parseInt(formData.estacionamientos);
+      // Helper function: Parse number safely, return null if empty/invalid
+      const parseNumber = (value: string, isInteger = false): number | null => {
+        if (!value || value.trim() === '') return null;
+        const parsed = isInteger ? parseInt(value) : parseFloat(value);
+        return isNaN(parsed) ? null : parsed;
+      };
 
-      if (isNaN(price) || isNaN(metrosUtiles) || isNaN(metrosTotales) || isNaN(bedrooms) || isNaN(bathrooms) || isNaN(parkingSpaces)) {
-        throw new Error('Valores numéricos inválidos');
+      // Parse numeric values with safe handling of empty values
+      const price = parseNumber(formData.price, false);
+      const metrosUtiles = parseNumber(formData.metrosUtiles, true);
+      const metrosTotales = parseNumber(formData.metrosTotales, true);
+      const metrosBodega = parseNumber(formData.metrosBodega, true);
+      const anoConstruccion = parseNumber(formData.anoConstruccion, true);
+      const commonExpenses = parseNumber(formData.common_expenses, false) || 0;
+      const bedrooms = parseNumber(formData.bedrooms, true) || 0;
+      const bathrooms = parseNumber(formData.bathrooms, true) || 0;
+      const parkingSpaces = formData.estacionamientos === '5+' ? 5 : (parseNumber(formData.estacionamientos, true) || 0);
+
+      // Validate REQUIRED fields only (price must always be valid)
+      if (price === null || price <= 0) {
+        throw new Error('El precio es requerido y debe ser mayor a 0');
       }
 
-      // TODO: Implement proper owner assignment logic
-      // Currently assigning to the advisor (user.id), but should assign to actual property owner
-      // This requires either finding existing user by RUT or creating new user account for owner
-      const propertyData = {
+      // Validate required numeric fields based on property type
+      const isStorage = formData.tipoPropiedad === 'Bodega';
+      const isParking = formData.tipoPropiedad === 'Estacionamiento';
+      const isParcela = formData.tipoPropiedad === 'Parcela';
+      const isStandardProperty = !isStorage && !isParking && !isParcela;
+
+      // Validate metros_utiles (required for Casa, Departamento, Oficina, Local Comercial)
+      if (isStandardProperty && (metrosUtiles === null || metrosUtiles <= 0)) {
+        throw new Error('Los M² Útiles son requeridos para este tipo de propiedad');
+      }
+
+      // Validate metros_totales (required for all except Estacionamiento)
+      if (!isParking && (metrosTotales === null || metrosTotales <= 0)) {
+        throw new Error('Los M² Totales son requeridos para este tipo de propiedad');
+      }
+
+      // CORREGIDO: Lógica condicional robusta alineada con BD y tipos de propiedad
+      // Limpia campos según el tipo de propiedad para evitar datos inconsistentes
+
+      // Valores base del propertyData - todos los campos numéricos son number o null
+      const propertyData: any = {
         owner_id: user.id, // FIXME: This should be the actual owner's user ID, not the advisor's
         listing_type: 'arriendo' as const,
         status: 'disponible' as const,
@@ -569,38 +595,74 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         address_department: formData.address_department || null,
         address_commune: formData.commune,
         address_region: formData.region,
-        price_clp: price,
-        common_expenses_clp: commonExpenses,
-        bedrooms: bedrooms,
-        bathrooms: bathrooms,
-        estacionamientos: parkingSpaces,
-        surface_m2: metrosTotales, // Use existing column temporarily
+        price_clp: price, // Always a valid number (validated above)
+        common_expenses_clp: commonExpenses, // 0 or valid number
         description: formData.description,
         created_at: new Date().toISOString(),
-        // Note: New columns will be added once migration is applied:
-        metros_utiles: metrosUtiles,
-        metros_totales: metrosTotales,
-        tiene_terraza: formData.tieneTerraza === 'Sí',
-        ano_construccion: anoConstruccion,
-        sistema_agua_caliente: formData.sistemaAguaCaliente,
-        tipo_cocina: formData.tipoCocina,
-        tiene_sala_estar: formData.tieneSalaEstar === 'Sí',
-        tiene_bodega: formData.tieneBodega === 'Sí',
-        metros_bodega: metrosBodega,
-        ubicacion_bodega: formData.ubicacionBodega || null,
-        ubicacion_estacionamiento: formData.ubicacionEstacionamiento || null,
-        storage_number: formData.numeroBodega || null,
-        parcela_number: formData.parcela_number || null,
-        // has_doorman: formData.amenidades.conserje,
-        // has_condominium: formData.amenidades.condominio,
-        // has_pool: formData.amenidades.piscina,
-        // has_event_room: formData.amenidades.salonEventos,
-        // has_gym: formData.amenidades.gimnasio,
-        // has_cowork: formData.amenidades.cowork,
-        // has_bbq_area: formData.amenidades.quincho,
-        // has_cinema: formData.amenidades.salaCine,
-        // has_green_areas: formData.amenidades.areasVerdes,
       };
+
+      // CORREGIDO: Campos condicionales según tipo de propiedad - COMPATIBLE CON BD ACTUAL
+      // Solo incluir campos que existen actualmente en la base de datos
+      // TODOS LOS CAMPOS NUMÉRICOS SON number | null (nunca NaN, undefined, ni "")
+      if (formData.tipoPropiedad === 'Bodega') {
+        // Bodega: Solo numeroBodega requerido, resto de campos tradicionales son NULL/0
+        propertyData.bedrooms = 0;
+        propertyData.bathrooms = 0;
+        propertyData.estacionamientos = 0;
+        propertyData.metros_utiles = null; // NO aplica para Bodega
+        propertyData.metros_totales = metrosTotales; // Can be null if not provided
+        propertyData.tiene_terraza = false;
+        // Campos legacy - solo si existen en BD
+        if (formData.numeroBodega) {
+          propertyData.numero_bodega = formData.numeroBodega;
+          // propertyData.storage_number = formData.numeroBodega; // Comentar hasta que se aplique migración
+        }
+
+      } else if (formData.tipoPropiedad === 'Estacionamiento') {
+        // Estacionamiento: Mínimos campos, solo ubicación opcional
+        propertyData.bedrooms = 0;
+        propertyData.bathrooms = 0;
+        propertyData.estacionamientos = 0; // No aplica contar estacionamientos para este tipo
+        propertyData.metros_utiles = null; // NO aplica
+        propertyData.metros_totales = null; // NO aplica
+        propertyData.tiene_terraza = false;
+        // propertyData.ubicacion_estacionamiento = formData.ubicacionEstacionamiento || null; // Comentar hasta migración
+
+      } else if (formData.tipoPropiedad === 'Parcela') {
+        // Parcela: Solo metros totales, parcela_number opcional
+        propertyData.bedrooms = 0;
+        propertyData.bathrooms = 0;
+        propertyData.estacionamientos = parkingSpaces; // Can be 0 or more
+        propertyData.metros_utiles = null; // NO aplica para Parcela
+        propertyData.metros_totales = metrosTotales; // Required for Parcela (validated above)
+        propertyData.tiene_terraza = formData.tieneTerraza === 'Sí';
+        // propertyData.parcela_number = formData.parcela_number || null; // Comentar hasta migración
+
+      } else {
+        // Casa, Departamento, Oficina, Local Comercial: Campos completos
+        propertyData.bedrooms = bedrooms;
+        propertyData.bathrooms = bathrooms;
+        propertyData.estacionamientos = parkingSpaces;
+        propertyData.metros_utiles = metrosUtiles; // Required for these types (validated above)
+        propertyData.metros_totales = metrosTotales; // Required for these types (validated above)
+        // Campos específicos del tipo
+        propertyData.tiene_terraza = formData.tieneTerraza === 'Sí';
+        propertyData.tiene_sala_estar = formData.tieneSalaEstar === 'Sí';
+        propertyData.sistema_agua_caliente = formData.sistemaAguaCaliente;
+        propertyData.tipo_cocina = formData.tipoCocina;
+        propertyData.ano_construccion = anoConstruccion; // Can be null
+        // propertyData.ubicacion_estacionamiento = parkingSpaces > 0 ? formData.ubicacionEstacionamiento || null : null; // Comentar hasta migración
+
+        // Campos específicos para Oficina - solo si existen en BD
+        if (formData.tipoPropiedad === 'Oficina') {
+          // propertyData.tiene_bodega = formData.tieneBodega === 'Sí'; // Comentar hasta migración
+          // propertyData.metros_bodega = metrosBodega; // Comentar hasta migración
+          // propertyData.ubicacion_bodega = formData.ubicacionBodega || null; // Comentar hasta migración
+        }
+      }
+
+      // DEBUGGING: Log propertyData to verify all numeric fields are correctly parsed
+      console.log('🏠 PropertyData to submit:', JSON.stringify(propertyData, null, 2));
 
       // Insert or update property
       let propertyResult;
@@ -773,38 +835,68 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     const newType = e.target.value;
                     setPropertyType(newType);
 
-                    // Limpiar valores específicos según el tipo de propiedad
+                    // CORREGIDO: Limpiar valores específicos según el tipo de propiedad - EXACTAMENTE como se envía a BD
                     const updatedFormData = { ...formData, tipoPropiedad: newType };
 
                     if (newType === 'Bodega') {
-                      // Para Bodega: limpiar campos que no aplican
-                      updatedFormData.address_department = '';
+                      // CORREGIDO: Bodega - Solo numeroBodega requerido, limpiar campos tradicionales
+                      updatedFormData.bedrooms = '0';
+                      updatedFormData.bathrooms = '0';
                       updatedFormData.estacionamientos = '0';
                       updatedFormData.ubicacionEstacionamiento = '';
-                      updatedFormData.metrosUtiles = '';
+                      updatedFormData.metrosUtiles = ''; // NULL en BD
+                      // metrosTotales se mantiene (M² de la Bodega)
                       updatedFormData.tieneTerraza = 'No';
-                      // Mantener metrosTotales (será M² de la Bodega)
-                    } else if (newType === 'Estacionamiento') {
-                      // Limpiar campos que no aplican para estacionamientos
-                      updatedFormData.address_department = '';
-                      updatedFormData.tieneTerraza = 'No';
-                      updatedFormData.metrosUtiles = '';
-                      updatedFormData.metrosTotales = '';
-                    } else if (newType === 'Oficina') {
-                      // Limpiar terraza cuando se selecciona oficina
-                      updatedFormData.tieneTerraza = 'No';
-                    } else if (newType === 'Parcela') {
-                      // Para Parcela: limpiar campos que no aplican
-                      updatedFormData.tieneTerraza = 'No';
-                      updatedFormData.estacionamientos = '0';
-                      updatedFormData.ubicacionEstacionamiento = '';
-                      updatedFormData.address_department = '';
-                      // Nota: parcela_number se mantiene, no se limpia
-                    } else {
-                      // Limpiar campos de bodega cuando NO es oficina
+                      updatedFormData.tieneSalaEstar = 'No';
                       updatedFormData.tieneBodega = 'No';
                       updatedFormData.metrosBodega = '';
                       updatedFormData.ubicacionBodega = '';
+                      updatedFormData.parcela_number = '';
+                      // numeroBodega se mantiene (requerido)
+
+                    } else if (newType === 'Estacionamiento') {
+                      // CORREGIDO: Estacionamiento - Mínimos campos aplicables
+                      updatedFormData.bedrooms = '0';
+                      updatedFormData.bathrooms = '0';
+                      updatedFormData.estacionamientos = '0'; // No cuenta estacionamientos para este tipo
+                      updatedFormData.metrosUtiles = ''; // NULL
+                      updatedFormData.metrosTotales = ''; // NULL
+                      updatedFormData.tieneTerraza = 'No';
+                      updatedFormData.tieneSalaEstar = 'No';
+                      updatedFormData.tieneBodega = 'No';
+                      updatedFormData.metrosBodega = '';
+                      updatedFormData.ubicacionBodega = '';
+                      updatedFormData.numeroBodega = '';
+                      updatedFormData.parcela_number = '';
+                      // ubicacionEstacionamiento opcional
+
+                    } else if (newType === 'Parcela') {
+                      // CORREGIDO: Parcela - Campos limitados
+                      updatedFormData.bedrooms = '0';
+                      updatedFormData.bathrooms = '0';
+                      updatedFormData.metrosUtiles = ''; // NULL
+                      // metrosTotales se mantiene (M² del terreno)
+                      updatedFormData.tieneSalaEstar = 'No';
+                      updatedFormData.tieneBodega = 'No';
+                      updatedFormData.metrosBodega = '';
+                      updatedFormData.ubicacionBodega = '';
+                      updatedFormData.numeroBodega = '';
+                      // parcela_number opcional, estacionamientos permitidos, terraza permitida
+
+                    } else if (newType === 'Oficina') {
+                      // CORREGIDO: Oficina - Campos completos más campos específicos de bodega
+                      updatedFormData.tieneTerraza = 'No'; // Oficinas generalmente no tienen terraza
+                      // Mantener todos los demás campos, tieneBodega/metrosBodega/ubicacionBodega condicionales
+
+                    } else {
+                      // Casa, Departamento, Local Comercial - Campos tradicionales completos
+                      // Limpiar campos específicos que no aplican
+                      updatedFormData.tieneBodega = 'No';
+                      updatedFormData.metrosBodega = '';
+                      updatedFormData.ubicacionBodega = '';
+                      updatedFormData.numeroBodega = '';
+                      updatedFormData.parcela_number = '';
+                      // Mantener bedrooms, bathrooms, estacionamientos, metrosUtiles, metrosTotales, terraza
                     }
 
                     setFormData(updatedFormData);

@@ -826,7 +826,8 @@ export type PropertyType = typeof PROPERTY_TYPE_OPTIONS[number]['value'];
 
 // Utility function to get property type display name and badge color
 export const getPropertyTypeInfo = (propertyType?: string) => {
-  const type = propertyType || 'Casa';
+  // Remove hardcoded default - show actual value or fallback to "No especificado"
+  const type = propertyType || 'No especificado';
   const typeMap: Record<string, { label: string; color: string; bgColor: string }> = {
     'Casa': { label: 'Casa', color: 'text-blue-700', bgColor: 'bg-blue-100' },
     'Departamento': { label: 'Departamento', color: 'text-purple-700', bgColor: 'bg-purple-100' },
@@ -834,9 +835,10 @@ export const getPropertyTypeInfo = (propertyType?: string) => {
     'Local Comercial': { label: 'Local Comercial', color: 'text-orange-700', bgColor: 'bg-orange-100' },
     'Estacionamiento': { label: 'Estacionamiento', color: 'text-green-700', bgColor: 'bg-green-100' },
     'Bodega': { label: 'Bodega', color: 'text-amber-700', bgColor: 'bg-amber-100' },
-    'Parcela': { label: 'Parcela', color: 'text-emerald-700', bgColor: 'bg-emerald-100' }
+    'Parcela': { label: 'Parcela', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
+    'No especificado': { label: 'No especificado', color: 'text-gray-500', bgColor: 'bg-gray-100' }
   };
-  return typeMap[type] || typeMap['Casa'];
+  return typeMap[type] || typeMap['No especificado'];
 };
 
 // API function to update application status

@@ -88,6 +88,13 @@ export const PanelPage: React.FC = () => {
         }));
 
       console.log(`📊 Fetched ${validProperties.length} valid properties out of ${(data || []).length} total`);
+
+      // Log property_type values to debug the issue
+      console.log('🔍 [PanelPage] Property types in fetched data:');
+      validProperties.forEach((prop, index) => {
+        console.log(`  ${index + 1}. ID: ${prop.id}, property_type: "${prop.property_type}"`);
+      });
+
       setProperties(validProperties || []);
     } catch (error) {
       console.error('Error fetching properties:', error);

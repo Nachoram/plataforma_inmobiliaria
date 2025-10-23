@@ -66,6 +66,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
     if (isEditing && initialData) {
       console.log('🎯 GET INITIAL FORM DATA: Using initialData for editing');
+      console.log('🎯 GET INITIAL FORM DATA: propiedad_amenidades:', initialData.propiedad_amenidades);
+      console.log('🎯 GET INITIAL FORM DATA: documents:', initialData.documents);
 
       // Función helper para convertir boolean a Sí/No con null check
       const boolToYesNo = (value: boolean | null | undefined): string => {
@@ -111,18 +113,10 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         numeroBodega: initialData.storage_number || '',
         parcela_number: initialData.parcela_number || '',
 
-        // Amenidades - TODO: Cargar desde tabla relacionada propiedad_amenidades
-        amenidades: {
-          conserje: false,
-          condominio: false,
-          piscina: false,
-          salonEventos: false,
-          gimnasio: false,
-          cowork: false,
-          quincho: false,
-          salaCine: false,
-          areasVerdes: false,
-        },
+        // Amenidades - Cargar desde propiedad_amenidades
+        amenidades: initialData.propiedad_amenidades
+          ? initialData.propiedad_amenidades.map(pa => pa.amenidades.nombre)
+          : [],
 
         // Datos del Propietario - TODOS los campos con fallbacks robustos
         owner_type: initialData.owner_type || 'natural',
@@ -157,15 +151,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         availableDays: [],
         availableTimeSlots: [],
 
-        // Documentos - inicializar null, se manejarán por separado
-        documents: {
-          ownership_certificate: null,
-          tax_assessment: null,
-          owner_id_copy: null,
-          power_of_attorney: null,
-          commercial_evaluation: null,
-          personeria_certificate: null,
-        }
+        // Documentos - inicializar con documentos existentes o array vacío
+      documents: initialData.documents || [],
       };
 
       console.log('✅ GET INITIAL FORM DATA: Final initialized formData:', {
@@ -175,7 +162,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         bedrooms: formData.bedrooms,
         tieneBodega: formData.tieneBodega,
         numeroBodega: formData.numeroBodega,
-        owner_type: formData.owner_type
+        owner_type: formData.owner_type,
+        amenidades: formData.amenidades,
+        documents: formData.documents
       });
 
       return formData;
@@ -218,17 +207,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       parcela_number: '',
 
       // Amenidades
-      amenidades: {
-        conserje: false,
-        condominio: false,
-        piscina: false,
-        salonEventos: false,
-        gimnasio: false,
-        cowork: false,
-        quincho: false,
-        salaCine: false,
-        areasVerdes: false,
-      },
+      amenidades: [],
 
       // Datos del Propietario
       owner_type: 'natural' as 'natural' | 'juridica',
@@ -253,14 +232,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       photos_urls: [] as string[],
       availableDays: [] as string[],
       availableTimeSlots: [] as string[],
-      documents: {
-        ownership_certificate: null as File | null,
-        tax_assessment: null as File | null,
-        owner_id_copy: null as File | null,
-        power_of_attorney: null as File | null,
-        commercial_evaluation: null as File | null,
-        personeria_certificate: null as File | null,
-      }
+      documents: []
     };
   }, [isEditing, initialData]);
 
@@ -271,6 +243,16 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
   // Constante para verificar si es estacionamiento
   const isParking = propertyType === 'Estacionamiento';
+
+  // Función helper para manejar cambios en amenidades
+  const handleAmenidadChange = (amenidad: string, isChecked: boolean) => {
+    setFormData({
+      ...formData,
+      amenidades: isChecked
+        ? [...formData.amenidades, amenidad]
+        : formData.amenidades.filter(a => a !== amenidad)
+    });
+  };
 
   // Form data state - inicializar con useMemo
   const [formData, setFormData] = useState(getInitialFormData);
@@ -310,7 +292,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         price: formData.price,
         bedrooms: formData.bedrooms,
         tieneBodega: formData.tieneBodega,
-        owner_type: formData.owner_type
+        owner_type: formData.owner_type,
+        amenidades: formData.amenidades,
+        documentsCount: formData.documents?.length || 0
       });
     }
   }, [formData, isEditing]);
@@ -362,25 +346,17 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   };
 
   // Handle document upload
-  const handleDocumentUpload = (documentType: keyof typeof formData.documents, file: File) => {
-    setFormData(prev => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        [documentType]: file
-      }
-    }));
+  const handleDocumentUpload = (documentType: string, file: File) => {
+    // Por ahora, solo agregamos el archivo al estado de archivos para subir
+    // En una implementación completa, esto debería manejar la subida inmediata
+    console.log('Document upload:', documentType, file.name);
+    // TODO: Implementar subida de documentos
   };
 
-  // Remove document
-  const removeDocument = (documentType: keyof typeof formData.documents) => {
-    setFormData(prev => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        [documentType]: null
-      }
-    }));
+  // Remove document - por ahora no implementado para documentos existentes
+  const removeDocument = (documentType: string) => {
+    console.log('Remove document:', documentType);
+    // TODO: Implementar eliminación de documentos
   };
 
   // Validation
@@ -436,7 +412,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     }
 
     // Validate personería certificate for legal entities
-    if (formData.owner_type === 'juridica' && !formData.documents.personeria_certificate) {
+    if (formData.owner_type === 'juridica' && !formData.documents.some((doc: any) => doc.document_type === 'personeria_certificate')) {
       newErrors.personeria_certificate = 'El certificado de personería es requerido para personas jurídicas';
     }
 
@@ -1568,11 +1544,17 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="conserje"
-                      checked={formData.amenidades.conserje}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, conserje: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Conserje')}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        const amenidad = 'Conserje';
+                        setFormData({
+                          ...formData,
+                          amenidades: isChecked
+                            ? [...formData.amenidades, amenidad]
+                            : formData.amenidades.filter(a => a !== amenidad)
+                        });
+                      }}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="conserje" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1585,11 +1567,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="condominio"
-                      checked={formData.amenidades.condominio}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, condominio: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Condominio')}
+                      onChange={(e) => handleAmenidadChange('Condominio', e.target.checked)}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="condominio" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1602,11 +1581,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="piscina"
-                      checked={formData.amenidades.piscina}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, piscina: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Piscina')}
+                      onChange={(e) => handleAmenidadChange('Piscina', e.target.checked)}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="piscina" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1619,11 +1595,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="salonEventos"
-                      checked={formData.amenidades.salonEventos}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, salonEventos: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Salón de Eventos')}
+                      onChange={(e) => handleAmenidadChange('Salón de Eventos', e.target.checked)}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="salonEventos" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1636,11 +1609,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="gimnasio"
-                      checked={formData.amenidades.gimnasio}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, gimnasio: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Gimnasio')}
+                      onChange={(e) => handleAmenidadChange('Gimnasio', e.target.checked)}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="gimnasio" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1653,11 +1623,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="cowork"
-                      checked={formData.amenidades.cowork}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, cowork: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Cowork')}
+                      onChange={(e) => handleAmenidadChange('Cowork', e.target.checked)}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="cowork" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1670,11 +1637,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="quincho"
-                      checked={formData.amenidades.quincho}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, quincho: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Quincho')}
+                      onChange={(e) => handleAmenidadChange('Quincho', e.target.checked)}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="quincho" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1687,11 +1651,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="salaCine"
-                      checked={formData.amenidades.salaCine}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, salaCine: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Sala de Cine')}
+                      onChange={(e) => handleAmenidadChange('Sala de Cine', e.target.checked)}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="salaCine" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1704,11 +1665,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <input
                       type="checkbox"
                       id="areasVerdes"
-                      checked={formData.amenidades.areasVerdes}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        amenidades: { ...formData.amenidades, areasVerdes: e.target.checked }
-                      })}
+                      checked={formData.amenidades.includes('Áreas Verdes')}
+                      onChange={(e) => handleAmenidadChange('Áreas Verdes', e.target.checked)}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                     />
                     <label htmlFor="areasVerdes" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -2294,6 +2252,26 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             </div>
 
             <div className="space-y-6">
+              {/* Documentos Existentes */}
+              {formData.documents && formData.documents.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Documentos Existentes</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {formData.documents.map((doc: any) => (
+                      <div key={doc.id} className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <Check className="h-5 w-5 text-green-600" />
+                        <span className="text-sm text-green-800 flex-1">
+                          {doc.document_type}: {doc.file_name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(doc.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Documentos Requeridos */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Documentos Requeridos</h3>
@@ -2303,35 +2281,19 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       <label className="block text-sm font-medium text-gray-700">
                         {doc.label}
                       </label>
-                      {formData.documents[doc.key as keyof typeof formData.documents] ? (
-                        <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <Check className="h-5 w-5 text-green-600" />
-                          <span className="text-sm text-green-800">
-                            {formData.documents[doc.key as keyof typeof formData.documents]?.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeDocument(doc.key as keyof typeof formData.documents)}
-                            className="ml-auto text-red-500 hover:text-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-emerald-400 transition-colors">
-                          <input
-                            type="file"
-                            accept=".pdf,.doc,.docx"
-                            onChange={(e) => e.target.files?.[0] && handleDocumentUpload(doc.key as keyof typeof formData.documents, e.target.files[0])}
-                            className="hidden"
-                            id={`doc-${doc.key}`}
-                          />
-                          <label htmlFor={`doc-${doc.key}`} className="cursor-pointer">
-                            <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                            <p className="mt-1 text-xs text-gray-600">Subir documento</p>
-                          </label>
-                        </div>
-                      )}
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-emerald-400 transition-colors">
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => e.target.files?.[0] && handleDocumentUpload(doc.key as any, e.target.files[0])}
+                          className="hidden"
+                          id={`doc-${doc.key}`}
+                        />
+                        <label htmlFor={`doc-${doc.key}`} className="cursor-pointer">
+                          <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                          <p className="mt-1 text-xs text-gray-600">Subir documento</p>
+                        </label>
+                      </div>
                     </div>
                   ))}
                 </div>

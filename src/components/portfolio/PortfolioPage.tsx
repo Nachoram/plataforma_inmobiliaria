@@ -61,11 +61,11 @@ const PortfolioPage: React.FC = () => {
 
       console.log('🔍 [DEBUG] RPC Response:', { data: propertiesData, error: propertiesError });
 
-      // Debug property_type values from API response
+      // Debug tipo_propiedad values from API response
       if (propertiesData) {
         console.log('🔍 [DEBUG] Properties from API:', propertiesData.map(p => ({
           id: p.id,
-          property_type: p.property_type,
+          tipo_propiedad: p.tipo_propiedad,
           status: p.status
         })));
       }

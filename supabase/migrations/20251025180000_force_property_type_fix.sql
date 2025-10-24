@@ -1,25 +1,10 @@
--- =====================================================
--- FIX PARA EL BUG: Todas las propiedades muestran "Casa"
--- =====================================================
--- Este script arregla la función get_portfolio_with_postulations
--- para devolver tipo_propiedad directamente desde la base de datos.
--- El problema era que la función usaba property_type pero los datos reales están en tipo_propiedad.
---
--- PASOS PARA APLICAR:
--- 1. Ve al Dashboard de Supabase
--- 2. Ve a la sección SQL Editor
--- 3. Crea una nueva consulta
--- 4. Copia y pega TODO este script
--- 5. Haz clic en "Run"
--- 6. Refresca tu página de portafolio
--- =====================================================
+-- Force fix for property_type bug in portfolio view
+-- This ensures get_portfolio_with_postulations includes property_type field
 
 -- DROPEAR LA FUNCIÓN EXISTENTE PRIMERO
--- PostgreSQL no permite cambiar el tipo de retorno con CREATE OR REPLACE
--- Por eso necesitamos eliminar la función primero y luego recrearla
 DROP FUNCTION IF EXISTS get_portfolio_with_postulations(uuid);
 
--- Crear la función con tipo_propiedad como campo principal
+-- Crear la función con property_type incluido
 CREATE OR REPLACE FUNCTION get_portfolio_with_postulations(user_id_param uuid)
 RETURNS TABLE (
     -- Columnas de properties
@@ -27,7 +12,7 @@ RETURNS TABLE (
     owner_id uuid,
     status property_status_enum,
     listing_type listing_type_enum,
-    tipo_propiedad tipo_propiedad_enum,  -- <-- CAMPO PRINCIPAL: tipo_propiedad
+    property_type property_type_enum,  -- <-- CAMPO AGREGADO
     address_street text,
     address_number varchar(10),
     address_department varchar(10),
@@ -52,7 +37,7 @@ BEGIN
         p.owner_id,
         p.status,
         p.listing_type,
-        p.tipo_propiedad,  -- <-- USAMOS tipo_propiedad DIRECTAMENTE
+        p.property_type,  -- <-- CAMPO AGREGADO EN EL SELECT
         p.address_street,
         p.address_number,
         p.address_department,
@@ -123,13 +108,7 @@ GRANT EXECUTE ON FUNCTION get_portfolio_with_postulations(uuid) TO authenticated
 
 -- Comentario actualizado
 COMMENT ON FUNCTION get_portfolio_with_postulations(uuid) IS
-'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval. Devuelve tipo_propiedad directamente desde la base de datos.';
+'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval. Incluye el campo property_type para mostrar el tipo correcto de propiedad.';
 
--- =====================================================
--- VERIFICACIÓN DEL FIX
--- =====================================================
--- Después de ejecutar, puedes verificar con esta consulta:
--- SELECT id, tipo_propiedad, address_street FROM get_portfolio_with_postulations('TU_USER_ID_AQUI');
---
--- Deberías ver que cada propiedad tiene su tipo_propiedad correcto
--- =====================================================
+-- Verificación: mostrar algunos registros para confirmar que property_type está incluido
+-- SELECT id, property_type FROM get_portfolio_with_postulations('some-user-id') LIMIT 5;

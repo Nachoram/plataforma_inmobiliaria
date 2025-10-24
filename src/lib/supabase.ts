@@ -88,6 +88,7 @@ export interface Property {
   // Note: 'disponible' is the default status for new properties
   listing_type: 'venta' | 'arriendo';
   property_type?: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela'; // Database: property_type_enum
+  tipo_propiedad?: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela'; // Campo principal del database
   address_street: string;
   address_number: string;
   address_department: string | null;

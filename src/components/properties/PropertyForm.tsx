@@ -162,7 +162,7 @@ export const PropertyForm: React.FC = () => {
     photos_urls: [] as string[],
 
     // Property type and conditional fields
-    property_type: 'Casa',
+    property_type: '',
     useful_area: undefined,
     total_area: undefined,
     bedrooms: 1,
@@ -245,7 +245,7 @@ export const PropertyForm: React.FC = () => {
         comuna: data.address_commune || '',
 
         // Property type and conditional fields
-        property_type: data.tipo_propiedad || 'Casa',
+        property_type: data.tipo_propiedad || '',
         useful_area: data.metros_utiles || undefined,
         total_area: data.metros_totales || undefined,
         bedrooms: data.bedrooms || 1,

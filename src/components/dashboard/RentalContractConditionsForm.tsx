@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, FileText, DollarSign, Calendar, Mail, Check, Building2, AlertTriangle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, validateRUT } from '../../lib/supabase';
 import CustomButton from '../common/CustomButton';
 
 interface RentalContractConditionsFormProps {
@@ -16,6 +16,9 @@ export interface RentalContractConditions {
   lease_term_months: number;
   payment_day: number;
   final_price_clp: number;
+  final_rent_price?: number; // NUEVO
+  broker_name?: string; // NUEVO
+  broker_rut?: string; // NUEVO
   broker_commission_clp: number;
   guarantee_amount_clp: number;
   official_communication_email: string;
@@ -45,6 +48,9 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
     lease_term_months: 12, // Default 1 año
     payment_day: 5, // Default día 5
     final_price_clp: propertyPrice, // Precio base de la propiedad
+    final_rent_price: propertyPrice, // NUEVO: Precio final del arriendo
+    broker_name: '', // NUEVO
+    broker_rut: '', // NUEVO
     broker_commission_clp: Math.round(propertyPrice * 0.01), // Default 1% del precio
     guarantee_amount_clp: propertyPrice, // Default 1 mes de garantía
     official_communication_email: '',
@@ -95,6 +101,9 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
             lease_term_months: data.lease_term_months,
             payment_day: data.payment_day,
             final_price_clp: data.final_price_clp,
+            final_rent_price: data.final_rent_price || data.final_price_clp, // NUEVO: fallback a final_price_clp
+            broker_name: data.broker_name || '', // NUEVO
+            broker_rut: data.broker_rut || '', // NUEVO
             broker_commission_clp: data.broker_commission_clp || 0,
             guarantee_amount_clp: data.guarantee_amount_clp,
             official_communication_email: data.official_communication_email || '',
@@ -143,6 +152,23 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
 
     if (!formData.final_price_clp || formData.final_price_clp < 0) {
       newErrors.final_price_clp = 'El precio final debe ser mayor a 0';
+    }
+
+    // NUEVO: Validar precio final del arriendo
+    if (!formData.final_rent_price || formData.final_rent_price <= 0) {
+      newErrors.final_rent_price = 'El precio final del arriendo es obligatorio y debe ser mayor a 0';
+    }
+
+    // NUEVO: Validar nombre del corredor
+    if (!formData.broker_name?.trim()) {
+      newErrors.broker_name = 'El nombre del corredor es obligatorio';
+    }
+
+    // NUEVO: Validar RUT del corredor
+    if (!formData.broker_rut?.trim()) {
+      newErrors.broker_rut = 'El RUT del corredor es obligatorio';
+    } else if (!validateRUT(formData.broker_rut)) {
+      newErrors.broker_rut = 'RUT del corredor inválido';
     }
 
     if (formData.broker_commission_clp < 0) {
@@ -244,13 +270,28 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
       return;
     }
 
+    // NUEVO: Validaciones adicionales antes de guardar
+    if (!formData.final_rent_price || formData.final_rent_price <= 0) {
+      throw new Error('El precio final es obligatorio');
+    }
+    if (!formData.broker_name?.trim()) {
+      throw new Error('El nombre del corredor es obligatorio');
+    }
+    if (!formData.broker_rut?.trim() || !validateRUT(formData.broker_rut)) {
+      throw new Error('RUT del corredor inválido');
+    }
+
     setSaving(true);
 
     try {
-      // Preparar los datos incluyendo el método de pago
+      // Preparar los datos incluyendo el método de pago y nuevos campos
       const dataToSave = {
         ...formData,
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        // NUEVO: Asegurar coerción correcta de tipos para nuevos campos
+        final_rent_price: Number(formData.final_rent_price),
+        broker_name: String(formData.broker_name).trim(),
+        broker_rut: String(formData.broker_rut).trim(),
       };
 
       // First, check if conditions already exist for this application
@@ -498,6 +539,94 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
                 </p>
                 {errors.guarantee_amount_clp && (
                   <p className="text-red-500 text-xs mt-1">{errors.guarantee_amount_clp}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Sección: Precio Final del Arriendo */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <DollarSign className="h-5 w-5 mr-2 text-emerald-600" />
+              Precio Final del Arriendo
+            </h3>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Precio Final del Arriendo (CLP) *
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={1000}
+                required
+                value={formData.final_rent_price ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, final_rent_price: e.target.value ? Number(e.target.value) : undefined }))}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                  errors.final_rent_price ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Ej: 500000"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Formateado: {formData.final_rent_price ? formatPrice(formData.final_rent_price) : '0'}
+              </p>
+              {errors.final_rent_price && (
+                <p className="text-red-500 text-xs mt-1">{errors.final_rent_price}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Sección: Corredor Responsable */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Check className="h-5 w-5 mr-2 text-emerald-600" />
+              Corredor Responsable
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre del Corredor *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.broker_name ?? ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, broker_name: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                    errors.broker_name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: María López"
+                  maxLength={120}
+                />
+                {errors.broker_name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.broker_name}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  RUT del Corredor *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.broker_rut ?? ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, broker_rut: e.target.value }))}
+                  onBlur={() => {
+                    if (formData.broker_rut && !validateRUT(formData.broker_rut)) {
+                      setErrors(prev => ({ ...prev, broker_rut: 'RUT del corredor inválido' }));
+                    } else {
+                      setErrors(prev => ({ ...prev, broker_rut: undefined }));
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                    errors.broker_rut ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 12.345.678-9"
+                  maxLength={12}
+                />
+                {errors.broker_rut && (
+                  <p className="text-red-500 text-xs mt-1">{errors.broker_rut}</p>
                 )}
               </div>
             </div>

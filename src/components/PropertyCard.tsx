@@ -1,7 +1,7 @@
 import React, { useState, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, Building, Heart, TrendingUp, MessageSquare, Eye, Edit, Trash2, Home } from 'lucide-react';
-import { SupabaseProperty, formatPriceCLP, isValidPrice, getPropertyTypeInfo } from '../lib/supabase';
+import { Property as SupabaseProperty, formatPriceCLP, isValidPrice, getPropertyTypeInfo } from '../lib/supabase';
 import CustomButton from './common/CustomButton';
 import ImageGallery from './common/ImageGallery';
 import PostulationsList from './portfolio/PostulationsList';
@@ -32,6 +32,7 @@ interface PropertyWithImages extends SupabaseProperty {
   }>;
   postulation_count?: number;
   postulations?: Postulation[];
+  tipo_propiedad?: string; // Campo agregado para el tipo de propiedad
 }
 
 type PropertyCardContext = 'panel' | 'portfolio';
@@ -117,11 +118,12 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
     }
   };
 
-  // Debug property_type values
+  // Debug tipo_propiedad values
   React.useEffect(() => {
-    console.log('🔍 [PropertyCard] Property:', property.id, 'property_type:', property.property_type);
-    console.log('🔍 [PropertyCard] getPropertyTypeInfo result:', getPropertyTypeInfo(property.property_type));
-  }, [property.id, property.property_type]);
+    console.log('🔍 [PropertyCard] Property:', property.id, 'tipo_propiedad:', property.tipo_propiedad, 'typeof:', typeof property.tipo_propiedad);
+    console.log('🔍 [PropertyCard] getPropertyTypeInfo result:', getPropertyTypeInfo(property.tipo_propiedad));
+    console.log('🔍 [PropertyCard] Full property object:', property);
+  }, [property.id, property.tipo_propiedad]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -215,9 +217,9 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
             )}
 
             {/* Property Type Badge */}
-            {property.property_type && (
-              <span className={`px-2 py-1 text-xs font-medium rounded-full pointer-events-auto ${getPropertyTypeInfo(property.property_type).bgColor} ${getPropertyTypeInfo(property.property_type).color}`}>
-                {getPropertyTypeInfo(property.property_type).label}
+            {property.tipo_propiedad && (
+              <span className={`px-2 py-1 text-xs font-medium rounded-full pointer-events-auto ${getPropertyTypeInfo(property.tipo_propiedad).bgColor} ${getPropertyTypeInfo(property.tipo_propiedad).color}`}>
+                {getPropertyTypeInfo(property.tipo_propiedad).label}
               </span>
             )}
           </div>
@@ -259,11 +261,11 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
         </div>
 
         {/* Property Type (visible on all contexts) */}
-        {property.property_type && (
+        {property.tipo_propiedad && (
           <div className="flex items-center gap-2 mb-2">
             <Home className="h-3 w-3 xs:h-4 xs:w-4 flex-shrink-0 text-gray-600" />
-            <span className={`text-xs xs:text-sm font-semibold px-2 py-0.5 rounded ${getPropertyTypeInfo(property.property_type).bgColor} ${getPropertyTypeInfo(property.property_type).color}`}>
-              {getPropertyTypeInfo(property.property_type).label}
+            <span className={`text-xs xs:text-sm font-semibold px-2 py-0.5 rounded ${getPropertyTypeInfo(property.tipo_propiedad).bgColor} ${getPropertyTypeInfo(property.tipo_propiedad).color}`}>
+              {getPropertyTypeInfo(property.tipo_propiedad).label}
             </span>
           </div>
         )}

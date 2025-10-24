@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Webhook Plataforma Inmobiliaria</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test del Webhook de Contratos</h1>
+        <p>Esta página prueba directamente la conectividad al webhook de n8n sin pasar por el frontend de React.</p>
+
+        <div id="status" class="status info">
+            Haz clic en "Probar Webhook" para verificar la conexión
+        </div>
+
+        <button id="testBtn" onclick="testWebhook()">Probar Webhook</button>
+
+        <div id="results" style="margin-top: 20px;"></div>
+
+        <script>
+            async function testWebhook() {
+                const statusDiv = document.getElementById('status');
+                const resultsDiv = document.getElementById('results');
+                const testBtn = document.getElementById('testBtn');
+
+                testBtn.disabled = true;
+                testBtn.textContent = 'Probando...';
+
+                statusDiv.className = 'status info';
+                statusDiv.textContent = '🔄 Enviando petición de prueba...';
+
+                try {
+                    // Simular los parámetros que enviaría el frontend
+                    const testParams = {
+                        application_characteristic_id: 'test-app-123',
+                        property_characteristic_id: 'test-prop-456',
+                        rental_owner_characteristic_id: 'test-owner-789',
+                        contract_conditions_characteristic_id: 'test-contract-101',
+                        guarantor_characteristic_id: 'test-guarantor-202',
+                        timestamp: new Date().toISOString(),
+                        platform: 'plataforma_inmobiliaria',
+                        action: 'generate_contract'
+                    };
+
+                    // Convertir a query parameters para GET request
+                    const queryParams = new URLSearchParams(testParams);
+                    const webhookUrl = `https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb?${queryParams.toString()}`;
+
+                    console.log('🌐 URL completa:', webhookUrl);
+
+                    const startTime = Date.now();
+                    const response = await fetch(webhookUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    const endTime = Date.now();
+
+                    console.log('📊 Status:', response.status);
+                    console.log('📊 Tiempo de respuesta:', endTime - startTime, 'ms');
+
+                    if (response.ok) {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = '✅ ¡Webhook responde correctamente!';
+
+                        resultsDiv.innerHTML = `
+                            <h3>📋 Detalles de la Respuesta:</h3>
+                            <pre>Status: ${response.status} ${response.statusText}
+Tiempo de respuesta: ${endTime - startTime} ms
+Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}</pre>
+                        `;
+                    } else {
+                        statusDiv.className = 'status error';
+                        statusDiv.textContent = `❌ Error del webhook: ${response.status} ${response.statusText}`;
+
+                        const errorText = await response.text();
+                        resultsDiv.innerHTML = `
+                            <h3>📋 Detalles del Error:</h3>
+                            <pre>${errorText}</pre>
+                        `;
+                    }
+
+                } catch (error) {
+                    console.error('❌ Error de conexión:', error);
+
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = '❌ Error de conexión al webhook';
+
+                    resultsDiv.innerHTML = `
+                        <h3>📋 Detalles del Error:</h3>
+                        <pre>Error: ${error.message}
+
+Posibles causas:
+• Problema de conectividad a internet
+• El dominio no está disponible
+• Firewall bloqueando la conexión
+• Problemas de DNS</pre>
+                    `;
+                }
+
+                testBtn.disabled = false;
+                testBtn.textContent = 'Probar Webhook';
+            }
+
+            // Auto-test al cargar la página
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    testWebhook();
+                }, 1000);
+            });
+        </script>
+    </div>
+</body>
+</html>

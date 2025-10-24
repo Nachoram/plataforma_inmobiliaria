@@ -83,7 +83,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
       const formData = {
         // Información de la Propiedad
-        tipoPropiedad: initialData.property_type || 'Casa',
+        tipoPropiedad: initialData.property_type || '',
         address_street: initialData.address_street || '',
         address_number: initialData.address_number || '',
         address_department: initialData.address_department || '',
@@ -174,7 +174,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     // Valores por defecto para nueva propiedad
     return {
       // Información de la Propiedad
-      tipoPropiedad: 'Casa',
+      tipoPropiedad: '',
       address_street: '',
       address_number: '',
       address_department: '',
@@ -238,7 +238,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
   // Estado para el tipo de propiedad seleccionado (para lógica de campos dinámicos)
   const [propertyType, setPropertyType] = useState(() => {
-    return isEditing && initialData ? initialData.property_type || 'Casa' : 'Casa';
+    return isEditing && initialData ? initialData.property_type || '' : '';
   });
 
   // Constante para verificar si es estacionamiento

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Calendar as CalendarIcon, ArrowLeft, Building, Car, Eye, Check, X, Mail, Phone, DollarSign, Briefcase, FileText, Send, UserCheck, FileUp, Copy, CheckCircle } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, Calendar as CalendarIcon, ArrowLeft, Building, Car, Eye, Check, X, Mail, Phone, DollarSign, Briefcase, FileText, Send, UserCheck, FileUp, Copy, CheckCircle, Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -54,6 +55,11 @@ export const AdminPropertyDetailView: React.FC = () => {
   const [postulations, setPostulations] = useState<any[]>([]);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
+  const [rentalContractConditions, setRentalContractConditions] = useState<any>(null);
+
+  // Estados para la funcionalidad de webhook de contrato
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Estado para el formulario de condiciones de contrato
   const [contractForm, setContractForm] = useState({
@@ -84,6 +90,13 @@ export const AdminPropertyDetailView: React.FC = () => {
       fetchPostulations();
     }
   }, [id]);
+
+  // Fetch rental contract conditions when modal opens
+  useEffect(() => {
+    if (isContractModalOpen && selectedProfile) {
+      fetchRentalContractConditions();
+    }
+  }, [isContractModalOpen, selectedProfile]);
 
   const fetchPropertyDetails = async () => {
     try {
@@ -193,6 +206,44 @@ export const AdminPropertyDetailView: React.FC = () => {
     }
   };
 
+  const fetchRentalContractConditions = async () => {
+    if (!selectedProfile) return;
+
+    try {
+      // Find the application ID for this profile and property
+      const { data: application, error: appError } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('property_id', id)
+        .eq('applicant_id', selectedProfile.id)
+        .single();
+
+      if (appError || !application) {
+        console.log('No application found for this profile/property combination');
+        setRentalContractConditions(null);
+        return;
+      }
+
+      // Fetch rental contract conditions
+      const { data: conditions, error: conditionsError } = await supabase
+        .from('rental_contract_conditions')
+        .select('*')
+        .eq('application_id', application.id)
+        .single();
+
+      if (conditionsError && conditionsError.code !== 'PGRST116') {
+        console.error('Error fetching rental contract conditions:', conditionsError);
+        setRentalContractConditions(null);
+        return;
+      }
+
+      setRentalContractConditions(conditions);
+    } catch (error) {
+      console.error('Error fetching rental contract conditions:', error);
+      setRentalContractConditions(null);
+    }
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -263,125 +314,165 @@ export const AdminPropertyDetailView: React.FC = () => {
     setContractForm(prev => ({ ...prev, [field]: value }));
   };
 
-  // Función para enviar los datos al webhook
-  const handleSendToWebhook = async () => {
-    if (!selectedProfile || !property) return;
-
-    // Validaciones básicas
-    if (!contractForm.startDate || !contractForm.guaranteeAmount || !contractForm.paymentDay) {
-      alert('Por favor completa todos los campos obligatorios');
-      return;
-    }
-
-    // Validar campos de transferencia bancaria si el método de pago es transferencia
-    if (contractForm.paymentMethod === 'transferencia') {
-      if (!contractForm.bankAccountHolder || !contractForm.bankAccountRut || 
-          !contractForm.bankName || !contractForm.bankAccountType || 
-          !contractForm.bankAccountNumber) {
-        alert('Por favor completa todos los datos bancarios para transferencia');
-        return;
-      }
-    }
-
-    setIsSubmittingContract(true);
-
-    const webhookUrl = 'https://producción primaria-bafdc.up.railway.app/prueba-de-webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';
-
-    const payload = {
-      postulant: {
-        name: selectedProfile.name,
-        email: selectedProfile.profile.email,
-        phone: selectedProfile.profile.phone,
-        income: selectedProfile.profile.income,
-        employment: selectedProfile.profile.employment
-      },
-      guarantor: selectedProfile.guarantor ? {
-        name: selectedProfile.guarantor.name,
-        email: selectedProfile.guarantor.email,
-        income: selectedProfile.guarantor.income
-      } : null,
-      property: {
-        id: property.id,
-        address: `${property.address_street} ${property.address_number}`,
-        commune: property.address_commune,
-        region: property.address_region,
-        type: property.tipo_propiedad || 'Casa',
-        price: property.price_clp,
-        bedrooms: property.bedrooms,
-        bathrooms: property.bathrooms
-      },
-      contract: {
-        startDate: contractForm.startDate,
-        duration: `${contractForm.duration} meses`,
-        guaranteeAmount: contractForm.guaranteeAmount,
-        paymentDay: contractForm.paymentDay,
-        // Campos condicionales según el tipo
-        ...(property.tipo_propiedad === 'Casa' || property.tipo_propiedad === 'Departamento' ? {
-          allowsPets: contractForm.allowsPets,
-          sublease: contractForm.sublease,
-          maxOccupants: contractForm.maxOccupants
-        } : {}),
-        ...(property.tipo_propiedad === 'Bodega' || property.tipo_propiedad === 'Estacionamiento' ? {
-          allowedUse: contractForm.allowedUse,
-          accessClause: contractForm.accessClause
-        } : {})
-      },
-      paymentConditions: {
-        brokerCommission: contractForm.brokerCommission || null,
-        paymentMethod: contractForm.paymentMethod,
-        ...(contractForm.paymentMethod === 'transferencia' ? {
-          bankTransferDetails: {
-            accountHolder: contractForm.bankAccountHolder,
-            accountHolderRut: contractForm.bankAccountRut,
-            bankName: contractForm.bankName,
-            accountType: contractForm.bankAccountType,
-            accountNumber: contractForm.bankAccountNumber
-          }
-        } : {})
-      }
-    };
-
+  // Función para obtener los IDs de características del contrato
+  const fetchContractData = async (applicationId: string) => {
     try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      console.log('🔍 Obteniendo datos del contrato para application:', applicationId);
 
-      if (response.ok) {
-        alert('¡Contrato enviado exitosamente!');
-        setIsContractModalOpen(false);
-        // Resetear el formulario
-        setContractForm({
-          startDate: '',
-          duration: '12',
-          guaranteeAmount: '',
-          paymentDay: '1',
-          allowsPets: false,
-          sublease: 'No Permitido',
-          maxOccupants: '',
-          allowedUse: '',
-          accessClause: '',
-          brokerCommission: '',
-          paymentMethod: 'transferencia',
-          bankAccountHolder: '',
-          bankAccountRut: '',
-          bankName: '',
-          bankAccountType: '',
-          bankAccountNumber: ''
-        });
-      } else {
-        const errorText = await response.text();
-        console.error('Error del servidor:', errorText);
-        alert('Hubo un error al enviar el contrato. Por favor, intenta de nuevo.');
+      // Obtener datos de la postulación con todas las relaciones
+      const { data: applicationData, error: appError } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          application_characteristic_id,
+          guarantor_characteristic_id,
+          property_id,
+          properties (
+            property_characteristic_id,
+            rental_owner_characteristic_id
+          )
+        `)
+        .eq('id', applicationId)
+        .single();
+
+      if (appError) throw appError;
+
+      // Obtener condiciones del contrato
+      const { data: contractData, error: contractError } = await supabase
+        .from('contract_conditions')
+        .select('id, contract_conditions_characteristic_id')
+        .eq('application_id', applicationId)
+        .single();
+
+      if (contractError) {
+        console.warn('⚠️ No se encontraron condiciones de contrato, usando valores por defecto');
       }
+
+      return {
+        application_characteristic_id: applicationData.application_characteristic_id,
+        property_characteristic_id: applicationData.properties?.property_characteristic_id,
+        rental_owner_characteristic_id: applicationData.properties?.rental_owner_characteristic_id,
+        contract_conditions_characteristic_id: contractData?.contract_conditions_characteristic_id,
+        guarantor_characteristic_id: applicationData.guarantor_characteristic_id
+      };
+
     } catch (error) {
-      console.error('Error en la llamada al webhook:', error);
-      alert('Error de conexión. Inténtalo de nuevo.');
-    } finally {
-      setIsSubmittingContract(false);
+      console.error('❌ Error al obtener datos del contrato:', error);
+      throw error;
     }
   };
+
+  // Función para generar y enviar contrato al webhook
+  const handleGenerateContract = async (applicationId: string) => {
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      console.log('🔍 Obteniendo datos del contrato para application:', applicationId);
+
+      // Obtener todos los IDs de características
+      const contractCharacteristics = await fetchContractData(applicationId);
+
+      console.log('📋 IDs de características obtenidos:', contractCharacteristics);
+
+      // Validar que todos los IDs existan
+      const missingFields = [];
+      if (!contractCharacteristics.application_characteristic_id) missingFields.push('application_characteristic_id');
+      if (!contractCharacteristics.property_characteristic_id) missingFields.push('property_characteristic_id');
+      if (!contractCharacteristics.rental_owner_characteristic_id) missingFields.push('rental_owner_characteristic_id');
+      if (!contractCharacteristics.contract_conditions_characteristic_id) missingFields.push('contract_conditions_characteristic_id');
+      if (!contractCharacteristics.guarantor_characteristic_id) missingFields.push('guarantor_characteristic_id');
+
+      if (missingFields.length > 0) {
+        throw new Error(`Faltan datos requeridos: ${missingFields.join(', ')}`);
+      }
+
+      // Preparar payload para el webhook
+      const webhookPayload = {
+        application_characteristic_id: contractCharacteristics.application_characteristic_id,
+        property_characteristic_id: contractCharacteristics.property_characteristic_id,
+        rental_owner_characteristic_id: contractCharacteristics.rental_owner_characteristic_id,
+        contract_conditions_characteristic_id: contractCharacteristics.contract_conditions_characteristic_id,
+        guarantor_characteristic_id: contractCharacteristics.guarantor_characteristic_id,
+
+        // Metadatos adicionales (opcional)
+        timestamp: new Date().toISOString(),
+        platform: 'plataforma_inmobiliaria',
+        action: 'generate_contract'
+      };
+
+      console.log('📤 Enviando datos al webhook de n8n:', webhookPayload);
+
+      // Enviar al webhook de n8n (usando GET con query parameters)
+      const queryParams = new URLSearchParams({
+        application_characteristic_id: webhookPayload.application_characteristic_id || '',
+        property_characteristic_id: webhookPayload.property_characteristic_id || '',
+        rental_owner_characteristic_id: webhookPayload.rental_owner_characteristic_id || '',
+        contract_conditions_characteristic_id: webhookPayload.contract_conditions_characteristic_id || '',
+        guarantor_characteristic_id: webhookPayload.guarantor_characteristic_id || '',
+        timestamp: webhookPayload.timestamp,
+        platform: webhookPayload.platform,
+        action: webhookPayload.action
+      });
+
+      const webhookUrl = `https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb?${queryParams.toString()}`;
+
+      console.log('🌐 URL completa del webhook:', webhookUrl);
+
+      const response = await fetch(webhookUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error del webhook (${response.status}): ${errorText}`);
+      }
+
+      // El webhook puede devolver respuesta vacía o no JSON
+      let result;
+      try {
+        const responseText = await response.text();
+        result = responseText ? JSON.parse(responseText) : { success: true };
+      } catch (parseError) {
+        // Si no es JSON válido, asumir éxito
+        result = { success: true, message: 'Webhook ejecutado correctamente' };
+      }
+      console.log('✅ Respuesta del webhook:', result);
+
+      // Actualizar estado del contrato en la BD
+      const { error: updateError } = await supabase
+        .from('applications')
+        .update({
+          status: 'contrato_generado',
+          contract_generated_at: new Date().toISOString()
+        })
+        .eq('id', applicationId);
+
+      if (updateError) {
+        console.error('⚠️ Error al actualizar estado:', updateError);
+      }
+
+      // Mostrar notificación de éxito
+      toast.success('Contrato generado y enviado exitosamente');
+
+      // Cerrar el modal
+      setIsContractModalOpen(false);
+
+      // Opcional: Recargar datos o redirigir
+      // navigate('/contracts');
+
+    } catch (error) {
+      console.error('❌ Error al generar contrato:', error);
+      setError(error.message || 'Error al generar el contrato');
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -1135,7 +1226,7 @@ export const AdminPropertyDetailView: React.FC = () => {
                     Propiedad
                   </h3>
                   <p className="text-sm text-gray-700"><strong>Dirección:</strong> {property.address_street} {property.address_number}</p>
-                  <p className="text-sm text-gray-700"><strong>Tipo:</strong> {property.tipo_propiedad || 'Casa'}</p>
+                  <p className="text-sm text-gray-700"><strong>Tipo:</strong> {property.tipo_propiedad || 'No especificado'}</p>
                 </div>
               </div>
 
@@ -1473,6 +1564,59 @@ export const AdminPropertyDetailView: React.FC = () => {
 
               </div>
 
+              {/* Resumen de Condiciones del Contrato de Arriendo */}
+              {rentalContractConditions && (
+                <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <span className="mr-2">📋</span>
+                    Resumen de Condiciones del Contrato
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Precio Final del Arriendo */}
+                    {rentalContractConditions.final_rent_price && (
+                      <div className="bg-white p-3 rounded-lg border border-green-300">
+                        <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">
+                          Precio Final del Arriendo
+                        </div>
+                        <div className="text-lg font-bold text-green-900">
+                          {formatPrice(rentalContractConditions.final_rent_price)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Corredor Responsable */}
+                    {rentalContractConditions.broker_name && (
+                      <div className="bg-white p-3 rounded-lg border border-green-300">
+                        <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">
+                          Corredor
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {rentalContractConditions.broker_name}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* RUT del Corredor */}
+                    {rentalContractConditions.broker_rut && (
+                      <div className="bg-white p-3 rounded-lg border border-green-300">
+                        <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">
+                          RUT del Corredor
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {rentalContractConditions.broker_rut}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 text-xs text-green-700 bg-green-100 p-3 rounded-lg border border-green-300">
+                    <strong>Nota:</strong> Estas condiciones fueron definidas previamente. Si necesita modificarlas,
+                    edite las condiciones del contrato desde la sección de postulaciones.
+                  </div>
+                </div>
+              )}
+
               {/* Botones de Acción */}
               <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6 border-t-2 border-gray-200">
                 <button
@@ -1483,23 +1627,33 @@ export const AdminPropertyDetailView: React.FC = () => {
                   Cancelar
                 </button>
                 <button
-                  onClick={handleSendToWebhook}
-                  disabled={isSubmittingContract}
+                  onClick={() => handleGenerateContract(selectedProfile.id)}
+                  disabled={isGenerating || !selectedProfile}
                   className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  {isSubmittingContract ? (
+                  {isGenerating ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Enviando...
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Generando contrato...
                     </>
                   ) : (
                     <>
-                      <Send className="h-5 w-5 mr-2" />
+                      <FileText className="w-5 h-5 mr-2" />
                       Generar y Enviar Contrato
                     </>
                   )}
                 </button>
               </div>
+
+              {error && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center">
+                    <X className="w-5 h-5 text-red-600 mr-2" />
+                    <p className="text-sm text-red-600 font-medium">Error al generar contrato</p>
+                  </div>
+                  <p className="text-xs text-red-500 mt-2">{error}</p>
+                </div>
+              )}
 
             </div>
           </div>

@@ -296,3 +296,4 @@ Para cualquier formulario que envíe datos numéricos a la BD:
 **Conclusión**: La clave está en el **manejo robusto de valores vacíos** y la **validación condicional según el contexto**. Nunca asumir que un campo numérico siempre tendrá un valor válido.
 
 
+

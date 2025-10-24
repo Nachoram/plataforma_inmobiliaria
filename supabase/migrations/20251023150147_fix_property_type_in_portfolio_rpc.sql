@@ -1,5 +1,5 @@
--- Función RPC para obtener propiedades del portafolio con sus postulaciones
--- Esta función reemplaza get_properties_with_postulation_count y añade detalles de postulaciones
+-- Fix get_portfolio_with_postulations to include property_type field
+-- This migration addresses the bug where all properties show as "Casa" in portfolio view
 
 CREATE OR REPLACE FUNCTION get_portfolio_with_postulations(user_id_param uuid)
 RETURNS TABLE (
@@ -102,7 +102,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Otorgar permisos
 GRANT EXECUTE ON FUNCTION get_portfolio_with_postulations(uuid) TO authenticated;
 
--- Comentario
-COMMENT ON FUNCTION get_portfolio_with_postulations(uuid) IS 
-'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval.';
+-- Comentario actualizado
+COMMENT ON FUNCTION get_portfolio_with_postulations(uuid) IS
+'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval. Incluye el campo property_type para mostrar el tipo correcto de propiedad.';
 

@@ -1,6 +1,24 @@
--- Función RPC para obtener propiedades del portafolio con sus postulaciones
--- Esta función reemplaza get_properties_with_postulation_count y añade detalles de postulaciones
+-- =====================================================
+-- FIX PARA EL BUG: Todas las propiedades muestran "Casa"
+-- =====================================================
+-- Este script arregla la función get_portfolio_with_postulations
+-- para que incluya el campo property_type en los resultados.
+--
+-- PASOS PARA APLICAR:
+-- 1. Ve al Dashboard de Supabase
+-- 2. Ve a la sección SQL Editor
+-- 3. Crea una nueva consulta
+-- 4. Copia y pega TODO este script
+-- 5. Haz clic en "Run"
+-- 6. Refresca tu página de portafolio
+-- =====================================================
 
+-- DROPEAR LA FUNCIÓN EXISTENTE PRIMERO
+-- PostgreSQL no permite cambiar el tipo de retorno con CREATE OR REPLACE
+-- Por eso necesitamos eliminar la función primero y luego recrearla
+DROP FUNCTION IF EXISTS get_portfolio_with_postulations(uuid);
+
+-- Crear la función con property_type incluido
 CREATE OR REPLACE FUNCTION get_portfolio_with_postulations(user_id_param uuid)
 RETURNS TABLE (
     -- Columnas de properties
@@ -8,7 +26,7 @@ RETURNS TABLE (
     owner_id uuid,
     status property_status_enum,
     listing_type listing_type_enum,
-    property_type property_type_enum,
+    property_type property_type_enum,  -- <-- CAMPO AGREGADO
     address_street text,
     address_number varchar(10),
     address_department varchar(10),
@@ -33,7 +51,7 @@ BEGIN
         p.owner_id,
         p.status,
         p.listing_type,
-        p.property_type,
+        p.property_type,  -- <-- CAMPO AGREGADO EN EL SELECT
         p.address_street,
         p.address_number,
         p.address_department,
@@ -102,7 +120,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Otorgar permisos
 GRANT EXECUTE ON FUNCTION get_portfolio_with_postulations(uuid) TO authenticated;
 
--- Comentario
-COMMENT ON FUNCTION get_portfolio_with_postulations(uuid) IS 
-'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval.';
+-- Comentario actualizado
+COMMENT ON FUNCTION get_portfolio_with_postulations(uuid) IS
+'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval. Incluye el campo property_type para mostrar el tipo correcto de propiedad.';
 
+-- =====================================================
+-- VERIFICACIÓN DEL FIX
+-- =====================================================
+-- Después de ejecutar, puedes verificar con esta consulta:
+-- SELECT * FROM get_portfolio_with_postulations('TU_USER_ID_AQUI');
+--
+-- Deberías ver que cada propiedad tiene su property_type correcto
+-- =====================================================

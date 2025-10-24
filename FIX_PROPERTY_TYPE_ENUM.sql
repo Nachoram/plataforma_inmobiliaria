@@ -33,3 +33,4 @@ WHERE enumtypid = 'tipo_propiedad_enum'::regtype
 ORDER BY enumsortorder;
 
 
+

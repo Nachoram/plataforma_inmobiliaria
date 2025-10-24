@@ -61,6 +61,15 @@ const PortfolioPage: React.FC = () => {
 
       console.log('🔍 [DEBUG] RPC Response:', { data: propertiesData, error: propertiesError });
 
+      // Debug property_type values from API response
+      if (propertiesData) {
+        console.log('🔍 [DEBUG] Properties from API:', propertiesData.map(p => ({
+          id: p.id,
+          property_type: p.property_type,
+          status: p.status
+        })));
+      }
+
       if (propertiesError) {
         console.error('❌ [ERROR] Error fetching portfolio:', propertiesError);
         console.error('❌ [ERROR] Error completo:', JSON.stringify(propertiesError, null, 2));

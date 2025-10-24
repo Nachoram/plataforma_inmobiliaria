@@ -346,3 +346,4 @@ Una vez completado el testing con éxito:
 - Resumen ejecutivo: `RESUMEN_EJECUTIVO.md`
 
 
+

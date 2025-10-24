@@ -117,6 +117,12 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
     }
   };
 
+  // Debug property_type values
+  React.useEffect(() => {
+    console.log('🔍 [PropertyCard] Property:', property.id, 'property_type:', property.property_type);
+    console.log('🔍 [PropertyCard] getPropertyTypeInfo result:', getPropertyTypeInfo(property.property_type));
+  }, [property.id, property.property_type]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';

@@ -55,7 +55,6 @@ export const AdminPropertyDetailView: React.FC = () => {
   const [postulations, setPostulations] = useState<any[]>([]);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
-  const [rentalContractConditions, setRentalContractConditions] = useState<any>(null);
 
   // Estados para la funcionalidad de webhook de contrato
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,6 +66,10 @@ export const AdminPropertyDetailView: React.FC = () => {
     duration: '12',
     guaranteeAmount: '',
     paymentDay: '1',
+    // NUEVOS CAMPOS: Precio final y corredor
+    finalRentPrice: '',
+    brokerName: '',
+    brokerRut: '',
     // Campos para Casa/Departamento
     allowsPets: false,
     sublease: 'No Permitido',
@@ -91,12 +94,6 @@ export const AdminPropertyDetailView: React.FC = () => {
     }
   }, [id]);
 
-  // Fetch rental contract conditions when modal opens
-  useEffect(() => {
-    if (isContractModalOpen && selectedProfile) {
-      fetchRentalContractConditions();
-    }
-  }, [isContractModalOpen, selectedProfile]);
 
   const fetchPropertyDetails = async () => {
     try {
@@ -206,43 +203,6 @@ export const AdminPropertyDetailView: React.FC = () => {
     }
   };
 
-  const fetchRentalContractConditions = async () => {
-    if (!selectedProfile) return;
-
-    try {
-      // Find the application ID for this profile and property
-      const { data: application, error: appError } = await supabase
-        .from('applications')
-        .select('id')
-        .eq('property_id', id)
-        .eq('applicant_id', selectedProfile.id)
-        .single();
-
-      if (appError || !application) {
-        console.log('No application found for this profile/property combination');
-        setRentalContractConditions(null);
-        return;
-      }
-
-      // Fetch rental contract conditions
-      const { data: conditions, error: conditionsError } = await supabase
-        .from('rental_contract_conditions')
-        .select('*')
-        .eq('application_id', application.id)
-        .single();
-
-      if (conditionsError && conditionsError.code !== 'PGRST116') {
-        console.error('Error fetching rental contract conditions:', conditionsError);
-        setRentalContractConditions(null);
-        return;
-      }
-
-      setRentalContractConditions(conditions);
-    } catch (error) {
-      console.error('Error fetching rental contract conditions:', error);
-      setRentalContractConditions(null);
-    }
-  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CL', {
@@ -368,6 +328,64 @@ export const AdminPropertyDetailView: React.FC = () => {
     setError(null);
 
     try {
+      console.log('🔍 Guardando condiciones del contrato antes de generar...');
+
+      // VALIDAR CAMPOS REQUERIDOS
+      const errors = [];
+      if (!contractForm.finalRentPrice || Number(contractForm.finalRentPrice) <= 0) {
+        errors.push('El precio final del arriendo es obligatorio y debe ser mayor a 0');
+      }
+      if (!contractForm.brokerName?.trim()) {
+        errors.push('El nombre del corredor es obligatorio');
+      }
+      if (!contractForm.brokerRut?.trim()) {
+        errors.push('El RUT del corredor es obligatorio');
+      }
+      if (!contractForm.startDate) {
+        errors.push('La fecha de inicio del contrato es obligatoria');
+      }
+      if (!contractForm.guaranteeAmount || Number(contractForm.guaranteeAmount) <= 0) {
+        errors.push('El monto de la garantía es obligatorio y debe ser mayor a 0');
+      }
+
+      if (errors.length > 0) {
+        throw new Error(`Errores de validación:\n${errors.join('\n')}`);
+      }
+
+      // PRIMERO: Guardar las condiciones del contrato en rental_contract_conditions
+      const contractConditionsData = {
+        application_id: applicationId,
+        final_rent_price: Number(contractForm.finalRentPrice),
+        broker_name: String(contractForm.brokerName).trim(),
+        broker_rut: String(contractForm.brokerRut).trim(),
+        // Mapear otros campos del formulario a los campos de la tabla
+        lease_term_months: Number(contractForm.duration),
+        payment_day: Number(contractForm.paymentDay),
+        guarantee_amount_clp: Number(contractForm.guaranteeAmount),
+        contract_start_date: contractForm.startDate,
+        accepts_pets: contractForm.allowsPets,
+        additional_conditions: `Duración: ${contractForm.duration} meses\nGarantía: ${contractForm.guaranteeAmount}\nMascotas: ${contractForm.allowsPets ? 'Sí' : 'No'}\nSubarriendo: ${contractForm.sublease}`,
+        payment_method: contractForm.paymentMethod,
+        bank_name: contractForm.bankName,
+        bank_account_type: contractForm.bankAccountType,
+        bank_account_number: contractForm.bankAccountNumber,
+        bank_account_rut: contractForm.bankAccountRut,
+        bank_account_holder: contractForm.bankAccountHolder
+      };
+
+      console.log('💾 Guardando condiciones:', contractConditionsData);
+
+      const { error: saveError } = await supabase
+        .from('rental_contract_conditions')
+        .upsert(contractConditionsData, { onConflict: 'application_id' });
+
+      if (saveError) {
+        console.error('❌ Error guardando condiciones:', saveError);
+        throw new Error(`Error guardando condiciones del contrato: ${saveError.message}`);
+      }
+
+      console.log('✅ Condiciones guardadas exitosamente');
+
       console.log('🔍 Obteniendo datos del contrato para application:', applicationId);
 
       // Obtener todos los IDs de características
@@ -1304,6 +1322,65 @@ export const AdminPropertyDetailView: React.FC = () => {
 
                 </div>
 
+                {/* NUEVOS CAMPOS: Precio Final y Corredor */}
+                <div className="mt-8 p-6 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border-2 border-emerald-200">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <span className="mr-2">💰</span>
+                    Precio Final del Arriendo y Corredor
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Precio Final del Arriendo */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Precio Final del Arriendo (CLP) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={1000}
+                        value={contractForm.finalRentPrice}
+                        onChange={(e) => handleContractFormChange('finalRentPrice', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        placeholder="Ej: 500000"
+                        required
+                      />
+                    </div>
+
+                    {/* Nombre del Corredor */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Nombre del Corredor <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={contractForm.brokerName}
+                        onChange={(e) => handleContractFormChange('brokerName', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        placeholder="Ej: María López"
+                        maxLength={120}
+                        required
+                      />
+                    </div>
+
+                    {/* RUT del Corredor */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        RUT del Corredor <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={contractForm.brokerRut}
+                        onChange={(e) => handleContractFormChange('brokerRut', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        placeholder="Ej: 12.345.678-9"
+                        maxLength={12}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Campos Condicionales para Casa o Departamento */}
                 {(property.tipo_propiedad === 'Casa' || property.tipo_propiedad === 'Departamento' || !property.tipo_propiedad) && (
                   <div className="mt-8 p-6 bg-purple-50 rounded-xl border-2 border-purple-200">
@@ -1563,59 +1640,6 @@ export const AdminPropertyDetailView: React.FC = () => {
                 </div>
 
               </div>
-
-              {/* Resumen de Condiciones del Contrato de Arriendo */}
-              {rentalContractConditions && (
-                <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <span className="mr-2">📋</span>
-                    Resumen de Condiciones del Contrato
-                  </h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Precio Final del Arriendo */}
-                    {rentalContractConditions.final_rent_price && (
-                      <div className="bg-white p-3 rounded-lg border border-green-300">
-                        <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">
-                          Precio Final del Arriendo
-                        </div>
-                        <div className="text-lg font-bold text-green-900">
-                          {formatPrice(rentalContractConditions.final_rent_price)}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Corredor Responsable */}
-                    {rentalContractConditions.broker_name && (
-                      <div className="bg-white p-3 rounded-lg border border-green-300">
-                        <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">
-                          Corredor
-                        </div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {rentalContractConditions.broker_name}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* RUT del Corredor */}
-                    {rentalContractConditions.broker_rut && (
-                      <div className="bg-white p-3 rounded-lg border border-green-300">
-                        <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">
-                          RUT del Corredor
-                        </div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {rentalContractConditions.broker_rut}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4 text-xs text-green-700 bg-green-100 p-3 rounded-lg border border-green-300">
-                    <strong>Nota:</strong> Estas condiciones fueron definidas previamente. Si necesita modificarlas,
-                    edite las condiciones del contrato desde la sección de postulaciones.
-                  </div>
-                </div>
-              )}
 
               {/* Botones de Acción */}
               <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6 border-t-2 border-gray-200">

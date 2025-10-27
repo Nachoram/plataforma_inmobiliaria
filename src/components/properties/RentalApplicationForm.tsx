@@ -1050,7 +1050,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                   min="18"
-                  max="120"  {/* ✅ BETA: Aumentado de 100 a 120 */}
+                  max="120"
                 />
                 {applicantData.age && (parseInt(applicantData.age) < 18 || parseInt(applicantData.age) > 120) && (
                   <p className="text-sm text-amber-600 mt-1">

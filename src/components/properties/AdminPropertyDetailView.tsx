@@ -232,6 +232,8 @@ export const AdminPropertyDetailView: React.FC = () => {
           common_expenses_clp,
           bedrooms,
           bathrooms,
+          surface_m2,
+          description,
           estacionamientos,
           metros_utiles,
           metros_totales,
@@ -384,8 +386,11 @@ export const AdminPropertyDetailView: React.FC = () => {
 
   // Función para abrir el modal de condiciones de contrato
   const handleAcceptClick = () => {
+    console.log('👆 [handleAcceptClick] CLICK en "Aceptar Postulación"');
+    console.log('👤 selectedProfile antes de abrir modal:', selectedProfile);
     setIsProfileModalOpen(false); // Cierra el modal del perfil
     setIsContractModalOpen(true);  // Abre el modal de contrato
+    console.log('✅ Modal de contrato abierto');
   };
 
   // Función para actualizar los campos del formulario
@@ -396,9 +401,10 @@ export const AdminPropertyDetailView: React.FC = () => {
   // Función para obtener los IDs de características del contrato
   const fetchContractData = async (applicationId: string) => {
     try {
-      console.log('🔍 Obteniendo datos del contrato para application:', applicationId);
+      console.log('🔍 [fetchContractData] INICIANDO - Application ID:', applicationId);
 
       // Paso 1: Obtener datos de la aplicación y propiedad
+      console.log('📋 Paso 1: Consultando aplicación y propiedad...');
       const { data: applicationData, error: appError } = await supabase
         .from('applications')
         .select(`
@@ -406,7 +412,7 @@ export const AdminPropertyDetailView: React.FC = () => {
           application_characteristic_id,
           guarantor_characteristic_id,
           property_id,
-          properties (
+          properties!inner (
             id,
             property_characteristic_id,
             owner_id
@@ -420,13 +426,17 @@ export const AdminPropertyDetailView: React.FC = () => {
         throw appError;
       }
 
-      console.log('📋 Application data:', applicationData);
+      console.log('📋 Application data obtenida:', applicationData);
+
+      // Asegurar que properties sea tratado como objeto único
+      const propertyData = applicationData.properties as any;
 
       // Paso 2: Obtener rental_owner_characteristic_id desde rental_owners
+      console.log('👤 Paso 2: Consultando propietario - Property ID:', propertyData?.id);
       const { data: ownerData, error: ownerError } = await supabase
         .from('rental_owners')
         .select('id, rental_owner_characteristic_id')
-        .eq('property_id', applicationData.properties.id)
+        .eq('property_id', propertyData?.id)
         .single();
 
       if (ownerError) {
@@ -434,9 +444,10 @@ export const AdminPropertyDetailView: React.FC = () => {
         throw ownerError;
       }
 
-      console.log('👤 Owner data:', ownerData);
+      console.log('👤 Owner data obtenida:', ownerData);
 
       // Paso 3: Obtener contract_conditions_characteristic_id
+      console.log('📄 Paso 3: Consultando condiciones del contrato existentes...');
       const { data: contractData, error: contractError } = await supabase
         .from('rental_contract_conditions')
         .select('id, contract_conditions_characteristic_id')
@@ -448,12 +459,12 @@ export const AdminPropertyDetailView: React.FC = () => {
         throw contractError;
       }
 
-      console.log('📄 Contract data:', contractData);
+      console.log('📄 Contract data obtenida:', contractData);
 
       // Validar que todos los IDs existen
       const characteristicIds = {
         application_characteristic_id: applicationData.application_characteristic_id,
-        property_characteristic_id: applicationData.properties.property_characteristic_id,
+        property_characteristic_id: propertyData?.property_characteristic_id,
         rental_owner_characteristic_id: ownerData.rental_owner_characteristic_id,
         contract_conditions_characteristic_id: contractData?.contract_conditions_characteristic_id || null,
         guarantor_characteristic_id: applicationData.guarantor_characteristic_id
@@ -462,6 +473,7 @@ export const AdminPropertyDetailView: React.FC = () => {
       console.log('✅ Characteristic IDs obtenidos:', characteristicIds);
 
       // Validar campos requeridos
+      console.log('🔍 Validando campos requeridos...');
       const missingFields = [];
       if (!characteristicIds.application_characteristic_id) {
         missingFields.push('application_characteristic_id');
@@ -477,9 +489,11 @@ export const AdminPropertyDetailView: React.FC = () => {
       }
 
       if (missingFields.length > 0) {
+        console.error('❌ Campos faltantes:', missingFields);
         throw new Error(`Faltan datos requeridos: ${missingFields.join(', ')}`);
       }
 
+      console.log('✅ [fetchContractData] FINALIZADO exitosamente');
       return characteristicIds;
     } catch (error) {
       console.error('❌ Error al obtener datos del contrato:', error);
@@ -584,38 +598,56 @@ export const AdminPropertyDetailView: React.FC = () => {
     let contractId = null;
 
     try {
+      console.log('🚀 [handleGenerateContract] INICIANDO proceso de generación de contrato');
+      console.log('👤 selectedProfile:', selectedProfile);
+      console.log('📄 formData:', formData);
+
       setIsGenerating(true);
       setError(null);
 
       // 1. Validar campos requeridos
+      console.log('🔍 Validando campos requeridos...');
       if (!formData.contract_start_date ||
           !formData.contract_end_date ||
           !formData.monthly_rent ||
           !formData.notification_email) {
+        console.error('❌ Faltan campos requeridos:', {
+          contract_start_date: formData.contract_start_date,
+          contract_end_date: formData.contract_end_date,
+          monthly_rent: formData.monthly_rent,
+          notification_email: formData.notification_email
+        });
         toast.error('Por favor completa todos los campos requeridos');
         setIsGenerating(false);
         return;
       }
+      console.log('✅ Campos requeridos validados');
 
       // 2. Validar formato de email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.notification_email)) {
+        console.error('❌ Email inválido:', formData.notification_email);
         toast.error('Por favor ingresa un correo electrónico válido');
         setIsGenerating(false);
         return;
       }
+      console.log('✅ Email validado');
 
       console.log('📋 Iniciando generación de contrato...');
-      console.log('🎯 Application ID:', selectedProfile.applicationId);
+      console.log('🎯 Application ID:', selectedProfile?.applicationId);
 
       // 3. Obtener datos de características (código existente)
+      console.log('🔍 Obteniendo datos de características...');
       const characteristicIds = await fetchContractData(selectedProfile.applicationId);
+      console.log('✅ Datos de características obtenidos:', characteristicIds);
 
       if (!characteristicIds.property_characteristic_id || !characteristicIds.rental_owner_characteristic_id) {
+        console.error('❌ Faltan datos requeridos:', characteristicIds);
         toast.error('Error obteniendo datos de la propiedad');
         setIsGenerating(false);
         return;
       }
+      console.log('✅ Validación de características exitosa');
 
       const { data: propertyTypeData } = await supabase
         .from('property_type_characteristics')
@@ -631,6 +663,15 @@ export const AdminPropertyDetailView: React.FC = () => {
 
       // 4. Guardar condiciones del contrato (código existente)
       console.log('💾 Guardando condiciones del contrato...');
+      console.log('📝 Datos a guardar:', {
+        application_id: selectedProfile.applicationId,
+        property_id: property?.id || null,
+        contract_start_date: formData.contract_start_date,
+        contract_end_date: formData.contract_end_date,
+        monthly_rent: Number(formData.monthly_rent),
+        final_rent_price: Number(formData.final_rent_price),
+        notification_email: formData.notification_email
+      });
 
       const { error: upsertError } = await supabase
         .from('rental_contract_conditions')
@@ -671,6 +712,7 @@ export const AdminPropertyDetailView: React.FC = () => {
       contractId = contractRecord.id;
       console.log('✅ Registro del contrato creado/actualizado:', contractRecord.id);
       console.log('📋 Contract number:', contractRecord.contract_number);
+      console.log('📄 Contract record completo:', contractRecord);
 
       // 6. Preparar y enviar payload al webhook (código existente)
       const webhookPayload = {
@@ -725,14 +767,17 @@ export const AdminPropertyDetailView: React.FC = () => {
       };
 
       console.log('📤 Enviando al webhook de n8n...');
+      console.log('🔗 URL del webhook:', import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_URL);
       console.log('📦 Payload completo:', webhookPayload);
 
       const contractWebhookUrl = import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_URL;
 
       if (!contractWebhookUrl) {
+        console.error('❌ URL del webhook no configurada');
         throw new Error('URL del webhook no configurada');
       }
 
+      console.log('🌐 Realizando petición fetch...');
       const webhookResponse = await fetch(contractWebhookUrl, {
         method: 'POST',
         headers: {
@@ -741,14 +786,17 @@ export const AdminPropertyDetailView: React.FC = () => {
         body: JSON.stringify(webhookPayload)
       });
 
+      console.log('📡 Respuesta del webhook recibida. Status:', webhookResponse.status);
+
       if (!webhookResponse.ok) {
         const errorText = await webhookResponse.text();
-        console.error('❌ Error del webhook:', errorText);
-        throw new Error(`Error del webhook: ${webhookResponse.status}`);
+        console.error('❌ Error del webhook. Status:', webhookResponse.status);
+        console.error('❌ Error del webhook. Response:', errorText);
+        throw new Error(`Error del webhook: ${webhookResponse.status} - ${errorText}`);
       }
 
       const webhookResult = await webhookResponse.json();
-      console.log('✅ Respuesta del webhook:', webhookResult);
+      console.log('✅ Respuesta del webhook exitosa:', webhookResult);
 
       toast.success('Contrato generado y enviado exitosamente');
 
@@ -757,15 +805,38 @@ export const AdminPropertyDetailView: React.FC = () => {
       // Recargar datos de la propiedad si es necesario
       // fetchPropertyDetails();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al generar contrato:', error);
-      toast.error('Error al generar el contrato');
+      console.error('❌ Detalles del error:', {
+        message: error?.message,
+        stack: error?.stack,
+        contractRecordCreated,
+        contractId
+      });
+
+      // Mostrar mensaje específico según el tipo de error
+      let errorMessage = 'Error al generar el contrato';
+      if (error?.message?.includes('webhook')) {
+        errorMessage = 'Error al enviar el contrato. Verifica la conexión con el servidor.';
+      } else if (error?.message?.includes('campos requeridos')) {
+        errorMessage = 'Por favor completa todos los campos requeridos';
+      } else if (error?.message?.includes('email')) {
+        errorMessage = 'Por favor ingresa un correo electrónico válido';
+      } else if (error?.message?.includes('propiedad')) {
+        errorMessage = 'Error obteniendo datos de la propiedad';
+      }
+
+      toast.error(errorMessage);
+
+      // Mostrar error detallado en el modal
+      setError(error?.message || 'Error desconocido al generar el contrato');
 
       // ROLLBACK: Si se creó el registro del contrato pero falló algo después, mantenerlo
       // El registro ya está creado, pero n8n no lo procesó aún, así que queda en estado 'draft'
       // Esto es intencional para poder reintentar
 
     } finally {
+      console.log('🔄 Finalizando proceso, cambiando isGenerating a false');
       setIsGenerating(false);
     }
   };
@@ -2014,7 +2085,14 @@ export const AdminPropertyDetailView: React.FC = () => {
                   Cancelar
                 </button>
                 <button
-                  onClick={() => handleGenerateContract()}
+                  onClick={() => {
+                    console.log('🖱️ BOTÓN CLICKED - Estado del botón:', {
+                      isGenerating,
+                      selectedProfile: !!selectedProfile,
+                      disabled: isGenerating || !selectedProfile
+                    });
+                    handleGenerateContract();
+                  }}
                   disabled={isGenerating || !selectedProfile}
                   className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >

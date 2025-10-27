@@ -184,38 +184,56 @@ export const AdminPropertyDetailView: React.FC = () => {
         .from('rental_contract_conditions')
         .select('*')
         .eq('application_id', selectedProfile.applicationId)
-        .single();
+        .maybeSingle();
 
       if (data && !error) {
         console.log('📦 Condiciones encontradas:', data);
 
         const loadedData: ContractConditionsFormData = {
+          // Fechas del contrato
           contract_start_date: data.contract_start_date || '',
           contract_end_date: data.contract_end_date || '',
-          monthly_rent: Number(data.monthly_rent) || Number(0),
-          warranty_amount: Number(data.warranty_amount) || Number(0),
-          payment_day: Number(data.payment_day) || Number(5),
-          special_conditions_house: data.special_conditions_house || '',
-          dicom_clause: data.dicom_clause || false, // NUEVO
-          notification_email: data.notification_email || '', // NUEVO
-          payment_conditions: data.payment_conditions || '',
+          
+          // Campos económicos - CORRECTED: mapear desde nombres de columnas actualizados
+          monthly_rent: Number(data.final_rent_price) || Number(0), // monthly_rent en el form = final_rent_price en DB
+          warranty_amount: Number(data.guarantee_amount) || Number(0), // warranty_amount en el form = guarantee_amount en DB
+          final_rent_price: Number(data.final_rent_price) || Number(0),
+          broker_commission: Number(data.brokerage_commission) || Number(0), // CORRECTED: brokerage_commission
+          
+          // Día de pago - CORRECTED: monthly_payment_day
+          payment_day: Number(data.monthly_payment_day) || Number(5),
+          
+          // Duración - CORRECTED: contract_duration_months
+          duration: data.contract_duration_months?.toString() || '12',
+          
+          // Condiciones especiales y booleanas
+          special_conditions_house: data.additional_conditions || '', // CORRECTED: additional_conditions
+          dicom_clause: data.dicom_clause || false,
+          allows_pets: data.accepts_pets || false,
+          
+          // Email oficial - CORRECTED: official_communication_email
+          notification_email: data.official_communication_email || '',
+          
+          // Información bancaria
           bank_name: data.bank_name || '',
           account_type: data.account_type || '',
           account_number: data.account_number || '',
           account_holder_name: data.account_holder_name || '',
           account_holder_rut: data.account_holder_rut || '',
+          
+          // Información del broker
           broker_name: data.broker_name || '',
           broker_rut: data.broker_rut || '',
-          final_rent_price: Number(data.final_rent_price) || Number(0),
-          // Map legacy fields if they exist in the data
-          duration: data.contract_duration_months?.toString() || '12',
-          allows_pets: data.accepts_pets || false,
-          sublease: 'No Permitido', // Default value
+          
+          // Payment method
+          payment_method: data.payment_method || 'transferencia',
+          
+          // Campos con valores por defecto
+          payment_conditions: '',
+          sublease: 'No Permitido',
           max_occupants: '',
           allowed_use: '',
           access_clause: '',
-          broker_commission: Number(data.broker_commission) || Number(0),
-          payment_method: data.payment_method || 'transferencia',
         };
 
         // Si no hay fecha de término pero hay fecha de inicio y duración, calcularla
@@ -641,21 +659,25 @@ export const AdminPropertyDetailView: React.FC = () => {
     return {
       application_id: selectedProfile.applicationId,
 
-      // Campos temporales - duration se convierte a lease_term_months
-      lease_term_months: Number(formData.duration),
+      // Campos temporales - CORRECTED: duration se convierte a contract_duration_months
+      contract_duration_months: Number(formData.duration),
 
-      // Día de pago (validado 1-31)
-      payment_day: Number(formData.payment_day),
+      // Día de pago (validado 1-31) - CORRECTED: monthly_payment_day
+      monthly_payment_day: Number(formData.payment_day),
 
-      // Campos económicos - mapeo correcto
-      final_price_clp: Number(formData.final_rent_price),
-      broker_commission_clp: Number(formData.broker_commission) || null,
-      guarantee_amount_clp: Number(formData.warranty_amount),
+      // Campos económicos - CORRECTED: nombres de columnas actualizados
+      final_rent_price: Number(formData.final_rent_price),
+      brokerage_commission: Number(formData.broker_commission) || null,
+      guarantee_amount: Number(formData.warranty_amount),
+
+      // Fechas del contrato
+      contract_start_date: formData.contract_start_date || null,
+      contract_end_date: formData.contract_end_date || null,
 
       // Email oficial
       official_communication_email: formData.notification_email?.trim() || null,
 
-      // Condiciones booleanas - mapeo correcto
+      // Condiciones booleanas
       accepts_pets: Boolean(formData.allows_pets),
       dicom_clause: Boolean(formData.dicom_clause),
 
@@ -672,6 +694,9 @@ export const AdminPropertyDetailView: React.FC = () => {
       account_number: formData.account_number?.trim() || null,
       account_holder_name: formData.account_holder_name?.trim() || null,
       account_holder_rut: formData.account_holder_rut?.trim() || null,
+
+      // Payment method
+      payment_method: formData.payment_method || 'transferencia',
 
       // Actualizar timestamp
       updated_at: new Date().toISOString(),
@@ -845,6 +870,7 @@ export const AdminPropertyDetailView: React.FC = () => {
 
       if (upsertError) {
         console.error('❌ Error guardando condiciones:', upsertError);
+        console.error('❌ Detalles completos del error:', JSON.stringify(upsertError, null, 2));
         throw upsertError;
       }
 
@@ -952,8 +978,12 @@ export const AdminPropertyDetailView: React.FC = () => {
 
     } catch (error: any) {
       console.error('❌ Error al generar contrato:', error);
+      console.error('❌ Error JSON:', JSON.stringify(error, null, 2));
       console.error('❌ Detalles del error:', {
         message: error?.message,
+        hint: error?.hint,
+        details: error?.details,
+        code: error?.code,
         stack: error?.stack,
         contractRecordCreated,
         contractId
@@ -1033,6 +1063,10 @@ export const AdminPropertyDetailView: React.FC = () => {
                   src={property.property_images[selectedPhoto].image_url}
                   alt={`${property.address_street || ''} ${property.address_number || ''} - Foto ${selectedPhoto + 1}`}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.warn('Error loading image:', property.property_images?.[selectedPhoto]?.image_url);
+                    e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23ddd" width="400" height="300"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle"%3EImagen no disponible%3C/text%3E%3C/svg%3E';
+                  }}
                 />
                 <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
                   {selectedPhoto + 1} / {property.property_images?.length || 0}
@@ -1055,6 +1089,10 @@ export const AdminPropertyDetailView: React.FC = () => {
                           src={image.image_url}
                           alt={`Miniatura ${index + 1}`}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.warn('Error loading thumbnail:', image.image_url);
+                            e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="64"%3E%3Crect fill="%23ddd" width="80" height="64"/%3E%3C/svg%3E';
+                          }}
                         />
                       </button>
                     ))}

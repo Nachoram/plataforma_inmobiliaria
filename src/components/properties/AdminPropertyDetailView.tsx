@@ -515,8 +515,10 @@ export const AdminPropertyDetailView: React.FC = () => {
       if (!characteristicIds.rental_owner_characteristic_id) {
         missingFields.push('rental_owner_characteristic_id');
       }
+      // guarantor_characteristic_id es OPCIONAL - no todas las postulaciones tienen garante
+      // Solo advertir si falta, pero no bloquear el proceso
       if (!characteristicIds.guarantor_characteristic_id) {
-        missingFields.push('guarantor_characteristic_id');
+        console.warn('⚠️ Esta postulación no tiene garante (guarantor_characteristic_id es null)');
       }
 
       if (missingFields.length > 0) {

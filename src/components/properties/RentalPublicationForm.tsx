@@ -215,12 +215,16 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       owner_paternal_last_name: '',
       owner_maternal_last_name: '',
       owner_rut: '',
+      owner_email: '',
+      owner_phone: '',
       owner_company_name: '',
       owner_company_rut: '',
       owner_representative_first_name: '',
       owner_representative_paternal_last_name: '',
       owner_representative_maternal_last_name: '',
       owner_representative_rut: '',
+      owner_representative_email: '',
+      owner_representative_phone: '',
       owner_address_street: '',
       owner_address_number: '',
       owner_region: '',
@@ -391,10 +395,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       if (!formData.owner_paternal_last_name || !formData.owner_paternal_last_name.trim()) newErrors.owner_paternal_last_name = 'El apellido paterno del propietario es requerido';
       if (!formData.owner_maternal_last_name || !formData.owner_maternal_last_name.trim()) newErrors.owner_maternal_last_name = 'El apellido materno del propietario es requerido';
       if (!formData.owner_rut || !formData.owner_rut.trim()) newErrors.owner_rut = 'El RUT del propietario es requerido';
-      // Validación de RUT deshabilitada para pruebas
-      // if (formData.owner_rut && formData.owner_rut.trim() && !validateRut(formData.owner_rut)) {
-      //   newErrors.owner_rut = 'El RUT del propietario no es válido';
-      // }
       if (!formData.marital_status) newErrors.marital_status = 'El estado civil es requerido';
     } else if (formData.owner_type === 'juridica') {
       if (!formData.owner_company_name || !formData.owner_company_name.trim()) newErrors.owner_company_name = 'La razón social es requerida';
@@ -415,6 +415,11 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     // Validación de email para personas naturales
     if (formData.owner_type === 'natural' && (!formData.owner_email || !formData.owner_email.trim())) {
       newErrors.owner_email = 'El email del propietario es requerido';
+    }
+
+    // Validación de email para representantes legales de personas jurídicas
+    if (formData.owner_type === 'juridica' && (!formData.owner_representative_email || !formData.owner_representative_email.trim())) {
+      newErrors.owner_representative_email = 'El email del representante legal es requerido';
     }
 
     // Validate property_regime if married (solo para personas naturales)
@@ -808,44 +813,43 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         email: formData.owner_email,
         };
 
-        // Agregar campos específicos según el tipo de propietario
-        // Nota: rental_owners table solo soporta personas naturales, no jurídicas
+        // CORRECCIÓN: Diferentes comportamientos según el tipo de propietario
         if (formData.owner_type === 'natural') {
+          // Para personas naturales, guardar en rental_owners
           Object.assign(ownerData, {
             first_name: formData.owner_first_name,
             paternal_last_name: formData.owner_paternal_last_name,
-            maternal_last_name: formData.owner_maternal_last_name,
+            maternal_last_name: formData.owner_maternal_last_name || null,
             rut: formData.owner_rut,
             marital_status: formData.marital_status,
             property_regime: formData.marital_status === 'casado' ? formData.property_regime : null,
           });
+
+          console.log('💾 Guardando propietario persona natural:', ownerData);
+
+          const { data: ownerResult, error: ownerError } = await supabase
+            .from('rental_owners')
+            .insert(ownerData)
+            .select()
+            .single();
+
+          if (ownerError) {
+            console.error('❌ Error insertando rental owner:', ownerError);
+            throw new Error(`Error guardando propietario: ${ownerError.message}`);
+          } else {
+            console.log('✅ Rental owner creado con ID:', ownerResult.id);
+            console.log('📋 Datos del propietario:', {
+              id: ownerResult.id,
+              property_id: ownerResult.property_id,
+              name: `${ownerResult.first_name} ${ownerResult.paternal_last_name}`,
+              rut: ownerResult.rut
+            });
+          }
         } else if (formData.owner_type === 'juridica') {
-          // Para personas jurídicas, no guardamos en rental_owners
-          // Los datos se guardan solo en la tabla properties
-          console.log('ℹ️ Persona jurídica detectada - omitiendo guardado en rental_owners');
-          return; // Salir de la función sin guardar
-        }
-
-        const { data: ownerResult, error: ownerError } = await supabase
-          .from('rental_owners')
-          .insert(ownerData)
-          .select()
-          .single();
-
-        if (ownerError) {
-          console.warn('Warning inserting rental owner:', ownerError);
-          // Continue anyway - owner creation is not critical for property creation
-        } else {
-          console.log('✅ Rental owner creado con ID específico:', ownerResult.id);
-          console.log('📋 Datos del propietario:', {
-            id: ownerResult.id,
-            property_id: ownerResult.property_id,
-            type: formData.owner_type,
-            name: formData.owner_type === 'natural'
-              ? `${ownerResult.first_name} ${ownerResult.paternal_last_name}`
-              : ownerResult.company_name,
-            rut: formData.owner_type === 'natural' ? ownerResult.rut : ownerResult.company_rut
-          });
+          // Para personas jurídicas, NO se guarda en rental_owners
+          // La tabla rental_owners solo soporta personas naturales
+          // Los datos de la empresa ya están guardados en properties
+          console.log('ℹ️ Persona jurídica detectada - datos guardados en properties, no en rental_owners');
         }
       }
 
@@ -871,35 +875,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       setLoading(false);
     }
   };
-
-  // Función para validar RUT chileno (deshabilitada para pruebas)
-  // const validateRut = (rut: string): boolean => {
-  //   if (!rut || !rut.trim()) return false;
-  //
-  //   // Limpiar el RUT (quitar puntos y guión)
-  //   const cleanRut = rut.replace(/[.\-]/g, '');
-  //
-  //   // Verificar que tenga al menos 8 dígitos
-  //   if (cleanRut.length < 8) return false;
-  //
-  //   // Separar número y dígito verificador
-  //   const body = cleanRut.slice(0, -1);
-  //   const verifier = cleanRut.slice(-1).toUpperCase();
-  //
-  //   // Calcular dígito verificador
-  //   let sum = 0;
-  //   let multiplier = 2;
-  //
-  //   for (let i = body.length - 1; i >= 0; i--) {
-  //     sum += parseInt(body[i]) * multiplier;
-  //     multiplier = multiplier === 7 ? 2 : multiplier + 1;
-  //   }
-  //
-  //   const calculatedVerifier = 11 - (sum % 11);
-  //   const expectedVerifier = calculatedVerifier === 11 ? '0' : calculatedVerifier === 10 ? 'K' : calculatedVerifier.toString();
-  //
-  //   return verifier === expectedVerifier;
-  // };
 
   // Document configuration
   const requiredDocuments = [
@@ -2002,6 +1977,46 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       )}
                     </div>
                   )}
+
+                  {/* Email y Teléfono del Propietario */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Email */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email del Propietario {formData.owner_type === 'natural' && '*'}
+                      </label>
+                      <input
+                        type="email"
+                        required={formData.owner_type === 'natural'}
+                        value={formData.owner_email || ''}
+                        onChange={(e) => setFormData({ ...formData, owner_email: e.target.value })}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          errors.owner_email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="Ej: propietario@ejemplo.com"
+                      />
+                      {errors.owner_email && (
+                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-1" />
+                          {errors.owner_email}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Teléfono */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Teléfono del Propietario (Opcional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.owner_phone || ''}
+                        onChange={(e) => setFormData({ ...formData, owner_phone: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        placeholder="Ej: +56 9 1234 5678"
+                      />
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -2139,6 +2154,46 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         {errors.owner_representative_rut}
                       </p>
                     )}
+                  </div>
+
+                  {/* Email y Teléfono del Representante Legal */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Email */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email del Representante Legal {formData.owner_type === 'juridica' && '*'}
+                      </label>
+                      <input
+                        type="email"
+                        required={formData.owner_type === 'juridica'}
+                        value={formData.owner_representative_email || ''}
+                        onChange={(e) => setFormData({ ...formData, owner_representative_email: e.target.value })}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          errors.owner_representative_email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="Ej: representante@empresa.com"
+                      />
+                      {errors.owner_representative_email && (
+                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-1" />
+                          {errors.owner_representative_email}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Teléfono */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Teléfono del Representante Legal (Opcional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.owner_representative_phone || ''}
+                        onChange={(e) => setFormData({ ...formData, owner_representative_phone: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        placeholder="Ej: +56 9 1234 5678"
+                      />
+                    </div>
                   </div>
 
                 </>

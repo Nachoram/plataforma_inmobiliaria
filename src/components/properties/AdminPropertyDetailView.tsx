@@ -58,7 +58,7 @@ interface ContractConditionsFormData {
   max_occupants: string; // For property-specific conditions
   allowed_use: string; // For property-specific conditions
   access_clause: string; // For property-specific conditions
-  broker_commission: string; // Commission amount
+  broker_commission: number; // Commission amount
   payment_method: string; // Payment method
 }
 
@@ -125,9 +125,9 @@ export const AdminPropertyDetailView: React.FC = () => {
   const [formData, setFormData] = useState<ContractConditionsFormData>({
     contract_start_date: '',
     contract_end_date: '',
-    monthly_rent: 0,
-    warranty_amount: 0,
-    payment_day: 5,
+    monthly_rent: Number(0),
+    warranty_amount: Number(0),
+    payment_day: Number(5),
     special_conditions_house: '',
     dicom_clause: false, // NUEVO
     notification_email: '', // NUEVO
@@ -139,7 +139,7 @@ export const AdminPropertyDetailView: React.FC = () => {
     account_holder_rut: '',
     broker_name: '',
     broker_rut: '',
-    final_rent_price: 0,
+    final_rent_price: Number(0),
     // Additional form fields
     duration: '12',
     allows_pets: false,
@@ -147,7 +147,7 @@ export const AdminPropertyDetailView: React.FC = () => {
     max_occupants: '',
     allowed_use: '',
     access_clause: '',
-    broker_commission: '',
+    broker_commission: Number(0),
     payment_method: 'transferencia',
   });
 
@@ -189,12 +189,12 @@ export const AdminPropertyDetailView: React.FC = () => {
       if (data && !error) {
         console.log('📦 Condiciones encontradas:', data);
 
-        const loadedData = {
+        const loadedData: ContractConditionsFormData = {
           contract_start_date: data.contract_start_date || '',
           contract_end_date: data.contract_end_date || '',
-          monthly_rent: data.monthly_rent || 0,
-          warranty_amount: data.warranty_amount || 0,
-          payment_day: data.payment_day || 5,
+          monthly_rent: Number(data.monthly_rent) || Number(0),
+          warranty_amount: Number(data.warranty_amount) || Number(0),
+          payment_day: Number(data.payment_day) || Number(5),
           special_conditions_house: data.special_conditions_house || '',
           dicom_clause: data.dicom_clause || false, // NUEVO
           notification_email: data.notification_email || '', // NUEVO
@@ -206,7 +206,7 @@ export const AdminPropertyDetailView: React.FC = () => {
           account_holder_rut: data.account_holder_rut || '',
           broker_name: data.broker_name || '',
           broker_rut: data.broker_rut || '',
-          final_rent_price: data.final_rent_price || 0,
+          final_rent_price: Number(data.final_rent_price) || Number(0),
           // Map legacy fields if they exist in the data
           duration: data.contract_duration_months?.toString() || '12',
           allows_pets: data.accepts_pets || false,
@@ -214,7 +214,7 @@ export const AdminPropertyDetailView: React.FC = () => {
           max_occupants: '',
           allowed_use: '',
           access_clause: '',
-          broker_commission: '',
+          broker_commission: Number(data.broker_commission) || Number(0),
           payment_method: data.payment_method || 'transferencia',
         };
 
@@ -414,7 +414,18 @@ export const AdminPropertyDetailView: React.FC = () => {
   // Función para actualizar los campos del formulario
   const handleContractFormChange = (field: string, value: any) => {
     setFormData(prev => {
-      const newData = { ...prev, [field]: value };
+      const newData = { ...prev };
+
+      // Campos que DEBEN ser números - conversión explícita
+      const numericFields = ['monthly_rent', 'warranty_amount', 'payment_day', 'final_rent_price', 'broker_commission'];
+
+      if (numericFields.includes(field)) {
+        // Convertir explícitamente a número
+        const numValue = typeof value === 'string' ? parseFloat(value) || 0 : Number(value) || 0;
+        (newData as any)[field] = numValue;
+      } else {
+        (newData as any)[field] = value;
+      }
 
       // Si cambia fecha de inicio o duración, recalcular fecha de término
       if (field === 'contract_start_date' || field === 'duration') {
@@ -625,6 +636,48 @@ export const AdminPropertyDetailView: React.FC = () => {
     }
   };
 
+  // Función helper para mapear campos del formulario a la estructura de la base de datos
+  const mapFormDataToDatabase = (formData: ContractConditionsFormData) => {
+    return {
+      application_id: selectedProfile.applicationId,
+
+      // Campos temporales - duration se convierte a lease_term_months
+      lease_term_months: Number(formData.duration),
+
+      // Día de pago (validado 1-31)
+      payment_day: Number(formData.payment_day),
+
+      // Campos económicos - mapeo correcto
+      final_price_clp: Number(formData.final_rent_price),
+      broker_commission_clp: Number(formData.broker_commission) || null,
+      guarantee_amount_clp: Number(formData.warranty_amount),
+
+      // Email oficial
+      official_communication_email: formData.notification_email?.trim() || null,
+
+      // Condiciones booleanas - mapeo correcto
+      accepts_pets: Boolean(formData.allows_pets),
+      dicom_clause: Boolean(formData.dicom_clause),
+
+      // Condiciones adicionales
+      additional_conditions: formData.special_conditions_house?.trim() || null,
+
+      // Información del broker
+      broker_name: formData.broker_name?.trim() || null,
+      broker_rut: formData.broker_rut?.trim() || null,
+
+      // Información bancaria (si existe)
+      bank_name: formData.bank_name?.trim() || null,
+      account_type: formData.account_type?.trim() || null,
+      account_number: formData.account_number?.trim() || null,
+      account_holder_name: formData.account_holder_name?.trim() || null,
+      account_holder_rut: formData.account_holder_rut?.trim() || null,
+
+      // Actualizar timestamp
+      updated_at: new Date().toISOString(),
+    };
+  };
+
   // Función para generar y enviar contrato al webhook
   const handleGenerateContract = async () => {
     let contractRecordCreated = false;
@@ -640,38 +693,99 @@ export const AdminPropertyDetailView: React.FC = () => {
 
       // 1. Validar campos requeridos
       console.log('🔍 Validando campos requeridos...');
+
+      // DEBUG: Logging para verificar tipos de datos
+      console.log('🔍 [DEBUG] Valores antes de validación:', {
+        final_rent_price: formData.final_rent_price,
+        final_rent_price_type: typeof formData.final_rent_price,
+        final_rent_price_parsed: Number(formData.final_rent_price),
+        warranty_amount: formData.warranty_amount,
+        warranty_amount_type: typeof formData.warranty_amount,
+        payment_day: formData.payment_day,
+        payment_day_type: typeof formData.payment_day,
+        broker_commission: formData.broker_commission,
+        broker_commission_type: typeof formData.broker_commission
+      });
+
       const validationErrors = [];
 
-      // Validar fecha de inicio
-      if (!formData.contract_start_date || formData.contract_start_date.trim() === '') {
-        validationErrors.push('fecha de inicio del contrato');
+      // Validar duración del contrato (1-60 meses)
+      if (!formData.duration || formData.duration.trim() === '') {
+        validationErrors.push('duración del contrato (campo requerido)');
+      } else {
+        const durationMonths = Number(formData.duration);
+        if (isNaN(durationMonths)) {
+          validationErrors.push('duración del contrato (debe ser un número válido)');
+        } else if (durationMonths < 1 || durationMonths > 60) {
+          validationErrors.push('duración del contrato (debe estar entre 1 y 60 meses)');
+        }
       }
 
-      // Validar fecha de término - se calcula automáticamente cuando cambian fecha de inicio o duración
-      // Solo validar que existe si el usuario ha completado los campos requeridos
-      if (formData.contract_start_date && formData.duration && (!formData.contract_end_date || formData.contract_end_date.trim() === '')) {
-        validationErrors.push('fecha de término del contrato (complete fecha de inicio y duración primero)');
+      // Validar día de pago (1-31)
+      if (!formData.payment_day) {
+        validationErrors.push('día de pago (campo requerido)');
+      } else {
+        const paymentDay = Number(formData.payment_day);
+        if (isNaN(paymentDay)) {
+          validationErrors.push('día de pago (debe ser un número válido)');
+        } else if (paymentDay < 1 || paymentDay > 31) {
+          validationErrors.push('día de pago (debe estar entre 1 y 31)');
+        }
       }
 
-      // Validar renta mensual (puede ser 0)
-      if (formData.monthly_rent === null || formData.monthly_rent === undefined || formData.monthly_rent < 0) {
-        validationErrors.push('renta mensual (debe ser mayor o igual a 0)');
+      // Validar precio final del arriendo (NO puede ser 0, debe ser mayor a 0)
+      const finalRentPriceValue = Number(formData.final_rent_price);
+      if (isNaN(finalRentPriceValue)) {
+        validationErrors.push('precio final del arriendo (debe ser un número válido)');
+      } else if (finalRentPriceValue <= 0) {
+        validationErrors.push('precio final del arriendo (debe ser mayor a 0)');
       }
 
-      // Validar email
+      // Validar monto de garantía (puede ser 0 pero no negativo)
+      if (formData.warranty_amount === null || formData.warranty_amount === undefined) {
+        validationErrors.push('monto de garantía (campo requerido)');
+      } else {
+        const warrantyAmount = Number(formData.warranty_amount);
+        if (isNaN(warrantyAmount)) {
+          validationErrors.push('monto de garantía (debe ser un número válido)');
+        } else if (warrantyAmount < 0) {
+          validationErrors.push('monto de garantía (no puede ser negativo)');
+        }
+      }
+
+      // Validar email oficial
       if (!formData.notification_email || formData.notification_email.trim() === '') {
-        validationErrors.push('correo electrónico de notificación');
+        validationErrors.push('correo electrónico oficial');
+      }
+
+      // Validar RUT del broker si se proporciona
+      if (formData.broker_rut && formData.broker_rut.trim() !== '') {
+        const rutRegex = /^\d{7,8}-[\dkK]$/;
+        if (!rutRegex.test(formData.broker_rut.trim())) {
+          validationErrors.push('RUT del corredor (formato inválido)');
+        }
+      }
+
+      // Validar comisión del broker (opcional pero no negativa si se proporciona)
+      if (formData.broker_commission !== null && formData.broker_commission !== undefined && formData.broker_commission !== 0) {
+        const commission = Number(formData.broker_commission);
+        if (isNaN(commission)) {
+          validationErrors.push('comisión del corredor (debe ser un número válido)');
+        } else if (commission < 0) {
+          validationErrors.push('comisión del corredor (no puede ser negativa)');
+        }
       }
 
       if (validationErrors.length > 0) {
-        console.error('❌ Faltan campos requeridos:', {
-          contract_start_date: formData.contract_start_date,
-          contract_end_date: formData.contract_end_date,
-          monthly_rent: formData.monthly_rent,
+        console.error('❌ Errores de validación:', {
+          duration: formData.duration,
+          payment_day: formData.payment_day,
+          final_rent_price: formData.final_rent_price,
+          warranty_amount: formData.warranty_amount,
           notification_email: formData.notification_email,
           errores: validationErrors
         });
-        toast.error(`Por favor completa: ${validationErrors.join(', ')}`);
+        toast.error(`Errores de validación: ${validationErrors.join(', ')}`);
         setIsGenerating(false);
         return;
       }
@@ -715,41 +829,18 @@ export const AdminPropertyDetailView: React.FC = () => {
         .eq('id', characteristicIds.rental_owner_characteristic_id)
         .single();
 
-      // 4. Guardar condiciones del contrato (código existente)
+      // 4. Guardar condiciones del contrato con mapeo correcto
       console.log('💾 Guardando condiciones del contrato...');
-      console.log('📝 Datos a guardar:', {
-        application_id: selectedProfile.applicationId,
-        property_id: property?.id || null,
-        contract_start_date: formData.contract_start_date,
-        contract_end_date: formData.contract_end_date,
-        monthly_rent: Number(formData.monthly_rent),
-        final_rent_price: Number(formData.final_rent_price),
-        notification_email: formData.notification_email
-      });
+
+      // Mapear campos del formulario a estructura de base de datos
+      const contractConditionsData = mapFormDataToDatabase(formData);
+
+      console.log('📝 Datos mapeados a guardar:', contractConditionsData);
 
       const { error: upsertError } = await supabase
         .from('rental_contract_conditions')
-        .upsert({
-          application_id: selectedProfile.applicationId,
-          property_id: property?.id || null,
-          contract_start_date: formData.contract_start_date,
-          contract_end_date: formData.contract_end_date,
-          monthly_rent: Number(formData.monthly_rent),
-          warranty_amount: Number(formData.warranty_amount),
-          payment_day: Number(formData.payment_day),
-          special_conditions_house: formData.special_conditions_house?.trim() || null,
-          dicom_clause: formData.dicom_clause,
-          notification_email: formData.notification_email || null,
-          payment_conditions: formData.payment_conditions?.trim() || null,
-          bank_name: formData.bank_name?.trim() || null,
-          account_type: formData.account_type?.trim() || null,
-          account_number: formData.account_number?.trim() || null,
-          account_holder_name: formData.account_holder_name?.trim() || null,
-          account_holder_rut: formData.account_holder_rut?.trim() || null,
-          broker_name: formData.broker_name?.trim() || null,
-          broker_rut: formData.broker_rut?.trim() || null,
-          final_rent_price: Number(formData.final_rent_price),
-          updated_at: new Date().toISOString(),
+        .upsert(contractConditionsData, {
+          onConflict: 'application_id'  // Evitar duplicados por application_id
         });
 
       if (upsertError) {
@@ -1723,8 +1814,10 @@ export const AdminPropertyDetailView: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      value={formData.warranty_amount}
-                      onChange={(e) => handleContractFormChange('warranty_amount', e.target.value)}
+                      min={0}
+                      step={1000}
+                      value={formData.warranty_amount || 0}
+                      onChange={(e) => handleContractFormChange('warranty_amount', parseFloat(e.target.value) || 0)}
                       placeholder="Ej: 850000"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       required
@@ -1766,10 +1859,10 @@ export const AdminPropertyDetailView: React.FC = () => {
                         type="number"
                         min={0}
                         step={1000}
-                        value={formData.final_rent_price}
-                        onChange={(e) => handleContractFormChange('final_rent_price', e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        value={formData.final_rent_price || 0}
+                        onChange={(e) => handleContractFormChange('final_rent_price', parseFloat(e.target.value) || 0)}
                         placeholder="Ej: 500000"
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                         required
                       />
                     </div>
@@ -1975,8 +2068,10 @@ export const AdminPropertyDetailView: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      value={formData.broker_commission}
-                      onChange={(e) => handleContractFormChange('broker_commission', e.target.value)}
+                      min={0}
+                      step={1000}
+                      value={formData.broker_commission || 0}
+                      onChange={(e) => handleContractFormChange('broker_commission', parseFloat(e.target.value) || 0)}
                       placeholder="Ingrese el monto de la comisión"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     />

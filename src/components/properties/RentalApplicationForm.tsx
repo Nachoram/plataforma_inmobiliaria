@@ -307,20 +307,24 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         throw new Error('Usuario no autenticado');
       }
 
-      // Validar RUT del postulante
-      if (!validateRUT(applicantData.rut)) {
-        throw new Error('RUT del postulante no es válido');
+      // ✅ BETA: Validación de RUT suavizada - solo advertencia en consola
+      if (applicantData.rut && !validateRUT(applicantData.rut)) {
+        console.warn('⚠️ ADVERTENCIA: RUT del postulante podría ser inválido:', applicantData.rut);
+        // NO lanzar error - permitir continuar
       }
 
-      // Validar RUT del aval si existe
-      if (showGuarantor && !validateRUT(guarantorData.rut)) {
-        throw new Error('RUT del aval no es válido');
+      // Validar RUT del aval si existe - también suavizado
+      if (showGuarantor && guarantorData.rut && !validateRUT(guarantorData.rut)) {
+        console.warn('⚠️ ADVERTENCIA: RUT del aval podría ser inválido:', guarantorData.rut);
+        // NO lanzar error - permitir continuar
       }
 
       // PASO 1: Asegurar que existe el profile del usuario (requerido por FK)
       console.log('🔍 DEBUG: Verificando/creando profile del usuario...');
       try {
-        // Primero validar que el RUT no esté siendo usado por otro usuario
+        // ✅ BETA: DESHABILITADO - Permitir RUTs duplicados entre usuarios
+        // En producción, esto se puede habilitar con mejor manejo
+        /*
         const { data: existingProfileWithRUT, error: rutCheckError } = await supabase
           .from('profiles')
           .select('id')
@@ -335,6 +339,9 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         if (existingProfileWithRUT) {
           throw new Error('El RUT ingresado ya está registrado para otro usuario. Por favor, verifica tus datos.');
         }
+        */
+
+        console.log('ℹ️ BETA: Verificación de RUT duplicado deshabilitada');
 
         // Ahora hacer el upsert del perfil
         const { error: profileError } = await supabase
@@ -443,74 +450,89 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       console.log('🔍 DEBUG: Datos preparados para application:', applicationData);
 
       try {
-        // ESTRATEGIA 1: UPSERT directo (maneja conflictos automáticamente)
-        console.log('🔍 DEBUG: Intentando UPSERT...');
-        
-        // Nota: UPSERT no funciona porque no hay constraint UNIQUE en property_id+applicant_id
-        // Vamos directo a la estrategia manual que SÍ funciona
-        console.log('🔍 DEBUG: Saltando UPSERT (no hay constraint), usando estrategia manual...');
-        
-        const upsertApplication = null;
-        const upsertError = { message: 'Usando estrategia manual por falta de constraint' };
+        // ✅ BETA: Permitir actualizar postulaciones existentes
+        console.log('🔍 DEBUG: Verificando postulación existente...');
 
-        if (upsertError) {
-          console.log('❌ DEBUG: UPSERT falló:', upsertError);
-          
-          // Si UPSERT falla, intentar estrategia manual
-          console.log('🔍 DEBUG: Intentando estrategia manual...');
-          
-          // Verificar si existe
-          const { data: existingApplication, error: fetchError } = await supabase
+        const { data: existingApplication, error: fetchError } = await supabase
+          .from('applications')
+          .select('id, created_at, status')
+          .eq('property_id', property.id)
+          .eq('applicant_id', user.id)
+          .maybeSingle();
+
+        console.log('🔍 DEBUG: Resultado verificación:', { existingApplication, fetchError });
+
+        if (fetchError) {
+          console.log('❌ DEBUG: Error en verificación:', fetchError);
+          throw new Error(`Error verificando postulación existente: ${fetchError.message}`);
+        }
+
+        if (existingApplication) {
+          // ✅ BETA: Permitir actualización - UPSERT automático
+          console.log('🔄 BETA: Postulación existente encontrada - actualizando...', existingApplication.id);
+
+          // Actualizar la postulación existente con los nuevos datos
+          const { data: updatedApplication, error: updateError } = await supabase
             .from('applications')
-            .select('id, created_at')
-            .eq('property_id', property.id)
-            .eq('applicant_id', user.id)
-            .maybeSingle();
+            .update({
+              message: message,
+              guarantor_id: guarantorId,
+              // Actualizar todos los campos snapshot
+              snapshot_applicant_profession: applicantData.profession,
+              snapshot_applicant_monthly_income_clp: parseInt(applicantData.monthly_income_clp) || 0,
+              snapshot_applicant_age: parseInt(applicantData.age) || 0,
+              snapshot_applicant_nationality: applicantData.nationality,
+              snapshot_applicant_marital_status: applicantData.marital_status,
+              snapshot_applicant_address_street: applicantData.address_street,
+              snapshot_applicant_address_number: applicantData.address_number,
+              snapshot_applicant_address_department: applicantData.address_department || null,
+              snapshot_applicant_address_commune: applicantData.address_commune,
+              snapshot_applicant_address_region: applicantData.address_region,
+              snapshot_applicant_first_name: applicantData.first_name,
+              snapshot_applicant_paternal_last_name: applicantData.paternal_last_name,
+              snapshot_applicant_maternal_last_name: applicantData.maternal_last_name,
+              snapshot_applicant_rut: applicantData.rut,
+              snapshot_applicant_email: user.email || '',
+              snapshot_applicant_phone: applicantData.phone || null,
+              updated_at: new Date().toISOString() // Registrar actualización
+            })
+            .eq('id', existingApplication.id)
+            .select()
+            .single();
 
-          console.log('🔍 DEBUG: Resultado verificación existente:', { existingApplication, fetchError });
-
-          if (fetchError) {
-            console.log('❌ DEBUG: Error en verificación:', fetchError);
-            throw new Error(`Error verificando postulación existente: ${fetchError.message}`);
+          if (updateError) {
+            console.log('❌ DEBUG: Error actualizando postulación:', updateError);
+            throw new Error(`Error actualizando postulación: ${updateError.message}`);
           }
 
-          if (existingApplication) {
-            // Ya existe - mostrar mensaje informativo
-            console.log('⚠️ DEBUG: Application ya existe:', existingApplication.id);
-            throw new Error(
-              `Ya has postulado a esta propiedad el ${new Date(existingApplication.created_at).toLocaleDateString()}. ` +
-              'Solo se permite una postulación por propiedad. ' +
-              'Si deseas actualizar tu información, contacta al propietario directamente.'
-            );
-          } else {
-            // No existe - intentar INSERT directo
-            console.log('🔍 DEBUG: No existe, intentando INSERT directo...');
-            
-            const { data: newApplication, error: insertError } = await supabase
-              .from('applications')
-              .insert([applicationData])
-              .select()
-              .single();
+          application = updatedApplication;
+          console.log('✅ BETA: Postulación actualizada exitosamente:', application.id);
 
-            if (insertError) {
-              console.log('❌ DEBUG: INSERT directo falló:', insertError);
-              
-              if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('conflict')) {
-                throw new Error(
-                  'Conflicto detectado: otro proceso creó una postulación simultáneamente. ' +
-                  'Por favor, recarga la página y verifica si tu postulación se creó correctamente.'
-                );
-              } else {
-                throw new Error(`Error creando postulación: ${insertError.message}`);
-              }
-            }
-
-            application = newApplication;
-            console.log('✅ DEBUG: Application creada con INSERT directo:', application.id);
-          }
         } else {
-          application = upsertApplication;
-          console.log('✅ DEBUG: Application procesada con UPSERT:', application.id);
+          // No existe - crear nueva postulación
+          console.log('🆕 DEBUG: Creando nueva postulación...');
+
+          const { data: newApplication, error: insertError } = await supabase
+            .from('applications')
+            .insert([applicationData])
+            .select()
+            .single();
+
+          if (insertError) {
+            console.log('❌ DEBUG: INSERT directo falló:', insertError);
+
+            if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('conflict')) {
+              throw new Error(
+                'Conflicto detectado: otro proceso creó una postulación simultáneamente. ' +
+                'Por favor, recarga la página y verifica si tu postulación se creó correctamente.'
+              );
+            } else {
+              throw new Error(`Error creando postulación: ${insertError.message}`);
+            }
+          }
+
+          application = newApplication;
+          console.log('✅ DEBUG: Nueva postulación creada:', application.id);
         }
 
       } catch (error) {
@@ -851,6 +873,22 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         </div>
       </div>
 
+      {/* Banner de Modo BETA */}
+      <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-300 rounded-xl">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h4 className="font-bold text-blue-900 mb-1">Modo Beta - Validaciones Suavizadas</h4>
+            <p className="text-sm text-blue-700">
+              Durante la fase beta, puedes <strong>actualizar tu postulación</strong> las veces que necesites.
+              Las validaciones estrictas (RUT, documentos, etc.) están deshabilitadas para facilitar el proceso.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Loading state for profile */}
       {profileLoading && (
         <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg">
@@ -1012,8 +1050,13 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                   min="18"
-                  max="100"
+                  max="120"  {/* ✅ BETA: Aumentado de 100 a 120 */}
                 />
+                {applicantData.age && (parseInt(applicantData.age) < 18 || parseInt(applicantData.age) > 120) && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    ⚠️ Edad fuera del rango típico (18-120 años)
+                  </p>
+                )}
               </div>
             </div>
 

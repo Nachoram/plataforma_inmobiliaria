@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Calendar as CalendarIcon, ArrowLeft, Building, Car, Eye, Check, X, Mail, Phone, DollarSign, Briefcase, FileText, Send, UserCheck, FileUp, Copy, CheckCircle, Loader2 } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, Calendar as CalendarIcon, ArrowLeft, Building, Building2, Car, Eye, Check, X, Mail, Phone, DollarSign, Briefcase, FileText, Send, UserCheck, FileUp, Copy, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Calendar from 'react-calendar';
@@ -14,6 +14,52 @@ interface PropertyWithImages extends Property {
     image_url: string;
     storage_path: string;
   }>;
+}
+
+// Interface for contract conditions form data
+interface ContractConditionsFormData {
+  // Basic contract information
+  contract_start_date: string;
+  contract_end_date: string;
+  monthly_rent: number;
+  warranty_amount: number;
+  payment_day: number;
+
+  // Special conditions
+  special_conditions_house: string;
+
+  // DICOM clause - NEW
+  dicom_clause: boolean;
+
+  // Email notification - NEW
+  notification_email: string;
+
+  // Payment conditions
+  payment_conditions: string;
+
+  // Banking information
+  bank_name: string;
+  account_type: string;
+  account_number: string;
+  account_holder_name: string;
+  account_holder_rut: string;
+
+  // Broker information
+  broker_name: string;
+  broker_rut: string;
+
+  // Final pricing
+  final_rent_price: number;
+
+  // Additional form fields still used in the UI
+  duration: string; // Contract duration in months
+  allows_pets: boolean; // For property-specific conditions
+  sublease: string; // For property-specific conditions
+  max_occupants: string; // For property-specific conditions
+  allowed_use: string; // For property-specific conditions
+  access_clause: string; // For property-specific conditions
+  broker_commission: string; // Commission amount
+  payment_method: string; // Payment method
 }
 
 // Datos de prueba para las métricas
@@ -56,35 +102,41 @@ export const AdminPropertyDetailView: React.FC = () => {
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
 
+  // Estado para el usuario actual
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   // Estados para la funcionalidad de webhook de contrato
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Estado para el formulario de condiciones de contrato
-  const [contractForm, setContractForm] = useState({
-    startDate: '',
+  const [formData, setFormData] = useState<ContractConditionsFormData>({
+    contract_start_date: '',
+    contract_end_date: '',
+    monthly_rent: 0,
+    warranty_amount: 0,
+    payment_day: 5,
+    special_conditions_house: '',
+    dicom_clause: false, // NUEVO
+    notification_email: '', // NUEVO
+    payment_conditions: '',
+    bank_name: '',
+    account_type: '',
+    account_number: '',
+    account_holder_name: '',
+    account_holder_rut: '',
+    broker_name: '',
+    broker_rut: '',
+    final_rent_price: 0,
+    // Additional form fields
     duration: '12',
-    guaranteeAmount: '',
-    paymentDay: '1',
-    // NUEVOS CAMPOS: Precio final y corredor
-    finalRentPrice: '',
-    brokerName: '',
-    brokerRut: '',
-    // Campos para Casa/Departamento
-    allowsPets: false,
+    allows_pets: false,
     sublease: 'No Permitido',
-    maxOccupants: '',
-    // Campos para Bodega/Estacionamiento
-    allowedUse: '',
-    accessClause: '',
-    // Condiciones de Pago
-    brokerCommission: '',
-    paymentMethod: 'transferencia',
-    bankAccountHolder: '',
-    bankAccountRut: '',
-    bankName: '',
-    bankAccountType: '',
-    bankAccountNumber: ''
+    max_occupants: '',
+    allowed_use: '',
+    access_clause: '',
+    broker_commission: '',
+    payment_method: 'transferencia',
   });
 
   useEffect(() => {
@@ -93,6 +145,72 @@ export const AdminPropertyDetailView: React.FC = () => {
       fetchPostulations();
     }
   }, [id]);
+
+  // UseEffect para obtener el usuario actual
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (user && !error) {
+        setCurrentUser(user);
+        console.log('👤 Usuario actual:', user.id);
+      } else {
+        console.error('❌ Error obteniendo usuario:', error);
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  // Cargar condiciones existentes cuando se abre el modal
+  useEffect(() => {
+    const loadExistingConditions = async () => {
+      if (!isContractModalOpen || !selectedProfile?.applicationId) return;
+
+      console.log('🔍 Cargando condiciones existentes...');
+
+      const { data, error } = await supabase
+        .from('rental_contract_conditions')
+        .select('*')
+        .eq('application_id', selectedProfile.applicationId)
+        .single();
+
+      if (data && !error) {
+        console.log('📦 Condiciones encontradas:', data);
+
+        setFormData(prev => ({
+          ...prev,
+          contract_start_date: data.contract_start_date || '',
+          contract_end_date: data.contract_end_date || '',
+          monthly_rent: data.monthly_rent || 0,
+          warranty_amount: data.warranty_amount || 0,
+          payment_day: data.payment_day || 5,
+          special_conditions_house: data.special_conditions_house || '',
+          dicom_clause: data.dicom_clause || false, // NUEVO
+          notification_email: data.notification_email || '', // NUEVO
+          payment_conditions: data.payment_conditions || '',
+          bank_name: data.bank_name || '',
+          account_type: data.account_type || '',
+          account_number: data.account_number || '',
+          account_holder_name: data.account_holder_name || '',
+          account_holder_rut: data.account_holder_rut || '',
+          broker_name: data.broker_name || '',
+          broker_rut: data.broker_rut || '',
+          final_rent_price: data.final_rent_price || 0,
+          // Map legacy fields if they exist in the data
+          duration: data.contract_duration_months?.toString() || '12',
+          allows_pets: data.accepts_pets || false,
+          sublease: 'No Permitido', // Default value
+          max_occupants: '',
+          allowed_use: '',
+          access_clause: '',
+          broker_commission: '',
+          payment_method: data.payment_method || 'transferencia',
+        }));
+      }
+    };
+
+    loadExistingConditions();
+  }, [isContractModalOpen, selectedProfile?.applicationId]);
 
 
   const fetchPropertyDetails = async () => {
@@ -176,8 +294,9 @@ export const AdminPropertyDetailView: React.FC = () => {
 
       // Formatear las postulaciones al formato que usa el componente
       const formattedPostulations = (data || []).map((app: any, index: number) => ({
-        id: index + 1, // ID numérico para la tabla
-        name: app.profiles 
+        id: index + 1, // ID numérico para la tabla (display)
+        applicationId: app.id, // ✅ ID REAL de la aplicación (UUID)
+        name: app.profiles
           ? `${app.profiles.first_name} ${app.profiles.paternal_last_name} ${app.profiles.maternal_last_name || ''}`.trim()
           : 'Sin nombre',
         date: new Date(app.created_at).toISOString().split('T')[0],
@@ -271,7 +390,7 @@ export const AdminPropertyDetailView: React.FC = () => {
 
   // Función para actualizar los campos del formulario
   const handleContractFormChange = (field: string, value: any) => {
-    setContractForm(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   // Función para obtener los IDs de características del contrato
@@ -279,7 +398,7 @@ export const AdminPropertyDetailView: React.FC = () => {
     try {
       console.log('🔍 Obteniendo datos del contrato para application:', applicationId);
 
-      // Obtener datos de la postulación con todas las relaciones
+      // Paso 1: Obtener datos de la aplicación y propiedad
       const { data: applicationData, error: appError } = await supabase
         .from('applications')
         .select(`
@@ -288,204 +407,364 @@ export const AdminPropertyDetailView: React.FC = () => {
           guarantor_characteristic_id,
           property_id,
           properties (
+            id,
             property_characteristic_id,
-            rental_owner_characteristic_id
+            owner_id
           )
         `)
         .eq('id', applicationId)
         .single();
 
-      if (appError) throw appError;
-
-      // Obtener condiciones del contrato
-      const { data: contractData, error: contractError } = await supabase
-        .from('contract_conditions')
-        .select('id, contract_conditions_characteristic_id')
-        .eq('application_id', applicationId)
-        .single();
-
-      if (contractError) {
-        console.warn('⚠️ No se encontraron condiciones de contrato, usando valores por defecto');
+      if (appError) {
+        console.error('❌ Error fetching application:', appError);
+        throw appError;
       }
 
-      return {
+      console.log('📋 Application data:', applicationData);
+
+      // Paso 2: Obtener rental_owner_characteristic_id desde rental_owners
+      const { data: ownerData, error: ownerError } = await supabase
+        .from('rental_owners')
+        .select('id, rental_owner_characteristic_id')
+        .eq('property_id', applicationData.properties.id)
+        .single();
+
+      if (ownerError) {
+        console.error('❌ Error fetching owner:', ownerError);
+        throw ownerError;
+      }
+
+      console.log('👤 Owner data:', ownerData);
+
+      // Paso 3: Obtener contract_conditions_characteristic_id
+      const { data: contractData, error: contractError } = await supabase
+        .from('rental_contract_conditions')
+        .select('id, contract_conditions_characteristic_id')
+        .eq('application_id', applicationId)
+        .maybeSingle(); // Puede no existir aún
+
+      if (contractError && contractError.code !== 'PGRST116') {
+        console.error('❌ Error fetching contract conditions:', contractError);
+        throw contractError;
+      }
+
+      console.log('📄 Contract data:', contractData);
+
+      // Validar que todos los IDs existen
+      const characteristicIds = {
         application_characteristic_id: applicationData.application_characteristic_id,
-        property_characteristic_id: applicationData.properties?.property_characteristic_id,
-        rental_owner_characteristic_id: applicationData.properties?.rental_owner_characteristic_id,
-        contract_conditions_characteristic_id: contractData?.contract_conditions_characteristic_id,
+        property_characteristic_id: applicationData.properties.property_characteristic_id,
+        rental_owner_characteristic_id: ownerData.rental_owner_characteristic_id,
+        contract_conditions_characteristic_id: contractData?.contract_conditions_characteristic_id || null,
         guarantor_characteristic_id: applicationData.guarantor_characteristic_id
       };
 
+      console.log('✅ Characteristic IDs obtenidos:', characteristicIds);
+
+      // Validar campos requeridos
+      const missingFields = [];
+      if (!characteristicIds.application_characteristic_id) {
+        missingFields.push('application_characteristic_id');
+      }
+      if (!characteristicIds.property_characteristic_id) {
+        missingFields.push('property_characteristic_id');
+      }
+      if (!characteristicIds.rental_owner_characteristic_id) {
+        missingFields.push('rental_owner_characteristic_id');
+      }
+      if (!characteristicIds.guarantor_characteristic_id) {
+        missingFields.push('guarantor_characteristic_id');
+      }
+
+      if (missingFields.length > 0) {
+        throw new Error(`Faltan datos requeridos: ${missingFields.join(', ')}`);
+      }
+
+      return characteristicIds;
     } catch (error) {
       console.error('❌ Error al obtener datos del contrato:', error);
       throw error;
     }
   };
 
+  /**
+   * Crea o actualiza el registro del contrato en rental_contracts
+   * Se ejecuta cuando se genera el contrato, antes de enviar a n8n
+   */
+  const createOrUpdateRentalContract = async (applicationId: string) => {
+    try {
+      console.log('📝 Creando/actualizando registro en rental_contracts...');
+
+      if (!currentUser?.id) {
+        console.error('❌ No hay usuario autenticado');
+        throw new Error('Usuario no autenticado');
+      }
+
+      // Verificar si ya existe un contrato para esta aplicación
+      const { data: existingContract, error: checkError } = await supabase
+        .from('rental_contracts')
+        .select('id, status, version')
+        .eq('application_id', applicationId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('❌ Error verificando contrato existente:', checkError);
+        throw checkError;
+      }
+
+      if (existingContract) {
+        console.log('📄 Contrato existente encontrado:', existingContract.id);
+        console.log('📊 Estado actual:', existingContract.status);
+        console.log('🔢 Versión actual:', existingContract.version);
+
+        // Si ya existe, actualizar campos relevantes pero mantener contract_content y contract_html
+        const { data: updatedContract, error: updateError } = await supabase
+          .from('rental_contracts')
+          .update({
+            status: 'draft', // Resetear a draft si se regenera
+            updated_at: new Date().toISOString(),
+            version: (existingContract.version || 1) + 1, // Incrementar versión
+            notes: `Contrato regenerado el ${new Date().toLocaleString('es-CL')}`,
+          })
+          .eq('id', existingContract.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('❌ Error actualizando contrato:', updateError);
+          throw updateError;
+        }
+
+        console.log('✅ Contrato actualizado:', updatedContract.id);
+        return updatedContract;
+
+      } else {
+        console.log('🆕 Creando nuevo contrato...');
+
+        // Crear nuevo registro
+        const { data: newContract, error: insertError } = await supabase
+          .from('rental_contracts')
+          .insert({
+            application_id: applicationId,
+            status: 'draft',
+            created_by: currentUser.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            contract_format: 'hybrid', // Porque tendremos tanto JSON como HTML
+            version: 1,
+            notes: `Contrato generado el ${new Date().toLocaleString('es-CL')}`,
+            // contract_content y contract_html se dejan null - n8n los llenará
+            // Los triggers automáticos generarán:
+            // - contract_characteristic_id
+            // - contract_number
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('❌ Error creando contrato:', insertError);
+          throw insertError;
+        }
+
+        console.log('✅ Nuevo contrato creado:', newContract.id);
+        console.log('🔢 Contract number:', newContract.contract_number);
+        console.log('🆔 Characteristic ID:', newContract.contract_characteristic_id);
+        return newContract;
+      }
+
+    } catch (error) {
+      console.error('❌ Error en createOrUpdateRentalContract:', error);
+      throw error;
+    }
+  };
+
   // Función para generar y enviar contrato al webhook
-  const handleGenerateContract = async (applicationId: string) => {
-    setIsGenerating(true);
-    setError(null);
+  const handleGenerateContract = async () => {
+    let contractRecordCreated = false;
+    let contractId = null;
 
     try {
-      console.log('🔍 Guardando condiciones del contrato antes de generar...');
+      setIsGenerating(true);
+      setError(null);
 
-      // VALIDAR CAMPOS REQUERIDOS
-      const errors = [];
-      if (!contractForm.finalRentPrice || Number(contractForm.finalRentPrice) <= 0) {
-        errors.push('El precio final del arriendo es obligatorio y debe ser mayor a 0');
-      }
-      if (!contractForm.brokerName?.trim()) {
-        errors.push('El nombre del corredor es obligatorio');
-      }
-      if (!contractForm.brokerRut?.trim()) {
-        errors.push('El RUT del corredor es obligatorio');
-      }
-      if (!contractForm.startDate) {
-        errors.push('La fecha de inicio del contrato es obligatoria');
-      }
-      if (!contractForm.guaranteeAmount || Number(contractForm.guaranteeAmount) <= 0) {
-        errors.push('El monto de la garantía es obligatorio y debe ser mayor a 0');
+      // 1. Validar campos requeridos
+      if (!formData.contract_start_date ||
+          !formData.contract_end_date ||
+          !formData.monthly_rent ||
+          !formData.notification_email) {
+        toast.error('Por favor completa todos los campos requeridos');
+        setIsGenerating(false);
+        return;
       }
 
-      if (errors.length > 0) {
-        throw new Error(`Errores de validación:\n${errors.join('\n')}`);
+      // 2. Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.notification_email)) {
+        toast.error('Por favor ingresa un correo electrónico válido');
+        setIsGenerating(false);
+        return;
       }
 
-      // PRIMERO: Guardar las condiciones del contrato en rental_contract_conditions
-      const contractConditionsData = {
-        application_id: applicationId,
-        final_rent_price: Number(contractForm.finalRentPrice),
-        broker_name: String(contractForm.brokerName).trim(),
-        broker_rut: String(contractForm.brokerRut).trim(),
-        // Mapear otros campos del formulario a los campos de la tabla
-        lease_term_months: Number(contractForm.duration),
-        payment_day: Number(contractForm.paymentDay),
-        guarantee_amount_clp: Number(contractForm.guaranteeAmount),
-        contract_start_date: contractForm.startDate,
-        accepts_pets: contractForm.allowsPets,
-        additional_conditions: `Duración: ${contractForm.duration} meses\nGarantía: ${contractForm.guaranteeAmount}\nMascotas: ${contractForm.allowsPets ? 'Sí' : 'No'}\nSubarriendo: ${contractForm.sublease}`,
-        payment_method: contractForm.paymentMethod,
-        bank_name: contractForm.bankName,
-        bank_account_type: contractForm.bankAccountType,
-        bank_account_number: contractForm.bankAccountNumber,
-        bank_account_rut: contractForm.bankAccountRut,
-        bank_account_holder: contractForm.bankAccountHolder
-      };
+      console.log('📋 Iniciando generación de contrato...');
+      console.log('🎯 Application ID:', selectedProfile.applicationId);
 
-      console.log('💾 Guardando condiciones:', contractConditionsData);
+      // 3. Obtener datos de características (código existente)
+      const characteristicIds = await fetchContractData(selectedProfile.applicationId);
 
-      const { error: saveError } = await supabase
+      if (!characteristicIds.property_characteristic_id || !characteristicIds.rental_owner_characteristic_id) {
+        toast.error('Error obteniendo datos de la propiedad');
+        setIsGenerating(false);
+        return;
+      }
+
+      const { data: propertyTypeData } = await supabase
+        .from('property_type_characteristics')
+        .select('name')
+        .eq('id', characteristicIds.property_characteristic_id)
+        .single();
+
+      const { data: ownerData } = await supabase
+        .from('rental_owner_characteristics')
+        .select('name, rut')
+        .eq('id', characteristicIds.rental_owner_characteristic_id)
+        .single();
+
+      // 4. Guardar condiciones del contrato (código existente)
+      console.log('💾 Guardando condiciones del contrato...');
+
+      const { error: upsertError } = await supabase
         .from('rental_contract_conditions')
-        .upsert(contractConditionsData, { onConflict: 'application_id' });
+        .upsert({
+          application_id: selectedProfile.applicationId,
+          property_id: property?.id || null,
+          contract_start_date: formData.contract_start_date,
+          contract_end_date: formData.contract_end_date,
+          monthly_rent: Number(formData.monthly_rent),
+          warranty_amount: Number(formData.warranty_amount),
+          payment_day: Number(formData.payment_day),
+          special_conditions_house: formData.special_conditions_house?.trim() || null,
+          dicom_clause: formData.dicom_clause,
+          notification_email: formData.notification_email || null,
+          payment_conditions: formData.payment_conditions?.trim() || null,
+          bank_name: formData.bank_name?.trim() || null,
+          account_type: formData.account_type?.trim() || null,
+          account_number: formData.account_number?.trim() || null,
+          account_holder_name: formData.account_holder_name?.trim() || null,
+          account_holder_rut: formData.account_holder_rut?.trim() || null,
+          broker_name: formData.broker_name?.trim() || null,
+          broker_rut: formData.broker_rut?.trim() || null,
+          final_rent_price: Number(formData.final_rent_price),
+          updated_at: new Date().toISOString(),
+        });
 
-      if (saveError) {
-        console.error('❌ Error guardando condiciones:', saveError);
-        throw new Error(`Error guardando condiciones del contrato: ${saveError.message}`);
+      if (upsertError) {
+        console.error('❌ Error guardando condiciones:', upsertError);
+        throw upsertError;
       }
 
       console.log('✅ Condiciones guardadas exitosamente');
 
-      console.log('🔍 Obteniendo datos del contrato para application:', applicationId);
+      // 5. NUEVO - Crear o actualizar registro en rental_contracts
+      console.log('📝 Creando registro del contrato...');
+      const contractRecord = await createOrUpdateRentalContract(selectedProfile.applicationId);
+      contractRecordCreated = true;
+      contractId = contractRecord.id;
+      console.log('✅ Registro del contrato creado/actualizado:', contractRecord.id);
+      console.log('📋 Contract number:', contractRecord.contract_number);
 
-      // Obtener todos los IDs de características
-      const contractCharacteristics = await fetchContractData(applicationId);
-
-      console.log('📋 IDs de características obtenidos:', contractCharacteristics);
-
-      // Validar que todos los IDs existan
-      const missingFields = [];
-      if (!contractCharacteristics.application_characteristic_id) missingFields.push('application_characteristic_id');
-      if (!contractCharacteristics.property_characteristic_id) missingFields.push('property_characteristic_id');
-      if (!contractCharacteristics.rental_owner_characteristic_id) missingFields.push('rental_owner_characteristic_id');
-      if (!contractCharacteristics.contract_conditions_characteristic_id) missingFields.push('contract_conditions_characteristic_id');
-      if (!contractCharacteristics.guarantor_characteristic_id) missingFields.push('guarantor_characteristic_id');
-
-      if (missingFields.length > 0) {
-        throw new Error(`Faltan datos requeridos: ${missingFields.join(', ')}`);
-      }
-
-      // Preparar payload para el webhook
+      // 6. Preparar y enviar payload al webhook (código existente)
       const webhookPayload = {
-        application_characteristic_id: contractCharacteristics.application_characteristic_id,
-        property_characteristic_id: contractCharacteristics.property_characteristic_id,
-        rental_owner_characteristic_id: contractCharacteristics.rental_owner_characteristic_id,
-        contract_conditions_characteristic_id: contractCharacteristics.contract_conditions_characteristic_id,
-        guarantor_characteristic_id: contractCharacteristics.guarantor_characteristic_id,
+        // Datos del postulante
+        applicant_name: selectedProfile.name,
+        applicant_rut: selectedProfile.rut || '',
+        applicant_email: selectedProfile.profile.email,
+        applicant_phone: selectedProfile.profile.phone,
 
-        // Metadatos adicionales (opcional)
-        timestamp: new Date().toISOString(),
-        platform: 'plataforma_inmobiliaria',
-        action: 'generate_contract'
+        // Datos de la propiedad
+        property_id: property?.id || '',
+        property_address: (property?.address_street || '') + ' ' + (property?.address_number || ''),
+        property_type: propertyTypeData?.name || 'No especificado',
+
+        // Datos del propietario
+        owner_name: ownerData?.name || 'No especificado',
+        owner_rut: ownerData?.rut || 'No especificado',
+
+        // Condiciones del contrato
+        contract_start_date: formData.contract_start_date,
+        contract_end_date: formData.contract_end_date,
+        monthly_rent: Number(formData.monthly_rent),
+        warranty_amount: Number(formData.warranty_amount),
+        payment_day: Number(formData.payment_day),
+
+        // Corredor
+        broker_name: formData.broker_name || '',
+        broker_rut: formData.broker_rut || '',
+        final_rent_price: Number(formData.final_rent_price),
+
+        // Condiciones especiales
+        special_conditions_house: formData.special_conditions_house || '',
+        dicom_clause: formData.dicom_clause,
+
+        // Email de notificación
+        notification_email: formData.notification_email,
+
+        // Condiciones de pago
+        payment_conditions: formData.payment_conditions || '',
+
+        // Datos bancarios
+        bank_name: formData.bank_name || '',
+        account_type: formData.account_type || '',
+        account_number: formData.account_number || '',
+        account_holder_name: formData.account_holder_name || '',
+        account_holder_rut: formData.account_holder_rut || '',
+
+        // NUEVO - Incluir IDs del contrato para que n8n pueda actualizar
+        contract_id: contractRecord.id,
+        contract_number: contractRecord.contract_number,
+        application_id: selectedProfile.applicationId,
       };
 
-      console.log('📤 Enviando datos al webhook de n8n:', webhookPayload);
+      console.log('📤 Enviando al webhook de n8n...');
+      console.log('📦 Payload completo:', webhookPayload);
 
-      // Enviar al webhook de n8n (usando GET con query parameters)
-      const queryParams = new URLSearchParams({
-        application_characteristic_id: webhookPayload.application_characteristic_id || '',
-        property_characteristic_id: webhookPayload.property_characteristic_id || '',
-        rental_owner_characteristic_id: webhookPayload.rental_owner_characteristic_id || '',
-        contract_conditions_characteristic_id: webhookPayload.contract_conditions_characteristic_id || '',
-        guarantor_characteristic_id: webhookPayload.guarantor_characteristic_id || '',
-        timestamp: webhookPayload.timestamp,
-        platform: webhookPayload.platform,
-        action: webhookPayload.action
-      });
+      const contractWebhookUrl = import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_URL;
 
-      const webhookUrl = `https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb?${queryParams.toString()}`;
+      if (!contractWebhookUrl) {
+        throw new Error('URL del webhook no configurada');
+      }
 
-      console.log('🌐 URL completa del webhook:', webhookUrl);
-
-      const response = await fetch(webhookUrl, {
-        method: 'GET',
+      const webhookResponse = await fetch(contractWebhookUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify(webhookPayload)
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error del webhook (${response.status}): ${errorText}`);
+      if (!webhookResponse.ok) {
+        const errorText = await webhookResponse.text();
+        console.error('❌ Error del webhook:', errorText);
+        throw new Error(`Error del webhook: ${webhookResponse.status}`);
       }
 
-      // El webhook puede devolver respuesta vacía o no JSON
-      let result;
-      try {
-        const responseText = await response.text();
-        result = responseText ? JSON.parse(responseText) : { success: true };
-      } catch (parseError) {
-        // Si no es JSON válido, asumir éxito
-        result = { success: true, message: 'Webhook ejecutado correctamente' };
-      }
-      console.log('✅ Respuesta del webhook:', result);
+      const webhookResult = await webhookResponse.json();
+      console.log('✅ Respuesta del webhook:', webhookResult);
 
-      // Actualizar estado del contrato en la BD
-      const { error: updateError } = await supabase
-        .from('applications')
-        .update({
-          status: 'contrato_generado',
-          contract_generated_at: new Date().toISOString()
-        })
-        .eq('id', applicationId);
-
-      if (updateError) {
-        console.error('⚠️ Error al actualizar estado:', updateError);
-      }
-
-      // Mostrar notificación de éxito
       toast.success('Contrato generado y enviado exitosamente');
 
-      // Cerrar el modal
+      // Cerrar modal y recargar datos
       setIsContractModalOpen(false);
-
-      // Opcional: Recargar datos o redirigir
-      // navigate('/contracts');
+      // Recargar datos de la propiedad si es necesario
+      // fetchPropertyDetails();
 
     } catch (error) {
       console.error('❌ Error al generar contrato:', error);
-      setError(error.message || 'Error al generar el contrato');
-      toast.error(`Error: ${error.message}`);
+      toast.error('Error al generar el contrato');
+
+      // ROLLBACK: Si se creó el registro del contrato pero falló algo después, mantenerlo
+      // El registro ya está creado, pero n8n no lo procesó aún, así que queda en estado 'draft'
+      // Esto es intencional para poder reintentar
+
     } finally {
       setIsGenerating(false);
     }
@@ -845,7 +1124,7 @@ export const AdminPropertyDetailView: React.FC = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-blue-600 font-semibold text-sm">
-                            {postulation.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            {postulation.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                           </span>
                         </div>
                         <div className="ml-4">
@@ -1263,8 +1542,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                     </label>
                     <input
                       type="date"
-                      value={contractForm.startDate}
-                      onChange={(e) => handleContractFormChange('startDate', e.target.value)}
+                      value={formData.contract_start_date}
+                      onChange={(e) => handleContractFormChange('contract_start_date', e.target.value)}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       required
                     />
@@ -1276,7 +1555,7 @@ export const AdminPropertyDetailView: React.FC = () => {
                       Duración del Contrato (meses) <span className="text-red-500">*</span>
                     </label>
                     <select
-                      value={contractForm.duration}
+                      value={formData.duration}
                       onChange={(e) => handleContractFormChange('duration', e.target.value)}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     >
@@ -1296,8 +1575,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      value={contractForm.guaranteeAmount}
-                      onChange={(e) => handleContractFormChange('guaranteeAmount', e.target.value)}
+                      value={formData.warranty_amount}
+                      onChange={(e) => handleContractFormChange('warranty_amount', e.target.value)}
                       placeholder="Ej: 850000"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       required
@@ -1310,8 +1589,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                       Día de Pago Mensual <span className="text-red-500">*</span>
                     </label>
                     <select
-                      value={contractForm.paymentDay}
-                      onChange={(e) => handleContractFormChange('paymentDay', e.target.value)}
+                      value={formData.payment_day}
+                      onChange={(e) => handleContractFormChange('payment_day', e.target.value)}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
@@ -1339,8 +1618,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                         type="number"
                         min={0}
                         step={1000}
-                        value={contractForm.finalRentPrice}
-                        onChange={(e) => handleContractFormChange('finalRentPrice', e.target.value)}
+                        value={formData.final_rent_price}
+                        onChange={(e) => handleContractFormChange('final_rent_price', e.target.value)}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                         placeholder="Ej: 500000"
                         required
@@ -1354,8 +1633,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        value={contractForm.brokerName}
-                        onChange={(e) => handleContractFormChange('brokerName', e.target.value)}
+                        value={formData.broker_name}
+                        onChange={(e) => handleContractFormChange('broker_name', e.target.value)}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                         placeholder="Ej: María López"
                         maxLength={120}
@@ -1370,8 +1649,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        value={contractForm.brokerRut}
-                        onChange={(e) => handleContractFormChange('brokerRut', e.target.value)}
+                        value={formData.broker_rut}
+                        onChange={(e) => handleContractFormChange('broker_rut', e.target.value)}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                         placeholder="Ej: 12.345.678-9"
                         maxLength={12}
@@ -1396,8 +1675,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                         <input
                           type="checkbox"
                           id="allowsPets"
-                          checked={contractForm.allowsPets}
-                          onChange={(e) => handleContractFormChange('allowsPets', e.target.checked)}
+                          checked={formData.allows_pets}
+                          onChange={(e) => handleContractFormChange('allows_pets', e.target.checked)}
                           className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                         <label htmlFor="allowsPets" className="ml-3 text-sm font-semibold text-gray-700">
@@ -1411,7 +1690,7 @@ export const AdminPropertyDetailView: React.FC = () => {
                           Cláusula de Subarriendo
                         </label>
                         <select
-                          value={contractForm.sublease}
+                          value={formData.sublease}
                           onChange={(e) => handleContractFormChange('sublease', e.target.value)}
                           className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         >
@@ -1427,8 +1706,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                         </label>
                         <input
                           type="number"
-                          value={contractForm.maxOccupants}
-                          onChange={(e) => handleContractFormChange('maxOccupants', e.target.value)}
+                          value={formData.max_occupants}
+                          onChange={(e) => handleContractFormChange('max_occupants', e.target.value)}
                           placeholder="Ej: 4"
                           min="1"
                           className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -1455,8 +1734,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                           Uso Permitido
                         </label>
                         <textarea
-                          value={contractForm.allowedUse}
-                          onChange={(e) => handleContractFormChange('allowedUse', e.target.value)}
+                          value={formData.allowed_use}
+                          onChange={(e) => handleContractFormChange('allowed_use', e.target.value)}
                           placeholder="Ej: Almacenamiento de enseres domésticos"
                           rows={3}
                           className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -1469,8 +1748,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                           Cláusula de Acceso
                         </label>
                         <textarea
-                          value={contractForm.accessClause}
-                          onChange={(e) => handleContractFormChange('accessClause', e.target.value)}
+                          value={formData.access_clause}
+                          onChange={(e) => handleContractFormChange('access_clause', e.target.value)}
                           placeholder="Ej: Acceso 24/7 con llave magnética"
                           rows={3}
                           className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -1480,6 +1759,59 @@ export const AdminPropertyDetailView: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Condiciones Especiales para Casa */}
+                {(property.tipo_propiedad === 'Casa' || property.tipo_propiedad === 'Departamento' || !property.tipo_propiedad) && (
+                  <div className="mt-8 p-6 bg-purple-50 rounded-xl border-2 border-purple-200">
+                    <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                      <Building2 className="w-5 h-5 text-purple-600 mr-2" />
+                      Condiciones Especiales para Casa
+                    </h4>
+                    <div className="bg-white rounded-lg p-4">
+                      <textarea
+                        value={formData.special_conditions_house}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          special_conditions_house: e.target.value
+                        }))}
+                        placeholder="Ej: Jardín compartido, uso de estacionamiento, etc."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Cláusula DICOM - NUEVO */}
+                <div className="mt-8 p-6 bg-amber-50 rounded-xl border-2 border-amber-200">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 mr-2" />
+                    Cláusula DICOM
+                  </h4>
+                  <div className="bg-white rounded-lg p-4">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.dicom_clause}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          dicom_clause: e.target.checked
+                        }))}
+                        className="mt-1 w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-900 block mb-1">
+                          Incluir cláusula de terminación anticipada por ingreso a DICOM
+                        </span>
+                        <p className="text-xs text-gray-600">
+                          Si se marca, el contrato incluirá una cláusula que permite al arrendador
+                          terminar anticipadamente el contrato en caso de que el arrendatario ingrese
+                          a DICOM durante la vigencia del arriendo.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
 
                 {/* Sección: Condiciones de Pago */}
                 <div className="mt-8 p-6 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border-2 border-emerald-300">
@@ -1495,8 +1827,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      value={contractForm.brokerCommission}
-                      onChange={(e) => handleContractFormChange('brokerCommission', e.target.value)}
+                      value={formData.broker_commission}
+                      onChange={(e) => handleContractFormChange('broker_commission', e.target.value)}
                       placeholder="Ingrese el monto de la comisión"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     />
@@ -1516,8 +1848,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                           type="radio"
                           name="paymentMethod"
                           value="transferencia"
-                          checked={contractForm.paymentMethod === 'transferencia'}
-                          onChange={(e) => handleContractFormChange('paymentMethod', e.target.value)}
+                          checked={formData.payment_method === 'transferencia'}
+                          onChange={(e) => handleContractFormChange('payment_method', e.target.value)}
                           className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
                         />
                         <span className="ml-3 text-sm font-semibold text-gray-700">
@@ -1540,7 +1872,7 @@ export const AdminPropertyDetailView: React.FC = () => {
                   </div>
 
                   {/* Datos para Transferencia (Condicional) */}
-                  {contractForm.paymentMethod === 'transferencia' && (
+                  {formData.payment_method === 'transferencia' && (
                     <div className="p-5 bg-white rounded-lg border-2 border-emerald-400">
                       <h5 className="text-md font-bold text-gray-800 mb-4 flex items-center">
                         <span className="mr-2">🏦</span>
@@ -1555,8 +1887,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                           </label>
                           <input
                             type="text"
-                            value={contractForm.bankAccountHolder}
-                            onChange={(e) => handleContractFormChange('bankAccountHolder', e.target.value)}
+                            value={formData.account_holder_name}
+                            onChange={(e) => handleContractFormChange('account_holder_name', e.target.value)}
                             placeholder="Ej: Juan Pérez González"
                             className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                           />
@@ -1569,8 +1901,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                           </label>
                           <input
                             type="text"
-                            value={contractForm.bankAccountRut}
-                            onChange={(e) => handleContractFormChange('bankAccountRut', e.target.value)}
+                            value={formData.account_holder_rut}
+                            onChange={(e) => handleContractFormChange('account_holder_rut', e.target.value)}
                             placeholder="Ej: 12.345.678-9"
                             className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                           />
@@ -1582,8 +1914,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                             Banco <span className="text-red-500">*</span>
                           </label>
                           <select
-                            value={contractForm.bankName}
-                            onChange={(e) => handleContractFormChange('bankName', e.target.value)}
+                            value={formData.bank_name}
+                            onChange={(e) => handleContractFormChange('bank_name', e.target.value)}
                             className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                           >
                             <option value="">Seleccione un banco</option>
@@ -1609,8 +1941,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                             Tipo de Cuenta <span className="text-red-500">*</span>
                           </label>
                           <select
-                            value={contractForm.bankAccountType}
-                            onChange={(e) => handleContractFormChange('bankAccountType', e.target.value)}
+                            value={formData.account_type}
+                            onChange={(e) => handleContractFormChange('account_type', e.target.value)}
                             className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                           >
                             <option value="">Seleccione tipo de cuenta</option>
@@ -1628,8 +1960,8 @@ export const AdminPropertyDetailView: React.FC = () => {
                           </label>
                           <input
                             type="text"
-                            value={contractForm.bankAccountNumber}
-                            onChange={(e) => handleContractFormChange('bankAccountNumber', e.target.value)}
+                            value={formData.account_number}
+                            onChange={(e) => handleContractFormChange('account_number', e.target.value)}
                             placeholder="Ej: 12345678"
                             className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                           />
@@ -1637,6 +1969,37 @@ export const AdminPropertyDetailView: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* Email de Notificación - NUEVO */}
+                <div className="mt-8 p-6 bg-blue-50 rounded-xl border-2 border-blue-200">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <Mail className="w-5 h-5 text-blue-600 mr-2" />
+                    Email de Notificación
+                  </h4>
+                  <div className="bg-white rounded-lg p-4">
+                    <div className="space-y-3">
+                      <label className="block">
+                        <span className="text-sm font-medium text-gray-700 mb-1 block">
+                          Correo Electrónico para Notificación *
+                        </span>
+                        <input
+                          type="email"
+                          value={formData.notification_email}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            notification_email: e.target.value.trim()
+                          }))}
+                          placeholder="ejemplo@correo.com"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </label>
+                      <p className="text-xs text-gray-600">
+                        El contrato generado será enviado a esta dirección de correo electrónico.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
               </div>
@@ -1651,7 +2014,7 @@ export const AdminPropertyDetailView: React.FC = () => {
                   Cancelar
                 </button>
                 <button
-                  onClick={() => handleGenerateContract(selectedProfile.id)}
+                  onClick={() => handleGenerateContract()}
                   disabled={isGenerating || !selectedProfile}
                   className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >

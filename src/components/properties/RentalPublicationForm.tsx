@@ -83,7 +83,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
       const formData = {
         // Información de la Propiedad
-        tipoPropiedad: initialData.property_type || '',
+        tipoPropiedad: initialData.property_type || 'Casa',
         address_street: initialData.address_street || '',
         address_number: initialData.address_number || '',
         address_department: initialData.address_department || '',
@@ -174,7 +174,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     // Valores por defecto para nueva propiedad
     return {
       // Información de la Propiedad
-      tipoPropiedad: '',
+      tipoPropiedad: 'Casa',
       address_street: '',
       address_number: '',
       address_department: '',
@@ -361,50 +361,61 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
   // Validation
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+    try {
+      console.log('🔍 Validando formulario...');
+      const newErrors: Record<string, string> = {};
 
     // Required fields validation
-    if (!formData.address_street.trim()) newErrors.address_street = 'La calle es requerida';
-    if (!formData.address_number.trim()) newErrors.address_number = 'El número es requerido';
+    if (!formData.address_street || !formData.address_street.trim()) newErrors.address_street = 'La calle es requerida';
+    if (!formData.address_number || !formData.address_number.trim()) newErrors.address_number = 'El número es requerido';
     if (!formData.region) newErrors.region = 'La región es requerida';
     if (!formData.commune) newErrors.commune = 'La comuna es requerida';
-    if (!formData.price.trim()) newErrors.price = 'El precio de arriendo es requerido';
+    if (!formData.price || !formData.price.trim()) newErrors.price = 'El precio de arriendo es requerido';
 
     // Validación específica para Bodega
     if (propertyType === 'Bodega') {
       if (!formData.numeroBodega || formData.numeroBodega.trim() === '') {
         newErrors.numeroBodega = 'El número de bodega es requerido';
       }
-      if (!formData.metrosTotales.trim()) newErrors.metrosTotales = 'Los M² de la bodega son requeridos';
+      if (!formData.metrosTotales || !formData.metrosTotales.trim()) newErrors.metrosTotales = 'Los M² de la bodega son requeridos';
       // Descripción opcional para bodegas
     } else {
       // M² son requeridos solo si NO es estacionamiento, NO es bodega y NO es Parcela
-      if (!isParking && propertyType !== 'Parcela' && !formData.metrosUtiles.trim()) newErrors.metrosUtiles = 'Los metros útiles son requeridos';
-      if (!isParking && !formData.metrosTotales.trim()) newErrors.metrosTotales = 'Los metros totales son requeridos';
-      if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
+      if (!isParking && propertyType !== 'Parcela' && (!formData.metrosUtiles || !formData.metrosUtiles.trim())) newErrors.metrosUtiles = 'Los metros útiles son requeridos';
+      if (!isParking && (!formData.metrosTotales || !formData.metrosTotales.trim())) newErrors.metrosTotales = 'Los metros totales son requeridos';
+      if (!formData.description || !formData.description.trim()) newErrors.description = 'La descripción es requerida';
     }
     // Validaciones condicionales según el tipo de propietario
     if (formData.owner_type === 'natural') {
-      if (!formData.owner_first_name.trim()) newErrors.owner_first_name = 'El nombre del propietario es requerido';
-      if (!formData.owner_paternal_last_name.trim()) newErrors.owner_paternal_last_name = 'El apellido paterno del propietario es requerido';
-      if (!formData.owner_maternal_last_name.trim()) newErrors.owner_maternal_last_name = 'El apellido materno del propietario es requerido';
-      if (!formData.owner_rut.trim()) newErrors.owner_rut = 'El RUT del propietario es requerido';
+      if (!formData.owner_first_name || !formData.owner_first_name.trim()) newErrors.owner_first_name = 'El nombre del propietario es requerido';
+      if (!formData.owner_paternal_last_name || !formData.owner_paternal_last_name.trim()) newErrors.owner_paternal_last_name = 'El apellido paterno del propietario es requerido';
+      if (!formData.owner_maternal_last_name || !formData.owner_maternal_last_name.trim()) newErrors.owner_maternal_last_name = 'El apellido materno del propietario es requerido';
+      if (!formData.owner_rut || !formData.owner_rut.trim()) newErrors.owner_rut = 'El RUT del propietario es requerido';
+      // Validación de RUT deshabilitada para pruebas
+      // if (formData.owner_rut && formData.owner_rut.trim() && !validateRut(formData.owner_rut)) {
+      //   newErrors.owner_rut = 'El RUT del propietario no es válido';
+      // }
       if (!formData.marital_status) newErrors.marital_status = 'El estado civil es requerido';
     } else if (formData.owner_type === 'juridica') {
-      if (!formData.owner_company_name.trim()) newErrors.owner_company_name = 'La razón social es requerida';
-      if (!formData.owner_company_rut.trim()) newErrors.owner_company_rut = 'El RUT de la empresa es requerido';
+      if (!formData.owner_company_name || !formData.owner_company_name.trim()) newErrors.owner_company_name = 'La razón social es requerida';
+      if (!formData.owner_company_rut || !formData.owner_company_rut.trim()) newErrors.owner_company_rut = 'El RUT de la empresa es requerido';
 
       // Validaciones para el representante legal
-      if (!formData.owner_representative_first_name.trim()) newErrors.owner_representative_first_name = 'El nombre del representante legal es requerido';
-      if (!formData.owner_representative_paternal_last_name.trim()) newErrors.owner_representative_paternal_last_name = 'El apellido paterno del representante legal es requerido';
-      if (!formData.owner_representative_rut.trim()) newErrors.owner_representative_rut = 'El RUT del representante legal es requerido';
+      if (!formData.owner_representative_first_name || !formData.owner_representative_first_name.trim()) newErrors.owner_representative_first_name = 'El nombre del representante legal es requerido';
+      if (!formData.owner_representative_paternal_last_name || !formData.owner_representative_paternal_last_name.trim()) newErrors.owner_representative_paternal_last_name = 'El apellido paterno del representante legal es requerido';
+      if (!formData.owner_representative_rut || !formData.owner_representative_rut.trim()) newErrors.owner_representative_rut = 'El RUT del representante legal es requerido';
     }
 
     // Validaciones comunes para ambos tipos
-    if (!formData.owner_address_street.trim()) newErrors.owner_address_street = 'La calle del propietario es requerida';
-    if (!formData.owner_address_number.trim()) newErrors.owner_address_number = 'El número del propietario es requerido';
+    if (!formData.owner_address_street || !formData.owner_address_street.trim()) newErrors.owner_address_street = 'La calle del propietario es requerida';
+    if (!formData.owner_address_number || !formData.owner_address_number.trim()) newErrors.owner_address_number = 'El número del propietario es requerido';
     if (!formData.owner_region) newErrors.owner_region = 'La región del propietario es requerida';
     if (!formData.owner_commune) newErrors.owner_commune = 'La comuna del propietario es requerida';
+
+    // Validación de email para personas naturales
+    if (formData.owner_type === 'natural' && (!formData.owner_email || !formData.owner_email.trim())) {
+      newErrors.owner_email = 'El email del propietario es requerido';
+    }
 
     // Validate property_regime if married (solo para personas naturales)
     if (formData.owner_type === 'natural' && formData.marital_status === 'casado' && !formData.property_regime) {
@@ -428,7 +439,23 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
     // Photos and documents are now OPTIONAL - no validation required
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    const isValid = Object.keys(newErrors).length === 0;
+    console.log(`📋 Validación completada. Errores encontrados: ${Object.keys(newErrors).length}`);
+    if (!isValid) {
+      console.log('❌ Errores de validación:', newErrors);
+    } else {
+      console.log('✅ Formulario válido');
+    }
+
+      return isValid;
+    } catch (error) {
+      console.error('❌ Error en validación:', error);
+      console.error('Stack trace:', error.stack);
+      // En caso de error, mostrar mensaje genérico
+      setErrors({ submit: 'Error en la validación del formulario. Revisa los campos e intenta nuevamente.' });
+      return false;
+    }
   };
 
   // Upload files to Supabase Storage with fallback buckets
@@ -571,16 +598,30 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🚀 Iniciando handleSubmit...');
+    console.log('📋 Estado del formulario:', {
+      owner_type: formData.owner_type,
+      tipoPropiedad: formData.tipoPropiedad,
+      address_street: formData.address_street,
+      address_number: formData.address_number,
+      price: formData.price,
+      region: formData.region,
+      commune: formData.commune,
+    });
 
     if (!validateForm()) {
+      console.log('❌ Validación fallida, deteniendo submit');
       return;
     }
+    console.log('✅ Validación exitosa, continuando...');
 
     // Validate user is authenticated
     if (!user?.id) {
+      console.log('❌ Usuario no autenticado');
       setErrors({ submit: 'Debes estar autenticado para publicar una propiedad.' });
       return;
     }
+    console.log('✅ Usuario autenticado:', user.id);
 
     setLoading(true);
 
@@ -609,6 +650,11 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       // Validate REQUIRED fields only (price must always be valid)
       if (price === null || price <= 0) {
         throw new Error('El precio es requerido y debe ser mayor a 0');
+      }
+
+      // Validate tipo_propiedad (required and cannot be empty)
+      if (!formData.tipoPropiedad || formData.tipoPropiedad.trim() === '') {
+        throw new Error('El tipo de propiedad es requerido. Por favor selecciona un tipo de propiedad.');
       }
 
       // Validate required numeric fields based on property type
@@ -752,15 +798,18 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       if (propertyResult?.id && !isEditing) {
         const ownerData = {
           property_id: propertyResult.id,
-          // Campos comunes
-          address_street: formData.owner_address_street,
-          address_number: formData.owner_address_number,
-          address_department: null,
-          address_commune: formData.owner_commune,
-          address_region: formData.owner_region,
+        // Campos comunes
+        address_street: formData.owner_address_street,
+        address_number: formData.owner_address_number,
+        address_department: null,
+        address_commune: formData.owner_commune,
+        address_region: formData.owner_region,
+        phone: formData.owner_phone,
+        email: formData.owner_email,
         };
 
         // Agregar campos específicos según el tipo de propietario
+        // Nota: rental_owners table solo soporta personas naturales, no jurídicas
         if (formData.owner_type === 'natural') {
           Object.assign(ownerData, {
             first_name: formData.owner_first_name,
@@ -769,18 +818,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             rut: formData.owner_rut,
             marital_status: formData.marital_status,
             property_regime: formData.marital_status === 'casado' ? formData.property_regime : null,
-            owner_type: 'natural',
           });
         } else if (formData.owner_type === 'juridica') {
-          Object.assign(ownerData, {
-            company_name: formData.owner_company_name,
-            company_rut: formData.owner_company_rut,
-            representative_first_name: formData.owner_representative_first_name,
-            representative_paternal_last_name: formData.owner_representative_paternal_last_name,
-            representative_maternal_last_name: formData.owner_representative_maternal_last_name,
-            representative_rut: formData.owner_representative_rut,
-            owner_type: 'juridica',
-          });
+          // Para personas jurídicas, no guardamos en rental_owners
+          // Los datos se guardan solo en la tabla properties
+          console.log('ℹ️ Persona jurídica detectada - omitiendo guardado en rental_owners');
+          return; // Salir de la función sin guardar
         }
 
         const { data: ownerResult, error: ownerError } = await supabase
@@ -828,6 +871,35 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       setLoading(false);
     }
   };
+
+  // Función para validar RUT chileno (deshabilitada para pruebas)
+  // const validateRut = (rut: string): boolean => {
+  //   if (!rut || !rut.trim()) return false;
+  //
+  //   // Limpiar el RUT (quitar puntos y guión)
+  //   const cleanRut = rut.replace(/[.\-]/g, '');
+  //
+  //   // Verificar que tenga al menos 8 dígitos
+  //   if (cleanRut.length < 8) return false;
+  //
+  //   // Separar número y dígito verificador
+  //   const body = cleanRut.slice(0, -1);
+  //   const verifier = cleanRut.slice(-1).toUpperCase();
+  //
+  //   // Calcular dígito verificador
+  //   let sum = 0;
+  //   let multiplier = 2;
+  //
+  //   for (let i = body.length - 1; i >= 0; i--) {
+  //     sum += parseInt(body[i]) * multiplier;
+  //     multiplier = multiplier === 7 ? 2 : multiplier + 1;
+  //   }
+  //
+  //   const calculatedVerifier = 11 - (sum % 11);
+  //   const expectedVerifier = calculatedVerifier === 11 ? '0' : calculatedVerifier === 10 ? 'K' : calculatedVerifier.toString();
+  //
+  //   return verifier === expectedVerifier;
+  // };
 
   // Document configuration
   const requiredDocuments = [

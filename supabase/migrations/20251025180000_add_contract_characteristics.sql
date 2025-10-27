@@ -89,3 +89,4 @@ CREATE TRIGGER update_contract_conditions_updated_at
 -- 4. Verificar permisos:
 -- SELECT grantee, privilege_type FROM information_schema.role_table_grants WHERE table_name = 'contract_conditions';
 -- =====================================================
+

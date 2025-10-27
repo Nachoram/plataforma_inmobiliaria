@@ -174,3 +174,4 @@ const fetchContractData = async (applicationId) => {
 
 // Ejecutar el script
 populateTestData();
+

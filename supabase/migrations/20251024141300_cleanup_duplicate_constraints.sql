@@ -50,3 +50,4 @@ END $$;
 -- - rental_contract_conditions_application_id_fkey
 -- - rental_contract_conditions_created_by_fkey
 -- =====================================================
+

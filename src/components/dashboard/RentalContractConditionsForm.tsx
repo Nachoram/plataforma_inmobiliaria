@@ -557,20 +557,6 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
               <div className="flex items-center">
                 <input
                   type="checkbox"
-                  id="dicom_clause"
-                  checked={formData.dicom_clause}
-                  onChange={(e) => handleInputChange('dicom_clause', e.target.checked)}
-                  className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                />
-                <label htmlFor="dicom_clause" className="ml-2 text-sm text-gray-700">
-                  <span className="font-medium">Cláusula DICOM</span>
-                  <span className="text-gray-500 ml-2">Derecho a Crédito por Cobranza Indebida</span>
-                </label>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
                   id="automatic_renewal"
                   checked={formData.automatic_renewal}
                   onChange={(e) => handleInputChange('automatic_renewal', e.target.checked)}
@@ -580,6 +566,43 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
                   <span className="font-medium">Renovación Automática</span>
                   <span className="text-gray-500 ml-2">El contrato se renueva automáticamente al término del plazo</span>
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección: Cláusula DICOM */}
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-1 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  Cláusula de DICOM
+                </h3>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.dicom_clause || false}
+                    onChange={(e) => handleInputChange('dicom_clause', e.target.checked)}
+                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      Incluir cláusula de terminación anticipada por ingreso a DICOM
+                    </span>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Si se marca, el contrato incluirá una cláusula que permite al propietario
+                      terminar anticipadamente el contrato si el arrendatario ingresa al registro
+                      DICOM durante la vigencia del arriendo.
+                    </p>
+                  </div>
+                </label>
+                {formData.dicom_clause && (
+                  <div className="mt-3 p-2 bg-amber-100 border border-amber-300 rounded">
+                    <p className="text-xs text-amber-800">
+                      ✓ El contrato incluirá la cláusula de terminación por ingreso a DICOM
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -10,6 +10,70 @@ interface PropertyPublicationFormProps {
   onCancel?: () => void;
 }
 
+// Interfaz para datos del propietario
+interface RentalOwnerData {
+  first_name: string;
+  paternal_last_name: string;
+  maternal_last_name: string | null;
+  rut: string;
+  address_street: string | null;
+  address_number: string | null;
+  address_department: string | null;
+  address_commune: string | null;
+  address_region: string | null;
+  marital_status: 'soltero' | 'casado' | 'divorciado' | 'viudo' | 'conviviente_civil';
+  property_regime: 'separacion_bienes' | 'sociedad_conyugal' | 'participacion_gananciales' | null;
+  phone: string | null;
+  email: string | null;
+}
+
+// Interfaz para el formulario completo de publicación
+interface PublishPropertyFormData {
+  // Información de la propiedad
+  listing_type: 'venta' | 'arriendo';
+  address_street: string;
+  address_number: string;
+  address_department: string;
+  address_commune: string;
+  address_region: string;
+  price_clp: string;
+  common_expenses_clp: string;
+  bedrooms: string;
+  bathrooms: string;
+  surface_m2: string;
+  tiene_bodega: 'Sí' | 'No';
+  metros_bodega: string;
+  ubicacion_bodega: string;
+  ubicacion_estacionamiento: string;
+  description: string;
+
+  // Información del propietario
+  owner_type: 'natural' | 'juridica';
+  // Campos para persona natural
+  owner_first_name: string;
+  owner_paternal_last_name: string;
+  owner_maternal_last_name: string;
+  owner_rut: string;
+  owner_email: string;
+  owner_phone: string;
+  // Campos para persona jurídica
+  owner_company_name: string;
+  owner_company_rut: string;
+  owner_company_business: string;
+  owner_company_email: string;
+  owner_company_phone: string;
+  // Campos para representante legal
+  owner_representative_first_name: string;
+  owner_representative_paternal_last_name: string;
+  owner_representative_maternal_last_name: string;
+  owner_representative_rut: string;
+  owner_representative_email: string;
+  owner_representative_phone: string;
+
+  // Datos del propietario para rental_owners
+  owner: RentalOwnerData;
+}
+
 const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   property,
   onSuccess,
@@ -23,7 +87,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileComplete, setProfileComplete] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PublishPropertyFormData>({
     // Información de la propiedad
     listing_type: 'venta' as 'venta' | 'arriendo',
     address_street: '',
@@ -64,6 +128,23 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
     owner_representative_rut: '',
     owner_representative_email: '',
     owner_representative_phone: '',
+
+    // Datos del propietario para rental_owners - NUEVO
+    owner: {
+      first_name: '',
+      paternal_last_name: '',
+      maternal_last_name: null,
+      rut: '',
+      address_street: null,
+      address_number: null,
+      address_department: null,
+      address_commune: null,
+      address_region: null,
+      marital_status: 'soltero',
+      property_regime: null,
+      phone: null,
+      email: null,
+    }
   });
 
   const [images, setImages] = useState<File[]>([]);
@@ -73,6 +154,156 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
 
   // Usar constantes compartidas
   const regions = CHILE_REGIONS;
+
+  // Función para validar RUT chileno
+  const validateRut = (rut: string): boolean => {
+    if (!rut || !rut.trim()) return false;
+
+    // Limpiar el RUT (quitar puntos y guión)
+    const cleanRut = rut.replace(/[.\-]/g, '');
+
+    // Verificar que tenga al menos 8 dígitos
+    if (cleanRut.length < 8) return false;
+
+    // Separar número y dígito verificador
+    const body = cleanRut.slice(0, -1);
+    const verifier = cleanRut.slice(-1).toUpperCase();
+
+    // Calcular dígito verificador
+    let sum = 0;
+    let multiplier = 2;
+
+    for (let i = body.length - 1; i >= 0; i--) {
+      sum += parseInt(body[i]) * multiplier;
+      multiplier = multiplier === 7 ? 2 : multiplier + 1;
+    }
+
+    const calculatedVerifier = 11 - (sum % 11);
+    const expectedVerifier = calculatedVerifier === 11 ? '0' : calculatedVerifier === 10 ? 'K' : calculatedVerifier.toString();
+
+    return verifier === expectedVerifier;
+  };
+
+  /**
+   * Guarda o actualiza los datos del propietario en rental_owners
+   * @param propertyId - ID de la propiedad asociada
+   * @param ownerData - Datos del propietario del formulario
+   * @returns ID del propietario creado/actualizado
+   */
+  const saveRentalOwner = async (
+    propertyId: string,
+    ownerData: RentalOwnerData
+  ): Promise<string> => {
+    try {
+      console.log('💾 Guardando datos del propietario...');
+      console.log('🏠 Property ID:', propertyId);
+      console.log('👤 Owner data:', ownerData);
+
+      // 1. Validar campos requeridos
+      if (!ownerData.first_name?.trim()) {
+        throw new Error('El nombre del propietario es requerido');
+      }
+      if (!ownerData.paternal_last_name?.trim()) {
+        throw new Error('El apellido paterno del propietario es requerido');
+      }
+      if (!ownerData.rut?.trim()) {
+        throw new Error('El RUT del propietario es requerido');
+      }
+
+      // 2. Validar RUT
+      if (!validateRut(ownerData.rut)) {
+        throw new Error('El RUT del propietario no es válido');
+      }
+
+      // 3. Validar property_regime solo si está casado
+      if (ownerData.marital_status === 'casado' && !ownerData.property_regime) {
+        throw new Error('Debe especificar el régimen patrimonial si el propietario está casado');
+      }
+
+      // 4. Limpiar property_regime si NO está casado
+      const cleanPropertyRegime = ownerData.marital_status === 'casado'
+        ? ownerData.property_regime
+        : null;
+
+      // 5. Verificar si ya existe un propietario para esta propiedad
+      const { data: existingOwner, error: checkError } = await supabase
+        .from('rental_owners')
+        .select('id')
+        .eq('property_id', propertyId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('❌ Error verificando propietario existente:', checkError);
+        throw checkError;
+      }
+
+      // 6. Preparar datos para inserción/actualización
+      const ownerPayload = {
+        property_id: propertyId,
+        first_name: ownerData.first_name.trim(),
+        paternal_last_name: ownerData.paternal_last_name.trim(),
+        maternal_last_name: ownerData.maternal_last_name?.trim() || null,
+        rut: ownerData.rut.trim(),
+        address_street: ownerData.address_street?.trim() || null,
+        address_number: ownerData.address_number?.trim() || null,
+        address_department: ownerData.address_department?.trim() || null,
+        address_commune: ownerData.address_commune?.trim() || null,
+        address_region: ownerData.address_region?.trim() || null,
+        marital_status: ownerData.marital_status,
+        property_regime: cleanPropertyRegime,
+        phone: ownerData.phone?.trim() || null,
+        email: ownerData.email?.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existingOwner) {
+        // Actualizar propietario existente
+        console.log('📝 Actualizando propietario existente:', existingOwner.id);
+
+        const { data: updatedOwner, error: updateError } = await supabase
+          .from('rental_owners')
+          .update(ownerPayload)
+          .eq('id', existingOwner.id)
+          .select('id, rental_owner_characteristic_id')
+          .single();
+
+        if (updateError) {
+          console.error('❌ Error actualizando propietario:', updateError);
+          throw updateError;
+        }
+
+        console.log('✅ Propietario actualizado:', updatedOwner.id);
+        console.log('🆔 Characteristic ID:', updatedOwner.rental_owner_characteristic_id);
+        return updatedOwner.id;
+
+      } else {
+        // Crear nuevo propietario
+        console.log('🆕 Creando nuevo propietario...');
+
+        const { data: newOwner, error: insertError } = await supabase
+          .from('rental_owners')
+          .insert({
+            ...ownerPayload,
+            created_at: new Date().toISOString(),
+          })
+          .select('id, rental_owner_characteristic_id')
+          .single();
+
+        if (insertError) {
+          console.error('❌ Error creando propietario:', insertError);
+          throw insertError;
+        }
+
+        console.log('✅ Nuevo propietario creado:', newOwner.id);
+        console.log('🆔 Characteristic ID:', newOwner.rental_owner_characteristic_id);
+        return newOwner.id;
+      }
+
+    } catch (error) {
+      console.error('❌ Error en saveRentalOwner:', error);
+      throw error;
+    }
+  };
 
   // Función para verificar si el perfil está completo
   const checkProfileComplete = (profile: any) => {
@@ -162,7 +393,27 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
 
         // Si estamos editando una propiedad existente, cargar sus datos
         if (property) {
-          const propertyFormData = {
+          // 2. Cargar datos del propietario desde rental_owners
+          console.log('👤 Cargando datos del propietario...');
+
+          const { data: ownerData, error: ownerError } = await supabase
+            .from('rental_owners')
+            .select('*')
+            .eq('property_id', property.id)
+            .maybeSingle();
+
+          if (ownerError && ownerError.code !== 'PGRST116') {
+            // PGRST116 = no rows returned (es esperado si no hay propietario)
+            console.error('❌ Error cargando propietario:', ownerError);
+          }
+
+          if (ownerData) {
+            console.log('✅ Datos del propietario cargados:', ownerData);
+          } else {
+            console.log('ℹ️ No se encontró propietario para esta propiedad');
+          }
+
+          const propertyFormData: PublishPropertyFormData = {
             listing_type: property.listing_type,
             address_street: property.address_street,
             address_number: property.address_number,
@@ -180,14 +431,15 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             ubicacion_estacionamiento: property.ubicacion_estacionamiento || '',
             description: property.description,
 
-            // Información del propietario
+            // Información del propietario (legacy - se mantiene por compatibilidad)
+            // Si hay datos en rental_owners, usar esos; si no, usar los de properties
             owner_type: (property.owner_type as 'natural' | 'juridica') || 'natural',
-            owner_first_name: property.owner_first_name || '',
-            owner_paternal_last_name: property.owner_paternal_last_name || '',
-            owner_maternal_last_name: property.owner_maternal_last_name || '',
-            owner_rut: property.owner_rut || '',
-            owner_email: property.owner_email || '',
-            owner_phone: property.owner_phone || '',
+            owner_first_name: ownerData?.first_name || property.owner_first_name || '',
+            owner_paternal_last_name: ownerData?.paternal_last_name || property.owner_paternal_last_name || '',
+            owner_maternal_last_name: ownerData?.maternal_last_name || property.owner_maternal_last_name || '',
+            owner_rut: ownerData?.rut || property.owner_rut || '',
+            owner_email: ownerData?.email || property.owner_email || '',
+            owner_phone: ownerData?.phone || property.owner_phone || '',
             owner_company_name: property.owner_company_name || '',
             owner_company_rut: property.owner_company_rut || '',
             owner_company_business: property.owner_company_business || '',
@@ -199,6 +451,38 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
             owner_representative_rut: property.owner_representative_rut || '',
             owner_representative_email: property.owner_representative_email || '',
             owner_representative_phone: property.owner_representative_phone || '',
+
+            // Datos del propietario para rental_owners
+            owner: ownerData ? {
+              first_name: ownerData.first_name || '',
+              paternal_last_name: ownerData.paternal_last_name || '',
+              maternal_last_name: ownerData.maternal_last_name || null,
+              rut: ownerData.rut || '',
+              address_street: ownerData.address_street || null,
+              address_number: ownerData.address_number || null,
+              address_department: ownerData.address_department || null,
+              address_commune: ownerData.address_commune || null,
+              address_region: ownerData.address_region || null,
+              marital_status: ownerData.marital_status || 'soltero',
+              property_regime: ownerData.property_regime || null,
+              phone: ownerData.phone || null,
+              email: ownerData.email || null,
+            } : {
+              // Valores por defecto si no hay propietario
+              first_name: '',
+              paternal_last_name: '',
+              maternal_last_name: null,
+              rut: '',
+              address_street: null,
+              address_number: null,
+              address_department: null,
+              address_commune: null,
+              address_region: null,
+              marital_status: 'soltero',
+              property_regime: null,
+              phone: null,
+              email: null,
+            }
           };
 
           setFormData(propertyFormData);
@@ -217,10 +501,23 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+    // Manejar campos anidados del propietario
+    if (name.startsWith('owner.')) {
+      const ownerField = name.replace('owner.', '');
+      setFormData(prev => ({
+        ...prev,
+        owner: {
+          ...prev.owner,
+          [ownerField]: value || null // Convertir string vacío a null para campos opcionales
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -429,7 +726,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         throw new Error('Por favor, completa todos los campos obligatorios de la propiedad.');
       }
 
-      // Validar campos del propietario
+      // Validar campos del propietario (legacy)
       if (formData.owner_type === 'natural') {
         if (!formData.owner_first_name || !formData.owner_paternal_last_name || !formData.owner_rut || !formData.owner_email) {
           throw new Error('Por favor, completa todos los campos obligatorios del propietario (Persona Natural).');
@@ -441,6 +738,25 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         if (!formData.owner_representative_first_name || !formData.owner_representative_paternal_last_name || !formData.owner_representative_rut || !formData.owner_representative_email) {
           throw new Error('Por favor, completa todos los campos obligatorios del representante legal.');
         }
+      }
+
+      // Validar campos del propietario para rental_owners
+      if (!formData.owner.first_name?.trim()) {
+        throw new Error('El nombre del propietario es requerido.');
+      }
+      if (!formData.owner.paternal_last_name?.trim()) {
+        throw new Error('El apellido paterno del propietario es requerido.');
+      }
+      if (!formData.owner.rut?.trim()) {
+        throw new Error('El RUT del propietario es requerido.');
+      }
+      // Validar RUT
+      if (!validateRut(formData.owner.rut)) {
+        throw new Error('El RUT del propietario no es válido.');
+      }
+      // Validar property_regime solo si está casado
+      if (formData.owner.marital_status === 'casado' && !formData.owner.property_regime) {
+        throw new Error('Debe especificar el régimen patrimonial si el propietario está casado.');
       }
 
       // Verificar si ya existe una propiedad en esta dirección (solo para nuevas propiedades)
@@ -513,6 +829,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
 
         if (error) throw error;
         propertyId = data.id;
+        console.log('✅ Propiedad actualizada:', propertyId);
       } else {
         // Crear nueva propiedad
         const { data, error } = await supabase
@@ -523,6 +840,45 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
 
         if (error) throw error;
         propertyId = data.id;
+        console.log('✅ Nueva propiedad creada:', propertyId);
+      }
+
+      // NUEVO: Guardar datos del propietario en rental_owners
+      console.log('👤 Guardando datos del propietario...');
+
+      // Sincronizar datos del propietario desde campos legacy
+      const ownerData = {
+        first_name: formData.owner_first_name || formData.owner.first_name || '',
+        paternal_last_name: formData.owner_paternal_last_name || formData.owner.paternal_last_name || '',
+        maternal_last_name: formData.owner_maternal_last_name || formData.owner.maternal_last_name || null,
+        rut: formData.owner_rut || formData.owner.rut || '',
+        address_street: formData.owner.address_street || null,
+        address_number: formData.owner.address_number || null,
+        address_department: formData.owner.address_department || null,
+        address_commune: formData.owner.address_commune || null,
+        address_region: formData.owner.address_region || null,
+        marital_status: formData.owner.marital_status || 'soltero',
+        property_regime: formData.owner.property_regime || null,
+        phone: formData.owner_phone || formData.owner.phone || null,
+        email: formData.owner_email || formData.owner.email || null,
+      };
+
+      console.log('📋 Datos del propietario a guardar:', JSON.stringify(ownerData, null, 2));
+
+      // Verificar que los datos del propietario sean válidos
+      if (!ownerData.first_name || !ownerData.paternal_last_name || !ownerData.rut) {
+        console.warn('⚠️ Datos del propietario incompletos, omitiendo guardado');
+        setError('Advertencia: Los datos del propietario están incompletos. La propiedad se publicó pero los datos del propietario no se guardaron.');
+      } else {
+        try {
+          const ownerId = await saveRentalOwner(propertyId, ownerData);
+          console.log('✅ Propietario guardado exitosamente:', ownerId);
+        } catch (ownerError) {
+          console.error('❌ Error guardando propietario:', ownerError);
+          // Mostrar advertencia pero no fallar la publicación completa
+          setError(`Advertencia: ${ownerError.message}. La propiedad se publicó pero los datos del propietario no se guardaron correctamente.`);
+          // Continuar con el proceso
+        }
       }
 
       // Subir imágenes si hay
@@ -1217,6 +1573,150 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
               </div>
             </div>
           )}
+
+          {/* Información Adicional del Propietario para rental_owners */}
+          <div className="mt-8 pt-6 border-t border-gray-300">
+            <h4 className="text-md font-semibold text-gray-800 mb-4">
+              Información Adicional del Propietario
+            </h4>
+
+            {/* Estado Civil */}
+            <div className="mb-4">
+              <label htmlFor="owner_marital_status" className="block text-sm font-medium text-gray-700 mb-2">
+                Estado Civil *
+              </label>
+              <select
+                id="owner_marital_status"
+                name="owner.marital_status"
+                value={formData.owner.marital_status}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="soltero">Soltero/a</option>
+                <option value="casado">Casado/a</option>
+                <option value="divorciado">Divorciado/a</option>
+                <option value="viudo">Viudo/a</option>
+                <option value="conviviente_civil">Conviviente Civil</option>
+              </select>
+            </div>
+
+            {/* Régimen Patrimonial - solo si está casado */}
+            {formData.owner.marital_status === 'casado' && (
+              <div className="mb-4">
+                <label htmlFor="owner_property_regime" className="block text-sm font-medium text-gray-700 mb-2">
+                  Régimen Patrimonial *
+                </label>
+                <select
+                  id="owner_property_regime"
+                  name="owner.property_regime"
+                  value={formData.owner.property_regime || ''}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required={formData.owner.marital_status === 'casado'}
+                >
+                  <option value="">Seleccionar régimen</option>
+                  <option value="separacion_bienes">Separación de bienes</option>
+                  <option value="sociedad_conyugal">Sociedad conyugal</option>
+                  <option value="participacion_gananciales">Participación en ganancias</option>
+                </select>
+              </div>
+            )}
+
+            {/* Dirección del Propietario */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Dirección del Propietario (Opcional)
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <input
+                    type="text"
+                    name="owner.address_street"
+                    value={formData.owner.address_street || ''}
+                    onChange={handleInputChange}
+                    placeholder="Calle"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    name="owner.address_number"
+                    value={formData.owner.address_number || ''}
+                    onChange={handleInputChange}
+                    placeholder="Número"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <div>
+                  <input
+                    type="text"
+                    name="owner.address_department"
+                    value={formData.owner.address_department || ''}
+                    onChange={handleInputChange}
+                    placeholder="Depto/Oficina"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    name="owner.address_commune"
+                    value={formData.owner.address_commune || ''}
+                    onChange={handleInputChange}
+                    placeholder="Comuna"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <select
+                    name="owner.address_region"
+                    value={formData.owner.address_region || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccionar región</option>
+                    {regions.map(region => (
+                      <option key={region} value={region}>{region}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Contacto del Propietario */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="owner_phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  Teléfono del Propietario
+                </label>
+                <input
+                  type="tel"
+                  id="owner_phone"
+                  name="owner.phone"
+                  value={formData.owner.phone || ''}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label htmlFor="owner_email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email del Propietario
+                </label>
+                <input
+                  type="email"
+                  id="owner_email"
+                  name="owner.email"
+                  value={formData.owner.email || ''}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Información del Usuario Publicador */}
           {ownerProfile && (

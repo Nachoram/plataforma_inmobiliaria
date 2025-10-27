@@ -1,19 +1,19 @@
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://phnkervuiijqmapgswkc.supabase.co';
-const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzA3NDYyNSwiZXhwIjoyMDcyNjUwNjI1fQ.YOUR_SERVICE_ROLE_KEY';
-
-const supabase = createClient(supabaseUrl, serviceRoleKey);
+const supabase = createClient(
+  'https://phnkervuiijqmapgswkc.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzA3NDYyNSwiZXhwIjoyMDcyNjUwNjI1fQ.va6jOCJN6MnbHSbbDFJaO2rN_3oCSVQlaYaPkPmXS2w'
+);
 
 async function applyContractMigration() {
   console.log('🔧 Aplicando migración de características de contrato...');
 
   try {
     // Leer el archivo de migración
-    const migrationSQL = fs.readFileSync('supabase/migrations/20251025180000_add_contract_characteristics.sql', 'utf8');
+    const migrationSQL = fs.readFileSync('supabase/migrations/20251027150000_ensure_all_characteristic_ids.sql', 'utf8');
 
-    console.log('📄 Ejecutando migración SQL...');
+    console.log('📄 Ejecutando migración SQL (UUID version)...');
 
     // Ejecutar la migración usando rpc
     const { data, error } = await supabase.rpc('exec_sql', {
@@ -59,16 +59,28 @@ async function applyContractMigration() {
       console.log('✅ properties: columnas verificadas');
     }
 
-    // Verificar contract_conditions
+    // Verificar rental_contract_conditions
     const { data: contractCols, error: contractErr } = await supabase
-      .from('contract_conditions')
+      .from('rental_contract_conditions')
       .select('contract_conditions_characteristic_id')
       .limit(1);
 
     if (contractErr) {
-      console.log('⚠️  contract_conditions podría no existir aún:', contractErr.message);
+      console.log('⚠️  rental_contract_conditions podría no existir aún:', contractErr.message);
     } else {
-      console.log('✅ contract_conditions: tabla creada');
+      console.log('✅ rental_contract_conditions: tabla creada');
+    }
+
+    // Verificar rental_owners
+    const { data: ownerCols, error: ownerErr } = await supabase
+      .from('rental_owners')
+      .select('rental_owner_characteristic_id')
+      .limit(1);
+
+    if (ownerErr && !ownerErr.message.includes('does not exist')) {
+      console.log('⚠️  Advertencia con rental_owners:', ownerErr.message);
+    } else {
+      console.log('✅ rental_owners: columnas verificadas');
     }
 
   } catch (error) {
@@ -77,3 +89,4 @@ async function applyContractMigration() {
 }
 
 applyContractMigration();
+

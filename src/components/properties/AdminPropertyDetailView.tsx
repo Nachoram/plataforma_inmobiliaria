@@ -108,7 +108,19 @@ export const AdminPropertyDetailView: React.FC = () => {
   // Estados para la funcionalidad de webhook de contrato
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
+  // Función para calcular fecha de término basada en fecha de inicio y duración
+  const calculateEndDate = (startDate: string, durationMonths: string): string => {
+    if (!startDate || !durationMonths) return '';
+
+    const start = new Date(startDate);
+    const months = parseInt(durationMonths);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + months);
+
+    return end.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+  };
+
   // Estado para el formulario de condiciones de contrato
   const [formData, setFormData] = useState<ContractConditionsFormData>({
     contract_start_date: '',
@@ -177,7 +189,7 @@ export const AdminPropertyDetailView: React.FC = () => {
       if (data && !error) {
         console.log('📦 Condiciones encontradas:', data);
 
-        setFormData(prev => ({
+        const loadedData = {
           ...prev,
           contract_start_date: data.contract_start_date || '',
           contract_end_date: data.contract_end_date || '',
@@ -205,7 +217,14 @@ export const AdminPropertyDetailView: React.FC = () => {
           access_clause: '',
           broker_commission: '',
           payment_method: data.payment_method || 'transferencia',
-        }));
+        };
+
+        // Si no hay fecha de término pero hay fecha de inicio y duración, calcularla
+        if (!loadedData.contract_end_date && loadedData.contract_start_date && loadedData.duration) {
+          loadedData.contract_end_date = calculateEndDate(loadedData.contract_start_date, loadedData.duration);
+        }
+
+        setFormData(loadedData);
       }
     };
 
@@ -393,9 +412,34 @@ export const AdminPropertyDetailView: React.FC = () => {
     console.log('✅ Modal de contrato abierto');
   };
 
+  // Función para calcular fecha de término basada en fecha de inicio y duración
+  const calculateEndDate = (startDate: string, durationMonths: string): string => {
+    if (!startDate || !durationMonths) return '';
+
+    const start = new Date(startDate);
+    const months = parseInt(durationMonths);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + months);
+
+    return end.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+  };
+
   // Función para actualizar los campos del formulario
   const handleContractFormChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+
+      // Si cambia fecha de inicio o duración, recalcular fecha de término
+      if (field === 'contract_start_date' || field === 'duration') {
+        const endDate = calculateEndDate(
+          field === 'contract_start_date' ? value : newData.contract_start_date,
+          field === 'duration' ? value : newData.duration
+        );
+        newData.contract_end_date = endDate;
+      }
+
+      return newData;
+    });
   };
 
   // Función para obtener los IDs de características del contrato
@@ -614,9 +658,10 @@ export const AdminPropertyDetailView: React.FC = () => {
         validationErrors.push('fecha de inicio del contrato');
       }
 
-      // Validar fecha de término
-      if (!formData.contract_end_date || formData.contract_end_date.trim() === '') {
-        validationErrors.push('fecha de término del contrato');
+      // Validar fecha de término - se calcula automáticamente cuando cambian fecha de inicio o duración
+      // Solo validar que existe si el usuario ha completado los campos requeridos
+      if (formData.contract_start_date && formData.duration && (!formData.contract_end_date || formData.contract_end_date.trim() === '')) {
+        validationErrors.push('fecha de término del contrato (complete fecha de inicio y duración primero)');
       }
 
       // Validar renta mensual (puede ser 0)
@@ -1670,6 +1715,16 @@ export const AdminPropertyDetailView: React.FC = () => {
                       <option value="24">24 meses</option>
                       <option value="36">36 meses</option>
                     </select>
+                    {/* Fecha de Término Calculada */}
+                    {formData.contract_end_date && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        📅 <strong>Fecha de término calculada:</strong> {new Date(formData.contract_end_date).toLocaleDateString('es-CL', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    )}
                   </div>
 
                   {/* Monto de la Garantía */}

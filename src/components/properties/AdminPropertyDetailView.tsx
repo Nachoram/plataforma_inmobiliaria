@@ -1432,40 +1432,53 @@ export const AdminPropertyDetailView: React.FC = () => {
                   </div>
                   
                   <div className="space-y-3">
-                    <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                      <div className="flex items-center space-x-3">
-                        <UserCheck className="h-5 w-5 text-green-600" />
-                        <div className="flex-1">
-                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Nombre del Aval</label>
-                          <p className="text-base font-semibold text-gray-900 mt-1">{selectedProfile.guarantor.name}</p>
+                    {selectedProfile.guarantor ? (
+                      <>
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                          <div className="flex items-center space-x-3">
+                            <UserCheck className="h-5 w-5 text-green-600" />
+                            <div className="flex-1">
+                              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Nombre del Aval</label>
+                              <p className="text-base font-semibold text-gray-900 mt-1">{selectedProfile.guarantor.name}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                          <div className="flex items-center space-x-3">
+                            <Mail className="h-5 w-5 text-blue-600" />
+                            <div className="flex-1">
+                              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Email</label>
+                              <p className="text-base text-gray-900 mt-1">{selectedProfile.guarantor.email}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                          <div className="flex items-center space-x-3">
+                            <DollarSign className="h-5 w-5 text-emerald-600" />
+                            <div className="flex-1">
+                              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Renta Mensual</label>
+                              <p className="text-lg font-bold text-emerald-600 mt-1">
+                                {new Intl.NumberFormat('es-CL', {
+                                  style: 'currency',
+                                  currency: 'CLP'
+                                }).format(selectedProfile.guarantor.income)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center space-x-3">
+                          <AlertTriangle className="h-5 w-5 text-gray-400" />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600">Esta postulación no tiene aval registrado</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                      <div className="flex items-center space-x-3">
-                        <Mail className="h-5 w-5 text-blue-600" />
-                        <div className="flex-1">
-                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Email</label>
-                          <p className="text-base text-gray-900 mt-1">{selectedProfile.guarantor.email}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                      <div className="flex items-center space-x-3">
-                        <DollarSign className="h-5 w-5 text-emerald-600" />
-                        <div className="flex-1">
-                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Renta Mensual</label>
-                          <p className="text-lg font-bold text-emerald-600 mt-1">
-                            {new Intl.NumberFormat('es-CL', {
-                              style: 'currency',
-                              currency: 'CLP'
-                            }).format(selectedProfile.guarantor.income)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Tarjeta Destacada de Capacidad de Pago Total */}
                     <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-700 rounded-xl p-6 shadow-xl mt-6 border-4 border-blue-300 transform hover:scale-105 transition-transform">
@@ -1478,10 +1491,10 @@ export const AdminPropertyDetailView: React.FC = () => {
                           {new Intl.NumberFormat('es-CL', {
                             style: 'currency',
                             currency: 'CLP'
-                          }).format(selectedProfile.profile.income + selectedProfile.guarantor.income)}
+                          }).format(selectedProfile.profile.income + (selectedProfile.guarantor?.income || 0))}
                         </p>
                         <p className="text-sm text-blue-100 font-medium">
-                          Postulante + Aval Combinados
+                          {selectedProfile.guarantor ? 'Postulante + Aval Combinados' : 'Solo Postulante'}
                         </p>
                       </div>
                     </div>

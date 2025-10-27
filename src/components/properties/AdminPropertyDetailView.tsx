@@ -607,17 +607,37 @@ export const AdminPropertyDetailView: React.FC = () => {
 
       // 1. Validar campos requeridos
       console.log('🔍 Validando campos requeridos...');
-      if (!formData.contract_start_date ||
-          !formData.contract_end_date ||
-          !formData.monthly_rent ||
-          !formData.notification_email) {
+      const validationErrors = [];
+
+      // Validar fecha de inicio
+      if (!formData.contract_start_date || formData.contract_start_date.trim() === '') {
+        validationErrors.push('fecha de inicio del contrato');
+      }
+
+      // Validar fecha de término
+      if (!formData.contract_end_date || formData.contract_end_date.trim() === '') {
+        validationErrors.push('fecha de término del contrato');
+      }
+
+      // Validar renta mensual (puede ser 0)
+      if (formData.monthly_rent === null || formData.monthly_rent === undefined || formData.monthly_rent < 0) {
+        validationErrors.push('renta mensual (debe ser mayor o igual a 0)');
+      }
+
+      // Validar email
+      if (!formData.notification_email || formData.notification_email.trim() === '') {
+        validationErrors.push('correo electrónico de notificación');
+      }
+
+      if (validationErrors.length > 0) {
         console.error('❌ Faltan campos requeridos:', {
           contract_start_date: formData.contract_start_date,
           contract_end_date: formData.contract_end_date,
           monthly_rent: formData.monthly_rent,
-          notification_email: formData.notification_email
+          notification_email: formData.notification_email,
+          errores: validationErrors
         });
-        toast.error('Por favor completa todos los campos requeridos');
+        toast.error(`Por favor completa: ${validationErrors.join(', ')}`);
         setIsGenerating(false);
         return;
       }

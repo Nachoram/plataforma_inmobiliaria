@@ -190,7 +190,6 @@ export const AdminPropertyDetailView: React.FC = () => {
         console.log('📦 Condiciones encontradas:', data);
 
         const loadedData = {
-          ...prev,
           contract_start_date: data.contract_start_date || '',
           contract_end_date: data.contract_end_date || '',
           monthly_rent: data.monthly_rent || 0,
@@ -410,18 +409,6 @@ export const AdminPropertyDetailView: React.FC = () => {
     setIsProfileModalOpen(false); // Cierra el modal del perfil
     setIsContractModalOpen(true);  // Abre el modal de contrato
     console.log('✅ Modal de contrato abierto');
-  };
-
-  // Función para calcular fecha de término basada en fecha de inicio y duración
-  const calculateEndDate = (startDate: string, durationMonths: string): string => {
-    if (!startDate || !durationMonths) return '';
-
-    const start = new Date(startDate);
-    const months = parseInt(durationMonths);
-    const end = new Date(start);
-    end.setMonth(end.getMonth() + months);
-
-    return end.toISOString().split('T')[0]; // Formato YYYY-MM-DD
   };
 
   // Función para actualizar los campos del formulario

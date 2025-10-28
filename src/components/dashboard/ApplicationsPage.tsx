@@ -20,7 +20,7 @@ interface ApplicationWithDetails {
     address_commune: string;
     price_clp: number;
     listing_type: string;
-    property_type?: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela';
+    tipo_propiedad?: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela';
     property_characteristic_id?: string;
     owner_id: string;
     property_images?: { image_url: string }[];
@@ -174,7 +174,7 @@ const ApplicationsPage: React.FC = () => {
             address_commune,
             price_clp,
             listing_type,
-            property_type,
+            tipo_propiedad,
             owner_id,
             property_characteristic_id
           ),
@@ -929,11 +929,11 @@ const ApplicationsPage: React.FC = () => {
                           <span className="text-emerald-600 text-xs">/mes</span>
                         </div>
                         {/* Property Type Badge */}
-                        {application.properties.property_type && (
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${getPropertyTypeInfo(application.properties.property_type).bgColor}`}>
+                        {application.properties.tipo_propiedad && (
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${getPropertyTypeInfo(application.properties.tipo_propiedad).bgColor}`}>
                             <Home className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span className={`font-semibold ${getPropertyTypeInfo(application.properties.property_type).color}`}>
-                              {getPropertyTypeInfo(application.properties.property_type).label}
+                            <span className={`font-semibold ${getPropertyTypeInfo(application.properties.tipo_propiedad).color}`}>
+                              {getPropertyTypeInfo(application.properties.tipo_propiedad).label}
                             </span>
                           </div>
                         )}
@@ -1150,11 +1150,11 @@ const ApplicationsPage: React.FC = () => {
                           <span className="text-indigo-600 text-xs">/mes</span>
                         </div>
                         {/* Property Type Badge */}
-                        {application.properties.property_type && (
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${getPropertyTypeInfo(application.properties.property_type).bgColor}`}>
+                        {application.properties.tipo_propiedad && (
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${getPropertyTypeInfo(application.properties.tipo_propiedad).bgColor}`}>
                             <Home className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span className={`font-semibold ${getPropertyTypeInfo(application.properties.property_type).color}`}>
-                              {getPropertyTypeInfo(application.properties.property_type).label}
+                            <span className={`font-semibold ${getPropertyTypeInfo(application.properties.tipo_propiedad).color}`}>
+                              {getPropertyTypeInfo(application.properties.tipo_propiedad).label}
                             </span>
                           </div>
                         )}

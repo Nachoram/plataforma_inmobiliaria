@@ -92,7 +92,7 @@ export const PanelPage: React.FC = () => {
       // Log property_type values to debug the issue
       console.log('🔍 [PanelPage] Property types in fetched data:');
       validProperties.forEach((prop, index) => {
-        console.log(`  ${index + 1}. ID: ${prop.id}, property_type: "${prop.property_type}"`);
+        console.log(`  ${index + 1}. ID: ${prop.id}, tipo_propiedad: "${prop.tipo_propiedad}"`);
       });
 
       setProperties(validProperties || []);

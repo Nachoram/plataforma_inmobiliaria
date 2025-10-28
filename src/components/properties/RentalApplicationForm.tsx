@@ -51,6 +51,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     rut: '',
     profession: '',
     monthly_income_clp: '',
+    contact_email: '',
     address_street: '',
     address_number: '',
     address_department: '',
@@ -322,8 +323,9 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       // PASO 1: Asegurar que existe el profile del usuario (requerido por FK)
       console.log('🔍 DEBUG: Verificando/creando profile del usuario...');
       try {
-        // ✅ BETA: DESHABILITADO - Permitir RUTs duplicados entre usuarios
-        // En producción, esto se puede habilitar con mejor manejo
+        // ✅ TEMPORARILY DISABLED: Permitir RUTs duplicados entre usuarios para facilitar desarrollo y pruebas
+        // TODO: RESTAURAR ANTES DE PRODUCCIÓN - Rehabilitar validación de unicidad de RUT
+        // En producción, re-habilitar esta validación para mantener integridad de datos
         /*
         const { data: existingProfileWithRUT, error: rutCheckError } = await supabase
           .from('profiles')
@@ -341,31 +343,73 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         }
         */
 
-        console.log('ℹ️ BETA: Verificación de RUT duplicado deshabilitada');
+        console.log('ℹ️ TEMPORARILY DISABLED: Verificación de RUT duplicado deshabilitada para desarrollo');
 
-        // Ahora hacer el upsert del perfil
-        const { error: profileError } = await supabase
+        // TODO: RESTAURAR UPSERT ANTES DE PRODUCCIÓN - Implementar lógica manual select->update/insert sin onConflict
+        // En producción, restaurar:
+        // const { error: profileError } = await supabase.from('profiles').upsert({...}, { onConflict: 'id' });
+        // Y re-habilitar restricciones UNIQUE en rut tanto en BD como validaciones frontend
+
+        // Lógica manual sin onConflict (para ambiente de pruebas sin restricciones UNIQUE)
+        console.log('🔍 Verificando si existe perfil del usuario...');
+        const { data: existingProfile, error: checkError } = await supabase
           .from('profiles')
-          .upsert({
-            id: user.id,
-            first_name: applicantData.first_name,
-            paternal_last_name: applicantData.paternal_last_name,
-            maternal_last_name: applicantData.maternal_last_name,
-            email: user.email || '',
-            rut: applicantData.rut,
-            phone: applicantData.phone || null,
-            address_street: applicantData.address_street,
-            address_number: applicantData.address_number,
-            address_commune: applicantData.address_commune,
-            address_region: applicantData.address_region,
-            profession: applicantData.profession,
-            marital_status: applicantData.marital_status,
-          }, {
-            onConflict: 'id'
-          });
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (checkError) {
+          console.log('❌ Error verificando perfil existente:', checkError);
+          throw new Error(`Error verificando perfil de usuario: ${checkError.message}`);
+        }
+
+        let profileError;
+        if (existingProfile) {
+          // Existe - hacer UPDATE
+          console.log('🔄 Actualizando perfil existente del usuario...');
+          const { error } = await supabase
+            .from('profiles')
+            .update({
+              first_name: applicantData.first_name,
+              paternal_last_name: applicantData.paternal_last_name,
+              maternal_last_name: applicantData.maternal_last_name,
+              email: user.email || '',
+              rut: applicantData.rut,
+              phone: applicantData.phone || null,
+              address_street: applicantData.address_street,
+              address_number: applicantData.address_number,
+              address_commune: applicantData.address_commune,
+              address_region: applicantData.address_region,
+              profession: applicantData.profession,
+              marital_status: applicantData.marital_status,
+            })
+            .eq('id', user.id);
+          profileError = error;
+        } else {
+          // No existe - hacer INSERT
+          console.log('🆕 Creando nuevo perfil del usuario...');
+          const { error } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              first_name: applicantData.first_name,
+              paternal_last_name: applicantData.paternal_last_name,
+              maternal_last_name: applicantData.maternal_last_name,
+              email: user.email || '',
+              rut: applicantData.rut,
+              phone: applicantData.phone || null,
+              address_street: applicantData.address_street,
+              address_number: applicantData.address_number,
+              address_commune: applicantData.address_commune,
+              address_region: applicantData.address_region,
+              profession: applicantData.profession,
+              marital_status: applicantData.marital_status,
+            });
+          profileError = error;
+        }
 
         if (profileError) {
-          console.log('❌ DEBUG: Error creando profile:', profileError);
+          console.log('❌ DEBUG: Error en operación de perfil:', profileError);
           throw new Error(`Error preparando perfil de usuario: ${profileError.message}`);
         }
         console.log('✅ DEBUG: Profile del usuario asegurado');
@@ -378,32 +422,86 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
       // PASO 2: Crear o encontrar aval si existe
       if (showGuarantor) {
-        // Intentar crear el guarantor directamente (maneja duplicados automáticamente)
+        // TODO: RESTAURAR UPSERT ANTES DE PRODUCCIÓN - Implementar lógica manual select->update/insert sin onConflict
+        // En producción, restaurar:
+        // const { data: guarantor, error: guarantorError } = await supabase.from('guarantors').upsert({...}, { onConflict: 'rut' });
+        // Y re-habilitar restricciones UNIQUE en rut tanto en BD como validaciones frontend
+
+        // Lógica manual sin onConflict (para ambiente de pruebas sin restricciones UNIQUE)
         try {
-          const { data: guarantor, error: guarantorError } = await supabase
+          console.log('🔍 Verificando si existe aval con RUT:', guarantorData.rut);
+          const { data: existingGuarantor, error: checkGuarantorError } = await supabase
             .from('guarantors')
-            .upsert({
-              first_name: guarantorData.first_name,
-              paternal_last_name: guarantorData.paternal_last_name,
-              maternal_last_name: guarantorData.maternal_last_name,
-              rut: guarantorData.rut,
-              profession: guarantorData.profession,
-              monthly_income_clp: parseInt(guarantorData.monthly_income_clp) || 0,
-              // Dirección embebida directamente en la tabla guarantors
-              address_street: guarantorData.address_street,
-              address_number: guarantorData.address_number,
-              address_department: guarantorData.address_department,
-              address_commune: guarantorData.address_commune,
-              address_region: guarantorData.address_region,
-              created_by: user.id // Track who created this guarantor
-            }, {
-              onConflict: 'rut'
-            })
-            .select()
-            .single();
+            .select('id')
+            .eq('rut', guarantorData.rut)
+            .maybeSingle();
+
+          if (checkGuarantorError) {
+            console.log('❌ Error verificando aval existente:', checkGuarantorError);
+            throw new Error(`Error verificando aval existente: ${checkGuarantorError.message}`);
+          }
+
+          let guarantor;
+          let guarantorError;
+
+          if (existingGuarantor) {
+            // Existe - hacer UPDATE
+            console.log('🔄 Actualizando aval existente con RUT:', guarantorData.rut);
+            const { data, error } = await supabase
+              .from('guarantors')
+              .update({
+                first_name: guarantorData.first_name,
+                paternal_last_name: guarantorData.paternal_last_name,
+                maternal_last_name: guarantorData.maternal_last_name,
+                full_name: `${guarantorData.first_name} ${guarantorData.paternal_last_name}${guarantorData.maternal_last_name ? ' ' + guarantorData.maternal_last_name : ''}`.trim(),
+                profession: guarantorData.profession,
+                monthly_income: parseInt(guarantorData.monthly_income_clp) || 0,
+                contact_email: guarantorData.contact_email || 'email@no-especificado.com',
+                // Dirección embebida directamente en la tabla guarantors
+                address_street: guarantorData.address_street,
+                address_number: guarantorData.address_number,
+                address_department: guarantorData.address_department,
+                address_commune: guarantorData.address_commune,
+                address_region: guarantorData.address_region,
+                created_by: user.id // Track who created this guarantor
+              })
+              .eq('rut', guarantorData.rut)
+              .select()
+              .single();
+
+            guarantor = data;
+            guarantorError = error;
+          } else {
+            // No existe - hacer INSERT
+            console.log('🆕 Creando nuevo aval con RUT:', guarantorData.rut);
+            const { data, error } = await supabase
+              .from('guarantors')
+              .insert({
+                first_name: guarantorData.first_name,
+                paternal_last_name: guarantorData.paternal_last_name,
+                maternal_last_name: guarantorData.maternal_last_name,
+                full_name: `${guarantorData.first_name} ${guarantorData.paternal_last_name}${guarantorData.maternal_last_name ? ' ' + guarantorData.maternal_last_name : ''}`.trim(),
+                rut: guarantorData.rut,
+                profession: guarantorData.profession,
+                monthly_income: parseInt(guarantorData.monthly_income_clp) || 0,
+                contact_email: guarantorData.contact_email || 'email@no-especificado.com',
+                // Dirección embebida directamente en la tabla guarantors
+                address_street: guarantorData.address_street,
+                address_number: guarantorData.address_number,
+                address_department: guarantorData.address_department,
+                address_commune: guarantorData.address_commune,
+                address_region: guarantorData.address_region,
+                created_by: user.id // Track who created this guarantor
+              })
+              .select()
+              .single();
+
+            guarantor = data;
+            guarantorError = error;
+          }
 
           if (guarantorError) {
-            throw new Error(`Error creando aval: ${guarantorError.message}`);
+            throw new Error(`Error procesando aval: ${guarantorError.message}`);
           }
 
           guarantorId = guarantor?.id || null;
@@ -843,11 +941,11 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               </h3>
               
               {/* Property Type Badge */}
-              {property.property_type && (
+              {property.tipo_propiedad && (
                 <div className="flex items-center gap-2 mb-2">
                   <Home className="h-4 w-4 text-white/90" />
                   <span className="text-xs sm:text-sm bg-white/20 px-2 py-0.5 rounded-lg backdrop-blur-sm font-medium">
-                    {getPropertyTypeInfo(property.property_type).label}
+                    {getPropertyTypeInfo(property.tipo_propiedad).label}
                   </span>
                 </div>
               )}
@@ -1339,6 +1437,20 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                     onChange={handleGuarantorChange}
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required={showGuarantor}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email de Contacto *
+                  </label>
+                  <input
+                    type="email"
+                    name="contact_email"
+                    value={guarantorData.contact_email}
+                    onChange={handleGuarantorChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required={showGuarantor}
+                    placeholder="email@ejemplo.com"
                   />
                 </div>
               </div>

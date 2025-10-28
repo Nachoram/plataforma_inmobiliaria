@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, Check, X, Mail, Phone, DollarSign, Briefcase, UserCheck, FileText } from 'lucide-react';
+import { Settings, Mail, Phone, DollarSign, Briefcase, UserCheck, FileText } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Postulation {
@@ -215,28 +215,14 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propP
                   </span>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleViewDetails(postulation)}
-                      className="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                      title="Ver Detalles"
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      Ver
-                    </button>
-                    <button
-                      className="inline-flex items-center px-2 py-1 border border-green-300 shadow-sm text-xs font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-                      title="Aprobar"
-                    >
-                      <Check className="h-3 w-3" />
-                    </button>
-                    <button
-                      className="inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
-                      title="Rechazar"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleViewDetails(postulation)}
+                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
+                    title="Administrar Postulación"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Administrar
+                  </button>
                 </td>
               </tr>
             ))}
@@ -370,37 +356,6 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propP
                 )}
               </div>
 
-              {/* Panel de Acciones */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 shadow-md border-2 border-gray-200">
-                <div className="flex items-center mb-4 pb-3 border-b-2 border-gray-300">
-                  <div className="h-10 w-10 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-                    <span className="text-white text-xl">⚡</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 ml-3">Acciones</h3>
-                </div>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <button className="bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-purple-800 transition-all">
-                    <FileText className="h-5 w-5 mx-auto mb-1" />
-                    <span className="text-xs">Informe</span>
-                  </button>
-
-                  <button className="bg-gradient-to-r from-cyan-600 to-cyan-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl hover:from-cyan-700 hover:to-cyan-800 transition-all">
-                    <FileText className="h-5 w-5 mx-auto mb-1" />
-                    <span className="text-xs">Documentos</span>
-                  </button>
-
-                  <button className="bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl hover:from-green-700 hover:to-green-800 transition-all">
-                    <Check className="h-5 w-5 mx-auto mb-1" />
-                    <span className="text-xs">Aprobar</span>
-                  </button>
-
-                  <button className="bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl hover:from-red-700 hover:to-red-800 transition-all">
-                    <X className="h-5 w-5 mx-auto mb-1" />
-                    <span className="text-xs">Rechazar</span>
-                  </button>
-                </div>
-              </div>
 
               {/* Footer */}
               <div className="flex justify-center mt-6 pt-4 border-t-2 border-gray-200">

@@ -57,7 +57,7 @@ export const PropertyDetailsPage: React.FC = () => {
           address_department,
           address_commune,
           address_region,
-          property_type,
+          tipo_propiedad,
           price_clp,
           common_expenses_clp,
           bedrooms,
@@ -282,11 +282,11 @@ export const PropertyDetailsPage: React.FC = () => {
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.address_street} {property.address_number}</h1>
                   
                   {/* Property Type Badge */}
-                  {property.property_type && (
+                  {property.tipo_propiedad && (
                     <div className="flex items-center gap-2 mb-3">
                       <Home className="h-5 w-5 text-gray-600" />
-                      <span className={`text-sm font-semibold px-3 py-1.5 rounded-lg ${getPropertyTypeInfo(property.property_type).bgColor} ${getPropertyTypeInfo(property.property_type).color}`}>
-                        {getPropertyTypeInfo(property.property_type).label}
+                      <span className={`text-sm font-semibold px-3 py-1.5 rounded-lg ${getPropertyTypeInfo(property.tipo_propiedad).bgColor} ${getPropertyTypeInfo(property.tipo_propiedad).color}`}>
+                        {getPropertyTypeInfo(property.tipo_propiedad).label}
                       </span>
                     </div>
                   )}

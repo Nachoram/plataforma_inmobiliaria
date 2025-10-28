@@ -100,7 +100,7 @@ interface PropertyFormData {
   photos_urls: string[];
 
   // Property type and conditional fields
-  property_type: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela';
+  tipo_propiedad: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela';
 
   // Measurement fields (conditional based on property type)
   useful_area?: number; // M² Útiles - not required for Bodega/Estacionamiento
@@ -162,7 +162,7 @@ export const PropertyForm: React.FC = () => {
     photos_urls: [] as string[],
 
     // Property type and conditional fields
-    property_type: '',
+    tipo_propiedad: '',
     useful_area: undefined,
     total_area: undefined,
     bedrooms: 1,
@@ -290,11 +290,11 @@ export const PropertyForm: React.FC = () => {
 
   // Handle property type change with automatic field cleanup
   const handlePropertyTypeChange = (newType: string) => {
-    const propertyType = newType as PropertyFormData['property_type'];
+    const propertyType = newType as PropertyFormData['tipo_propiedad'];
 
     // Base update with new type
     const updatedData: Partial<PropertyFormData> = {
-      property_type: propertyType
+      tipo_propiedad: propertyType
     };
 
     // Clean up fields that should be hidden/optional for certain types

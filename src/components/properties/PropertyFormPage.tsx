@@ -92,7 +92,7 @@ const PropertyFormPage: React.FC = () => {
 
       console.log('🔍 Property data loaded for edit:', property);
       console.log('🔍 Property fields:', Object.keys(property));
-      console.log('🔍 Property type:', property.property_type);
+      console.log('🔍 Property type:', property.tipo_propiedad);
       console.log('🔍 Property images:', property.property_images);
       console.log('🔍 Property amenidades:', property.propiedad_amenidades);
       console.log('🔍 Property documents:', property.documents);

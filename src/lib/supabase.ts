@@ -87,8 +87,7 @@ export interface Property {
   status: 'disponible' | 'arrendada' | 'vendida' | 'pausada' | 'activa';
   // Note: 'disponible' is the default status for new properties
   listing_type: 'venta' | 'arriendo';
-  property_type?: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela'; // Database: property_type_enum
-  tipo_propiedad?: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela'; // Campo principal del database
+  tipo_propiedad: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela'; // Campo principal del database
   address_street: string;
   address_number: string;
   address_department: string | null;
@@ -144,6 +143,9 @@ export interface Property {
   storage_number?: string | null; // Database: varchar(50), nullable
   parking_location?: string | null; // Database: varchar(100), nullable
   parcela_number?: string | null; // Database: varchar(30), nullable
+
+  // Campo agregado en migración 20251028120000_create_property_type_characteristics.sql
+  property_type_characteristics_id?: string | null; // Database: uuid REFERENCES property_type_characteristics(id), nullable
 }
 
 // Interface para datos transformados/calculados en el frontend

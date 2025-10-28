@@ -2,14 +2,5 @@
   "status": "commited",
   "type": "frontend",
   "scope": "codebase",
-  "localEndpoint": "http://localhost:5173",
-  "executionArgs": {
-    "projectName": "plataforma_inmobiliaria",
-    "projectPath": "C:\\Users\\ignac\\plataforma_inmobiliaria-1",
-    "testIds": [],
-    "additionalInstruction": "Analizar la plataforma inmobiliaria completa, incluyendo autenticación, marketplace, gestión de propiedades, contratos y workflows",
-    "envs": {
-      "API_KEY": ""
-    }
-  }
+  "localEndpoint": "http://localhost:5173"
 }

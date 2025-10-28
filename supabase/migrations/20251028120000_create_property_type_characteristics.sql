@@ -1,7 +1,7 @@
 -- ========================================================================
--- Migración: Crear tabla property_type_characteristics
+-- Migración: Crear tabla property_type_characteristics y agregar FK a properties
 -- Fecha: 2025-10-28
--- Descripción: Crear tabla para características de tipos de propiedad
+-- Descripción: Crear tabla para características de tipos de propiedad y agregar relación con properties
 -- ========================================================================
 
 -- Crear tabla property_type_characteristics
@@ -74,4 +74,85 @@ BEGIN
     FOR r IN SELECT name, description FROM public.property_type_characteristics ORDER BY name LIMIT 5 LOOP
         RAISE NOTICE '  - %: %', r.name, COALESCE(r.description, 'Sin descripción');
     END LOOP;
+END $$;
+
+-- ========================================================================
+-- AGREGAR RELACIÓN CON PROPERTIES
+-- ========================================================================
+
+-- Agregar columna property_type_characteristics_id a la tabla properties
+ALTER TABLE public.properties
+ADD COLUMN IF NOT EXISTS property_type_characteristics_id UUID REFERENCES public.property_type_characteristics(id);
+
+-- Crear índice para mejor performance
+CREATE INDEX IF NOT EXISTS idx_properties_property_type_characteristics_id
+ON public.properties(property_type_characteristics_id);
+
+-- Agregar comentario
+COMMENT ON COLUMN public.properties.property_type_characteristics_id IS 'Referencia al UUID de property_type_characteristics para el tipo de propiedad';
+
+-- Función para mapear tipo_propiedad al UUID correspondiente de property_type_characteristics
+CREATE OR REPLACE FUNCTION public.get_property_type_characteristics_id(property_type_text TEXT)
+RETURNS UUID AS $$
+DECLARE
+    characteristics_id UUID;
+BEGIN
+    SELECT id INTO characteristics_id
+    FROM public.property_type_characteristics
+    WHERE name = property_type_text
+    LIMIT 1;
+
+    RETURN characteristics_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Actualizar registros existentes en properties para mapear tipo_propiedad a property_type_characteristics_id
+DO $$
+DECLARE
+    property_record RECORD;
+    characteristics_id UUID;
+BEGIN
+    RAISE NOTICE '🔄 Actualizando property_type_characteristics_id en tabla properties...';
+
+    FOR property_record IN
+        SELECT id, tipo_propiedad
+        FROM public.properties
+        WHERE property_type_characteristics_id IS NULL
+        AND tipo_propiedad IS NOT NULL
+    LOOP
+        -- Obtener el UUID correspondiente del tipo de propiedad
+        SELECT id INTO characteristics_id
+        FROM public.property_type_characteristics
+        WHERE name = property_record.tipo_propiedad::text
+        LIMIT 1;
+
+        IF characteristics_id IS NOT NULL THEN
+            UPDATE public.properties
+            SET property_type_characteristics_id = characteristics_id
+            WHERE id = property_record.id;
+
+            RAISE NOTICE '  ✅ Actualizado propiedad %: % -> %', property_record.id, property_record.tipo_propiedad, characteristics_id;
+        ELSE
+            RAISE NOTICE '  ⚠️ No se encontró UUID para tipo_propiedad: % en propiedad %', property_record.tipo_propiedad, property_record.id;
+        END IF;
+    END LOOP;
+
+    RAISE NOTICE '✅ Actualización completada';
+END $$;
+
+-- Verificar la actualización
+DO $$
+DECLARE
+    v_total_properties integer;
+    v_updated_properties integer;
+    v_missing_mappings integer;
+BEGIN
+    SELECT COUNT(*) INTO v_total_properties FROM public.properties;
+    SELECT COUNT(*) INTO v_updated_properties FROM public.properties WHERE property_type_characteristics_id IS NOT NULL;
+    SELECT COUNT(*) INTO v_missing_mappings FROM public.properties WHERE property_type_characteristics_id IS NULL;
+
+    RAISE NOTICE '📊 Estadísticas de mapeo:';
+    RAISE NOTICE '  - Total de propiedades: %', v_total_properties;
+    RAISE NOTICE '  - Propiedades con mapeo actualizado: %', v_updated_properties;
+    RAISE NOTICE '  - Propiedades sin mapeo: %', v_missing_mappings;
 END $$;

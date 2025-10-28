@@ -119,3 +119,4 @@ COMMENT ON FUNCTION get_portfolio_with_postulations(uuid) IS
 -- Para verificar que la función se actualizó correctamente:
 -- SELECT * FROM get_portfolio_with_postulations('YOUR_USER_ID_HERE');
 
+

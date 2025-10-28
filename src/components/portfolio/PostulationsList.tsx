@@ -55,9 +55,9 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propP
                 phone
               ),
               guarantors!guarantor_id (
-                first_name,
-                paternal_last_name,
-                maternal_last_name,
+                full_name,
+                contact_email,
+                contact_phone,
                 rut,
                 guarantor_characteristic_id
               )
@@ -80,11 +80,9 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propP
                 : 'Sin nombre',
               applicant_email: app.profiles?.email || null,
               applicant_phone: app.profiles?.phone || null,
-              guarantor_name: app.guarantors
-                ? `${app.guarantors.first_name} ${app.guarantors.paternal_last_name} ${app.guarantors.maternal_last_name || ''}`.trim()
-                : null,
-              guarantor_email: null, // La tabla guarantors no tiene email
-              guarantor_phone: null, // La tabla guarantors no tiene phone
+              guarantor_name: app.guarantors?.full_name || null,
+              guarantor_email: app.guarantors?.contact_email || null,
+              guarantor_phone: app.guarantors?.contact_phone || null,
               guarantor_characteristic_id: app.guarantors?.guarantor_characteristic_id || null,
             }));
             console.log('✅ [PostulationsList] Postulaciones formateadas:', formattedPostulations);

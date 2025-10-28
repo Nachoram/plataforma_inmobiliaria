@@ -220,3 +220,4 @@ Si después de aplicar esta solución sigues teniendo problemas:
 2. Revisa los logs de Supabase (Logging → Postgres Logs)
 3. Comparte el error específico que estés experimentando
 
+

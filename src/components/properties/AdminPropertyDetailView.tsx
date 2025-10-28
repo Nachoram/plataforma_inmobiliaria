@@ -21,8 +21,8 @@ interface ContractConditionsFormData {
   // Basic contract information
   contract_start_date: string;
   contract_end_date: string;
-  monthly_rent: number;
-  warranty_amount: number;
+  monthly_rent: number | string;
+  warranty_amount: number | string;
   payment_day: number;
 
   // Special conditions
@@ -49,7 +49,7 @@ interface ContractConditionsFormData {
   broker_rut: string;
 
   // Final pricing
-  final_rent_price: number;
+  final_rent_price: number | string;
 
   // Additional form fields still used in the UI
   duration: string; // Contract duration in months
@@ -58,8 +58,8 @@ interface ContractConditionsFormData {
   max_occupants: string; // For property-specific conditions
   allowed_use: string; // For property-specific conditions
   access_clause: string; // For property-specific conditions
-  broker_commission: number; // Commission amount
-  payment_method: string; // Payment method
+  broker_commission: number | string; // Commission amount
+  payment_method: 'transferencia_bancaria' | 'plataforma'; // Payment method
 }
 
 // Datos de prueba para las métricas
@@ -84,6 +84,104 @@ const marketPriceData = {
   recommendation: 'El precio es competitivo.'
 };
 
+// ========================================================================
+// HELPER FUNCTIONS FOR ERROR HANDLING
+// ========================================================================
+
+/**
+ * Formatea un error de Supabase para logging y display
+ * @param error - Error object from Supabase or other sources
+ * @param context - Context string describing where the error occurred
+ * @returns Formatted error object with all details
+ */
+const formatErrorDetails = (error: any, context: string = '') => {
+  const details = {
+    context,
+    message: error?.message || 'Error desconocido',
+    code: error?.code || 'N/A',
+    details: error?.details || 'Sin detalles adicionales',
+    hint: error?.hint || 'Sin sugerencias',
+    stack: error?.stack || 'Sin stack trace',
+    statusCode: error?.statusCode || error?.status || 'N/A',
+  };
+
+  // Log completo en consola
+  console.error(`❌ [ERROR] ${context}:`, details);
+
+  return details;
+};
+
+/**
+ * Genera un mensaje de error user-friendly a partir de un error de Supabase
+ * @param error - Error object from Supabase
+ * @param defaultMessage - Default message if no specific match is found
+ * @returns User-friendly error message
+ */
+const getUserFriendlyErrorMessage = (error: any, defaultMessage: string = 'Ha ocurrido un error'): string => {
+  if (!error) return defaultMessage;
+
+  const message = error.message || '';
+
+  // Check constraint violations
+  if (message.includes('violates check constraint "check_monthly_payment_day"')) {
+    return 'El día de pago debe estar entre 1 y 31';
+  }
+  if (message.includes('violates check constraint')) {
+    return 'Datos inválidos. Por favor verifica los campos ingresados.';
+  }
+
+  // Foreign key violations
+  if (message.includes('violates foreign key constraint')) {
+    return 'Referencia inválida. Verifica que todos los datos relacionados existan.';
+  }
+
+  // Not-null constraint violations
+  if (message.includes('violates not-null constraint')) {
+    const match = message.match(/column "([^"]+)"/);
+    const columnName = match ? match[1] : 'desconocido';
+    return `Campo requerido faltante: ${columnName}`;
+  }
+
+  // Permission/RLS errors
+  if (message.includes('permission denied') || message.includes('RLS') || message.includes('policy')) {
+    return 'No tienes permisos para realizar esta acción. Verifica que seas el propietario.';
+  }
+
+  // Column doesn't exist (common in schema mismatches)
+  if (message.includes('column') && message.includes('does not exist')) {
+    const match = message.match(/column "?([^"]+)"?/i);
+    const columnName = match ? match[1] : 'desconocida';
+    return `Error de configuración: La columna "${columnName}" no existe en la base de datos. Contacta al administrador.`;
+  }
+
+  // 400 errors
+  if (error.code === '400' || error.statusCode === 400) {
+    return `Error 400: ${message || error.details || 'Solicitud inválida'}`;
+  }
+
+  // 404 errors
+  if (error.code === '404' || error.statusCode === 404 || message.includes('not found')) {
+    return 'El recurso solicitado no existe o no está disponible.';
+  }
+
+  // Network/Connection errors
+  if (message.includes('fetch') || message.includes('network') || message.includes('connection')) {
+    return 'Error de conexión. Verifica tu conexión a internet e intenta nuevamente.';
+  }
+
+  // Validation errors from backend
+  if (message.includes('obligatorio') || message.includes('inválido') || message.includes('debe ser')) {
+    return message;
+  }
+
+  // Default: use the original message if it exists, otherwise default
+  return message || defaultMessage;
+};
+
+// ========================================================================
+// MAIN COMPONENT
+// ========================================================================
+
 export const AdminPropertyDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -101,6 +199,9 @@ export const AdminPropertyDetailView: React.FC = () => {
   const [postulations, setPostulations] = useState<any[]>([]);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
+
+  // ✅ Estados para validación de formulario
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   // Estado para el usuario actual
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -125,8 +226,8 @@ export const AdminPropertyDetailView: React.FC = () => {
   const [formData, setFormData] = useState<ContractConditionsFormData>({
     contract_start_date: '',
     contract_end_date: '',
-    monthly_rent: Number(0),
-    warranty_amount: Number(0),
+    monthly_rent: '',
+    warranty_amount: '',
     payment_day: Number(5),
     special_conditions_house: '',
     dicom_clause: false, // NUEVO
@@ -139,7 +240,7 @@ export const AdminPropertyDetailView: React.FC = () => {
     account_holder_rut: '',
     broker_name: '',
     broker_rut: '',
-    final_rent_price: Number(0),
+    final_rent_price: '',
     // Additional form fields
     duration: '12',
     allows_pets: false,
@@ -147,8 +248,8 @@ export const AdminPropertyDetailView: React.FC = () => {
     max_occupants: '',
     allowed_use: '',
     access_clause: '',
-    broker_commission: Number(0),
-    payment_method: 'transferencia',
+    broker_commission: '',
+    payment_method: 'transferencia_bancaria',
   });
 
   useEffect(() => {
@@ -295,16 +396,26 @@ export const AdminPropertyDetailView: React.FC = () => {
 
   const fetchPostulations = async () => {
     console.log('🔍 [AdminPropertyDetailView] Cargando postulaciones reales para property:', id);
+    
+    // ✅ Validación: prevenir consultas con ID undefined/null
+    if (!id) {
+      console.error('❌ [AdminPropertyDetailView] Property ID es undefined/null, no se puede cargar postulaciones');
+      toast.error('Error: ID de propiedad no válido');
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('applications')
         .select(`
           id,
           applicant_id,
+          guarantor_id,
           status,
           created_at,
           message,
           application_characteristic_id,
+          guarantor_characteristic_id,
           profiles!applicant_id (
             first_name,
             paternal_last_name,
@@ -312,19 +423,19 @@ export const AdminPropertyDetailView: React.FC = () => {
             email,
             phone
           ),
-          guarantors!guarantor_id (
-            first_name,
-            paternal_last_name,
-            maternal_last_name,
-            rut,
-            guarantor_characteristic_id
-          )
+        guarantors!guarantor_id (
+          first_name,
+          rut
+        )
         `)
         .eq('property_id', id)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ [AdminPropertyDetailView] Error cargando postulaciones:', error);
+        // ✅ Usar función helper para formatear error
+        formatErrorDetails(error, 'fetchPostulations - Error cargando postulaciones');
+        const userMessage = getUserFriendlyErrorMessage(error, 'Error al cargar las postulaciones');
+        toast.error(userMessage);
         return;
       }
 
@@ -347,16 +458,20 @@ export const AdminPropertyDetailView: React.FC = () => {
           employment: 'N/A' // TODO: Agregar si existe en la BD
         },
         guarantor: app.guarantors ? {
-          name: `${app.guarantors.first_name} ${app.guarantors.paternal_last_name} ${app.guarantors.maternal_last_name || ''}`.trim(),
-          email: 'N/A', // La tabla guarantors no tiene email
+          name: app.guarantors.first_name || 'Sin nombre',
+          email: 'N/A', // Email not available in current schema
+          phone: 'N/A', // Phone not available in current schema
           income: 0 // TODO: Agregar si existe en la BD
         } : null
       }));
 
       console.log('📊 [AdminPropertyDetailView] Postulaciones formateadas:', formattedPostulations);
       setPostulations(formattedPostulations);
-    } catch (error) {
-      console.error('❌ [AdminPropertyDetailView] Error en catch:', error);
+    } catch (error: any) {
+      // ✅ Usar función helper para formatear error
+      formatErrorDetails(error, 'fetchPostulations - Error en catch');
+      const userMessage = getUserFriendlyErrorMessage(error, 'Error inesperado al cargar postulaciones');
+      toast.error(userMessage);
     }
   };
 
@@ -429,17 +544,63 @@ export const AdminPropertyDetailView: React.FC = () => {
     console.log('✅ Modal de contrato abierto');
   };
 
+  // ✅ Función de validación en tiempo real
+  const validateField = (field: string, value: any): string | null => {
+    switch (field) {
+      case 'broker_name':
+        if (!value || !value.trim()) {
+          return 'El nombre del corredor es obligatorio';
+        }
+        if (value.trim().length < 3) {
+          return 'El nombre debe tener al menos 3 caracteres';
+        }
+        return null;
+
+      case 'broker_rut':
+        if (!value || !value.trim()) {
+          return 'El RUT del corredor es obligatorio';
+        }
+        if (value.trim().length < 9) {
+          return 'Ingresa un RUT válido (ej: 12.345.678-9)';
+        }
+        return null;
+
+      case 'final_rent_price':
+        const price = Number(value);
+        if (isNaN(price) || price <= 0) {
+          return 'El precio debe ser mayor a 0';
+        }
+        return null;
+
+      case 'notification_email':
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!value || !emailRegex.test(value)) {
+          return 'Ingresa un correo electrónico válido';
+        }
+        return null;
+
+      default:
+        return null;
+    }
+  };
+
   // Función para actualizar los campos del formulario
   const handleContractFormChange = (field: string, value: any) => {
     setFormData(prev => {
       const newData = { ...prev };
 
-      // Campos que DEBEN ser números - conversión explícita
-      const numericFields = ['monthly_rent', 'warranty_amount', 'payment_day', 'final_rent_price', 'broker_commission'];
+      // Campos de monto que permiten valores vacíos en el UI
+      const amountFields = ['monthly_rent', 'warranty_amount', 'final_rent_price', 'broker_commission'];
+      
+      // Campo de pago que debe ser número entero
+      const integerFields = ['payment_day'];
 
-      if (numericFields.includes(field)) {
-        // Convertir explícitamente a número
-        const numValue = typeof value === 'string' ? parseFloat(value) || 0 : Number(value) || 0;
+      if (amountFields.includes(field)) {
+        // Permitir string vacío o mantener el valor como está (string o número)
+        (newData as any)[field] = value === '' ? '' : value;
+      } else if (integerFields.includes(field)) {
+        // Convertir explícitamente a número para payment_day
+        const numValue = typeof value === 'string' ? parseInt(value) || 0 : Number(value) || 0;
         (newData as any)[field] = numValue;
       } else {
         (newData as any)[field] = value;
@@ -456,10 +617,29 @@ export const AdminPropertyDetailView: React.FC = () => {
 
       return newData;
     });
+
+    // ✅ Validar campo en tiempo real y actualizar errores
+    const error = validateField(field, value);
+    setFormErrors(prev => {
+      const newErrors = { ...prev };
+      if (error) {
+        newErrors[field] = error;
+      } else {
+        delete newErrors[field];
+      }
+      return newErrors;
+    });
   };
 
   // Función para obtener los IDs de características del contrato
   const fetchContractData = async (applicationId: string) => {
+    // ✅ Validación: prevenir consultas con ID undefined/null
+    if (!applicationId) {
+      const errorMsg = 'Application ID es undefined/null';
+      console.error('❌ [fetchContractData]', errorMsg);
+      throw new Error('ID de aplicación no válido');
+    }
+
     try {
       console.log('🔍 [fetchContractData] INICIANDO - Application ID:', applicationId);
 
@@ -482,8 +662,8 @@ export const AdminPropertyDetailView: React.FC = () => {
         .single();
 
       if (appError) {
-        console.error('❌ Error fetching application:', appError);
-        throw appError;
+        formatErrorDetails(appError, 'fetchContractData - Error fetching application');
+        throw new Error(getUserFriendlyErrorMessage(appError, 'No se pudo obtener la información de la aplicación'));
       }
 
       console.log('📋 Application data obtenida:', applicationData);
@@ -655,56 +835,81 @@ export const AdminPropertyDetailView: React.FC = () => {
   };
 
   // Función helper para mapear campos del formulario a la estructura de la base de datos
-  const mapFormDataToDatabase = (formData: ContractConditionsFormData) => {
+  const mapFormDataToDatabase = (formData: ContractConditionsFormData, currentUserId: string) => {
+    // Convertir campos de monto de string a número ('' se convierte a 0)
+    const finalRentPrice = formData.final_rent_price === '' ? 0 : Number(formData.final_rent_price);
+    const warrantyAmount = formData.warranty_amount === '' ? 0 : Number(formData.warranty_amount);
+    const brokerCommission = formData.broker_commission === '' ? 0 : Number(formData.broker_commission);
+
+    // Validaciones básicas antes de mapear
+    if (!formData.broker_name?.trim()) {
+      throw new Error('El nombre del corredor es obligatorio');
+    }
+    if (!formData.broker_rut?.trim()) {
+      throw new Error('El RUT del corredor es obligatorio');
+    }
+    if (!formData.contract_start_date) {
+      throw new Error('La fecha de inicio del contrato es obligatoria');
+    }
+    if (isNaN(finalRentPrice) || finalRentPrice <= 0) {
+      throw new Error('El precio final del arriendo debe ser mayor a 0');
+    }
+    if (isNaN(warrantyAmount) || warrantyAmount <= 0) {
+      throw new Error('El monto de garantía debe ser mayor a 0');
+    }
+    if (!formData.duration || Number(formData.duration) <= 0) {
+      throw new Error('La duración del contrato debe ser mayor a 0 meses');
+    }
+    if (!formData.payment_day || formData.payment_day < 1 || formData.payment_day > 31) {
+      throw new Error('El día de pago debe estar entre 1 y 31');
+    }
+    if (!selectedProfile.applicationId) {
+      throw new Error('No se encontró el ID de la aplicación');
+    }
+
     return {
       application_id: selectedProfile.applicationId,
 
-      // Campos temporales - CORRECTED: duration se convierte a contract_duration_months
+      // Campos requeridos por la tabla
+      final_rent_price: finalRentPrice,
+      broker_name: formData.broker_name.trim(),
+      broker_rut: formData.broker_rut.trim(),
       contract_duration_months: Number(formData.duration),
-
-      // Día de pago (validado 1-31) - CORRECTED: monthly_payment_day
       monthly_payment_day: Number(formData.payment_day),
+      guarantee_amount: warrantyAmount,
+      contract_start_date: formData.contract_start_date,
 
-      // Campos económicos - CORRECTED: nombres de columnas actualizados
-      final_rent_price: Number(formData.final_rent_price),
-      brokerage_commission: Number(formData.broker_commission) || null,
-      guarantee_amount: Number(formData.warranty_amount),
-
-      // Fechas del contrato
-      contract_start_date: formData.contract_start_date || null,
-      contract_end_date: formData.contract_end_date || null,
-
-      // Email oficial
-      official_communication_email: formData.notification_email?.trim() || null,
-
-      // Condiciones booleanas
+      // Campos opcionales
       accepts_pets: Boolean(formData.allows_pets),
-      dicom_clause: Boolean(formData.dicom_clause),
-
-      // Condiciones adicionales
       additional_conditions: formData.special_conditions_house?.trim() || null,
+      brokerage_commission: brokerCommission,
 
-      // Información del broker
-      broker_name: formData.broker_name?.trim() || null,
-      broker_rut: formData.broker_rut?.trim() || null,
-
-      // Información bancaria (si existe)
+      // Información bancaria (opcional)
       bank_name: formData.bank_name?.trim() || null,
       account_type: formData.account_type?.trim() || null,
       account_number: formData.account_number?.trim() || null,
       account_holder_name: formData.account_holder_name?.trim() || null,
       account_holder_rut: formData.account_holder_rut?.trim() || null,
 
-      // Payment method
-      payment_method: formData.payment_method || 'transferencia',
+      // Método de pago - Normalizar valores antiguos (cast para compatibilidad con datos legacy)
+      payment_method: (formData.payment_method as string) === 'transferencia' ? 'transferencia_bancaria' : formData.payment_method,
 
-      // Actualizar timestamp
+      // Usuario que crea las condiciones
+      created_by: currentUserId,
+
+      // Timestamp de actualización (el trigger lo maneja, pero lo incluimos por claridad)
       updated_at: new Date().toISOString(),
     };
   };
 
   // Función para generar y enviar contrato al webhook
   const handleGenerateContract = async () => {
+    // Prevenir múltiples ejecuciones simultáneas
+    if (isGenerating) {
+      console.log('⚠️ Ya hay una generación de contrato en proceso. Ignorando duplicado.');
+      return;
+    }
+
     let contractRecordCreated = false;
     let contractId = null;
 
@@ -733,6 +938,17 @@ export const AdminPropertyDetailView: React.FC = () => {
       });
 
       const validationErrors = [];
+
+      // ✅ Validar campos críticos PRIMERO (broker_name, broker_rut)
+      if (!formData.broker_name?.trim()) {
+        validationErrors.push('nombre del corredor (campo obligatorio)');
+        setFormErrors(prev => ({ ...prev, broker_name: 'El nombre del corredor es obligatorio' }));
+      }
+      
+      if (!formData.broker_rut?.trim()) {
+        validationErrors.push('RUT del corredor (campo obligatorio)');
+        setFormErrors(prev => ({ ...prev, broker_rut: 'El RUT del corredor es obligatorio' }));
+      }
 
       // Validar duración del contrato (1-60 meses)
       if (!formData.duration || formData.duration.trim() === '') {
@@ -834,31 +1050,63 @@ export const AdminPropertyDetailView: React.FC = () => {
       const characteristicIds = await fetchContractData(selectedProfile.applicationId);
       console.log('✅ Datos de características obtenidos:', characteristicIds);
 
+      // ✅ Validación: verificar que existan los IDs necesarios
       if (!characteristicIds.property_characteristic_id || !characteristicIds.rental_owner_characteristic_id) {
         console.error('❌ Faltan datos requeridos:', characteristicIds);
-        toast.error('Error obteniendo datos de la propiedad');
+        toast.error('Error obteniendo datos de la propiedad. Verifica que la propiedad tenga características asignadas.');
         setIsGenerating(false);
         return;
       }
       console.log('✅ Validación de características exitosa');
 
-      const { data: propertyTypeData } = await supabase
+      // ✅ Consultas con manejo de errores para evitar 404s
+      console.log('🔍 Obteniendo datos de property_type_characteristics...');
+      const { data: propertyTypeData, error: propertyTypeError } = await supabase
         .from('property_type_characteristics')
         .select('name')
         .eq('id', characteristicIds.property_characteristic_id)
-        .single();
+        .maybeSingle(); // ✅ maybeSingle() no lanza error si no existe
 
-      const { data: ownerData } = await supabase
+      if (propertyTypeError) {
+        formatErrorDetails(propertyTypeError, 'handleGenerateContract - Error obteniendo property_type_characteristics');
+        toast.error('Error al obtener datos del tipo de propiedad');
+        setIsGenerating(false);
+        return;
+      }
+
+      if (!propertyTypeData) {
+        console.error('❌ property_type_characteristics no encontrado para ID:', characteristicIds.property_characteristic_id);
+        toast.error('No se encontraron las características del tipo de propiedad');
+        setIsGenerating(false);
+        return;
+      }
+
+      console.log('🔍 Obteniendo datos de rental_owner_characteristics...');
+      const { data: ownerData, error: ownerError } = await supabase
         .from('rental_owner_characteristics')
         .select('name, rut')
         .eq('id', characteristicIds.rental_owner_characteristic_id)
-        .single();
+        .maybeSingle(); // ✅ maybeSingle() no lanza error si no existe
+
+      if (ownerError) {
+        formatErrorDetails(ownerError, 'handleGenerateContract - Error obteniendo rental_owner_characteristics');
+        toast.error('Error al obtener datos del propietario');
+        setIsGenerating(false);
+        return;
+      }
+
+      if (!ownerData) {
+        console.error('❌ rental_owner_characteristics no encontrado para ID:', characteristicIds.rental_owner_characteristic_id);
+        toast.error('No se encontraron las características del propietario');
+        setIsGenerating(false);
+        return;
+      }
 
       // 4. Guardar condiciones del contrato con mapeo correcto
       console.log('💾 Guardando condiciones del contrato...');
 
       // Mapear campos del formulario a estructura de base de datos
-      const contractConditionsData = mapFormDataToDatabase(formData);
+      const contractConditionsData = mapFormDataToDatabase(formData, currentUser?.id);
 
       console.log('📝 Datos mapeados a guardar:', contractConditionsData);
 
@@ -869,9 +1117,10 @@ export const AdminPropertyDetailView: React.FC = () => {
         });
 
       if (upsertError) {
-        console.error('❌ Error guardando condiciones:', upsertError);
-        console.error('❌ Detalles completos del error:', JSON.stringify(upsertError, null, 2));
-        throw upsertError;
+        // ✅ Usar función helper para formatear error
+        formatErrorDetails(upsertError, 'handleGenerateContract - Error guardando condiciones del contrato');
+        const errorMessage = getUserFriendlyErrorMessage(upsertError, 'Error al guardar las condiciones del contrato');
+        throw new Error(errorMessage);
       }
 
       console.log('✅ Condiciones guardadas exitosamente');
@@ -885,56 +1134,93 @@ export const AdminPropertyDetailView: React.FC = () => {
       console.log('📋 Contract number:', contractRecord.contract_number);
       console.log('📄 Contract record completo:', contractRecord);
 
-      // 6. Preparar y enviar payload al webhook (código existente)
+      // 6. Preparar y enviar payload al webhook con todos los datos necesarios para n8n
       const webhookPayload = {
-        // Datos del postulante
+        // ========== IDs de referencia ==========
+        contract_id: contractRecord.id,
+        contract_number: contractRecord.contract_number,
+        application_id: selectedProfile.applicationId,
+        property_id: property?.id || '',
+        
+        // ========== Datos del postulante ==========
         applicant_name: selectedProfile.name,
         applicant_rut: selectedProfile.rut || '',
         applicant_email: selectedProfile.profile.email,
         applicant_phone: selectedProfile.profile.phone,
+        applicant_characteristic_id: selectedProfile.applicationCharacteristicId || null,
 
-        // Datos de la propiedad
-        property_id: property?.id || '',
+        // ========== Datos del garante (si existe) ==========
+        guarantor_name: selectedProfile.guarantorName || null,
+        guarantor_rut: selectedProfile.guarantorRut || null,
+        guarantor_email: selectedProfile.guarantorEmail || null,
+        guarantor_phone: selectedProfile.guarantorPhone || null,
+        guarantor_characteristic_id: selectedProfile.guarantorCharacteristicId || null,
+
+        // ========== Datos de la propiedad ==========
         property_address: (property?.address_street || '') + ' ' + (property?.address_number || ''),
+        property_commune: property?.address_commune || '',
+        property_region: property?.address_region || '',
         property_type: propertyTypeData?.name || 'No especificado',
+        property_characteristic_id: (property as any)?.property_characteristic_id || null,
 
-        // Datos del propietario
+        // ========== Datos del propietario ==========
         owner_name: ownerData?.name || 'No especificado',
         owner_rut: ownerData?.rut || 'No especificado',
+        owner_email: (ownerData as any)?.email || '',
+        owner_phone: (ownerData as any)?.phone || '',
+        owner_characteristic_id: (ownerData as any)?.rental_owner_characteristic_id || null,
 
-        // Condiciones del contrato
+        // ========== Condiciones del contrato ==========
         contract_start_date: formData.contract_start_date,
         contract_end_date: formData.contract_end_date,
+        contract_duration_months: Number(formData.duration),
+        
+        // Precios y montos
         monthly_rent: Number(formData.monthly_rent),
+        final_rent_price: Number(formData.final_rent_price),
         warranty_amount: Number(formData.warranty_amount),
+        broker_commission: Number(formData.broker_commission) || 0,
+        
+        // Día de pago
         payment_day: Number(formData.payment_day),
+        monthly_payment_day: Number(formData.payment_day), // Alias para compatibilidad
 
-        // Corredor
+        // ========== Información del corredor ==========
         broker_name: formData.broker_name || '',
         broker_rut: formData.broker_rut || '',
-        final_rent_price: Number(formData.final_rent_price),
 
-        // Condiciones especiales
-        special_conditions_house: formData.special_conditions_house || '',
-        dicom_clause: formData.dicom_clause,
+        // ========== Condiciones especiales ==========
+        accepts_pets: Boolean(formData.allows_pets),
+        allows_pets: Boolean(formData.allows_pets), // Alias para compatibilidad
+        dicom_clause: Boolean(formData.dicom_clause),
+        additional_conditions: formData.special_conditions_house || '',
+        special_conditions_house: formData.special_conditions_house || '', // Alias
 
-        // Email de notificación
-        notification_email: formData.notification_email,
+        // ========== Email de notificación oficial ==========
+        notification_email: formData.notification_email || '',
+        official_communication_email: formData.notification_email || '', // Alias
 
-        // Condiciones de pago
+        // ========== Condiciones de pago ==========
         payment_conditions: formData.payment_conditions || '',
+        payment_method: formData.payment_method || 'transferencia_bancaria',
 
-        // Datos bancarios
+        // ========== Datos bancarios ==========
         bank_name: formData.bank_name || '',
         account_type: formData.account_type || '',
         account_number: formData.account_number || '',
         account_holder_name: formData.account_holder_name || '',
         account_holder_rut: formData.account_holder_rut || '',
 
-        // NUEVO - Incluir IDs del contrato para que n8n pueda actualizar
-        contract_id: contractRecord.id,
-        contract_number: contractRecord.contract_number,
-        application_id: selectedProfile.applicationId,
+        // ========== Metadata del contrato ==========
+        contract_type: 'arriendo', // rental
+        contract_format: 'hybrid', // JSON + HTML
+        contract_status: 'draft', // Hasta que n8n lo procese
+        
+        // ========== Characteristic IDs para n8n ==========
+        contract_conditions_characteristic_id: (contractConditionsData as any).contract_conditions_characteristic_id || null,
+        
+        // ========== Timestamp ==========
+        generated_at: new Date().toISOString(),
       };
 
       console.log('📤 Enviando al webhook de n8n...');
@@ -960,10 +1246,41 @@ export const AdminPropertyDetailView: React.FC = () => {
       console.log('📡 Respuesta del webhook recibida. Status:', webhookResponse.status);
 
       if (!webhookResponse.ok) {
-        const errorText = await webhookResponse.text();
-        console.error('❌ Error del webhook. Status:', webhookResponse.status);
-        console.error('❌ Error del webhook. Response:', errorText);
-        throw new Error(`Error del webhook: ${webhookResponse.status} - ${errorText}`);
+        let errorText = '';
+        let errorDetails = {};
+        
+        try {
+          // Intentar parsear como JSON primero
+          const contentType = webhookResponse.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            errorDetails = await webhookResponse.json();
+            errorText = JSON.stringify(errorDetails, null, 2);
+          } else {
+            errorText = await webhookResponse.text();
+          }
+        } catch (parseError) {
+          errorText = await webhookResponse.text();
+        }
+        
+        console.error('❌ Error del webhook n8n. Status:', webhookResponse.status);
+        console.error('❌ Error del webhook n8n. Response:', errorText);
+        
+        // Mensajes específicos según status code
+        let userMessage = 'Error al generar el contrato en el servidor';
+        
+        if (webhookResponse.status === 400) {
+          userMessage = 'Datos inválidos enviados al generador de contratos. Verifica todos los campos.';
+        } else if (webhookResponse.status === 401 || webhookResponse.status === 403) {
+          userMessage = 'No autorizado para generar contratos. Verifica la configuración del webhook.';
+        } else if (webhookResponse.status === 404) {
+          userMessage = 'Endpoint de generación de contratos no encontrado. Contacta al administrador.';
+        } else if (webhookResponse.status === 500) {
+          userMessage = 'Error interno en el servidor de generación de contratos. Intenta nuevamente.';
+        } else if (webhookResponse.status === 503) {
+          userMessage = 'Servicio de generación de contratos no disponible temporalmente. Intenta más tarde.';
+        }
+        
+        throw new Error(`${userMessage} (HTTP ${webhookResponse.status})`);
       }
 
       const webhookResult = await webhookResponse.json();
@@ -977,22 +1294,20 @@ export const AdminPropertyDetailView: React.FC = () => {
       // fetchPropertyDetails();
 
     } catch (error: any) {
-      console.error('❌ Error al generar contrato:', error);
-      console.error('❌ Error JSON:', JSON.stringify(error, null, 2));
-      console.error('❌ Detalles del error:', {
-        message: error?.message,
-        hint: error?.hint,
-        details: error?.details,
-        code: error?.code,
-        stack: error?.stack,
-        contractRecordCreated,
-        contractId
-      });
-
+      // ✅ Usar función helper para formatear error
+      formatErrorDetails(error, 'handleGenerateContract - Error al generar contrato');
+      
       // Mostrar mensaje específico según el tipo de error
-      let errorMessage = 'Error al generar el contrato';
-      if (error?.message?.includes('webhook')) {
-        errorMessage = 'Error al enviar el contrato. Verifica la conexión con el servidor.';
+      let errorMessage = getUserFriendlyErrorMessage(error, 'Error al generar el contrato');
+      
+      // Si el error ya tiene un mensaje descriptivo (de mapFormDataToDatabase), usarlo directamente
+      if (error?.message && (
+        error.message.includes('obligatorio') ||
+        error.message.includes('debe ser') ||
+        error.message.includes('inválido') ||
+        error.message.includes('HTTP')
+      )) {
+        errorMessage = error.message;
       } else if (error?.message?.includes('campos requeridos')) {
         errorMessage = 'Por favor completa todos los campos requeridos';
       } else if (error?.message?.includes('email')) {
@@ -1854,8 +2169,11 @@ export const AdminPropertyDetailView: React.FC = () => {
                       type="number"
                       min={0}
                       step={1000}
-                      value={formData.warranty_amount || 0}
-                      onChange={(e) => handleContractFormChange('warranty_amount', parseFloat(e.target.value) || 0)}
+                      value={formData.warranty_amount}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        handleContractFormChange('warranty_amount', value === '' ? '' : value);
+                      }}
                       placeholder="Ej: 850000"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       required
@@ -1897,8 +2215,11 @@ export const AdminPropertyDetailView: React.FC = () => {
                         type="number"
                         min={0}
                         step={1000}
-                        value={formData.final_rent_price || 0}
-                        onChange={(e) => handleContractFormChange('final_rent_price', parseFloat(e.target.value) || 0)}
+                        value={formData.final_rent_price}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          handleContractFormChange('final_rent_price', value === '' ? '' : value);
+                        }}
                         placeholder="Ej: 500000"
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                         required
@@ -1914,11 +2235,21 @@ export const AdminPropertyDetailView: React.FC = () => {
                         type="text"
                         value={formData.broker_name}
                         onChange={(e) => handleContractFormChange('broker_name', e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 transition-colors ${
+                          formErrors.broker_name
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                            : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'
+                        }`}
                         placeholder="Ej: María López"
                         maxLength={120}
                         required
                       />
+                      {formErrors.broker_name && (
+                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                          <AlertTriangle className="h-4 w-4 mr-1" />
+                          {formErrors.broker_name}
+                        </p>
+                      )}
                     </div>
 
                     {/* RUT del Corredor */}
@@ -1930,11 +2261,21 @@ export const AdminPropertyDetailView: React.FC = () => {
                         type="text"
                         value={formData.broker_rut}
                         onChange={(e) => handleContractFormChange('broker_rut', e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 transition-colors ${
+                          formErrors.broker_rut
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                            : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'
+                        }`}
                         placeholder="Ej: 12.345.678-9"
                         maxLength={12}
                         required
                       />
+                      {formErrors.broker_rut && (
+                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                          <AlertTriangle className="h-4 w-4 mr-1" />
+                          {formErrors.broker_rut}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2121,16 +2462,16 @@ export const AdminPropertyDetailView: React.FC = () => {
                   {/* Modo de Pago del Arriendo */}
                   <div className="mb-6">
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      Modo de Pago del Arriendo
+                      Modo de Pago del Arriendo *
                     </label>
                     <div className="space-y-2">
                       <label className="flex items-center p-3 border-2 border-gray-300 rounded-lg cursor-pointer hover:bg-white transition-colors">
                         <input
                           type="radio"
                           name="paymentMethod"
-                          value="transferencia"
-                          checked={formData.payment_method === 'transferencia'}
-                          onChange={(e) => handleContractFormChange('payment_method', e.target.value)}
+                          value="transferencia_bancaria"
+                          checked={formData.payment_method === 'transferencia_bancaria'}
+                          onChange={(e) => handleContractFormChange('payment_method', e.target.value as 'transferencia_bancaria' | 'plataforma')}
                           className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
                         />
                         <span className="ml-3 text-sm font-semibold text-gray-700">
@@ -2153,7 +2494,7 @@ export const AdminPropertyDetailView: React.FC = () => {
                   </div>
 
                   {/* Datos para Transferencia (Condicional) */}
-                  {formData.payment_method === 'transferencia' && (
+                  {formData.payment_method === 'transferencia_bancaria' && (
                     <div className="p-5 bg-white rounded-lg border-2 border-emerald-400">
                       <h5 className="text-md font-bold text-gray-800 mb-4 flex items-center">
                         <span className="mr-2">🏦</span>

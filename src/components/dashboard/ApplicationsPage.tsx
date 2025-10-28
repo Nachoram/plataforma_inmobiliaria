@@ -4,7 +4,6 @@ import { supabase, updateApplicationStatus, approveApplicationWithWebhook, getPr
 import { useAuth } from '../../hooks/useAuth';
 import { webhookClient } from '../../lib/webhook';
 import CustomButton from '../common/CustomButton';
-import RentalContractConditionsForm, { RentalContractConditions } from './RentalContractConditionsForm';
 
 interface ApplicationWithDetails {
   id: string;
@@ -69,8 +68,6 @@ const ApplicationsPage: React.FC = () => {
   const [contractStatus, setContractStatus] = useState<Record<string, { status: string; approved_at?: string; sent_to_signature_at?: string }>>({});
   const [showUndoModal, setShowUndoModal] = useState(false);
   const [applicationToUndo, setApplicationToUndo] = useState<ApplicationWithDetails | null>(null);
-  const [showContractConditionsModal, setShowContractConditionsModal] = useState(false);
-  const [applicationToApprove, setApplicationToApprove] = useState<ApplicationWithDetails | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -603,29 +600,7 @@ const ApplicationsPage: React.FC = () => {
     setShowUndoModal(true);
   };
 
-  // Función para manejar el éxito del formulario de condiciones del contrato
-  const handleContractConditionsSuccess = async (conditions: RentalContractConditions) => {
-    if (!applicationToApprove) return;
 
-    console.log('✅ Condiciones del contrato guardadas:', conditions);
-
-    // Cerrar modal de condiciones
-    setShowContractConditionsModal(false);
-    setApplicationToApprove(null);
-
-    // Proceder con la aprobación normal, pasando las condiciones
-    await handleApproveApplication(applicationToApprove, conditions);
-
-    // El contrato se crea vacío, sin contenido HTML generado
-    // El contenido será generado externamente (por ejemplo, por N8N u otro sistema externo)
-    console.log('✅ Contrato creado en estado draft, sin contenido HTML');
-  };
-
-  // Función para cancelar el modal de condiciones del contrato
-  const handleContractConditionsCancel = () => {
-    setShowContractConditionsModal(false);
-    setApplicationToApprove(null);
-  };
 
   // Función para confirmar deshacer aceptación
   const confirmUndoAcceptance = async () => {
@@ -1099,8 +1074,7 @@ const ApplicationsPage: React.FC = () => {
                       onClick={() => {
                         console.log('🖱️ BOTÓN APROBAR CLICKEADO!');
                         console.log('📋 Application:', application);
-                        setApplicationToApprove(application);
-                        setShowContractConditionsModal(true);
+                        handleApproveApplication(application);
                       }}
                       disabled={updating?.startsWith(application.id)}
                       className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation font-semibold"
@@ -1489,15 +1463,6 @@ const ApplicationsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal para Condiciones del Contrato de Arriendo */}
-      {showContractConditionsModal && applicationToApprove && (
-        <RentalContractConditionsForm
-          applicationId={applicationToApprove.id}
-          propertyPrice={applicationToApprove.properties.price_clp}
-          onSuccess={handleContractConditionsSuccess}
-          onCancel={handleContractConditionsCancel}
-        />
-      )}
     </div>
   );
 };

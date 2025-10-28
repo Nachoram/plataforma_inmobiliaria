@@ -301,6 +301,30 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ---
 
+## 📋 **Últimos Cambios**
+
+### 🔄 **Refactorización: Eliminación de RentalContractConditionsForm**
+**Fecha:** Octubre 2025
+
+**✅ Componente eliminado:** `RentalContractConditionsForm.tsx`
+- **Motivo:** Redundancia con `AdminPropertyDetailView.tsx`
+- **Funcionalidades migradas:** Gestión completa de condiciones contractuales
+- **Beneficios:**
+  - ✅ Reducción de deuda técnica
+  - ✅ Simplificación de la base de código
+  - ✅ Flujo unificado en componente centralizado
+  - ✅ Mantenimiento facilitado
+
+**Archivos afectados:**
+- ❌ Eliminado: `src/components/dashboard/RentalContractConditionsForm.tsx`
+- ❌ Eliminado: `src/components/dashboard/__tests__/RentalContractConditionsForm.test.tsx`
+- 🔄 Modificado: `src/components/dashboard/ApplicationsPage.tsx`
+- ✅ Validado: Build exitoso sin referencias rotas
+
+**Flujo actual:** Todas las condiciones contractuales se gestionan exclusivamente desde `AdminPropertyDetailView.tsx`.
+
+---
+
 ## 🆘 **Soporte**
 
 ¿Necesitas ayuda? Consulta la documentación:

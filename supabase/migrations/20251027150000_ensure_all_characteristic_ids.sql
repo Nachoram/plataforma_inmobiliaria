@@ -13,60 +13,124 @@ END $$;
 -- 1. APPLICATIONS TABLE
 -- =====================================================
 
--- Ensure guarantor_characteristic_id exists in applications (UUID type)
+-- Ensure application_characteristic_id is TEXT type for special format
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'applications' AND column_name = 'application_characteristic_id'
+  ) THEN
+    ALTER TABLE applications ADD COLUMN application_characteristic_id TEXT;
+    RAISE NOTICE 'Added application_characteristic_id to applications table';
+  ELSE
+    -- If column exists but is UUID type, change to TEXT
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'applications' AND column_name = 'application_characteristic_id'
+      AND data_type = 'uuid'
+    ) THEN
+      ALTER TABLE applications ALTER COLUMN application_characteristic_id TYPE TEXT;
+      RAISE NOTICE 'Changed application_characteristic_id type from UUID to TEXT';
+    END IF;
+    RAISE NOTICE 'application_characteristic_id already exists in applications table';
+  END IF;
+END $$;
+
+-- Ensure guarantor_characteristic_id exists in applications (TEXT type for special format)
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'applications' AND column_name = 'guarantor_characteristic_id'
   ) THEN
-    ALTER TABLE applications ADD COLUMN guarantor_characteristic_id UUID;
+    ALTER TABLE applications ADD COLUMN guarantor_characteristic_id TEXT;
     RAISE NOTICE 'Added guarantor_characteristic_id to applications table';
   ELSE
+    -- If column exists but is UUID type, change to TEXT
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'applications' AND column_name = 'guarantor_characteristic_id'
+      AND data_type = 'uuid'
+    ) THEN
+      ALTER TABLE applications ALTER COLUMN guarantor_characteristic_id TYPE TEXT;
+      RAISE NOTICE 'Changed guarantor_characteristic_id type from UUID to TEXT';
+    END IF;
     RAISE NOTICE 'guarantor_characteristic_id already exists in applications table';
   END IF;
 END $$;
 
--- Generate missing application_characteristic_id values (as UUID)
+-- Generate missing application_characteristic_id values (with APP_ format)
 UPDATE applications
-SET application_characteristic_id = gen_random_uuid()
+SET application_characteristic_id = 'APP_' || LPAD(EXTRACT(EPOCH FROM created_at)::text, 10, '0') || '_' || SUBSTRING(id::text, 1, 8)
 WHERE application_characteristic_id IS NULL;
 
--- Generate missing guarantor_characteristic_id values (as UUID)
+-- Generate missing guarantor_characteristic_id values (with GUAR_ format)
 UPDATE applications
-SET guarantor_characteristic_id = gen_random_uuid()
+SET guarantor_characteristic_id = 'GUAR_' || LPAD(EXTRACT(EPOCH FROM created_at)::text, 10, '0') || '_' || SUBSTRING(id::text, 1, 8)
 WHERE guarantor_characteristic_id IS NULL AND guarantor_id IS NOT NULL;
 
 -- =====================================================
 -- 2. RENTAL_OWNERS TABLE
 -- =====================================================
 
--- Ensure rental_owner_characteristic_id exists in rental_owners (UUID type)
+-- Ensure rental_owner_characteristic_id exists in rental_owners (TEXT type for special format)
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'rental_owners' AND column_name = 'rental_owner_characteristic_id'
   ) THEN
-    ALTER TABLE rental_owners ADD COLUMN rental_owner_characteristic_id UUID;
+    ALTER TABLE rental_owners ADD COLUMN rental_owner_characteristic_id TEXT;
     RAISE NOTICE 'Added rental_owner_characteristic_id to rental_owners table';
   ELSE
+    -- If column exists but is UUID type, change to TEXT
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'rental_owners' AND column_name = 'rental_owner_characteristic_id'
+      AND data_type = 'uuid'
+    ) THEN
+      ALTER TABLE rental_owners ALTER COLUMN rental_owner_characteristic_id TYPE TEXT;
+      RAISE NOTICE 'Changed rental_owner_characteristic_id type from UUID to TEXT';
+    END IF;
     RAISE NOTICE 'rental_owner_characteristic_id already exists in rental_owners table';
   END IF;
 END $$;
 
--- Generate missing rental_owner_characteristic_id values (as UUID)
+-- Generate missing rental_owner_characteristic_id values (with RENTAL_OWNER_ format)
 UPDATE rental_owners
-SET rental_owner_characteristic_id = gen_random_uuid()
+SET rental_owner_characteristic_id = 'RENTAL_OWNER_' || LPAD(EXTRACT(EPOCH FROM created_at)::text, 10, '0') || '_' || SUBSTRING(id::text, 1, 8)
 WHERE rental_owner_characteristic_id IS NULL;
 
 -- =====================================================
 -- 2.5. PROPERTIES TABLE (additional characteristic_id)
 -- =====================================================
 
--- Generate missing property_characteristic_id values (as UUID)
+-- Ensure property_characteristic_id is TEXT type for special format
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'properties' AND column_name = 'property_characteristic_id'
+  ) THEN
+    ALTER TABLE properties ADD COLUMN property_characteristic_id TEXT;
+    RAISE NOTICE 'Added property_characteristic_id to properties table';
+  ELSE
+    -- If column exists but is UUID type, change to TEXT
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'properties' AND column_name = 'property_characteristic_id'
+      AND data_type = 'uuid'
+    ) THEN
+      ALTER TABLE properties ALTER COLUMN property_characteristic_id TYPE TEXT;
+      RAISE NOTICE 'Changed property_characteristic_id type from UUID to TEXT';
+    END IF;
+    RAISE NOTICE 'property_characteristic_id already exists in properties table';
+  END IF;
+END $$;
+
+-- Generate missing property_characteristic_id values (with PROP_ format)
 UPDATE properties
-SET property_characteristic_id = gen_random_uuid()
+SET property_characteristic_id = 'PROP_' || LPAD(EXTRACT(EPOCH FROM created_at)::text, 10, '0') || '_' || SUBSTRING(id::text, 1, 8)
 WHERE property_characteristic_id IS NULL;
 
 -- =====================================================
@@ -141,23 +205,32 @@ CREATE POLICY "Users can update rental contract conditions for their application
     )
   );
 
--- Ensure contract_conditions_characteristic_id exists in rental_contract_conditions (UUID type)
+-- Ensure contract_conditions_characteristic_id exists in rental_contract_conditions (TEXT type for special format)
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'rental_contract_conditions' AND column_name = 'contract_conditions_characteristic_id'
   ) THEN
-    ALTER TABLE rental_contract_conditions ADD COLUMN contract_conditions_characteristic_id UUID;
+    ALTER TABLE rental_contract_conditions ADD COLUMN contract_conditions_characteristic_id TEXT;
     RAISE NOTICE 'Added contract_conditions_characteristic_id to rental_contract_conditions table';
   ELSE
+    -- If column exists but is UUID type, change to TEXT
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'rental_contract_conditions' AND column_name = 'contract_conditions_characteristic_id'
+      AND data_type = 'uuid'
+    ) THEN
+      ALTER TABLE rental_contract_conditions ALTER COLUMN contract_conditions_characteristic_id TYPE TEXT;
+      RAISE NOTICE 'Changed contract_conditions_characteristic_id type from UUID to TEXT';
+    END IF;
     RAISE NOTICE 'contract_conditions_characteristic_id already exists in rental_contract_conditions table';
   END IF;
 END $$;
 
--- Generate missing contract_conditions_characteristic_id values (as UUID)
+-- Generate missing contract_conditions_characteristic_id values (with CONTRACT_COND_ format)
 UPDATE rental_contract_conditions
-SET contract_conditions_characteristic_id = gen_random_uuid()
+SET contract_conditions_characteristic_id = 'CONTRACT_COND_' || LPAD(EXTRACT(EPOCH FROM created_at)::text, 10, '0') || '_' || SUBSTRING(id::text, 1, 8)
 WHERE contract_conditions_characteristic_id IS NULL;
 
 -- =====================================================

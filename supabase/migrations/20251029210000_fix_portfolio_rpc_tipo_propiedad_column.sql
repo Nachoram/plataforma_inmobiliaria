@@ -1,10 +1,10 @@
--- Force fix for property_type bug in portfolio view
--- This ensures get_portfolio_with_postulations includes tipo_propiedad field (correct column name)
+-- Fix get_portfolio_with_postulations RPC function to use correct column names
+-- Fix both property column (tipo_propiedad) and guarantor columns (contact_email, contact_phone)
 
--- DROPEAR LA FUNCIÓN EXISTENTE PRIMERO (necesario porque cambiamos el tipo de retorno)
+-- Drop the existing function first since we're changing the return type
 DROP FUNCTION IF EXISTS get_portfolio_with_postulations(uuid);
 
--- Crear la función con tipo_propiedad incluido (correct column name)
+-- Create the corrected function
 CREATE OR REPLACE FUNCTION get_portfolio_with_postulations(user_id_param uuid)
 RETURNS TABLE (
     -- Columnas de properties
@@ -12,7 +12,7 @@ RETURNS TABLE (
     owner_id uuid,
     status property_status_enum,
     listing_type listing_type_enum,
-    tipo_propiedad tipo_propiedad_enum,  -- <-- CORRECTED: Use actual column name
+    tipo_propiedad tipo_propiedad_enum,  -- Correct column name
     address_street text,
     address_number varchar(10),
     address_department varchar(10),
@@ -26,9 +26,9 @@ RETURNS TABLE (
     description text,
     created_at timestamptz,
     -- Columnas adicionales
-    property_images json,
+    property_images jsonb,
     postulation_count bigint,
-    postulations json
+    postulations jsonb
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -37,7 +37,7 @@ BEGIN
         p.owner_id,
         p.status,
         p.listing_type,
-        p.tipo_propiedad,  -- <-- CORRECTED: Use actual column name
+        p.tipo_propiedad,  -- Correct column name
         p.address_street,
         p.address_number,
         p.address_department,
@@ -53,21 +53,21 @@ BEGIN
         -- Subquery para property_images
         COALESCE(
             (
-                SELECT json_agg(json_build_object(
+                SELECT jsonb_agg(jsonb_build_object(
                     'image_url', pi.image_url,
                     'storage_path', pi.storage_path
                 ))
                 FROM property_images pi
                 WHERE pi.property_id = p.id
             ),
-            '[]'::json
+            '[]'::jsonb
         ) as property_images,
         -- Count de postulaciones
         COUNT(a.id)::bigint as postulation_count,
         -- Array de postulaciones con detalles
         COALESCE(
             (
-                SELECT json_agg(json_build_object(
+                SELECT jsonb_agg(jsonb_build_object(
                     'id', app.id,
                     'applicant_id', app.applicant_id,
                     'status', app.status,
@@ -80,20 +80,18 @@ BEGIN
                     ),
                     'applicant_email', prof.email,
                     'applicant_phone', prof.phone,
-                    'guarantor_name', COALESCE(
-                        guar.first_name || ' ' || guar.paternal_last_name || ' ' || COALESCE(guar.maternal_last_name, ''),
-                        NULL
-                    ),
-                    'guarantor_email', guar.email,
-                    'guarantor_phone', guar.phone,
-                    'guarantor_characteristic_id', guar.guarantor_characteristic_id
+                    -- FIXED: Use correct guarantor column names
+                    'guarantor_name', guar.full_name,
+                    'guarantor_email', guar.contact_email,
+                    'guarantor_phone', guar.contact_phone,
+                    'guarantor_characteristic_id', app.guarantor_characteristic_id
                 ) ORDER BY app.created_at DESC)
                 FROM applications app
                 LEFT JOIN profiles prof ON app.applicant_id = prof.id
                 LEFT JOIN guarantors guar ON app.guarantor_id = guar.id
                 WHERE app.property_id = p.id
             ),
-            '[]'::json
+            '[]'::jsonb
         ) as postulations
     FROM properties p
     LEFT JOIN applications a ON p.id = a.property_id
@@ -108,7 +106,4 @@ GRANT EXECUTE ON FUNCTION get_portfolio_with_postulations(uuid) TO authenticated
 
 -- Comentario actualizado
 COMMENT ON FUNCTION get_portfolio_with_postulations(uuid) IS
-'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval. Incluye el campo tipo_propiedad para mostrar el tipo correcto de propiedad.';
-
--- Verificación: mostrar algunos registros para confirmar que tipo_propiedad está incluido
--- SELECT id, tipo_propiedad FROM get_portfolio_with_postulations('some-user-id') LIMIT 5;
+'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval. Usa las columnas correctas: tipo_propiedad para propiedades y full_name, contact_email, contact_phone para garantes.';

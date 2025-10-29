@@ -535,6 +535,7 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
           property_id,
           properties!inner (
             id,
+            property_characteristic_id,
             property_type_characteristics_id,
             owner_id,
             address_street,
@@ -585,6 +586,7 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
 
       const characteristicIds = {
         application_characteristic_id: applicationData.application_characteristic_id,
+        property_characteristic_id: propertyData.property_characteristic_id,
         property_type_characteristics_id: propertyData.property_type_characteristics_id,
         rental_owner_characteristic_id: ownerData.rental_owner_characteristic_id,
         rental_contract_conditions_characteristic_id: contractData?.rental_contract_conditions_characteristic_id || null,
@@ -1128,104 +1130,59 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
       const contractRecord = await createOrUpdateRentalContract(selectedProfile.applicationId);
       console.log('✅ Registro del contrato creado/actualizado:', contractRecord.id);
 
-      // 8. Preparar y enviar payload al webhook
+      // 8. Preparar y enviar payload simplificado al webhook (solo IDs característicos)
       const webhookPayload = {
-        contract_id: contractRecord.id,
-        contract_number: contractRecord.contract_number,
-        application_id: selectedProfile.applicationId,
-        property_id: property?.id || '',
-        
-        // Datos del postulante
-        applicant_name: selectedProfile.name,
-        applicant_rut: selectedProfile.rut || '',
-        applicant_email: selectedProfile.profile.email,
-        applicant_phone: selectedProfile.profile.phone,
-        applicant_characteristic_id: selectedProfile.applicationCharacteristicId || null,
-
-        // Datos del garante
-        guarantor_name: selectedProfile.guarantorName || null,
-        guarantor_rut: selectedProfile.guarantorRut || null,
-        guarantor_email: selectedProfile.guarantorEmail || null,
-        guarantor_phone: selectedProfile.guarantorPhone || null,
-        guarantor_characteristic_id: selectedProfile.guarantorCharacteristicId || null,
-
-        // Datos de la propiedad
-        property_address: (property?.address_street || '') + ' ' + (property?.address_number || ''),
-        property_commune: property?.address_commune || '',
-        property_region: property?.address_region || '',
-        property_type: propertyTypeData?.name || 'No especificado',
-        property_type_characteristics_id: (property as any)?.property_type_characteristics_id || null,
-
-        // Datos del propietario
-        owner_name: ownerFullName || 'No especificado',
-        owner_rut: ownerFullData?.rut || 'No especificado',
-        owner_email: ownerFullData?.email || '',
-        owner_phone: ownerFullData?.phone || '',
-        owner_characteristic_id: ownerFullData?.rental_owner_characteristic_id || null,
-
-        // Condiciones del contrato
-        contract_start_date: formData.contract_start_date,
-        contract_end_date: formData.contract_end_date,
-        contract_duration_months: Number(formData.duration),
-        monthly_rent: Number(formData.monthly_rent),
-        final_rent_price: Number(formData.final_rent_price),
-        warranty_amount: Number(formData.warranty_amount),
-        broker_commission: Number(formData.broker_commission) || 0,
-        payment_day: Number(formData.payment_day),
-        monthly_payment_day: Number(formData.payment_day),
-
-        // Información del corredor
-        broker_name: formData.broker_name || '',
-        broker_rut: formData.broker_rut || '',
-
-        // Condiciones especiales
-        accepts_pets: Boolean(formData.allows_pets),
-        allows_pets: Boolean(formData.allows_pets),
-        dicom_clause: Boolean(formData.dicom_clause),
-        additional_conditions: formData.special_conditions_house || '',
-        special_conditions_house: formData.special_conditions_house || '',
-
-        // Email de notificación
-        notification_email: formData.notification_email || '',
-        official_communication_email: formData.notification_email || '',
-
-        // Condiciones de pago
-        payment_conditions: formData.payment_conditions || '',
-        payment_method: formData.payment_method || 'transferencia_bancaria',
-
-        // Datos bancarios
-        bank_name: formData.bank_name || '',
-        account_type: formData.account_type || '',
-        account_number: formData.account_number || '',
-        account_holder_name: formData.account_holder_name || '',
-        account_holder_rut: formData.account_holder_rut || '',
-
-        // Metadata
-        contract_type: 'arriendo',
-        contract_format: 'hybrid',
-        contract_status: 'draft',
-        rental_contract_conditions_characteristic_id: contractConditionsCharacteristicId,
-        generated_at: new Date().toISOString(),
+        application_characteristic_id: characteristicIds.application_characteristic_id,
+        property_characteristic_id: characteristicIds.property_characteristic_id,
+        applicant_characteristic_id: characteristicIds.application_characteristic_id, // Para applicant usamos el mismo que application
+        rental_owner_characteristic_id: characteristicIds.rental_owner_characteristic_id,
+        guarantor_characteristic_id: characteristicIds.guarantor_characteristic_id,
+        contract_conditions_characteristic_id: contractConditionsCharacteristicId,
+        contract_characteristic_id: contractRecord.contract_characteristic_id || contractRecord.id,
+        action: "contract_generated",
+        timestamp: new Date().toISOString(),
+        application_uuid: selectedProfile.applicationId,
+        property_uuid: property?.id,
+        applicant_uuid: selectedProfile.applicationId,
+        owner_uuid: characteristicIds.rental_owner_characteristic_id,
+        guarantor_uuid: characteristicIds.guarantor_characteristic_id
       };
 
-      console.log('📤 Enviando al webhook de n8n...');
+      // Validar que todos los IDs requeridos estén presentes
+      const missingIds = [];
+      if (!webhookPayload.application_characteristic_id) missingIds.push('application_characteristic_id');
+      if (!webhookPayload.property_characteristic_id) missingIds.push('property_characteristic_id');
+      if (!webhookPayload.applicant_characteristic_id) missingIds.push('applicant_characteristic_id');
+      if (!webhookPayload.rental_owner_characteristic_id) missingIds.push('rental_owner_characteristic_id');
+      if (!webhookPayload.contract_conditions_characteristic_id) missingIds.push('contract_conditions_characteristic_id');
+      if (!webhookPayload.contract_characteristic_id) missingIds.push('contract_characteristic_id');
 
-      const contractWebhookUrl = import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_URL;
+      if (missingIds.length > 0) {
+        console.warn('⚠️ Algunos IDs característicos no están disponibles:', missingIds);
+        console.warn('📊 Payload actual:', webhookPayload);
+      }
 
-      if (!contractWebhookUrl) {
-        console.error('❌ URL del webhook de contratos (N8N) no configurada');
+      console.log('📤 Enviando payload simplificado al webhook de n8n (solo IDs característicos)...');
+      console.log('📊 Payload a enviar:', webhookPayload);
+
+      // Use proxy URL instead of direct external URL to avoid CORS issues
+      const webhookId = import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_ID;
+
+      if (!webhookId) {
+        console.error('❌ ID del webhook de contratos (N8N) no configurada');
         const errorMessage = `
-          La variable de entorno VITE_N8N_CONTRACT_WEBHOOK_URL no está configurada.
+          La variable de entorno VITE_N8N_CONTRACT_WEBHOOK_ID no está configurada.
 
           Para generar contratos automáticamente, necesitas:
 
           1. Configurar un webhook en n8n para generación de contratos
           2. Agregar la siguiente variable a tu archivo .env:
 
-             VITE_N8N_CONTRACT_WEBHOOK_URL=https://tu-n8n-instance.com/webhook/generate-contract
+             VITE_N8N_CONTRACT_WEBHOOK_ID=tu-webhook-id
 
           3. Reiniciar el servidor de desarrollo
 
+          El proxy de desarrollo se encargará de redirigir las peticiones al servidor externo.
           Consulta INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md para más detalles.
         `.trim();
 
@@ -1235,28 +1192,37 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
         return;
       }
 
-      const webhookResponse = await fetch(contractWebhookUrl, {
-        method: 'POST',
+      // Use proxy URL to avoid CORS issues in development
+      const proxyWebhookUrl = `/api/webhook/${webhookId}`;
+
+      // Convert payload to flat parameters for GET request (like webhook client)
+      const queryParams = new URLSearchParams();
+      Object.entries(webhookPayload).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+
+      const fullUrl = `${proxyWebhookUrl}?${queryParams.toString()}`;
+      console.log('🔗 URL completa del webhook (primeros 200 caracteres):', fullUrl.substring(0, 200) + '...');
+
+      const webhookResponse = await fetch(fullUrl, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
+          'Accept': 'application/json',
+          'User-Agent': 'PropiedadesApp/1.0',
+          'X-Webhook-Source': 'contract-generation'
+        }
       });
 
       if (!webhookResponse.ok) {
         let errorText = '';
         try {
-          const contentType = webhookResponse.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorDetails = await webhookResponse.json();
-            errorText = JSON.stringify(errorDetails, null, 2);
-          } else {
-            errorText = await webhookResponse.text();
-          }
-        } catch (parseError) {
           errorText = await webhookResponse.text();
+        } catch (parseError) {
+          errorText = `HTTP ${webhookResponse.status}: ${webhookResponse.statusText}`;
         }
-        
+
         console.error('❌ Error del webhook n8n:', errorText);
         
         let userMessage = 'Error al generar el contrato en el servidor';
@@ -1269,8 +1235,13 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
         throw new Error(`${userMessage} (HTTP ${webhookResponse.status})`);
       }
 
-      const webhookResult = await webhookResponse.json();
-      console.log('✅ Respuesta del webhook exitosa:', webhookResult);
+      let webhookResult;
+      try {
+        webhookResult = await webhookResponse.text();
+        console.log('✅ Respuesta del webhook exitosa:', webhookResult);
+      } catch {
+        console.log('✅ Webhook ejecutado exitosamente (sin respuesta)');
+      }
 
       toast.success('Contrato generado y enviado exitosamente');
 

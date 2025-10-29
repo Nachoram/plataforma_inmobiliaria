@@ -1,24 +1,10 @@
-// Script to apply the property_type fix to the get_portfolio_with_postulations function
-// Run this script to fix the bug where all properties show as "Casa"
+-- FIX for Portfolio RPC Error: column p.property_type does not exist
+-- This script fixes the get_portfolio_with_postulations function to use the correct column name 'tipo_propiedad'
 
-import { createClient } from '@supabase/supabase-js';
-
-// Get environment variables
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing Supabase environment variables');
-  console.error('Required: VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY');
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-const migrationSQL = `
 -- Drop the existing function first since we're changing the return type
 DROP FUNCTION IF EXISTS get_portfolio_with_postulations(uuid);
 
+-- Create the corrected function
 CREATE OR REPLACE FUNCTION get_portfolio_with_postulations(user_id_param uuid)
 RETURNS TABLE (
     -- Columnas de properties
@@ -26,7 +12,7 @@ RETURNS TABLE (
     owner_id uuid,
     status property_status_enum,
     listing_type listing_type_enum,
-    tipo_propiedad tipo_propiedad_enum,
+    tipo_propiedad tipo_propiedad_enum,  -- Correct column name
     address_street text,
     address_number varchar(10),
     address_department varchar(10),
@@ -51,7 +37,7 @@ BEGIN
         p.owner_id,
         p.status,
         p.listing_type,
-        p.tipo_propiedad,
+        p.tipo_propiedad,  -- Correct column name
         p.address_street,
         p.address_number,
         p.address_department,
@@ -123,47 +109,6 @@ GRANT EXECUTE ON FUNCTION get_portfolio_with_postulations(uuid) TO authenticated
 -- Comentario actualizado
 COMMENT ON FUNCTION get_portfolio_with_postulations(uuid) IS
 'Obtiene todas las propiedades de un usuario con el conteo de postulaciones y detalles completos de cada postulación incluyendo datos del postulante y aval. Incluye el campo tipo_propiedad para mostrar el tipo correcto de propiedad.';
-`;
 
-async function applyMigration() {
-  try {
-    console.log('🚀 Applying property_type fix migration...');
-
-    const { error } = await supabase.rpc('exec_sql', {
-      sql: migrationSQL
-    });
-
-    if (error) {
-      console.error('❌ Error applying migration via RPC:', error);
-
-      // Try direct SQL execution
-      console.log('🔄 Trying direct SQL execution...');
-      const { error: directError } = await supabase.from('_supabase_migration_temp').select('*').limit(1);
-
-      // Since we can't execute DDL directly, let's try a different approach
-      console.log('📋 Migration SQL to execute manually in Supabase Dashboard:');
-      console.log('='.repeat(80));
-      console.log(migrationSQL);
-      console.log('='.repeat(80));
-      console.log('');
-      console.log('📝 Instructions:');
-      console.log('1. Go to https://supabase.com/dashboard/project/[your-project-ref]/sql');
-      console.log('2. Create a new query');
-      console.log('3. Paste the SQL above');
-      console.log('4. Click "Run"');
-      console.log('');
-      console.log('✅ After applying the migration, refresh your portfolio page to see the fix!');
-
-      return;
-    }
-
-    console.log('✅ Migration applied successfully!');
-    console.log('🔄 Refresh your portfolio page to see the property types displayed correctly.');
-
-  } catch (err) {
-    console.error('❌ Unexpected error:', err);
-  }
-}
-
-applyMigration();
-
+-- Verification query (optional - run after applying to verify the fix)
+-- SELECT id, tipo_propiedad FROM get_portfolio_with_postulations('your-user-id') LIMIT 5;

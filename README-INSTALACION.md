@@ -69,6 +69,9 @@ cp .env.example .env
 VITE_SUPABASE_URL=https://phnkervuiijqmapgswkc.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNzQ2MjUsImV4cCI6MjA3MjY1MDYyNX0.va6jOCJN6MnbHSbbDFJaO2rN_3oCSVQlaYaPkPmXS2w
 
+# Configuración de contratos (requerida para generar contratos automáticamente)
+VITE_N8N_CONTRACT_WEBHOOK_URL=https://tu-n8n-instance.com/webhook/generate-contract
+
 # Configuración opcional de notificaciones
 VITE_RAILWAY_WEBHOOK_URL=https://tu-n8n-webhook.com/webhook/real-estate-events
 ```
@@ -220,9 +223,12 @@ console.log('Upload test:', { data, error });
 
 ### **Variables Requeridas**
 ```env
-# ⚠️ REQUERIDAS
+# ⚠️ REQUERIDAS - SIN ESTAS VARIABLES LA APLICACIÓN NO FUNCIONARÁ
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-clave-anonima
+
+# ⚠️ REQUERIDA PARA FUNCIONALIDAD DE CONTRATOS
+VITE_N8N_CONTRACT_WEBHOOK_URL=https://tu-n8n-instance.com/webhook/generate-contract
 ```
 
 ### **Configuración de Supabase**
@@ -274,7 +280,12 @@ VITE_SENTRY_DSN=https://tu-sentry-dsn
 
 ### **Configuración de Webhooks**
 
-#### **Estado Actual del Webhook**
+#### **Webhook de Contratos (N8N)**
+- ⚠️ **Variable Requerida**: `VITE_N8N_CONTRACT_WEBHOOK_URL`
+- 📄 **Propósito**: Generar contratos automáticamente usando n8n
+- 📋 **Configuración**: Ver [INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md](INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md)
+
+#### **Estado Actual del Webhook de Notificaciones**
 - ✅ **URL Configurada**: `VITE_RAILWAY_WEBHOOK_URL` está configurada
 - ⚠️ **Modo Prueba**: El webhook está en modo test en n8n
 - 🔄 **Activación**: Para producción, activar el workflow en n8n
@@ -286,6 +297,25 @@ VITE_SENTRY_DSN=https://tu-sentry-dsn
 - `offer_received` - Nueva oferta
 - `offer_accepted` - Oferta aceptada
 - `offer_rejected` - Oferta rechazada
+
+#### **Configuración de N8N para Contratos**
+Para habilitar la generación automática de contratos:
+
+1. **Configurar Workflow en N8N**
+   - Crear un workflow que reciba datos de contrato
+   - Configurar webhook trigger
+   - Procesar la información y generar PDF/HTML
+
+2. **Obtener URL del Webhook**
+   - Activar el workflow en n8n
+   - Copiar la URL del webhook endpoint
+   - Agregar a `VITE_N8N_CONTRACT_WEBHOOK_URL`
+
+3. **Campos Requeridos en el Payload**
+   - `property_type_characteristics_id` (UUID obligatorio)
+   - `rental_owner_characteristic_id` (ID único del propietario)
+   - `application_characteristic_id` (ID único de la postulación)
+   - Datos completos del contrato (fechas, montos, condiciones)
 
 #### **Test de Webhook**
 ```typescript
@@ -337,7 +367,8 @@ NODE_ENV=production
 console.log('Environment Variables:');
 console.log('SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
 console.log('ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-console.log('WEBHOOK_URL:', import.meta.env.VITE_RAILWAY_WEBHOOK_URL);
+console.log('CONTRACT_WEBHOOK_URL:', import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_URL);
+console.log('NOTIFICATION_WEBHOOK_URL:', import.meta.env.VITE_RAILWAY_WEBHOOK_URL);
 ```
 
 ---
@@ -524,6 +555,34 @@ SELECT * FROM storage.policies WHERE bucket_id = 'property-images';
 
 -- Si faltan políticas, ejecutar migración de storage
 ```
+
+### **Error: "URL del webhook no configurada"**
+
+**Causa:** Falta variable de entorno `VITE_N8N_CONTRACT_WEBHOOK_URL`
+
+**Solución:**
+1. Crear o editar el archivo `.env` en la raíz del proyecto
+2. Agregar la variable:
+   ```env
+   VITE_N8N_CONTRACT_WEBHOOK_URL=https://tu-n8n-instance.com/webhook/generate-contract
+   ```
+3. Reiniciar el servidor de desarrollo
+4. Ver [INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md](INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md) para configuración completa
+
+### **Error: "propertyData is not defined"**
+
+**Causa:** Datos de propiedad incompletos o consulta fallida
+
+**Soluciones:**
+1. Verificar que la propiedad tenga `property_type_characteristics_id` asignado
+2. Ejecutar migraciones de actualización de propiedades legacy:
+   ```sql
+   -- Archivo: supabase/migrations/20251029010000_update_legacy_properties_with_uuid.sql
+   ```
+3. Verificar que el propietario tenga `rental_owner_characteristic_id`:
+   ```sql
+   -- Archivo: supabase/migrations/20251029020000_ensure_rental_owner_characteristic_ids.sql
+   ```
 
 ### **Error: "Connection refused" o problemas de red**
 

@@ -94,6 +94,126 @@ class WebhookClient {
     }
   }
 
+  /**
+   * Aplana un objeto anidado en parámetros planos para query string
+   * Ejemplo: { application: { id: '123' } } => { 'application_id': '123' }
+   */
+  private flattenPayload(payload: WebhookPayload): Record<string, string> {
+    const flat: Record<string, string> = {};
+
+    // Campos de nivel superior
+    flat.action = payload.action;
+    flat.status = payload.status;
+    flat.timestamp = payload.timestamp;
+    if (payload.decision) {
+      flat.decision = payload.decision;
+    }
+
+    // Application data
+    if (payload.application) {
+      flat.application_id = payload.application.id;
+      flat.application_property_id = payload.application.property_id;
+      flat.application_applicant_id = payload.application.applicant_id;
+      flat.application_status = payload.application.status;
+      flat.application_created_at = payload.application.created_at;
+      if (payload.application.message) {
+        flat.application_message = payload.application.message;
+      }
+      if (payload.application.snapshot_data) {
+        const snapshot = payload.application.snapshot_data;
+        flat.application_profession = snapshot.profession;
+        flat.application_monthly_income_clp = String(snapshot.monthly_income_clp);
+        flat.application_age = String(snapshot.age);
+        flat.application_nationality = snapshot.nationality;
+        flat.application_marital_status = snapshot.marital_status;
+        flat.application_address = snapshot.address;
+      }
+    }
+
+    // Offer data
+    if (payload.offer) {
+      flat.offer_id = payload.offer.id;
+      flat.offer_property_id = payload.offer.property_id;
+      flat.offer_offerer_id = payload.offer.offerer_id;
+      flat.offer_amount_clp = String(payload.offer.amount_clp);
+      flat.offer_created_at = payload.offer.created_at;
+      if (payload.offer.message) {
+        flat.offer_message = payload.offer.message;
+      }
+    }
+
+    // Property data
+    if (payload.property) {
+      flat.property_id = payload.property.id;
+      flat.property_address = payload.property.address;
+      flat.property_comuna = payload.property.comuna;
+      flat.property_region = payload.property.region;
+      flat.property_price_clp = String(payload.property.price_clp);
+      flat.property_listing_type = payload.property.listing_type;
+      if (payload.property.bedrooms !== undefined) {
+        flat.property_bedrooms = String(payload.property.bedrooms);
+      }
+      if (payload.property.bathrooms !== undefined) {
+        flat.property_bathrooms = String(payload.property.bathrooms);
+      }
+      if (payload.property.surface_m2 !== undefined) {
+        flat.property_surface_m2 = String(payload.property.surface_m2);
+      }
+      if (payload.property.photos_urls && payload.property.photos_urls.length > 0) {
+        flat.property_photos_urls = payload.property.photos_urls.join(',');
+      }
+    }
+
+    // Applicant data
+    if (payload.applicant) {
+      flat.applicant_id = payload.applicant.id;
+      flat.applicant_full_name = payload.applicant.full_name;
+      flat.applicant_contact_email = payload.applicant.contact_email;
+      if (payload.applicant.contact_phone) {
+        flat.applicant_contact_phone = payload.applicant.contact_phone;
+      }
+      if (payload.applicant.profession) {
+        flat.applicant_profession = payload.applicant.profession;
+      }
+      if (payload.applicant.monthly_income !== undefined && payload.applicant.monthly_income !== null) {
+        flat.applicant_monthly_income = String(payload.applicant.monthly_income);
+      }
+    }
+
+    // Offerer data
+    if (payload.offerer) {
+      flat.offerer_id = payload.offerer.id;
+      flat.offerer_full_name = payload.offerer.full_name;
+      flat.offerer_contact_email = payload.offerer.contact_email;
+      if (payload.offerer.contact_phone) {
+        flat.offerer_contact_phone = payload.offerer.contact_phone;
+      }
+    }
+
+    // Property owner data
+    if (payload.property_owner) {
+      flat.property_owner_id = payload.property_owner.id;
+      flat.property_owner_full_name = payload.property_owner.full_name;
+      flat.property_owner_contact_email = payload.property_owner.contact_email;
+      if (payload.property_owner.contact_phone) {
+        flat.property_owner_contact_phone = payload.property_owner.contact_phone;
+      }
+    }
+
+    // Metadata
+    if (payload.metadata) {
+      flat.metadata_source = payload.metadata.source;
+      flat.metadata_user_agent = payload.metadata.user_agent;
+      flat.metadata_url = payload.metadata.url;
+      flat.metadata_environment = payload.metadata.environment;
+      if (payload.metadata.ip_address) {
+        flat.metadata_ip_address = payload.metadata.ip_address;
+      }
+    }
+
+    return flat;
+  }
+
   async send(payload: WebhookPayload): Promise<void> {
     if (!this.baseURL) {
       console.log('ℹ️ Webhook no configurado - funcionando sin notificaciones externas');
@@ -104,12 +224,20 @@ class WebhookClient {
     console.log('📦 Payload del webhook:', JSON.stringify(payload, null, 2));
 
     try {
-      // Convertir payload a query parameters para GET request
+      // Convertir payload complejo a parámetros planos
+      const flatPayload = this.flattenPayload(payload);
+      console.log('📋 Payload aplanado:', flatPayload);
+
+      // Crear query parameters con valores planos
       const queryParams = new URLSearchParams();
-      queryParams.append('data', JSON.stringify(payload));
+      Object.entries(flatPayload).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          queryParams.append(key, value);
+        }
+      });
       
       const urlWithParams = `${this.baseURL}?${queryParams.toString()}`;
-      console.log('🔗 URL completa del webhook:', urlWithParams);
+      console.log('🔗 URL completa del webhook (primeros 200 caracteres):', urlWithParams.substring(0, 200) + '...');
       
       const response = await fetch(urlWithParams, {
         method: 'GET',
@@ -134,8 +262,13 @@ class WebhookClient {
           console.error('❌ No se pudo leer el cuerpo de la respuesta de error');
         }
       } else {
-        const result = await response.json();
-        console.log('✅ Webhook ejecutado con éxito:', result);
+        try {
+          const result = await response.json();
+          console.log('✅ Webhook ejecutado con éxito:', result);
+        } catch {
+          // Si no hay JSON en la respuesta, está bien
+          console.log('✅ Webhook ejecutado con éxito');
+        }
       }
     } catch (error) {
       console.warn('⚠️ Servicio de notificaciones no disponible:', error);

@@ -653,111 +653,81 @@ const ApplicationsPage: React.FC = () => {
         }));
       }
 
-      // 5. Configurar URL del webhook de n8n
-      let webhookURL = import.meta.env.VITE_RAILWAY_WEBHOOK_URL;
-      
-      // Use proxy in development to avoid CORS issues
-      if (import.meta.env.DEV && webhookURL) {
-        const url = new URL(webhookURL);
-        webhookURL = `/api${url.pathname}`;
-      }
-      
-      // 6. Intentar enviar webhook solo si está configurado
-      if (webhookURL) {
-        try {
-          // Construir el payload completo con toda la información necesaria
-          const webhookPayload = {
-            // Información básica de la decisión
-            action: 'application_reverted',
-            decision: 'reverted',
-            status: 'pendiente',
-            timestamp: new Date().toISOString(),
-            
-            // Información de la aplicación
-            application: {
-              id: applicationToUndo.id,
-              property_id: applicationToUndo.property_id,
-              applicant_id: applicationToUndo.applicant_id,
-              message: applicationToUndo.message,
-              created_at: applicationToUndo.created_at,
-              status: 'pendiente'
-            },
-            
-            // Información de la propiedad
-            property: {
-              id: applicationToUndo.property_id,
-              address_street: applicationToUndo.properties.address_street,
-              address_commune: applicationToUndo.properties.address_commune,
-              price: applicationToUndo.properties.price_clp,
-              listing_type: applicationToUndo.properties.listing_type,
-              photos_urls: applicationToUndo.properties.property_images?.map(img => img.image_url) || []
-            },
-            
-            // Información del postulante
-            applicant: {
-              id: applicationToUndo.applicant_id,
-              full_name: applicationToUndo.structured_applicant?.full_name || getFullName(applicationToUndo.profiles) || 'No especificado',
-              contact_email: applicationToUndo.structured_applicant?.contact_email || getContactEmail(applicationToUndo.profiles) || 'No especificado',
-              contact_phone: applicationToUndo.structured_applicant?.contact_phone || getContactPhone(applicationToUndo.profiles) || null,
-              profession: applicationToUndo.structured_applicant?.profession || null,
-              company: applicationToUndo.structured_applicant?.company || null,
-              monthly_income: applicationToUndo.structured_applicant?.monthly_income || null
-            },
-            
-            // Información adicional para procesamiento
-            metadata: {
-              source: 'propiedades_app',
-              user_agent: navigator.userAgent,
-              url: window.location.href,
-              environment: import.meta.env.MODE || 'development'
-            }
-          };
-
-          console.log('📤 Enviando payload al webhook:', webhookPayload);
-
-          // Convertir payload a query parameters para GET request
-          const queryParams = new URLSearchParams();
-          queryParams.append('data', JSON.stringify(webhookPayload));
-          const urlWithParams = `${webhookURL}?${queryParams.toString()}`;
+      // 5. Enviar notificación de webhook con parámetros planos
+      try {
+        // Construir el payload completo con toda la información necesaria
+        const webhookPayload = {
+          // Información básica de la decisión
+          action: 'application_reverted' as const,
+          decision: 'reverted' as const,
+          status: 'pendiente',
+          timestamp: new Date().toISOString(),
           
-          // Realizar la solicitud GET al webhook con las cabeceras correctas
-          const response = await fetch(urlWithParams, {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'PropiedadesApp/1.0'
-            }
-          });
-
-          console.log('📡 Respuesta del webhook - Status:', response.status);
+          // Información de la aplicación
+          application: {
+            id: applicationToUndo.id,
+            property_id: applicationToUndo.property_id,
+            applicant_id: applicationToUndo.applicant_id,
+            message: applicationToUndo.message,
+            created_at: applicationToUndo.created_at,
+            status: 'pendiente'
+          },
           
-          // Verificar si la respuesta fue exitosa
-          if (!response.ok) {
-            // Solo registrar el error sin interrumpir el proceso
-            console.warn(`⚠️ Webhook no disponible (${response.status}): El servicio de notificaciones externo no está activo`);
-          } else {
-            // Intentar leer la respuesta
-            let result;
-            try {
-              result = await response.json();
-              console.log('✅ Webhook de n8n ejecutado con éxito:', result);
-            } catch (jsonError) {
-              // Si no es JSON válido, leer como texto
-              result = await response.text();
-              console.log('✅ Webhook de n8n ejecutado con éxito (respuesta texto):', result);
-            }
+          // Información de la propiedad
+          property: {
+            id: applicationToUndo.property_id,
+            address: `${applicationToUndo.properties.address_street || ''} ${applicationToUndo.properties.address_number || ''}`.trim(),
+            comuna: applicationToUndo.properties.address_commune || '',
+            region: applicationToUndo.properties.address_region || '',
+            price_clp: applicationToUndo.properties.price_clp || 0,
+            listing_type: applicationToUndo.properties.listing_type,
+            bedrooms: applicationToUndo.properties.bedrooms,
+            bathrooms: applicationToUndo.properties.bathrooms,
+            surface_m2: applicationToUndo.properties.surface_m2,
+            photos_urls: applicationToUndo.properties.property_images?.map(img => img.image_url) || []
+          },
+          
+          // Información del postulante
+          applicant: {
+            id: applicationToUndo.applicant_id,
+            full_name: applicationToUndo.structured_applicant?.full_name || getFullName(applicationToUndo.profiles) || 'No especificado',
+            contact_email: applicationToUndo.structured_applicant?.contact_email || getContactEmail(applicationToUndo.profiles) || 'No especificado',
+            contact_phone: applicationToUndo.structured_applicant?.contact_phone || getContactPhone(applicationToUndo.profiles) || null,
+            profession: applicationToUndo.structured_applicant?.profession || null,
+            monthly_income: applicationToUndo.structured_applicant?.monthly_income || null
+          },
+          
+          // Información del propietario (requerido por la interfaz)
+          property_owner: {
+            id: applicationToUndo.properties.owner_id || '',
+            full_name: 'Propietario',
+            contact_email: 'owner@example.com',
+            contact_phone: null
+          },
+          
+          // Información adicional para procesamiento
+          metadata: {
+            source: 'propiedades_app' as const,
+            user_agent: navigator.userAgent,
+            url: window.location.href,
+            environment: (import.meta.env.MODE || 'development') as 'development' | 'production'
           }
-        } catch (webhookError) {
-          // Solo registrar el error sin mostrar alertas al usuario
-          console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError);
-          
-          // Safely extract error message
-          const errorMessage = webhookError instanceof Error ? webhookError.message : JSON.stringify(webhookError);
-          console.warn('⚠️ Webhook error message:', errorMessage);
-        }
-      } else {
-        // No mostrar alerta si no hay webhook configurado, es opcional
-        console.log('ℹ️ Webhook no configurado - funcionando sin notificaciones externas');
+        };
+
+        console.log('📤 Enviando webhook de reversión con parámetros planos...');
+        
+        // Usar el webhookClient refactorizado que envía parámetros planos
+        await webhookClient.send(webhookPayload);
+        
+        console.log('✅ Webhook de reversión enviado exitosamente');
+      } catch (webhookError) {
+        // Solo registrar el error sin interrumpir el proceso
+        console.warn('⚠️ Servicio de notificaciones no disponible:', webhookError);
+        
+        // Safely extract error message
+        const errorMessage = webhookError instanceof Error ? webhookError.message : JSON.stringify(webhookError);
+        console.warn('⚠️ Webhook error message:', errorMessage);
+        // Continuar con el proceso aunque falle el webhook
       }
 
       console.log('✅ Proceso de reversión completado exitosamente');

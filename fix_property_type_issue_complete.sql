@@ -147,3 +147,4 @@ ORDER BY ordinal_position;
 
 -- Test the function
 -- SELECT id, tipo_propiedad, postulation_count FROM get_portfolio_with_postulations('00000000-0000-0000-0000-000000000000') LIMIT 1;
+

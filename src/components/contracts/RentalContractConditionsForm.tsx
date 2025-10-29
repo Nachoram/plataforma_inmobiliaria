@@ -205,6 +205,64 @@ const calculateEndDate = (startDate: string, durationMonths: string): string => 
   return end.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 };
 
+/**
+ * Validación defensiva para datos de propiedad
+ * @param propertyData - Datos de la propiedad a validar
+ * @returns true si los datos son válidos, false en caso contrario
+ */
+const validatePropertyData = (propertyData: any): boolean => {
+  if (!propertyData) {
+    console.error('❌ validatePropertyData: propertyData es null/undefined');
+    return false;
+  }
+
+  if (!propertyData.id) {
+    console.error('❌ validatePropertyData: Falta propertyData.id');
+    return false;
+  }
+
+  if (!propertyData.property_type_characteristics_id) {
+    console.error('❌ validatePropertyData: Falta property_type_characteristics_id');
+    return false;
+  }
+
+  // Validar formato UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(propertyData.property_type_characteristics_id)) {
+    console.error('❌ validatePropertyData: property_type_characteristics_id no es un UUID válido');
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Validación defensiva para datos de características del contrato
+ * @param characteristicIds - Objeto con IDs de características
+ * @returns true si todos los datos requeridos están presentes, false en caso contrario
+ */
+const validateCharacteristicIds = (characteristicIds: any): boolean => {
+  if (!characteristicIds) {
+    console.error('❌ validateCharacteristicIds: characteristicIds es null/undefined');
+    return false;
+  }
+
+  const requiredFields = [
+    'application_characteristic_id',
+    'property_type_characteristics_id',
+    'rental_owner_characteristic_id'
+  ];
+
+  for (const field of requiredFields) {
+    if (!characteristicIds[field]) {
+      console.error(`❌ validateCharacteristicIds: Falta campo requerido: ${field}`);
+      return false;
+    }
+  }
+
+  return true;
+};
+
 // ========================================================================
 // MAIN COMPONENT
 // ========================================================================
@@ -465,7 +523,9 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
     try {
       console.log('🔍 [fetchContractData] INICIANDO - Application ID:', applicationId);
 
-      // Paso 1: Obtener datos de la aplicación y propiedad
+      // Paso 1: Obtener datos de la aplicación y propiedad con validaciones robustas
+      console.log('🔍 [fetchContractData] Consultando aplicación y propiedad con ID:', applicationId);
+
       const { data: applicationData, error: appError } = await supabase
         .from('applications')
         .select(`
@@ -476,7 +536,12 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
           properties!inner (
             id,
             property_type_characteristics_id,
-            owner_id
+            owner_id,
+            address_street,
+            address_number,
+            address_commune,
+            address_region,
+            tipo_propiedad
           )
         `)
         .eq('id', applicationId)
@@ -487,16 +552,17 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
         throw new Error(getUserFriendlyErrorMessage(appError, 'No se pudo obtener la información de la aplicación'));
       }
 
+      // Validación defensiva: verificar que properties existe en la respuesta
       const propertyData = applicationData.properties as any;
 
-      if (!propertyData?.id) {
-        throw new Error('No se pudo obtener los datos de la propiedad asociada a la aplicación');
+      if (!validatePropertyData(propertyData)) {
+        throw new Error('Los datos de la propiedad son inválidos o incompletos. Verifique que la propiedad esté correctamente configurada en el sistema.');
       }
 
-      // Paso 2: Obtener rental_owner_characteristic_id
+      // Paso 2: Obtener rental_owner_characteristic_id y datos del owner
       const { data: ownerData, error: ownerError } = await supabase
         .from('rental_owners')
-        .select('id, rental_owner_characteristic_id')
+        .select('id, rental_owner_characteristic_id, first_name, paternal_last_name, maternal_last_name, rut, email, phone')
         .eq('property_id', propertyData.id)
         .single();
 
@@ -573,6 +639,11 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
       }
 
       console.log('✅ Validación de property_type_characteristics_id exitosa:', propertyTypeExists.name);
+
+      // Validación final de todos los datos requeridos
+      if (!validateCharacteristicIds(characteristicIds)) {
+        throw new Error('Validación final fallida: faltan datos requeridos para el contrato');
+      }
 
       return characteristicIds;
     } catch (error) {
@@ -901,14 +972,23 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
 
       // 1. Obtener datos de características
 
-      // 3. Obtener datos de características
+      // 3. Obtener datos de características con validación robusta
       console.log('🔍 Obteniendo datos de características...');
-      const characteristicIds = await fetchContractData(selectedProfile.applicationId);
-      console.log('✅ Datos de características obtenidos:', characteristicIds);
+      let characteristicIds;
+      try {
+        characteristicIds = await fetchContractData(selectedProfile.applicationId);
+        console.log('✅ Datos de características obtenidos:', characteristicIds);
+      } catch (fetchError: any) {
+        console.error('❌ Error al obtener datos de características:', fetchError);
+        const errorMessage = fetchError.message || 'Error al obtener datos de la propiedad y aplicación';
+        toast.error(`Error de datos: ${errorMessage}`);
+        setIsGenerating(false);
+        return;
+      }
 
-      if (!characteristicIds.property_type_characteristics_id || !characteristicIds.rental_owner_characteristic_id) {
-        console.error('❌ Faltan datos requeridos:', characteristicIds);
-        toast.error('Error obteniendo datos de la propiedad. Verifica que la propiedad tenga características asignadas.');
+      // Validación defensiva de datos de características
+      if (!validateCharacteristicIds(characteristicIds)) {
+        toast.error('Los datos requeridos para generar el contrato están incompletos. Verifique la configuración de la propiedad y el propietario.');
         setIsGenerating(false);
         return;
       }
@@ -940,32 +1020,53 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
         return;
       }
 
-      // 5. Obtener rental_owner_characteristics
-      const validatedOwnerId = safeUUIDQuery(
-        characteristicIds.rental_owner_characteristic_id,
-        'rental_owner_characteristics',
-        'id'
-      );
+      // 5. Obtener datos de la propiedad para validación
+      const { data: propertyValidationData, error: propertyValidationError } = await supabase
+        .from('applications')
+        .select('property_id, properties!inner(id)')
+        .eq('id', selectedProfile.applicationId)
+        .single();
 
-      const { data: ownerData, error: ownerError } = await supabase
-        .from('rental_owner_characteristics')
-        .select('name, rut')
-        .eq('id', validatedOwnerId)
-        .maybeSingle();
+      if (propertyValidationError || !propertyValidationData?.property_id) {
+        console.error('❌ Error obteniendo property_id de la aplicación');
+        toast.error('No se pudo obtener la información de la propiedad de la aplicación');
+        setIsGenerating(false);
+        return;
+      }
 
-      if (ownerError) {
-        formatErrorDetails(ownerError, 'handleGenerateContract - Error obteniendo rental_owner_characteristics');
+      // 6. Obtener datos completos del owner desde rental_owners
+      // NOTA: No usamos rental_owner_characteristics porque rental_owner_characteristic_id
+      // es TEXT (formato "RENTAL_OWNER_XXXXXXX"), no un UUID FK
+      const { data: ownerFullData, error: ownerFullError } = await supabase
+        .from('rental_owners')
+        .select('first_name, paternal_last_name, maternal_last_name, rut, email, phone, rental_owner_characteristic_id')
+        .eq('property_id', propertyValidationData.property_id)
+        .single();
+
+      if (ownerFullError) {
+        formatErrorDetails(ownerFullError, 'handleGenerateContract - Error obteniendo datos completos del owner');
         toast.error('Error al obtener datos del propietario');
         setIsGenerating(false);
         return;
       }
 
-      if (!ownerData) {
-        console.error('❌ rental_owner_characteristics no encontrado');
-        toast.error('No se encontraron las características del propietario');
+      if (!ownerFullData) {
+        console.error('❌ Datos completos del owner no encontrados');
+        toast.error('No se encontraron los datos del propietario');
         setIsGenerating(false);
         return;
       }
+
+      // Construir el nombre completo del owner
+      const ownerFullName = `${ownerFullData.first_name} ${ownerFullData.paternal_last_name}${
+        ownerFullData.maternal_last_name ? ' ' + ownerFullData.maternal_last_name : ''
+      }`.trim();
+
+      console.log('✅ Datos completos del owner obtenidos:', { 
+        name: ownerFullName, 
+        rut: ownerFullData.rut,
+        characteristic_id: ownerFullData.rental_owner_characteristic_id
+      });
 
       // 6. Guardar condiciones del contrato en rental_contract_conditions
       console.log('💾 Guardando condiciones del contrato en rental_contract_conditions...');
@@ -1056,11 +1157,11 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
         property_type_characteristics_id: (property as any)?.property_type_characteristics_id || null,
 
         // Datos del propietario
-        owner_name: ownerData?.name || 'No especificado',
-        owner_rut: ownerData?.rut || 'No especificado',
-        owner_email: (ownerData as any)?.email || '',
-        owner_phone: (ownerData as any)?.phone || '',
-        owner_characteristic_id: (ownerData as any)?.rental_owner_characteristic_id || null,
+        owner_name: ownerFullName || 'No especificado',
+        owner_rut: ownerFullData?.rut || 'No especificado',
+        owner_email: ownerFullData?.email || '',
+        owner_phone: ownerFullData?.phone || '',
+        owner_characteristic_id: ownerFullData?.rental_owner_characteristic_id || null,
 
         // Condiciones del contrato
         contract_start_date: formData.contract_start_date,
@@ -1112,8 +1213,26 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
       const contractWebhookUrl = import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_URL;
 
       if (!contractWebhookUrl) {
-        console.error('❌ URL del webhook no configurada');
-        throw new Error('URL del webhook no configurada');
+        console.error('❌ URL del webhook de contratos (N8N) no configurada');
+        const errorMessage = `
+          La variable de entorno VITE_N8N_CONTRACT_WEBHOOK_URL no está configurada.
+
+          Para generar contratos automáticamente, necesitas:
+
+          1. Configurar un webhook en n8n para generación de contratos
+          2. Agregar la siguiente variable a tu archivo .env:
+
+             VITE_N8N_CONTRACT_WEBHOOK_URL=https://tu-n8n-instance.com/webhook/generate-contract
+
+          3. Reiniciar el servidor de desarrollo
+
+          Consulta INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md para más detalles.
+        `.trim();
+
+        toast.error('Configuración incompleta: Webhook de contratos no configurado');
+        setError(errorMessage);
+        setIsGenerating(false);
+        return;
       }
 
       const webhookResponse = await fetch(contractWebhookUrl, {

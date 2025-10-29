@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Upload, X, Image, Check, AlertCircle, Loader2 } from 'lucide-react';
-import { supabase, Property } from '../../lib/supabase';
+import { toast } from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
 // Datos de regiones y comunas de Chile
@@ -86,6 +87,13 @@ const CHILE_REGIONS_COMMUNES = {
   }
 };
 
+// Interface for Property Type Characteristics (from DB)
+interface PropertyTypeCharacteristic {
+  id: string; // UUID
+  name: string;
+  description: string | null;
+}
+
 // Interface for Property Form Data with conditional fields
 interface PropertyFormData {
   // Basic fields
@@ -101,6 +109,20 @@ interface PropertyFormData {
 
   // Property type and conditional fields
   tipo_propiedad: 'Casa' | 'Departamento' | 'Oficina' | 'Local Comercial' | 'Estacionamiento' | 'Bodega' | 'Parcela';
+  
+  /**
+   * Property type characteristics ID (UUID) - OBLIGATORIO PARA CONTRATOS
+   * 
+   * Este campo es crítico porque:
+   * - Es requerido por el sistema de contratos para generar documentos legales
+   * - Identifica de forma inequívoca el tipo de propiedad en la base de datos
+   * - Permite aplicar cláusulas contractuales específicas por tipo de propiedad
+   * - Previene errores al generar contratos de arriendo
+   * 
+   * IMPORTANTE: Este UUID se obtiene automáticamente de la tabla 
+   * property_type_characteristics cuando el usuario selecciona el tipo de propiedad
+   */
+  property_type_characteristics_id: string;
 
   // Measurement fields (conditional based on property type)
   useful_area?: number; // M² Útiles - not required for Bodega/Estacionamiento
@@ -148,6 +170,9 @@ export const PropertyForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // State for property type characteristics from DB
+  const [propertyTypeOptions, setPropertyTypeOptions] = useState<PropertyTypeCharacteristic[]>([]);
 
   // Form data state with conditional fields
   const [formData, setFormData] = useState<PropertyFormData>({
@@ -162,7 +187,8 @@ export const PropertyForm: React.FC = () => {
     photos_urls: [] as string[],
 
     // Property type and conditional fields
-    tipo_propiedad: '',
+    tipo_propiedad: '' as PropertyFormData['tipo_propiedad'],
+    property_type_characteristics_id: '', // UUID field - CRÍTICO PARA CONTRATOS
     useful_area: undefined,
     total_area: undefined,
     bedrooms: 1,
@@ -194,6 +220,34 @@ export const PropertyForm: React.FC = () => {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
+  // Fetch property types from DB on component mount
+  useEffect(() => {
+    const fetchPropertyTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('property_type_characteristics')
+          .select('id, name, description')
+          .order('name', { ascending: true });
+
+        if (error) {
+          console.error('❌ Error fetching property types:', error);
+          toast.error('Error cargando tipos de propiedad');
+          return;
+        }
+
+        if (data) {
+          console.log('✅ Property types loaded:', data);
+          setPropertyTypeOptions(data);
+        }
+      } catch (error) {
+        console.error('❌ Exception fetching property types:', error);
+        toast.error('Error cargando tipos de propiedad');
+      }
+    };
+
+    fetchPropertyTypes();
+  }, []);
+
   useEffect(() => {
     if (isEditing && id) {
       fetchProperty();
@@ -215,7 +269,8 @@ export const PropertyForm: React.FC = () => {
             id,
             image_url,
             storage_path
-          )
+          ),
+          property_type_characteristics_id
         `)
         .eq('id', id)
         .single();
@@ -245,7 +300,8 @@ export const PropertyForm: React.FC = () => {
         comuna: data.address_commune || '',
 
         // Property type and conditional fields
-        property_type: data.tipo_propiedad || '',
+        tipo_propiedad: data.tipo_propiedad || '',
+        property_type_characteristics_id: data.property_type_characteristics_id || '', // UUID from DB
         useful_area: data.metros_utiles || undefined,
         total_area: data.metros_totales || undefined,
         bedrooms: data.bedrooms || 1,
@@ -262,12 +318,12 @@ export const PropertyForm: React.FC = () => {
         common_expenses: data.common_expenses_clp?.toString() || data.common_expenses?.toString() || '',
 
         // Photos
-        photos_urls: data.property_images?.map(img => img.image_url) || [],
+        photos_urls: data.property_images?.map((img: any) => img.image_url) || [],
       }));
 
       // Cargar imágenes existentes en el estado de preview
       if (data.property_images && data.property_images.length > 0) {
-        setPhotoPreviews(data.property_images.map(img => img.image_url));
+        setPhotoPreviews(data.property_images.map((img: any) => img.image_url));
       }
     } catch (error) {
       console.error('Error fetching property:', JSON.stringify(error, null, 2));
@@ -289,12 +345,30 @@ export const PropertyForm: React.FC = () => {
   };
 
   // Handle property type change with automatic field cleanup
-  const handlePropertyTypeChange = (newType: string) => {
+  const handlePropertyTypeChange = async (newType: string) => {
     const propertyType = newType as PropertyFormData['tipo_propiedad'];
 
-    // Base update with new type
+    // Find the UUID for the selected property type
+    const selectedPropertyType = propertyTypeOptions.find(pt => pt.name === newType);
+    
+    if (!selectedPropertyType) {
+      console.error('❌ No se encontró UUID para el tipo de propiedad:', newType);
+      setErrors(prev => ({
+        ...prev,
+        tipo_propiedad: `No se encontró UUID para el tipo de propiedad "${newType}". Contacte al administrador.`
+      }));
+      return;
+    }
+
+    console.log('✅ UUID encontrado para tipo de propiedad:', {
+      name: selectedPropertyType.name,
+      id: selectedPropertyType.id
+    });
+
+    // Base update with new type AND UUID
     const updatedData: Partial<PropertyFormData> = {
-      tipo_propiedad: propertyType
+      tipo_propiedad: propertyType,
+      property_type_characteristics_id: selectedPropertyType.id // Set UUID automatically
     };
 
     // Clean up fields that should be hidden/optional for certain types
@@ -323,17 +397,17 @@ export const PropertyForm: React.FC = () => {
     }
 
     // If changing FROM Bodega to another type, clear storage_number
-    if (formData.property_type === 'Bodega' && propertyType !== 'Bodega') {
+    if (formData.tipo_propiedad === 'Bodega' && propertyType !== 'Bodega') {
       updatedData.storage_number = undefined;
     }
 
     // If changing FROM Estacionamiento to another type, clear parking_location
-    if (formData.property_type === 'Estacionamiento' && propertyType !== 'Estacionamiento') {
+    if (formData.tipo_propiedad === 'Estacionamiento' && propertyType !== 'Estacionamiento') {
       updatedData.parking_location = undefined;
     }
 
     // If changing FROM Parcela to another type, clear parcela_number
-    if (formData.property_type === 'Parcela' && propertyType !== 'Parcela') {
+    if (formData.tipo_propiedad === 'Parcela' && propertyType !== 'Parcela') {
       updatedData.parcela_number = undefined;
     }
 
@@ -408,10 +482,28 @@ export const PropertyForm: React.FC = () => {
     if (!formData.price.trim()) newErrors.price = 'El precio es requerido';
     if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
 
+    // Property type validation - CRITICAL FOR CONTRACTS
+    if (!formData.tipo_propiedad || formData.tipo_propiedad.trim() === '') {
+      newErrors.tipo_propiedad = 'El tipo de propiedad es obligatorio';
+    }
+
+    // Property type characteristics UUID validation - CRÍTICO PARA CONTRATOS
+    if (!formData.property_type_characteristics_id || formData.property_type_characteristics_id.trim() === '') {
+      newErrors.property_type_characteristics_id = 
+        'El ID del tipo de propiedad es obligatorio. Por favor, selecciona nuevamente el tipo de propiedad.';
+    } else {
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(formData.property_type_characteristics_id)) {
+        newErrors.property_type_characteristics_id = 
+          'El ID del tipo de propiedad tiene un formato inválido. Por favor, selecciona nuevamente el tipo de propiedad.';
+      }
+    }
+
     // Property type specific validation
-    const isStorage = formData.property_type === 'Bodega';
-    const isParking = formData.property_type === 'Estacionamiento';
-    const isParcela = formData.property_type === 'Parcela';
+    const isStorage = formData.tipo_propiedad === 'Bodega';
+    const isParking = formData.tipo_propiedad === 'Estacionamiento';
+    const isParcela = formData.tipo_propiedad === 'Parcela';
     const requiresUsefulArea = !isStorage && !isParking && !isParcela; // Useful area required except for Bodega, Estacionamiento, and Parcela
     const requiresTotalArea = !isParking; // Total area required for all except parking
 
@@ -540,7 +632,6 @@ export const PropertyForm: React.FC = () => {
         throw new Error('Error de conexión con la base de datos: ' + connectionError.message);
       }
 
-      let documentUrls: string[] = [];
       let propertyId = id; // Para edición
       let uploadedPhotoUrls: string[] = [];
 
@@ -549,16 +640,13 @@ export const PropertyForm: React.FC = () => {
         try {
           const uploadResult = await uploadFiles();
           uploadedPhotoUrls = uploadResult.uploadedPhotoUrls;
-          documentUrls = uploadResult.uploadedDocumentUrls;
+          // documentUrls = uploadResult.uploadedDocumentUrls; // Not used for now
         } catch (uploadError: any) {
           throw new Error('Error subiendo archivos: ' + uploadError.message);
         }
       }
 
       // Prepare property data with conditional fields
-      const isStorage = formData.property_type === 'Bodega';
-      const isParking = formData.property_type === 'Estacionamiento';
-
       const propertyData = {
         owner_id: user.id,
         listing_type: formData.type,
@@ -571,7 +659,8 @@ export const PropertyForm: React.FC = () => {
         address_commune: formData.comuna,
 
         // Property type and conditional fields
-        tipo_propiedad: formData.property_type,
+        tipo_propiedad: formData.tipo_propiedad,
+        property_type_characteristics_id: formData.property_type_characteristics_id, // UUID - CRÍTICO PARA CONTRATOS
         metros_utiles: formData.useful_area || null,
         metros_totales: formData.total_area || null,
         bedrooms: formData.bedrooms,
@@ -878,7 +967,7 @@ export const PropertyForm: React.FC = () => {
                 </label>
                 <select
                   required
-                  value={formData.property_type}
+                  value={formData.tipo_propiedad}
                   onChange={(e) => handlePropertyTypeChange(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 >
@@ -895,9 +984,9 @@ export const PropertyForm: React.FC = () => {
 
               {/* Conditional fields based on property type */}
               {(() => {
-                const isStorage = formData.property_type === 'Bodega';
-                const isParking = formData.property_type === 'Estacionamiento';
-                const isParcela = formData.property_type === 'Parcela';
+                const isStorage = formData.tipo_propiedad === 'Bodega';
+                const isParking = formData.tipo_propiedad === 'Estacionamiento';
+                const isParcela = formData.tipo_propiedad === 'Parcela';
                 const showStandardFields = !isStorage && !isParking && !isParcela;
                 const requiresUsefulArea = !isStorage && !isParking;
 
@@ -1132,7 +1221,7 @@ export const PropertyForm: React.FC = () => {
                         )}
 
                         {/* Campo: ¿Tiene Terraza? - OCULTAR PARA BODEGA, ESTACIONAMIENTO, OFICINA Y PARCELA */}
-                        {formData.property_type !== 'Oficina' && !isParcela && (
+                        {formData.tipo_propiedad !== 'Oficina' && !isParcela && (
                           <div className="transition-all duration-300">
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                               ¿Tiene Terraza?
@@ -1218,18 +1307,18 @@ export const PropertyForm: React.FC = () => {
               {/* Fila 7: Descripción */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Descripción {formData.property_type === 'Bodega' && '(Opcional)'}
+                  Descripción {formData.tipo_propiedad === 'Bodega' && '(Opcional)'}
                 </label>
                 <textarea
                   rows={4}
-                  required={formData.property_type !== 'Bodega'}
+                  required={formData.tipo_propiedad !== 'Bodega'}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                     errors.description ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
                   placeholder={
-                    formData.property_type === 'Bodega'
+                    formData.tipo_propiedad === 'Bodega'
                       ? "Ej: Bodega amplia en subterráneo, acceso por ascensor, ideal para almacenamiento"
                       : "Describe las características principales de la propiedad, ubicación, amenidades, etc."
                   }
@@ -1481,7 +1570,7 @@ export const PropertyForm: React.FC = () => {
                 <span>
                   {isEditing
                     ? 'Actualizar Propiedad'
-                    : formData.property_type === 'Bodega'
+                    : formData.tipo_propiedad === 'Bodega'
                       ? 'Publicar Bodega en Arriendo'
                       : 'Publicar Propiedad'
                   }

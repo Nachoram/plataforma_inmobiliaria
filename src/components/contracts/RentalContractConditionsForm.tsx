@@ -1406,9 +1406,24 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
                   type="date"
                   value={formData.contract_start_date}
                   onChange={(e) => handleContractFormChange('contract_start_date', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  min={new Date().toISOString().split('T')[0]} // No permitir fechas pasadas
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors relative z-10 bg-white"
+                  style={{
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    appearance: 'none'
+                  }}
                   required
                 />
+                {formData.contract_start_date && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Fecha seleccionada: {new Date(formData.contract_start_date).toLocaleDateString('es-CL', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                )}
               </div>
 
               {/* Duración del Contrato */}

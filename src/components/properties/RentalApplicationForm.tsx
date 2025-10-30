@@ -463,6 +463,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                 address_department: guarantorData.address_department,
                 address_commune: guarantorData.address_commune,
                 address_region: guarantorData.address_region,
+                property_id: property.id, // Asignar property_id para relación directa con propiedad
                 created_by: user.id // Track who created this guarantor
               })
               .eq('rut', guarantorData.rut)
@@ -491,6 +492,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                 address_department: guarantorData.address_department,
                 address_commune: guarantorData.address_commune,
                 address_region: guarantorData.address_region,
+                property_id: property.id, // Asignar property_id para relación directa con propiedad
                 created_by: user.id // Track who created this guarantor
               })
               .select()

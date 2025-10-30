@@ -94,3 +94,5 @@ BEGIN
   RAISE NOTICE 'Rollback completed. Characteristic IDs reset to basic UUID format.';
   RAISE NOTICE '⚠️  WARNING: Webhook compatibility may be affected. Re-run the fix script if needed.';
 END $$;
+
+

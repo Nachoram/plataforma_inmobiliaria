@@ -1287,6 +1287,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   onChange={handleApplicantChange}
                   placeholder="Número"
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  maxLength="10"
                   required
                 />
               </div>
@@ -1298,6 +1299,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                   onChange={handleApplicantChange}
                   placeholder="Depto (opcional)"
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  maxLength="10"
                 />
                 <input
                   type="text"
@@ -1496,6 +1498,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                     onChange={handleGuarantorChange}
                     placeholder="Número"
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    maxLength="10"
                     required={showGuarantor}
                   />
                 </div>
@@ -1507,6 +1510,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                     onChange={handleGuarantorChange}
                     placeholder="Depto (opcional)"
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    maxLength="10"
                   />
                   <input
                     type="text"

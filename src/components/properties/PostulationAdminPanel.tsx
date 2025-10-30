@@ -636,6 +636,22 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
       return;
     }
 
+    // Validación adicional: verificar que la aplicación aún existe
+    console.log('🔍 Verificando que la aplicación existe antes de generar contrato...');
+    const { data: appCheck, error: appCheckError } = await supabase
+      .from('applications')
+      .select('id')
+      .eq('id', selectedProfile.applicationId)
+      .single();
+
+    if (appCheckError || !appCheck) {
+      console.error('❌ La aplicación ya no existe:', selectedProfile.applicationId);
+      toast.error('Esta postulación ya no existe en el sistema. Por favor, recarga la página.');
+      // Recargar postulaciones para actualizar la vista
+      fetchPostulations();
+      return;
+    }
+
     console.log('✅ [PostulationAdminPanel] Iniciando proceso de aceptación de postulación');
     console.log('👤 Perfil seleccionado:', selectedProfile);
 

@@ -972,9 +972,24 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
 
       console.log('✅ Validación final del formulario exitosa');
 
-      // 1. Obtener datos de características
+      // 1. Validación previa: verificar que la aplicación existe
+      console.log('🔍 Verificando existencia de la aplicación...');
+      const { data: appExists, error: appCheckError } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('id', selectedProfile.applicationId)
+        .single();
 
-      // 3. Obtener datos de características con validación robusta
+      if (appCheckError || !appExists) {
+        console.error('❌ La aplicación no existe:', selectedProfile.applicationId);
+        toast.error('La postulación seleccionada no existe o ha sido eliminada. Por favor, recarga la página e intenta nuevamente.');
+        setIsGenerating(false);
+        return;
+      }
+
+      console.log('✅ Aplicación verificada:', appExists.id);
+
+      // 2. Obtener datos de características con validación robusta
       console.log('🔍 Obteniendo datos de características...');
       let characteristicIds;
       try {

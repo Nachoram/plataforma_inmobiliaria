@@ -135,3 +135,5 @@ Después de la corrección, el webhook debería enviar:
 ### IDs no se actualizan
 - **Causa:** Registros pueden no tener `created_at` o IDs válidos
 - **Solución:** Verificar datos existentes antes de ejecutar el script
+
+

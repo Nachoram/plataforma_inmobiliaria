@@ -1041,6 +1041,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
               value={formData.address_number}
               onChange={handleInputChange}
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              maxLength="10"
               required
             />
           </div>
@@ -1056,6 +1057,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
               value={formData.address_department}
               onChange={handleInputChange}
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              maxLength="10"
             />
           </div>
 
@@ -1647,6 +1649,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
                     onChange={handleInputChange}
                     placeholder="Número"
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    maxLength="10"
                   />
                 </div>
               </div>
@@ -1659,6 +1662,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
                     onChange={handleInputChange}
                     placeholder="Depto/Oficina"
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    maxLength="10"
                   />
                 </div>
                 <div>

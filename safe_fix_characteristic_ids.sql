@@ -184,3 +184,5 @@ DO $$
 BEGIN
   RAISE NOTICE 'SAFE characteristic IDs format fix completed successfully!';
 END $$;
+
+

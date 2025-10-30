@@ -74,3 +74,5 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION 'Error accessing monthly_income_clp column: %', SQLERRM;
 END $$;
+
+

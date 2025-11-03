@@ -234,3 +234,5 @@ BEGIN
   RAISE NOTICE 'Políticas RLS actualizadas para nueva estructura';
   RAISE NOTICE 'Validación de consistencia implementada';
 END $$;
+
+

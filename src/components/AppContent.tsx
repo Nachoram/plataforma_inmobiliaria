@@ -18,6 +18,7 @@ import { AdminPropertyDetailView } from './properties/AdminPropertyDetailView';
 
 // Diagnostic components - keep loaded
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
+import DatabaseQueryRunner from './DatabaseQueryRunner';
 
 // Temporarily disable lazy loading to debug the issue
 import PortfolioPage from './portfolio/PortfolioPage';
@@ -145,6 +146,12 @@ export const AppContent: React.FC = () => {
       <Route path="/diagnostic" element={
         <Layout>
           <SupabaseDiagnostic />
+        </Layout>
+      } />
+
+      <Route path="/db-fix" element={
+        <Layout>
+          <DatabaseQueryRunner />
         </Layout>
       } />
 

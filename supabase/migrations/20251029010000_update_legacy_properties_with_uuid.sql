@@ -191,3 +191,52 @@ BEGIN
     RAISE NOTICE '✅ Índice creado/verificado para mejor rendimiento';
 END $$;
 
+Quiero implementar en el repositorio la función de un botón "Deshacer Aceptación" dentro del PostulationAdminPanel. El flujo esperado es:
+
+Al presionar este botón sobre una postulación aceptada:
+
+Se debe revocar/modificar el estado a “En Revisión” (“revertir aceptación”) en la tabla de postulaciones/applications.
+
+Se deberá borrar o invalidar la aceptación anterior: esto significa eliminar, actualizar o poner en status “cancelado” cualquier registro relacionado (en especial en rental_contract_conditions y/o rental_contracts) que se hubiera generado por la aceptación.
+
+Tras “deshacer”:
+
+El botón “Aceptar Postulación” debe quedar nuevamente habilitado (visible/activo en el front).
+
+El historial/auditoría debe dejar constancia del cambio, quién y cuándo lo hizo (idealmente log en tabla o campo de tracking).
+
+Todo el flujo/estados debe estar soportado tanto en backend (actualización de tablas, constraints) como visualmente en front.
+
+Validaciones:
+
+Solo puede revocarse si aún no existen firmas ni contratos “finalizados/firmados”.
+
+El cambio debe ser reversible (puede volver a aceptar una vez deshecho).
+
+Si hay contratos firmados, la acción debe estar bloqueada y mostrar advertencia al usuario.
+
+Acciones requeridas:
+
+Backend:
+
+Implementar endpoint o mutación que permita cambiar el estado de la postulación a “en revisión” y revertir/borrar/inutilizar (soft delete/status) las condiciones/contratos generados.
+
+Garantizar integridad referencial: no dejar registros huérfanos ni en estados incoherentes.
+
+Frontend:
+
+Agregar botón visible solo cuando la postulación está “aceptada” y el contrato aún puede revertirse.
+
+Recargar el estado tras acción, mostrar snakbar/toast confirmando, y habilitar botón de aceptación otra vez.
+
+Mostrar advertencia si la acción no es posible (contrato firmado, error del backend).
+
+Ejemplo visual UX:
+
+Botón rojo “Deshacer Aceptación”
+
+Al confirmar, volver a pantalla de postulación editable, botón “Aceptar” habilitado.
+
+Mensaje: “Aceptación revertida. Puedes volver a aceptar esta postulación.”
+
+¿Sugerencias para queries/upserts en Supabase o naming de estados que maximicen la trazabilidad y la reversibilidad de las postulaciones? ¿Patrones para el borrado seguro/reversible en los módulos críticos?

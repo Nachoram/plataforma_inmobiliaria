@@ -28,3 +28,5 @@ BEGIN
         RAISE NOTICE 'Warning: % guarantors still have NULL property_id and may cause issues', updated_count;
     END IF;
 END $$;
+
+

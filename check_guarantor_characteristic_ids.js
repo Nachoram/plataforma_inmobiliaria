@@ -66,3 +66,5 @@ async function checkGuarantorCharacteristicIds() {
 }
 
 checkGuarantorCharacteristicIds();
+
+

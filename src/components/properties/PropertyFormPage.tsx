@@ -65,11 +65,6 @@ const PropertyFormPage: React.FC = () => {
             storage_path,
             created_at
           ),
-          propiedad_amenidades (
-            amenidades (
-              nombre
-            )
-          ),
           documents (
             id,
             document_type,
@@ -94,7 +89,6 @@ const PropertyFormPage: React.FC = () => {
       console.log('🔍 Property fields:', Object.keys(property));
       console.log('🔍 Property type:', property.tipo_propiedad);
       console.log('🔍 Property images:', property.property_images);
-      console.log('🔍 Property amenidades:', property.propiedad_amenidades);
       console.log('🔍 Property documents:', property.documents);
 
       setEditingProperty(property);

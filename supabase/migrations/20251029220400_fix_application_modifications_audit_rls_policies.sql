@@ -50,3 +50,5 @@ GRANT SELECT ON application_modifications TO authenticated;
 GRANT SELECT ON application_audit_log TO authenticated;
 
 
+
+

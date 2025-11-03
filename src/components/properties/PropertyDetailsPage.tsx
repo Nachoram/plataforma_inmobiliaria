@@ -10,11 +10,6 @@ interface PropertyWithImages extends Property {
     image_url: string;
     storage_path: string;
   }>;
-  propiedad_amenidades?: Array<{
-    amenidades: {
-      nombre: string;
-    };
-  }>;
   publicador?: {
     id: string;
     first_name: string;
@@ -44,7 +39,7 @@ export const PropertyDetailsPage: React.FC = () => {
 
   const fetchPropertyDetails = async () => {
     try {
-      // Fetch property with images, amenities and publisher info
+      // Fetch property with images and publisher info
       const { data: propertyData, error: propertyError } = await supabase
         .from('properties')
         .select(`
@@ -75,11 +70,6 @@ export const PropertyDetailsPage: React.FC = () => {
           property_images!inner (
             image_url,
             storage_path
-          ),
-          propiedad_amenidades (
-            amenidades (
-              nombre
-            )
           ),
           publicador:profiles!owner_id (
             id,
@@ -409,24 +399,6 @@ export const PropertyDetailsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Equipamiento y Amenidades */}
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Equipamiento y Amenidades</h3>
-              {property.propiedad_amenidades && property.propiedad_amenidades.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {property.propiedad_amenidades.map((item, index) => (
-                    <div key={index} className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
-                      <Check className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-gray-900">{item.amenidades.nombre}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">
-                  Esta propiedad no tiene amenidades registradas.
-                </div>
-              )}
-            </div>
 
             {/* Publication Date */}
             <div className="flex items-center text-sm text-gray-500">

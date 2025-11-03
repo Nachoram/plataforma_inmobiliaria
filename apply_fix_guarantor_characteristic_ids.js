@@ -70,3 +70,5 @@ async function applyFixGuarantorCharacteristicIds() {
 }
 
 applyFixGuarantorCharacteristicIds();
+
+

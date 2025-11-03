@@ -130,3 +130,5 @@ BEGIN
   RAISE NOTICE 'Migration completed: Fixed missing guarantor_characteristic_id values in applications table';
   RAISE NOTICE 'The completed_processes_characteristics view should now display guarantor_characteristic_id correctly.';
 END $$;
+
+

@@ -66,7 +66,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
     if (isEditing && initialData) {
       console.log('🎯 GET INITIAL FORM DATA: Using initialData for editing');
-      console.log('🎯 GET INITIAL FORM DATA: propiedad_amenidades:', initialData.propiedad_amenidades);
       console.log('🎯 GET INITIAL FORM DATA: documents:', initialData.documents);
 
       // Función helper para convertir boolean a Sí/No con null check
@@ -113,10 +112,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         numeroBodega: initialData.storage_number || '',
         parcela_number: initialData.parcela_number || '',
 
-        // Amenidades - Cargar desde propiedad_amenidades
-        amenidades: initialData.propiedad_amenidades
-          ? initialData.propiedad_amenidades.map(pa => pa.amenidades.nombre)
-          : [],
+        // Amenidades - Tabla eliminada, inicializar vacío
+        amenidades: [],
 
         // Datos del Propietario - TODOS los campos con fallbacks robustos
         owner_type: initialData.owner_type || 'natural',
@@ -163,7 +160,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         tieneBodega: formData.tieneBodega,
         numeroBodega: formData.numeroBodega,
         owner_type: formData.owner_type,
-        amenidades: formData.amenidades,
         documents: formData.documents
       });
 
@@ -206,9 +202,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       // Campo específico para Parcela
       parcela_number: '',
 
-      // Amenidades
-      amenidades: [],
-
       // Datos del Propietario
       owner_type: 'natural' as 'natural' | 'juridica',
       owner_first_name: '',
@@ -248,15 +241,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   // Constante para verificar si es estacionamiento
   const isParking = propertyType === 'Estacionamiento';
 
-  // Función helper para manejar cambios en amenidades
-  const handleAmenidadChange = (amenidad: string, isChecked: boolean) => {
-    setFormData({
-      ...formData,
-      amenidades: isChecked
-        ? [...formData.amenidades, amenidad]
-        : formData.amenidades.filter(a => a !== amenidad)
-    });
-  };
 
   // Form data state - inicializar con useMemo
   const [formData, setFormData] = useState(getInitialFormData);
@@ -297,7 +281,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         bedrooms: formData.bedrooms,
         tieneBodega: formData.tieneBodega,
         owner_type: formData.owner_type,
-        amenidades: formData.amenidades,
         documentsCount: formData.documents?.length || 0
       });
     }
@@ -1576,154 +1559,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             </div>
           )}
 
-          {/* Sección 3: Amenidades y Equipamiento - Solo para Casa y Departamento */}
-          {['Casa', 'Departamento'].includes(propertyType) && (
-            <div className="space-y-6">
-              <div className="border-b pb-2">
-                <h2 className="text-xl font-bold text-gray-900">Amenidades y Equipamiento</h2>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6">
-                {/* Checkboxes en grilla 3x4 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Conserje */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="conserje"
-                      checked={formData.amenidades.includes('Conserje')}
-                      onChange={(e) => {
-                        const isChecked = e.target.checked;
-                        const amenidad = 'Conserje';
-                        setFormData({
-                          ...formData,
-                          amenidades: isChecked
-                            ? [...formData.amenidades, amenidad]
-                            : formData.amenidades.filter(a => a !== amenidad)
-                        });
-                      }}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="conserje" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Conserje
-                    </label>
-                  </div>
-
-                  {/* Condominio */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="condominio"
-                      checked={formData.amenidades.includes('Condominio')}
-                      onChange={(e) => handleAmenidadChange('Condominio', e.target.checked)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="condominio" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Condominio
-                    </label>
-                  </div>
-
-                  {/* Piscina */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="piscina"
-                      checked={formData.amenidades.includes('Piscina')}
-                      onChange={(e) => handleAmenidadChange('Piscina', e.target.checked)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="piscina" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Piscina
-                    </label>
-                  </div>
-
-                  {/* Salón de Eventos */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="salonEventos"
-                      checked={formData.amenidades.includes('Salón de Eventos')}
-                      onChange={(e) => handleAmenidadChange('Salón de Eventos', e.target.checked)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="salonEventos" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Salón de Eventos
-                    </label>
-                  </div>
-
-                  {/* Gimnasio */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="gimnasio"
-                      checked={formData.amenidades.includes('Gimnasio')}
-                      onChange={(e) => handleAmenidadChange('Gimnasio', e.target.checked)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="gimnasio" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Gimnasio
-                    </label>
-                  </div>
-
-                  {/* Cowork */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="cowork"
-                      checked={formData.amenidades.includes('Cowork')}
-                      onChange={(e) => handleAmenidadChange('Cowork', e.target.checked)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="cowork" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Cowork
-                    </label>
-                  </div>
-
-                  {/* Quincho */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="quincho"
-                      checked={formData.amenidades.includes('Quincho')}
-                      onChange={(e) => handleAmenidadChange('Quincho', e.target.checked)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="quincho" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Quincho
-                    </label>
-                  </div>
-
-                  {/* Sala de Cine */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="salaCine"
-                      checked={formData.amenidades.includes('Sala de Cine')}
-                      onChange={(e) => handleAmenidadChange('Sala de Cine', e.target.checked)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="salaCine" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Sala de Cine
-                    </label>
-                  </div>
-
-                  {/* Áreas Verdes */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="areasVerdes"
-                      checked={formData.amenidades.includes('Áreas Verdes')}
-                      onChange={(e) => handleAmenidadChange('Áreas Verdes', e.target.checked)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="areasVerdes" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Áreas Verdes
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Sección 3.5: Características de Oficina - Solo para Oficinas */}
           {propertyType === 'Oficina' && (

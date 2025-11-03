@@ -154,3 +154,5 @@ BEGIN
         RAISE EXCEPTION '❌ Error: La vista completed_processes_characteristics no se creó';
     END IF;
 END $$;
+
+

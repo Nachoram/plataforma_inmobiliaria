@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X, Home, ChefHat, Droplets, Sofa, Check, Car } from 'lucide-react';
 import { supabase, Property, Profile, getPropertyTypeInfo } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import RentalApplicationForm from './RentalApplicationForm';
 
 interface PropertyWithImages extends Property {
   property_images?: Array<{
@@ -24,18 +23,31 @@ interface PropertyWithImages extends Property {
 export const PropertyDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [property, setProperty] = useState<PropertyWithImages | null>(null);
   const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
-  const [showApplicationForm, setShowApplicationForm] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchPropertyDetails();
     }
   }, [id]);
+
+  useEffect(() => {
+    // Check if user came back from successful application
+    if (location.state?.applicationSubmitted) {
+      setShowSuccessMessage(true);
+      // Clear the state to prevent showing message again on refresh
+      window.history.replaceState({}, document.title);
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setShowSuccessMessage(false), 5000);
+    }
+  }, [location.state]);
 
   const fetchPropertyDetails = async () => {
     try {
@@ -189,25 +201,36 @@ export const PropertyDetailsPage: React.FC = () => {
 
   const handleApplicationClick = () => {
     if (!user || !property) return;
-    setShowApplicationForm(true);
-  };
-
-  const handleApplicationSuccess = () => {
-    setShowApplicationForm(false);
-    // Mostrar mensaje de éxito
-    alert('¡Postulación enviada exitosamente!');
-  };
-
-  const handleApplicationCancel = () => {
-    setShowApplicationForm(false);
+    navigate(`/property/${property.id}/apply`);
   };
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+              <Check className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-green-800 font-semibold">¡Postulación enviada exitosamente!</h3>
+              <p className="text-green-700 text-sm">El propietario revisará tu solicitud pronto.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSuccessMessage(false)}
+            className="text-green-400 hover:text-green-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
       {/* Back Button */}
       <div>
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -476,7 +499,7 @@ export const PropertyDetailsPage: React.FC = () => {
                     className="w-full bg-emerald-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
                   >
                     <MessageSquare className="h-5 w-5 inline mr-2" />
-                    Postular a Arriendo
+                    Ir al Formulario de Postulación
                   </button>
                 ) : (
                   <button
@@ -518,31 +541,6 @@ export const PropertyDetailsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal del formulario de postulación */}
-      {showApplicationForm && property && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Postulación de Arriendo
-                </h2>
-                <button
-                  onClick={handleApplicationCancel}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <RentalApplicationForm
-                property={property}
-                onSuccess={handleApplicationSuccess}
-                onCancel={handleApplicationCancel}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

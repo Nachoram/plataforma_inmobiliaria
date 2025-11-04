@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Application Route</title>
+</head>
+<body>
+    <h1>Test - Nueva Ruta de Postulación</h1>
+    <p>Esta página prueba que la nueva ruta de aplicación funciona correctamente.</p>
+
+    <div style="margin: 20px 0;">
+        <h2>Instrucciones de prueba:</h2>
+        <ol>
+            <li>Ve a cualquier propiedad en arriendo</li>
+            <li>Haz clic en "Postular a Arriendo"</li>
+            <li>Deberías ser redirigido a: <code>/property/[ID]/apply</code></li>
+            <li>La página debería mostrar el formulario completo</li>
+            <li>Después de enviar, deberías volver a la propiedad con un mensaje de éxito</li>
+        </ol>
+    </div>
+
+    <div style="margin: 20px 0; padding: 15px; background: #e8f5e8; border: 1px solid #4caf50;">
+        <h3>✅ Funcionalidades implementadas:</h3>
+        <ul>
+            <li>Nueva página dedicada: <code>RentalApplicationPage.tsx</code></li>
+            <li>Ruta nueva: <code>/property/:propertyId/apply</code></li>
+            <li>Navegación desde detalles de propiedad</li>
+            <li>Mensaje de éxito al regresar</li>
+            <li>Navegación de vuelta con breadcrumbs</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('🧪 Test page for application route loaded');
+    </script>
+</body>
+</html>

@@ -416,7 +416,6 @@ class WebhookClient {
     propertyId: string,
     applicantId: string,
     rentalOwnerCharacteristicId?: string,
-    guarantorId?: string,
     contractConditionsId?: string,
     contractCharacteristicId?: string
   ): Promise<void> {
@@ -426,7 +425,7 @@ class WebhookClient {
       property_characteristic_id: propertyId,       // Este vendrá de la base de datos como characteristic_id
       applicant_characteristic_id: applicantId,     // Este vendrá de la base de datos como characteristic_id
       rental_owner_characteristic_id: rentalOwnerCharacteristicId || null, // ID característico del propietario (de rental_owners)
-      guarantor_characteristic_id: guarantorId || null, // Este vendrá de la base de datos como characteristic_id
+      // guarantor_characteristic_id: REMOVED - guarantor fields no longer required in webhook v2025-11
       contract_conditions_characteristic_id: contractConditionsId || null, // ID característico de las condiciones del contrato
       contract_characteristic_id: contractCharacteristicId || null, // ID característico del contrato generado
       action: 'application_approved',
@@ -435,8 +434,8 @@ class WebhookClient {
       application_uuid: applicationId,
       property_uuid: propertyId,
       applicant_uuid: applicantId,
-      owner_uuid: rentalOwnerCharacteristicId || null,
-      guarantor_uuid: guarantorId || null
+      owner_uuid: rentalOwnerCharacteristicId || null
+      // guarantor_uuid: REMOVED - guarantor fields no longer required in webhook v2025-11
     };
 
     if (!this.baseURL) {
@@ -448,7 +447,7 @@ class WebhookClient {
     console.log('📦 Datos con characteristic IDs:', JSON.stringify(data, null, 2));
     console.log('📋 Application characteristic ID enviado:', data.application_characteristic_id);
     console.log('🏠 Rental owner characteristic ID enviado:', data.rental_owner_characteristic_id);
-    console.log('🛡️ Guarantor characteristic ID enviado:', data.guarantor_characteristic_id);
+    // Guarantor fields removed - no longer required in webhook v2025-11
     console.log('📄 Contract characteristic ID enviado:', data.contract_characteristic_id);
 
     try {

@@ -176,7 +176,13 @@ const ApplicationsPage: React.FC = () => {
             listing_type,
             tipo_propiedad,
             owner_id,
-            property_characteristic_id
+            property_characteristic_id,
+            property_type_characteristics_id,
+            property_type_characteristics (
+              id,
+              name,
+              description
+            )
           ),
           profiles!applicant_id(
             first_name,
@@ -420,10 +426,8 @@ const ApplicationsPage: React.FC = () => {
           applicationCharacteristicId = application.id;
         }
 
-        // Enviar únicamente el guarantor_characteristic_id original de la base de datos
-        const guarantorIdForWebhook = application.guarantors?.guarantor_characteristic_id || undefined;
-
-        console.log('🔍 Guarantor ID para webhook:', guarantorIdForWebhook);
+        // Guarantor ID no longer needed for webhook - fields removed in v2025-11
+        // const guarantorIdForWebhook = application.guarantors?.guarantor_characteristic_id || undefined;
         console.log('🔍 Contract conditions object:', contractConditions);
         console.log('🔍 Contract conditions characteristic ID:', contractConditions?.rental_contract_conditions_characteristic_id);
         console.log('📄 Contract characteristic ID para webhook:', contractId);
@@ -433,7 +437,6 @@ const ApplicationsPage: React.FC = () => {
           application.properties?.property_characteristic_id || application.property_id, // Property ID
           application.applicant_id, // Applicant ID (mantenemos UUID, no tiene characteristic_id)
           ownerCharacteristicId, // Owner ID (usa rental_owner_characteristic_id si está disponible)
-          guarantorIdForWebhook, // Guarantor ID único por aplicación
           contractConditions?.rental_contract_conditions_characteristic_id || undefined, // ID característico de las condiciones del contrato
           contractId // ID del contrato generado
         );
@@ -443,8 +446,8 @@ const ApplicationsPage: React.FC = () => {
           application_characteristic_id: applicationCharacteristicId || application.id,
           property_characteristic_id: application.properties?.property_characteristic_id || application.property_id,
           rental_owner_characteristic_id: ownerCharacteristicId,
-          guarantor_characteristic_id: application.guarantors?.guarantor_characteristic_id || null,
-          guarantor_id_for_webhook: guarantorIdForWebhook,
+          // guarantor_characteristic_id: REMOVED - guarantor fields no longer required in webhook v2025-11
+          // guarantor_id_for_webhook: REMOVED - guarantor fields no longer required in webhook v2025-11
           contract_conditions_characteristic_id: contractConditions?.rental_contract_conditions_characteristic_id || undefined,
           contract_characteristic_id: contractId
         });

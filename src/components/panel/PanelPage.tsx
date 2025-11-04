@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Building, Heart, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { OfferModal } from './OfferModal';
-import RentalApplicationForm from '../properties/RentalApplicationForm';
 import { useAuth } from '../../hooks/useAuth';
 import PropertyCard from '../PropertyCard';
 import { usePropertyRoutePreloader } from '../../hooks/useRoutePreloader';
 
 export const PanelPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Preload rutas relacionadas con propiedades para mejor UX
   usePropertyRoutePreloader();
@@ -16,7 +17,6 @@ export const PanelPage: React.FC = () => {
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOfferModal, setShowOfferModal] = useState(false);
-  const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -232,8 +232,7 @@ export const PanelPage: React.FC = () => {
       // window.location.href = '/auth';
       return;
     }
-    setSelectedProperty(property);
-    setShowApplicationForm(true);
+    navigate(`/property/${property.id}/apply`);
   };
 
   const onOfferSuccess = () => {
@@ -242,11 +241,6 @@ export const PanelPage: React.FC = () => {
     // Opcional: refrescar propiedades
   };
 
-  const onApplicationSuccess = () => {
-    setShowApplicationForm(false);
-    setSelectedProperty(null);
-    // Opcional: refrescar propiedades
-  };
 
   if (loading) {
     return (
@@ -453,17 +447,6 @@ export const PanelPage: React.FC = () => {
         />
       )}
 
-      {showApplicationForm && selectedProperty && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <RentalApplicationForm
-              property={selectedProperty}
-              onSuccess={onApplicationSuccess}
-              onCancel={() => setShowApplicationForm(false)}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -169,8 +169,9 @@ export const PropertyForm: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isLoadingTypes, setIsLoadingTypes] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   // State for property type characteristics from DB
   const [propertyTypeOptions, setPropertyTypeOptions] = useState<PropertyTypeCharacteristic[]>([]);
 
@@ -224,6 +225,7 @@ export const PropertyForm: React.FC = () => {
   useEffect(() => {
     const fetchPropertyTypes = async () => {
       try {
+        setIsLoadingTypes(true);
         const { data, error } = await supabase
           .from('property_type_characteristics')
           .select('id, name, description')
@@ -242,6 +244,8 @@ export const PropertyForm: React.FC = () => {
       } catch (error) {
         console.error('❌ Exception fetching property types:', error);
         toast.error('Error cargando tipos de propiedad');
+      } finally {
+        setIsLoadingTypes(false);
       }
     };
 
@@ -270,7 +274,11 @@ export const PropertyForm: React.FC = () => {
             image_url,
             storage_path
           ),
-          property_type_characteristics_id
+          property_type_characteristics (
+            id,
+            name,
+            description
+          )
         `)
         .eq('id', id)
         .single();
@@ -300,8 +308,8 @@ export const PropertyForm: React.FC = () => {
         comuna: data.address_commune || '',
 
         // Property type and conditional fields
-        tipo_propiedad: data.tipo_propiedad || '',
-        property_type_characteristics_id: data.property_type_characteristics_id || '', // UUID from DB
+        tipo_propiedad: data.property_type_characteristics?.name || data.tipo_propiedad || '',
+        property_type_characteristics_id: data.property_type_characteristics?.id || data.property_type_characteristics_id || '', // UUID from DB
         useful_area: data.metros_utiles || undefined,
         total_area: data.metros_totales || undefined,
         bedrooms: data.bedrooms || 1,
@@ -965,21 +973,37 @@ export const PropertyForm: React.FC = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Tipo de Propiedad *
                 </label>
-                <select
-                  required
-                  value={formData.tipo_propiedad}
-                  onChange={(e) => handlePropertyTypeChange(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                >
-                  <option value="">Seleccionar tipo</option>
-                  <option value="Casa">Casa</option>
-                  <option value="Departamento">Departamento</option>
-                  <option value="Oficina">Oficina</option>
-                  <option value="Local Comercial">Local Comercial</option>
-                  <option value="Estacionamiento">Estacionamiento</option>
-                  <option value="Bodega">Bodega</option>
-                  <option value="Parcela">Parcela</option>
-                </select>
+                {isLoadingTypes ? (
+                  <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 flex items-center">
+                    <Loader2 className="w-4 h-4 animate-spin mr-2 text-gray-500" />
+                    <span className="text-sm text-gray-500">Cargando tipos de propiedad...</span>
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={formData.property_type_characteristics_id || ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const selectedType = propertyTypeOptions.find(pt => pt.id === selectedId);
+                      if (selectedType) {
+                        handlePropertyTypeChange(selectedType.name);
+                      }
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      errors.property_type_characteristics_id ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">Seleccionar tipo</option>
+                    {propertyTypeOptions.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {errors.property_type_characteristics_id && (
+                  <p className="mt-1 text-sm text-red-600">{errors.property_type_characteristics_id}</p>
+                )}
               </div>
 
               {/* Conditional fields based on property type */}

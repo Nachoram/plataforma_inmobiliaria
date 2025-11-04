@@ -43,46 +43,6 @@ interface RentalPublicationFormProps {
   onCancel?: () => void;
 }
 
-// Interface para propietario individual
-interface Owner {
-  id: string;
-  owner_type: 'natural' | 'juridica';
-  // Campos para persona natural
-  owner_first_name?: string;
-  owner_paternal_last_name?: string;
-  owner_maternal_last_name?: string;
-  owner_rut?: string;
-  owner_email?: string;
-  owner_phone?: string;
-  marital_status?: string;
-  property_regime?: string;
-  // Campos para persona jurídica
-  owner_company_name?: string;
-  owner_company_rut?: string;
-  owner_company_business?: string;
-  owner_company_email?: string;
-  owner_company_phone?: string;
-  owner_representative_first_name?: string;
-  owner_representative_paternal_last_name?: string;
-  owner_representative_maternal_last_name?: string;
-  owner_representative_rut?: string;
-  owner_representative_email?: string;
-  owner_representative_phone?: string;
-  // Campos de personería jurídica (condicionales)
-  constitution_type?: 'empresa_en_un_dia' | 'tradicional';
-  constitution_date?: string;
-  cve_code?: string; // Solo para empresa_en_un_dia
-  notary_name?: string; // Solo para tradicional
-  repertory_number?: string; // Solo para tradicional
-  // Campos de dirección (comunes)
-  owner_address_street?: string;
-  owner_address_number?: string;
-  owner_region?: string;
-  owner_commune?: string;
-  // Campo para porcentaje de propiedad (opcional)
-  ownership_percentage?: number;
-}
-
 export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   initialData,
   isEditing = false,
@@ -99,55 +59,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   const [initializing, setInitializing] = useState(isEditing);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Función para inicializar propietarios
-  const getInitialOwners = useMemo((): Owner[] => {
-    console.log('🎯 GET INITIAL OWNERS: isEditing:', isEditing, 'initialData:', !!initialData);
-
-    if (isEditing && initialData) {
-      // For editing, we need to load owners from the database
-      // For now, return a loading state - owners will be loaded in useEffect
-      console.log('🎯 GET INITIAL OWNERS: Returning empty array for editing - owners will be loaded via useEffect');
-      return [];
-    }
-
-    // Para nueva propiedad, empezar con un propietario vacío
-    const defaultOwner: Owner = {
-      id: 'owner-1',
-      owner_type: 'natural',
-      owner_first_name: '',
-      owner_paternal_last_name: '',
-      owner_maternal_last_name: '',
-      owner_rut: '',
-      owner_email: '',
-      owner_phone: '',
-      owner_company_name: '',
-      owner_company_rut: '',
-      owner_company_business: '',
-      owner_company_email: '',
-      owner_company_phone: '',
-      owner_representative_first_name: '',
-      owner_representative_paternal_last_name: '',
-      owner_representative_maternal_last_name: '',
-      owner_representative_rut: '',
-      owner_representative_email: '',
-      owner_representative_phone: '',
-      // Campos de personería jurídica
-      constitution_type: undefined,
-      constitution_date: '',
-      cve_code: '',
-      notary_name: '',
-      repertory_number: '',
-      owner_address_street: '',
-      owner_address_number: '',
-      owner_region: '',
-      owner_commune: '',
-      marital_status: '',
-      property_regime: '',
-      ownership_percentage: undefined
-    };
-    return [defaultOwner];
-  }, [isEditing, initialData]);
 
   // Función para inicializar formData
   const getInitialFormData = useMemo(() => {
@@ -204,6 +115,34 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         // Amenidades - Tabla eliminada, inicializar vacío
         amenidades: [],
 
+        // Datos del Propietario - TODOS los campos con fallbacks robustos
+        owner_type: initialData.owner_type || 'natural',
+        owner_first_name: initialData.owner_first_name || '',
+        owner_paternal_last_name: initialData.owner_paternal_last_name || '',
+        owner_maternal_last_name: initialData.owner_maternal_last_name || '',
+        owner_rut: initialData.owner_rut || '',
+        owner_email: initialData.owner_email || '',
+        owner_phone: initialData.owner_phone || '',
+        owner_company_name: initialData.owner_company_name || '',
+        owner_company_rut: initialData.owner_company_rut || '',
+        owner_company_business: initialData.owner_company_business || '',
+        owner_company_email: initialData.owner_company_email || '',
+        owner_company_phone: initialData.owner_company_phone || '',
+        owner_representative_first_name: initialData.owner_representative_first_name || '',
+        owner_representative_paternal_last_name: initialData.owner_representative_paternal_last_name || '',
+        owner_representative_maternal_last_name: initialData.owner_representative_maternal_last_name || '',
+        owner_representative_rut: initialData.owner_representative_rut || '',
+        owner_representative_email: initialData.owner_representative_email || '',
+        owner_representative_phone: initialData.owner_representative_phone || '',
+
+        // Campos de dirección del propietario (no se usan en edición)
+        owner_address_street: '',
+        owner_address_number: '',
+        owner_region: '',
+        owner_commune: '',
+        marital_status: '',
+        property_regime: '',
+
         // Arrays - inicializar vacíos, se manejarán por separado
         photos_urls: [],
         availableDays: [],
@@ -220,6 +159,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         bedrooms: formData.bedrooms,
         tieneBodega: formData.tieneBodega,
         numeroBodega: formData.numeroBodega,
+        owner_type: formData.owner_type,
         documents: formData.documents
       });
 
@@ -262,6 +202,29 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       // Campo específico para Parcela
       parcela_number: '',
 
+      // Datos del Propietario
+      owner_type: 'natural' as 'natural' | 'juridica',
+      owner_first_name: '',
+      owner_paternal_last_name: '',
+      owner_maternal_last_name: '',
+      owner_rut: '',
+      owner_email: '',
+      owner_phone: '',
+      owner_company_name: '',
+      owner_company_rut: '',
+      owner_representative_first_name: '',
+      owner_representative_paternal_last_name: '',
+      owner_representative_maternal_last_name: '',
+      owner_representative_rut: '',
+      owner_representative_email: '',
+      owner_representative_phone: '',
+      owner_address_street: '',
+      owner_address_number: '',
+      owner_region: '',
+      owner_commune: '',
+      marital_status: '',
+      property_regime: '',
+
       // Archivos
       photos_urls: [] as string[],
       availableDays: [] as string[],
@@ -278,8 +241,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   // Constante para verificar si es estacionamiento
   const isParking = propertyType === 'Estacionamiento';
 
-  // Estado para propietarios
-  const [owners, setOwners] = useState<Owner[]>(getInitialOwners);
 
   // Form data state - inicializar con useMemo
   const [formData, setFormData] = useState(getInitialFormData);
@@ -288,11 +249,10 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
-  // Actualizar formData y owners cuando cambien los datos iniciales y cargar fotos
+  // Actualizar formData cuando cambie getInitialFormData y cargar fotos
   useEffect(() => {
     console.log('🔄 RENTAL FORM: Updating formData with getInitialFormData');
     setFormData(getInitialFormData);
-    setOwners(getInitialOwners);
 
     // Si hay fotos existentes, cargar sus URLs
     if (isEditing && initialData?.property_images) {
@@ -309,7 +269,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     } else {
       setInitializing(false);
     }
-  }, [getInitialFormData, getInitialOwners, isEditing, initialData]);
+  }, [getInitialFormData, isEditing, initialData]);
 
   // Debug: Monitorear cambios en formData
   useEffect(() => {
@@ -320,96 +280,11 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         price: formData.price,
         bedrooms: formData.bedrooms,
         tieneBodega: formData.tieneBodega,
+        owner_type: formData.owner_type,
         documentsCount: formData.documents?.length || 0
       });
     }
   }, [formData, isEditing]);
-
-  // Load owners for editing
-  useEffect(() => {
-    const loadOwnersForEditing = async () => {
-      if (!isEditing || !initialData?.id) return;
-
-      console.log('🔄 Loading owners for editing property:', initialData.id);
-
-      try {
-        // Load owners with their relationships
-        const { data: relationships, error: relError } = await supabase
-          .from('property_rental_owners')
-          .select(`
-            ownership_percentage,
-            rental_owner_id,
-            rental_owners!inner(*)
-          `)
-          .eq('property_id', initialData.id);
-
-        if (relError) {
-          console.error('❌ Error loading owner relationships:', relError);
-          return;
-        }
-
-        if (!relationships || relationships.length === 0) {
-          console.log('⚠️ No owners found for property, using default owner');
-          setOwners(getInitialOwners());
-          return;
-        }
-
-        // Convert database records to Owner interface
-        const loadedOwners: Owner[] = relationships.map((rel: any, index: number) => {
-          const ownerData = rel.rental_owners;
-          const owner: Owner = {
-            id: `loaded-owner-${index}`,
-            owner_type: ownerData.owner_type || 'natural',
-            // Address fields (common)
-            owner_address_street: ownerData.address_street || '',
-            owner_address_number: ownerData.address_number || '',
-            owner_region: ownerData.address_region || '',
-            owner_commune: ownerData.address_commune || '',
-            // Natural person fields
-            owner_first_name: ownerData.first_name || '',
-            owner_paternal_last_name: ownerData.paternal_last_name || '',
-            owner_maternal_last_name: ownerData.maternal_last_name || '',
-            owner_rut: ownerData.rut || '',
-            owner_email: ownerData.email || '',
-            owner_phone: ownerData.phone || '',
-            marital_status: ownerData.marital_status || '',
-            property_regime: ownerData.property_regime || '',
-            // Legal entity fields
-            owner_company_name: ownerData.company_name || '',
-            owner_company_rut: ownerData.company_rut || '',
-            owner_company_business: ownerData.company_business || '',
-            owner_company_email: ownerData.company_email || '',
-            owner_company_phone: ownerData.company_phone || '',
-            owner_representative_first_name: ownerData.representative_first_name || '',
-            owner_representative_paternal_last_name: ownerData.representative_paternal_last_name || '',
-            owner_representative_maternal_last_name: ownerData.representative_maternal_last_name || '',
-            owner_representative_rut: ownerData.representative_rut || '',
-            owner_representative_email: ownerData.representative_email || '',
-            owner_representative_phone: ownerData.representative_phone || '',
-            // Legal entity constitution fields
-            constitution_type: ownerData.constitution_type,
-            constitution_date: ownerData.constitution_date,
-            cve_code: ownerData.cve_code,
-            notary_name: ownerData.notary_name,
-            repertory_number: ownerData.repertory_number,
-            // Ownership percentage
-            ownership_percentage: rel.ownership_percentage
-          };
-          return owner;
-        });
-
-        console.log('✅ Loaded owners for editing:', loadedOwners.length);
-        setOwners(loadedOwners);
-
-      } catch (error) {
-        console.error('❌ Error loading owners for editing:', error);
-        // Fallback to default owner
-        setOwners(getInitialOwners());
-      }
-    };
-
-    loadOwnersForEditing();
-  }, [isEditing, initialData?.id]);
 
   // Obtener comunas disponibles según la región seleccionada
   const getAvailableCommunes = (regionKey: string) => {
@@ -431,60 +306,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         commune: '' // Resetear comuna cuando cambia la región
       }));
     }
-  };
-
-  // Funciones para manejar propietarios
-  const addOwner = () => {
-    if (owners.length >= 5) return; // Máximo 5 propietarios
-
-    const newOwner: Owner = {
-      id: `owner-${Date.now()}`,
-      owner_type: 'natural',
-      owner_first_name: '',
-      owner_paternal_last_name: '',
-      owner_maternal_last_name: '',
-      owner_rut: '',
-      owner_email: '',
-      owner_phone: '',
-      owner_company_name: '',
-      owner_company_rut: '',
-      owner_company_business: '',
-      owner_company_email: '',
-      owner_company_phone: '',
-      owner_representative_first_name: '',
-      owner_representative_paternal_last_name: '',
-      owner_representative_maternal_last_name: '',
-      owner_representative_rut: '',
-      owner_representative_email: '',
-      owner_representative_phone: '',
-      // Campos de personería jurídica
-      constitution_type: undefined,
-      constitution_date: '',
-      cve_code: '',
-      notary_name: '',
-      repertory_number: '',
-      owner_address_street: '',
-      owner_address_number: '',
-      owner_region: '',
-      owner_commune: '',
-      marital_status: '',
-      property_regime: '',
-      ownership_percentage: undefined
-    };
-
-    setOwners(prev => [...prev, newOwner]);
-  };
-
-  const removeOwner = (ownerId: string) => {
-    if (owners.length <= 1) return; // Mínimo 1 propietario
-
-    setOwners(prev => prev.filter(owner => owner.id !== ownerId));
-  };
-
-  const updateOwner = (ownerId: string, field: keyof Owner, value: string) => {
-    setOwners(prev => prev.map(owner =>
-      owner.id === ownerId ? { ...owner, [field]: value } : owner
-    ));
   };
 
   // Handle photo upload and preview
@@ -551,115 +372,48 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       if (!isParking && (!formData.metrosTotales || !formData.metrosTotales.trim())) newErrors.metrosTotales = 'Los metros totales son requeridos';
       if (!formData.description || !formData.description.trim()) newErrors.description = 'La descripción es requerida';
     }
-    // Validaciones para cada propietario
-    owners.forEach((owner, index) => {
-      const prefix = owners.length > 1 ? `Propietario ${index + 1}: ` : '';
+    // Validaciones condicionales según el tipo de propietario
+    if (formData.owner_type === 'natural') {
+      if (!formData.owner_first_name || !formData.owner_first_name.trim()) newErrors.owner_first_name = 'El nombre del propietario es requerido';
+      if (!formData.owner_paternal_last_name || !formData.owner_paternal_last_name.trim()) newErrors.owner_paternal_last_name = 'El apellido paterno del propietario es requerido';
+      if (!formData.owner_maternal_last_name || !formData.owner_maternal_last_name.trim()) newErrors.owner_maternal_last_name = 'El apellido materno del propietario es requerido';
+      if (!formData.owner_rut || !formData.owner_rut.trim()) newErrors.owner_rut = 'El RUT del propietario es requerido';
+      if (!formData.marital_status) newErrors.marital_status = 'El estado civil es requerido';
+    } else if (formData.owner_type === 'juridica') {
+      if (!formData.owner_company_name || !formData.owner_company_name.trim()) newErrors.owner_company_name = 'La razón social es requerida';
+      if (!formData.owner_company_rut || !formData.owner_company_rut.trim()) newErrors.owner_company_rut = 'El RUT de la empresa es requerido';
 
-      if (owner.owner_type === 'natural') {
-        if (!owner.owner_first_name || !owner.owner_first_name.trim()) newErrors[`owner_${owner.id}_first_name`] = `${prefix}El nombre del propietario es requerido`;
-        if (!owner.owner_paternal_last_name || !owner.owner_paternal_last_name.trim()) newErrors[`owner_${owner.id}_paternal_last_name`] = `${prefix}El apellido paterno del propietario es requerido`;
-        if (!owner.owner_maternal_last_name || !owner.owner_maternal_last_name.trim()) newErrors[`owner_${owner.id}_maternal_last_name`] = `${prefix}El apellido materno del propietario es requerido`;
-        if (!owner.owner_rut || !owner.owner_rut.trim()) newErrors[`owner_${owner.id}_rut`] = `${prefix}El RUT del propietario es requerido`;
-        if (!owner.marital_status) newErrors[`owner_${owner.id}_marital_status`] = `${prefix}El estado civil es requerido`;
-
-        // Validación de email para personas naturales
-        if (!owner.owner_email || !owner.owner_email.trim()) {
-          newErrors[`owner_${owner.id}_email`] = `${prefix}El email del propietario es requerido`;
-        }
-
-        // Validate property_regime if married (solo para personas naturales)
-        if (owner.marital_status === 'casado' && !owner.property_regime) {
-          newErrors[`owner_${owner.id}_property_regime`] = `${prefix}El régimen patrimonial es requerido para personas casadas`;
-        }
-      } else if (owner.owner_type === 'juridica') {
-        if (!owner.owner_company_name || !owner.owner_company_name.trim()) newErrors[`owner_${owner.id}_company_name`] = `${prefix}La razón social es requerida`;
-        if (!owner.owner_company_rut || !owner.owner_company_rut.trim()) newErrors[`owner_${owner.id}_company_rut`] = `${prefix}El RUT de la empresa es requerido`;
-
-        // Validaciones para personería jurídica
-        if (!owner.constitution_type) newErrors[`owner_${owner.id}_constitution_type`] = `${prefix}El tipo de constitución es requerido para personas jurídicas`;
-        if (!owner.constitution_date) newErrors[`owner_${owner.id}_constitution_date`] = `${prefix}La fecha de constitución es requerida para personas jurídicas`;
-
-        // Validaciones condicionales según tipo de constitución
-        if (owner.constitution_type === 'empresa_en_un_dia' && (!owner.cve_code || !owner.cve_code.trim())) {
-          newErrors[`owner_${owner.id}_cve_code`] = `${prefix}El código CVE es requerido para empresas constituidas en un día`;
-        }
-        if (owner.constitution_type === 'tradicional') {
-          if (!owner.notary_name || !owner.notary_name.trim()) {
-            newErrors[`owner_${owner.id}_notary_name`] = `${prefix}El nombre de la notaría es requerido para constituciones tradicionales`;
-          }
-          if (!owner.repertory_number || !owner.repertory_number.trim()) {
-            newErrors[`owner_${owner.id}_repertory_number`] = `${prefix}El número de repertorio es requerido para constituciones tradicionales`;
-          }
-        }
-
-        // Validaciones para el representante legal
-        if (!owner.owner_representative_first_name || !owner.owner_representative_first_name.trim()) newErrors[`owner_${owner.id}_representative_first_name`] = `${prefix}El nombre del representante legal es requerido`;
-        if (!owner.owner_representative_paternal_last_name || !owner.owner_representative_paternal_last_name.trim()) newErrors[`owner_${owner.id}_representative_paternal_last_name`] = `${prefix}El apellido paterno del representante legal es requerido`;
-        if (!owner.owner_representative_rut || !owner.owner_representative_rut.trim()) newErrors[`owner_${owner.id}_representative_rut`] = `${prefix}El RUT del representante legal es requerido`;
-
-        // Validación de email para representantes legales de personas jurídicas
-        if (!owner.owner_representative_email || !owner.owner_representative_email.trim()) {
-          newErrors[`owner_${owner.id}_representative_email`] = `${prefix}El email del representante legal es requerido`;
-        }
-      }
-
-      // Validaciones comunes para ambos tipos (dirección)
-      if (!owner.owner_address_street || !owner.owner_address_street.trim()) newErrors[`owner_${owner.id}_address_street`] = `${prefix}La calle del propietario es requerida`;
-      if (!owner.owner_address_number || !owner.owner_address_number.trim()) newErrors[`owner_${owner.id}_address_number`] = `${prefix}El número del propietario es requerido`;
-      if (!owner.owner_region) newErrors[`owner_${owner.id}_region`] = `${prefix}La región del propietario es requerida`;
-      if (!owner.owner_commune) newErrors[`owner_${owner.id}_commune`] = `${prefix}La comuna del propietario es requerida`;
-
-      // Validación de porcentaje de propiedad
-      if (owner.ownership_percentage !== undefined && owner.ownership_percentage !== null) {
-        const percentage = parseFloat(owner.ownership_percentage.toString());
-        if (isNaN(percentage) || percentage < 0 || percentage > 100) {
-          newErrors[`owner_${owner.id}_ownership_percentage`] = `${prefix}El porcentaje de propiedad debe estar entre 0 y 100`;
-        }
-      }
-    });
-
-    // Validación de suma total de porcentajes si todos los propietarios tienen porcentaje definido
-    const ownersWithPercentage = owners.filter(owner => owner.ownership_percentage !== undefined && owner.ownership_percentage !== null && owner.ownership_percentage !== '');
-    if (ownersWithPercentage.length === owners.length && owners.length > 1) {
-      const totalPercentage = ownersWithPercentage.reduce((sum, owner) => sum + parseFloat(owner.ownership_percentage!.toString()), 0);
-      if (Math.abs(totalPercentage - 100) > 0.01) { // Tolerancia para errores de redondeo
-        newErrors.ownership_percentage_total = `La suma de los porcentajes de propiedad debe ser igual a 100%. Actualmente suma ${totalPercentage.toFixed(2)}%`;
-      }
+      // Validaciones para el representante legal
+      if (!formData.owner_representative_first_name || !formData.owner_representative_first_name.trim()) newErrors.owner_representative_first_name = 'El nombre del representante legal es requerido';
+      if (!formData.owner_representative_paternal_last_name || !formData.owner_representative_paternal_last_name.trim()) newErrors.owner_representative_paternal_last_name = 'El apellido paterno del representante legal es requerido';
+      if (!formData.owner_representative_rut || !formData.owner_representative_rut.trim()) newErrors.owner_representative_rut = 'El RUT del representante legal es requerido';
     }
 
-    // Validación de duplicados: RUTs y emails únicos entre propietarios
-    const ruts = new Map<string, number>();
-    const emails = new Map<string, number>();
+    // Validaciones comunes para ambos tipos
+    if (!formData.owner_address_street || !formData.owner_address_street.trim()) newErrors.owner_address_street = 'La calle del propietario es requerida';
+    if (!formData.owner_address_number || !formData.owner_address_number.trim()) newErrors.owner_address_number = 'El número del propietario es requerido';
+    if (!formData.owner_region) newErrors.owner_region = 'La región del propietario es requerida';
+    if (!formData.owner_commune) newErrors.owner_commune = 'La comuna del propietario es requerida';
 
-    owners.forEach((owner, index) => {
-      // Validar RUT único
-      const rutKey = owner.owner_type === 'natural' ? owner.owner_rut : owner.owner_company_rut;
-      if (rutKey && rutKey.trim()) {
-        if (ruts.has(rutKey)) {
-          const firstIndex = ruts.get(rutKey)!;
-          newErrors[`owner_${owner.id}_rut`] = `Este RUT ya está registrado para ${owners.length > 1 ? `el propietario ${firstIndex + 1}` : 'otro propietario'}`;
-        } else {
-          ruts.set(rutKey, index);
-        }
-      }
+    // Validación de email para personas naturales
+    if (formData.owner_type === 'natural' && (!formData.owner_email || !formData.owner_email.trim())) {
+      newErrors.owner_email = 'El email del propietario es requerido';
+    }
 
-      // Validar email único
-      const emailKey = owner.owner_type === 'natural' ? owner.owner_email : owner.owner_company_email;
-      if (emailKey && emailKey.trim()) {
-        if (emails.has(emailKey)) {
-          const firstIndex = emails.get(emailKey)!;
-          newErrors[`owner_${owner.id}_email`] = `Este email ya está registrado para ${owners.length > 1 ? `el propietario ${firstIndex + 1}` : 'otro propietario'}`;
-        } else {
-          emails.set(emailKey, index);
-        }
-      }
-    });
+    // Validación de email para representantes legales de personas jurídicas
+    if (formData.owner_type === 'juridica' && (!formData.owner_representative_email || !formData.owner_representative_email.trim())) {
+      newErrors.owner_representative_email = 'El email del representante legal es requerido';
+    }
 
-    // Validate personería certificate for legal entities - TEMPORARILY DISABLED FOR DEVELOPMENT
-    // const hasLegalEntity = owners.some(owner => owner.owner_type === 'juridica');
-    // if (hasLegalEntity && !formData.documents.some((doc: any) => doc.document_type === 'personeria_certificate')) {
-    //   newErrors.personeria_certificate = 'El certificado de personería es requerido para personas jurídicas';
-    // }
+    // Validate property_regime if married (solo para personas naturales)
+    if (formData.owner_type === 'natural' && formData.marital_status === 'casado' && !formData.property_regime) {
+      newErrors.property_regime = 'El régimen patrimonial es requerido para personas casadas';
+    }
+
+    // Validate personería certificate for legal entities
+    if (formData.owner_type === 'juridica' && !formData.documents.some((doc: any) => doc.document_type === 'personeria_certificate')) {
+      newErrors.personeria_certificate = 'El certificado de personería es requerido para personas jurídicas';
+    }
 
     // Validaciones específicas para oficinas
     if (propertyType === 'Oficina') {
@@ -834,6 +588,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     e.preventDefault();
     console.log('🚀 Iniciando handleSubmit...');
     console.log('📋 Estado del formulario:', {
+      owner_type: formData.owner_type,
       tipoPropiedad: formData.tipoPropiedad,
       address_street: formData.address_street,
       address_number: formData.address_number,
@@ -1027,96 +782,34 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         }
       }
 
-      // Insert/Update rental owner information and relationships
-      if (propertyResult?.id) {
-        console.log('💾 Guardando propietarios:', owners.length);
+      // Insert rental owner information with specific ID capture (only for new properties)
+      if (propertyResult?.id && !isEditing) {
+        const ownerData = {
+          property_id: propertyResult.id,
+        // Campos comunes
+        address_street: formData.owner_address_street,
+        address_number: formData.owner_address_number,
+        address_department: null,
+        address_commune: formData.owner_commune,
+        address_region: formData.owner_region,
+        phone: formData.owner_phone,
+        email: formData.owner_email,
+        };
 
-        // First, handle existing relationships for editing
-        if (isEditing) {
-          // Remove existing relationships for this property
-          const { error: deleteError } = await supabase
-            .from('property_rental_owners')
-            .delete()
-            .eq('property_id', propertyResult.id);
+        // CORRECCIÓN: Diferentes comportamientos según el tipo de propietario
+        if (formData.owner_type === 'natural') {
+          // Para personas naturales, guardar en rental_owners
+          Object.assign(ownerData, {
+            first_name: formData.owner_first_name,
+            paternal_last_name: formData.owner_paternal_last_name,
+            maternal_last_name: formData.owner_maternal_last_name || null,
+            rut: formData.owner_rut,
+            marital_status: formData.marital_status,
+            property_regime: formData.marital_status === 'casado' ? formData.property_regime : null,
+          });
 
-          if (deleteError) {
-            console.error('❌ Error eliminando relaciones existentes:', deleteError);
-            throw new Error(`Error actualizando propietarios: ${deleteError.message}`);
-          }
+          console.log('💾 Guardando propietario persona natural:', ownerData);
 
-          // Remove existing rental_owners for this property
-          const { error: deleteOwnersError } = await supabase
-            .from('rental_owners')
-            .delete()
-            .eq('property_id', propertyResult.id);
-
-          if (deleteOwnersError) {
-            console.error('❌ Error eliminando propietarios existentes:', deleteOwnersError);
-            throw new Error(`Error actualizando propietarios: ${deleteOwnersError.message}`);
-          }
-        }
-
-        // Create rental_owners and relationships for each owner
-        for (const owner of owners) {
-          // Prepare owner data for rental_owners table
-          const ownerData: any = {
-            property_id: propertyResult.id,
-            owner_type: owner.owner_type,
-            // Campos comunes
-            address_street: owner.owner_address_street,
-            address_number: owner.owner_address_number,
-            address_department: null,
-            address_commune: owner.owner_commune,
-            address_region: owner.owner_region,
-            phone: owner.owner_phone,
-            email: owner.owner_email,
-          };
-
-          // Add type-specific fields
-          if (owner.owner_type === 'natural') {
-            Object.assign(ownerData, {
-              first_name: owner.owner_first_name,
-              paternal_last_name: owner.owner_paternal_last_name,
-              maternal_last_name: owner.owner_maternal_last_name || null,
-              rut: owner.owner_rut,
-              marital_status: owner.marital_status,
-              property_regime: owner.marital_status === 'casado' ? owner.property_regime : null,
-            });
-          } else if (owner.owner_type === 'juridica') {
-            // Add company fields - explicitly exclude natural person fields
-            Object.assign(ownerData, {
-              // Explicitly set natural person fields to null for legal entities
-              first_name: null,
-              paternal_last_name: null,
-              maternal_last_name: null,
-              rut: null,
-              marital_status: null,
-              property_regime: null,
-              // Company fields
-              company_name: owner.owner_company_name,
-              company_rut: owner.owner_company_rut,
-              company_business: owner.owner_company_business,
-              company_email: owner.owner_company_email,
-              company_phone: owner.owner_company_phone,
-              // Add representative fields
-              representative_first_name: owner.owner_representative_first_name,
-              representative_paternal_last_name: owner.owner_representative_paternal_last_name,
-              representative_maternal_last_name: owner.owner_representative_maternal_last_name,
-              representative_rut: owner.owner_representative_rut,
-              representative_email: owner.owner_representative_email,
-              representative_phone: owner.owner_representative_phone,
-              // Add legal entity fields
-              constitution_type: owner.constitution_type,
-              constitution_date: owner.constitution_date,
-              cve_code: owner.cve_code,
-              notary_name: owner.notary_name,
-              repertory_number: owner.repertory_number,
-            });
-          }
-
-          console.log(`💾 Guardando propietario ${owner.owner_type}:`, ownerData);
-
-          // Insert into rental_owners
           const { data: ownerResult, error: ownerError } = await supabase
             .from('rental_owners')
             .insert(ownerData)
@@ -1125,43 +818,21 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
           if (ownerError) {
             console.error('❌ Error insertando rental owner:', ownerError);
-            const name = owner.owner_type === 'natural'
-              ? `${owner.owner_first_name} ${owner.owner_paternal_last_name}`
-              : owner.owner_company_name;
-            throw new Error(`Error guardando propietario ${name}: ${ownerError.message}`);
+            throw new Error(`Error guardando propietario: ${ownerError.message}`);
+          } else {
+            console.log('✅ Rental owner creado con ID:', ownerResult.id);
+            console.log('📋 Datos del propietario:', {
+              id: ownerResult.id,
+              property_id: ownerResult.property_id,
+              name: `${ownerResult.first_name} ${ownerResult.paternal_last_name}`,
+              rut: ownerResult.rut
+            });
           }
-
-          console.log('✅ Rental owner creado con ID:', ownerResult.id);
-
-          // Create relationship in property_rental_owners
-          const relationshipData = {
-            property_id: propertyResult.id,
-            rental_owner_id: ownerResult.id,
-            ownership_percentage: owner.ownership_percentage ? parseFloat(owner.ownership_percentage.toString()) : null,
-            is_primary_owner: owners.length === 1 ? true : false, // First owner is primary if only one
-          };
-
-          const { data: relationshipResult, error: relationshipError } = await supabase
-            .from('property_rental_owners')
-            .insert(relationshipData)
-            .select()
-            .single();
-
-          if (relationshipError) {
-            console.error('❌ Error creando relación property_rental_owners:', relationshipError);
-            throw new Error(`Error creando relación para propietario: ${relationshipError.message}`);
-          }
-
-          console.log('✅ Relación property_rental_owners creada con ID:', relationshipResult.id);
-          console.log('📋 Datos del propietario:', {
-            id: ownerResult.id,
-            property_id: ownerResult.property_id,
-            type: owner.owner_type,
-            name: owner.owner_type === 'natural'
-              ? `${ownerResult.first_name} ${ownerResult.paternal_last_name}`
-              : ownerResult.company_name,
-            percentage: relationshipData.ownership_percentage
-          });
+        } else if (formData.owner_type === 'juridica') {
+          // Para personas jurídicas, NO se guarda en rental_owners
+          // La tabla rental_owners solo soporta personas naturales
+          // Los datos de la empresa ya están guardados en properties
+          console.log('ℹ️ Persona jurídica detectada - datos guardados en properties, no en rental_owners');
         }
       }
 
@@ -1195,7 +866,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     { key: 'owner_id_copy', label: 'Fotocopia de Cédula de Identidad del Propietario' },
   ];
 
-  // TEMPORARILY DISABLED FOR DEVELOPMENT - Re-enable when document handling is implemented
   const optionalDocuments = [
     { key: 'power_of_attorney', label: 'Poder (si aplica)' },
     { key: 'commercial_evaluation', label: 'Evaluación Comercial de la Propiedad' },
@@ -1966,705 +1636,510 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
           {/* Sección 4: Datos del Propietario */}
           <div className="space-y-6">
-            <div className="border-b pb-2 flex justify-between items-center">
+            <div className="border-b pb-2">
               <h2 className="text-xl font-bold text-gray-900">Datos del Propietario</h2>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Propietarios: {owners.length}/5</span>
-                {owners.length < 5 && (
-                  <button
-                    type="button"
-                    onClick={addOwner}
-                    className="px-3 py-1 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors"
-                  >
-                    + Agregar Propietario
-                  </button>
-                )}
-              </div>
             </div>
 
-            {owners.map((owner, index) => (
-              <div key={owner.id} className="border border-gray-200 rounded-lg p-6 space-y-6">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Propietario {index + 1}
-                  </h3>
-                  {owners.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeOwner(owner.id)}
-                      className="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Selector de Tipo de Propietario */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tipo de Propietario *
+                </label>
+                <select
+                  required
+                  value={formData.owner_type}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    owner_type: e.target.value as 'natural' | 'juridica',
+                    // Limpiar campos cuando cambia el tipo
+                    marital_status: e.target.value === 'natural' ? formData.marital_status : '',
+                    property_regime: e.target.value === 'natural' ? formData.property_regime : ''
+                  })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                >
+                  <option value="natural">Persona Natural</option>
+                  <option value="juridica">Persona Jurídica</option>
+                </select>
+              </div>
 
-                <div className="grid grid-cols-1 gap-6">
-                  {/* Selector de Tipo de Propietario */}
+              {/* Campos para Persona Natural */}
+              {formData.owner_type === 'natural' && (
+                <>
+                  {/* Nombres del Propietario */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tipo de Propietario *
+                      Nombres del Propietario *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'natural'}
+                      value={formData.owner_first_name}
+                      onChange={(e) => setFormData({ ...formData, owner_first_name: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_first_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: Juan Carlos"
+                    />
+                    {errors.owner_first_name && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_first_name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Apellido Paterno */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Apellido Paterno *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'natural'}
+                      value={formData.owner_paternal_last_name}
+                      onChange={(e) => setFormData({ ...formData, owner_paternal_last_name: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_paternal_last_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: Pérez"
+                    />
+                    {errors.owner_paternal_last_name && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_paternal_last_name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Apellido Materno */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Apellido Materno *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'natural'}
+                      value={formData.owner_maternal_last_name}
+                      onChange={(e) => setFormData({ ...formData, owner_maternal_last_name: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_maternal_last_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: González"
+                    />
+                    {errors.owner_maternal_last_name && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_maternal_last_name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* RUT del Propietario */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      RUT del Propietario *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'natural'}
+                      value={formData.owner_rut}
+                      onChange={(e) => setFormData({ ...formData, owner_rut: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_rut ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 12.345.678-9"
+                    />
+                    {errors.owner_rut && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_rut}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Estado Civil */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Estado Civil *
                     </label>
                     <select
-                      required
-                      value={owner.owner_type}
-                      onChange={(e) => updateOwner(owner.id, 'owner_type', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                      required={formData.owner_type === 'natural'}
+                      value={formData.marital_status}
+                      onChange={(e) => setFormData({ ...formData, marital_status: e.target.value, property_regime: '' })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.marital_status ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                     >
-                      <option value="natural">Persona Natural</option>
-                      <option value="juridica">Persona Jurídica</option>
+                      <option value="">Seleccionar estado civil</option>
+                      <option value="soltero">Soltero(a)</option>
+                      <option value="casado">Casado(a)</option>
+                      <option value="divorciado">Divorciado(a)</option>
+                      <option value="viudo">Viudo(a)</option>
                     </select>
-                  </div>
-
-                  {/* Campos de Personería Jurídica - Solo para Persona Jurídica */}
-                  {owner.owner_type === 'juridica' && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-                      <h3 className="text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2">
-                        Datos de Personería Jurídica
-                      </h3>
-
-                      {/* Tipo de Constitución */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          ¿La persona jurídica está constituida por Empresa en un Día / Tradicional? *
-                        </label>
-                        <select
-                          required={owner.owner_type === 'juridica'}
-                          value={owner.constitution_type || ''}
-                          onChange={(e) => updateOwner(owner.id, 'constitution_type', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_constitution_type`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                        >
-                          <option value="">Seleccionar tipo de constitución</option>
-                          <option value="empresa_en_un_dia">Empresa en un Día</option>
-                          <option value="tradicional">Tradicional</option>
-                        </select>
-                        {errors[`owner_${owner.id}_constitution_type`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_constitution_type`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Campos condicionales según tipo de constitución */}
-                      {owner.constitution_type && (
-                        <>
-                          {/* Fecha de Constitución - Siempre requerida */}
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                              Fecha de Constitución *
-                            </label>
-                            <input
-                              type="date"
-                              required={owner.owner_type === 'juridica'}
-                              value={owner.constitution_date || ''}
-                              onChange={(e) => updateOwner(owner.id, 'constitution_date', e.target.value)}
-                              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                                errors[`owner_${owner.id}_constitution_date`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                              }`}
-                            />
-                            {errors[`owner_${owner.id}_constitution_date`] && (
-                              <p className="mt-1 text-sm text-red-600 flex items-center">
-                                <AlertCircle className="h-4 w-4 mr-1" />
-                                {errors[`owner_${owner.id}_constitution_date`]}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Campos específicos para Empresa en un Día */}
-                          {owner.constitution_type === 'empresa_en_un_dia' && (
-                            <div>
-                              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                CVE (Código de Verificación Empresa) *
-                              </label>
-                              <input
-                                type="text"
-                                required={owner.constitution_type === 'empresa_en_un_dia'}
-                                value={owner.cve_code || ''}
-                                onChange={(e) => updateOwner(owner.id, 'cve_code', e.target.value)}
-                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                                  errors[`owner_${owner.id}_cve_code`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                }`}
-                                placeholder="Ej: CVE123456789"
-                              />
-                              {errors[`owner_${owner.id}_cve_code`] && (
-                                <p className="mt-1 text-sm text-red-600 flex items-center">
-                                  <AlertCircle className="h-4 w-4 mr-1" />
-                                  {errors[`owner_${owner.id}_cve_code`]}
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Campos específicos para Tradicional */}
-                          {owner.constitution_type === 'tradicional' && (
-                            <>
-                              <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                  Notaría *
-                                </label>
-                                <input
-                                  type="text"
-                                  required={owner.constitution_type === 'tradicional'}
-                                  value={owner.notary_name || ''}
-                                  onChange={(e) => updateOwner(owner.id, 'notary_name', e.target.value)}
-                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                                    errors[`owner_${owner.id}_notary_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                  }`}
-                                  placeholder="Ej: Notaría Central de Santiago"
-                                />
-                                {errors[`owner_${owner.id}_notary_name`] && (
-                                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                                    <AlertCircle className="h-4 w-4 mr-1" />
-                                    {errors[`owner_${owner.id}_notary_name`]}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                  N° Repertorio *
-                                </label>
-                                <input
-                                  type="text"
-                                  required={owner.constitution_type === 'tradicional'}
-                                  value={owner.repertory_number || ''}
-                                  onChange={(e) => updateOwner(owner.id, 'repertory_number', e.target.value)}
-                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                                    errors[`owner_${owner.id}_repertory_number`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                  }`}
-                                  placeholder="Ej: 12345"
-                                />
-                                {errors[`owner_${owner.id}_repertory_number`] && (
-                                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                                    <AlertCircle className="h-4 w-4 mr-1" />
-                                    {errors[`owner_${owner.id}_repertory_number`]}
-                                  </p>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Campos para Persona Natural */}
-                  {owner.owner_type === 'natural' && (
-                    <>
-                      {/* Nombres del Propietario */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Nombres del Propietario *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'natural'}
-                          value={owner.owner_first_name || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_first_name', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_first_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: Juan Carlos"
-                        />
-                        {errors[`owner_${owner.id}_first_name`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_first_name`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Apellido Paterno */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Apellido Paterno *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'natural'}
-                          value={owner.owner_paternal_last_name || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_paternal_last_name', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_paternal_last_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: Pérez"
-                        />
-                        {errors[`owner_${owner.id}_paternal_last_name`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_paternal_last_name`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Apellido Materno */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Apellido Materno *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'natural'}
-                          value={owner.owner_maternal_last_name || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_maternal_last_name', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_maternal_last_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: González"
-                        />
-                        {errors[`owner_${owner.id}_maternal_last_name`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_maternal_last_name`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* RUT del Propietario */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          RUT del Propietario *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'natural'}
-                          value={owner.owner_rut || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_rut', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_rut`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: 12.345.678-9"
-                        />
-                        {errors[`owner_${owner.id}_rut`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_rut`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Estado Civil */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Estado Civil *
-                        </label>
-                        <select
-                          required={owner.owner_type === 'natural'}
-                          value={owner.marital_status || ''}
-                          onChange={(e) => {
-                            updateOwner(owner.id, 'marital_status', e.target.value);
-                            updateOwner(owner.id, 'property_regime', '');
-                          }}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_marital_status`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                        >
-                          <option value="">Seleccionar estado civil</option>
-                          <option value="soltero">Soltero(a)</option>
-                          <option value="casado">Casado(a)</option>
-                          <option value="divorciado">Divorciado(a)</option>
-                          <option value="viudo">Viudo(a)</option>
-                        </select>
-                        {errors[`owner_${owner.id}_marital_status`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_marital_status`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Régimen Patrimonial (condicional) */}
-                      {owner.marital_status === 'casado' && (
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Régimen Patrimonial *
-                          </label>
-                          <select
-                            required
-                            value={owner.property_regime || ''}
-                            onChange={(e) => updateOwner(owner.id, 'property_regime', e.target.value)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                              errors[`owner_${owner.id}_property_regime`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                          >
-                            <option value="">Seleccionar régimen</option>
-                            <option value="sociedad_conyugal">Sociedad conyugal</option>
-                            <option value="separacion_bienes">Separación total de bienes</option>
-                            <option value="participacion_gananciales">Participación en los gananciales</option>
-                          </select>
-                          {errors[`owner_${owner.id}_property_regime`] && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center">
-                              <AlertCircle className="h-4 w-4 mr-1" />
-                              {errors[`owner_${owner.id}_property_regime`]}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Email y Teléfono del Propietario */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Email */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Email del Propietario {owner.owner_type === 'natural' && '*'}
-                          </label>
-                          <input
-                            type="email"
-                            required={owner.owner_type === 'natural'}
-                            value={owner.owner_email || ''}
-                            onChange={(e) => updateOwner(owner.id, 'owner_email', e.target.value)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                              errors[`owner_${owner.id}_email`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                            placeholder="Ej: propietario@ejemplo.com"
-                          />
-                          {errors[`owner_${owner.id}_email`] && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center">
-                              <AlertCircle className="h-4 w-4 mr-1" />
-                              {errors[`owner_${owner.id}_email`]}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Teléfono */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Teléfono del Propietario (Opcional)
-                          </label>
-                          <input
-                            type="tel"
-                            value={owner.owner_phone || ''}
-                            onChange={(e) => updateOwner(owner.id, 'owner_phone', e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                            placeholder="Ej: +56 9 1234 5678"
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Campos para Persona Jurídica */}
-                  {owner.owner_type === 'juridica' && (
-                    <>
-                      <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Datos de la Empresa</h3>
-
-                      {/* Razón Social */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Razón Social *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'juridica'}
-                          value={owner.owner_company_name || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_company_name', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_company_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: Inmobiliaria XYZ Ltda."
-                        />
-                        {errors[`owner_${owner.id}_company_name`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_company_name`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* RUT de la Empresa */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          RUT de la Empresa *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'juridica'}
-                          value={owner.owner_company_rut || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_company_rut', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_company_rut`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: 76.123.456-7"
-                        />
-                        {errors[`owner_${owner.id}_company_rut`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_company_rut`]}
-                          </p>
-                        )}
-                      </div>
-
-                      <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mt-6">Datos del Representante Legal</h3>
-
-                      {/* Nombres del Representante Legal */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Nombres del Representante Legal *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'juridica'}
-                          value={owner.owner_representative_first_name || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_representative_first_name', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_representative_first_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: María José"
-                        />
-                        {errors[`owner_${owner.id}_representative_first_name`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_representative_first_name`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Apellido Paterno del Representante Legal */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Apellido Paterno del Representante Legal *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'juridica'}
-                          value={owner.owner_representative_paternal_last_name || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_representative_paternal_last_name', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_representative_paternal_last_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: Silva"
-                        />
-                        {errors[`owner_${owner.id}_representative_paternal_last_name`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_representative_paternal_last_name`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Apellido Materno del Representante Legal */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Apellido Materno del Representante Legal
-                        </label>
-                        <input
-                          type="text"
-                          value={owner.owner_representative_maternal_last_name || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_representative_maternal_last_name', e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                          placeholder="Ej: Torres"
-                        />
-                      </div>
-
-                      {/* RUT del Representante Legal */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          RUT del Representante Legal *
-                        </label>
-                        <input
-                          type="text"
-                          required={owner.owner_type === 'juridica'}
-                          value={owner.owner_representative_rut || ''}
-                          onChange={(e) => updateOwner(owner.id, 'owner_representative_rut', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_representative_rut`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: 15.678.901-2"
-                        />
-                        {errors[`owner_${owner.id}_representative_rut`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_representative_rut`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Email y Teléfono del Representante Legal */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Email */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Email del Representante Legal {owner.owner_type === 'juridica' && '*'}
-                          </label>
-                          <input
-                            type="email"
-                            required={owner.owner_type === 'juridica'}
-                            value={owner.owner_representative_email || ''}
-                            onChange={(e) => updateOwner(owner.id, 'owner_representative_email', e.target.value)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                              errors[`owner_${owner.id}_representative_email`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                            placeholder="Ej: representante@empresa.com"
-                          />
-                          {errors[`owner_${owner.id}_representative_email`] && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center">
-                              <AlertCircle className="h-4 w-4 mr-1" />
-                              {errors[`owner_${owner.id}_representative_email`]}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Teléfono */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Teléfono del Representante Legal (Opcional)
-                          </label>
-                          <input
-                            type="tel"
-                            value={owner.owner_representative_phone || ''}
-                            onChange={(e) => updateOwner(owner.id, 'owner_representative_phone', e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                            placeholder="Ej: +56 9 1234 5678"
-                          />
-                        </div>
-                      </div>
-
-                    </>
-                  )}
-
-                  {/* Dirección del Propietario (común para ambos tipos) */}
-                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mt-6">Dirección del Propietario</h3>
-
-                  {/* Calle del Propietario */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Calle del Propietario *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={owner.owner_address_street || ''}
-                      onChange={(e) => updateOwner(owner.id, 'owner_address_street', e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                        errors[`owner_${owner.id}_address_street`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      placeholder="Ej: Av. Providencia"
-                    />
-                    {errors[`owner_${owner.id}_address_street`] && (
+                    {errors.marital_status && (
                       <p className="mt-1 text-sm text-red-600 flex items-center">
                         <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors[`owner_${owner.id}_address_street`]}
+                        {errors.marital_status}
                       </p>
                     )}
                   </div>
 
-                  {/* Número del Propietario */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Número del Propietario *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={owner.owner_address_number || ''}
-                      onChange={(e) => updateOwner(owner.id, 'owner_address_number', e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                        errors[`owner_${owner.id}_address_number`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      placeholder="Ej: 2500"
-                    />
-                    {errors[`owner_${owner.id}_address_number`] && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors[`owner_${owner.id}_address_number`]}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Región y Comuna del Propietario */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Régimen Patrimonial (condicional) */}
+                  {formData.marital_status === 'casado' && (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Región del Propietario *
+                        Régimen Patrimonial *
                       </label>
                       <select
                         required
-                        value={owner.owner_region || ''}
-                        onChange={(e) => updateOwner(owner.id, 'owner_region', e.target.value)}
+                        value={formData.property_regime}
+                        onChange={(e) => setFormData({ ...formData, property_regime: e.target.value })}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                          errors[`owner_${owner.id}_region`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          errors.property_regime ? 'border-red-500 bg-red-50' : 'border-gray-300'
                         }`}
                       >
-                        <option value="">Seleccionar región</option>
-                        {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
-                          <option key={key} value={key}>{region.name}</option>
-                        ))}
+                        <option value="">Seleccionar régimen</option>
+                        <option value="sociedad_conyugal">Sociedad conyugal</option>
+                        <option value="separacion_bienes">Separación total de bienes</option>
+                        <option value="participacion_gananciales">Participación en los gananciales</option>
                       </select>
-                      {errors[`owner_${owner.id}_region`] && (
+                      {errors.property_regime && (
                         <p className="mt-1 text-sm text-red-600 flex items-center">
                           <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors[`owner_${owner.id}_region`]}
+                          {errors.property_regime}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Email y Teléfono del Propietario */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Email */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email del Propietario {formData.owner_type === 'natural' && '*'}
+                      </label>
+                      <input
+                        type="email"
+                        required={formData.owner_type === 'natural'}
+                        value={formData.owner_email || ''}
+                        onChange={(e) => setFormData({ ...formData, owner_email: e.target.value })}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          errors.owner_email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="Ej: propietario@ejemplo.com"
+                      />
+                      {errors.owner_email && (
+                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-1" />
+                          {errors.owner_email}
                         </p>
                       )}
                     </div>
 
+                    {/* Teléfono */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Comuna del Propietario *
+                        Teléfono del Propietario (Opcional)
                       </label>
-                      <select
-                        required
-                        value={owner.owner_commune || ''}
-                        onChange={(e) => updateOwner(owner.id, 'owner_commune', e.target.value)}
-                        disabled={!owner.owner_region}
+                      <input
+                        type="tel"
+                        value={formData.owner_phone || ''}
+                        onChange={(e) => setFormData({ ...formData, owner_phone: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        placeholder="Ej: +56 9 1234 5678"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Campos para Persona Jurídica */}
+              {formData.owner_type === 'juridica' && (
+                <>
+                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Datos de la Empresa</h3>
+
+                  {/* Razón Social */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Razón Social *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'juridica'}
+                      value={formData.owner_company_name}
+                      onChange={(e) => setFormData({ ...formData, owner_company_name: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_company_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: Inmobiliaria XYZ Ltda."
+                    />
+                    {errors.owner_company_name && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_company_name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* RUT de la Empresa */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      RUT de la Empresa *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'juridica'}
+                      value={formData.owner_company_rut}
+                      onChange={(e) => setFormData({ ...formData, owner_company_rut: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_company_rut ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 76.123.456-7"
+                    />
+                    {errors.owner_company_rut && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_company_rut}
+                      </p>
+                    )}
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mt-6">Datos del Representante Legal</h3>
+
+                  {/* Nombres del Representante Legal */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Nombres del Representante Legal *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'juridica'}
+                      value={formData.owner_representative_first_name}
+                      onChange={(e) => setFormData({ ...formData, owner_representative_first_name: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_representative_first_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: María José"
+                    />
+                    {errors.owner_representative_first_name && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_representative_first_name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Apellido Paterno del Representante Legal */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Apellido Paterno del Representante Legal *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'juridica'}
+                      value={formData.owner_representative_paternal_last_name}
+                      onChange={(e) => setFormData({ ...formData, owner_representative_paternal_last_name: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_representative_paternal_last_name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: Silva"
+                    />
+                    {errors.owner_representative_paternal_last_name && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_representative_paternal_last_name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Apellido Materno del Representante Legal */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Apellido Materno del Representante Legal
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.owner_representative_maternal_last_name}
+                      onChange={(e) => setFormData({ ...formData, owner_representative_maternal_last_name: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                      placeholder="Ej: Torres"
+                    />
+                  </div>
+
+                  {/* RUT del Representante Legal */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      RUT del Representante Legal *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.owner_type === 'juridica'}
+                      value={formData.owner_representative_rut}
+                      onChange={(e) => setFormData({ ...formData, owner_representative_rut: e.target.value })}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors.owner_representative_rut ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 15.678.901-2"
+                    />
+                    {errors.owner_representative_rut && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.owner_representative_rut}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Email y Teléfono del Representante Legal */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Email */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email del Representante Legal {formData.owner_type === 'juridica' && '*'}
+                      </label>
+                      <input
+                        type="email"
+                        required={formData.owner_type === 'juridica'}
+                        value={formData.owner_representative_email || ''}
+                        onChange={(e) => setFormData({ ...formData, owner_representative_email: e.target.value })}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                          errors[`owner_${owner.id}_commune`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        } ${!owner.owner_region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                      >
-                        <option value="">
-                          {owner.owner_region ? 'Seleccionar comuna' : 'Primero selecciona una región'}
-                        </option>
-                        {owner.owner_region && getAvailableCommunes(owner.owner_region).map((commune) => (
-                          <option key={commune} value={commune}>{commune}</option>
-                        ))}
-                      </select>
-                      {errors[`owner_${owner.id}_commune`] && (
+                          errors.owner_representative_email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="Ej: representante@empresa.com"
+                      />
+                      {errors.owner_representative_email && (
                         <p className="mt-1 text-sm text-red-600 flex items-center">
                           <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors[`owner_${owner.id}_commune`]}
+                          {errors.owner_representative_email}
                         </p>
                       )}
+                    </div>
+
+                    {/* Teléfono */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Teléfono del Representante Legal (Opcional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.owner_representative_phone || ''}
+                        onChange={(e) => setFormData({ ...formData, owner_representative_phone: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        placeholder="Ej: +56 9 1234 5678"
+                      />
                     </div>
                   </div>
 
-                  {/* Porcentaje de Propiedad */}
-                  {owners.length > 1 && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Porcentaje de Propiedad (Opcional)
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={owner.ownership_percentage || ''}
-                          onChange={(e) => updateOwner(owner.id, 'ownership_percentage', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_ownership_percentage`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: 50.00"
-                        />
-                        <p className="mt-1 text-sm text-gray-600">
-                          Si no se especifica, se asumirá propiedad igualitaria entre todos los propietarios.
-                        </p>
-                        {errors[`owner_${owner.id}_ownership_percentage`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_ownership_percentage`]}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                </>
+              )}
+
+              {/* Dirección del Propietario (común para ambos tipos) */}
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mt-6">Dirección del Propietario</h3>
+
+              {/* Calle del Propietario */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Calle del Propietario *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.owner_address_street}
+                  onChange={(e) => setFormData({ ...formData, owner_address_street: e.target.value })}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    errors.owner_address_street ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: Av. Providencia"
+                />
+                {errors.owner_address_street && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.owner_address_street}
+                  </p>
+                )}
+              </div>
+
+              {/* Número del Propietario */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Número del Propietario *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.owner_address_number}
+                  onChange={(e) => setFormData({ ...formData, owner_address_number: e.target.value })}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    errors.owner_address_number ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 2500"
+                />
+                {errors.owner_address_number && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.owner_address_number}
+                  </p>
+                )}
+              </div>
+
+              {/* Región y Comuna del Propietario */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Región del Propietario *
+                  </label>
+                  <select
+                    required
+                    value={formData.owner_region}
+                    onChange={(e) => handleRegionChange(e.target.value, true)}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      errors.owner_region ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">Seleccionar región</option>
+                    {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
+                      <option key={key} value={key}>{region.name}</option>
+                    ))}
+                  </select>
+                  {errors.owner_region && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.owner_region}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Comuna del Propietario *
+                  </label>
+                  <select
+                    required
+                    value={formData.owner_commune}
+                    onChange={(e) => setFormData({ ...formData, owner_commune: e.target.value })}
+                    disabled={!formData.owner_region}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      errors.owner_commune ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    } ${!formData.owner_region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  >
+                    <option value="">
+                      {formData.owner_region ? 'Seleccionar comuna' : 'Primero selecciona una región'}
+                    </option>
+                    {formData.owner_region && getAvailableCommunes(formData.owner_region).map((commune) => (
+                      <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                  </select>
+                  {errors.owner_commune && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.owner_commune}
+                    </p>
                   )}
                 </div>
               </div>
-            ))}
             </div>
+          </div>
 
           {/* Sección 3: Fotos de la Propiedad */}
           <div className="space-y-6">
@@ -2786,15 +2261,13 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 </div>
               </div>
 
-              {/* Documentos Opcionales - TEMPORARILY DISABLED FOR DEVELOPMENT */}
-              {/*
+              {/* Documentos Opcionales */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Documentos Opcionales</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {optionalDocuments.map((doc) => {
                     // Solo mostrar certificado de personería para persona jurídica
-                    const hasLegalEntity = owners.some(owner => owner.owner_type === 'juridica');
-                    if (doc.conditional && !hasLegalEntity) {
+                    if (doc.conditional && formData.owner_type !== 'juridica') {
                       return null;
                     }
 
@@ -2826,11 +2299,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                               onChange={(e) => e.target.files?.[0] && handleDocumentUpload(doc.key as keyof typeof formData.documents, e.target.files[0])}
                               className="hidden"
                               id={`doc-${doc.key}`}
+                              required={doc.conditional && formData.owner_type === 'juridica'}
                             />
                             <label htmlFor={`doc-${doc.key}`} className="cursor-pointer">
                               <Upload className="mx-auto h-8 w-8 text-gray-400" />
                               <p className="mt-1 text-xs text-gray-600">Subir documento</p>
-                              {doc.conditional && hasLegalEntity && (
+                              {doc.conditional && formData.owner_type === 'juridica' && (
                                 <p className="mt-1 text-xs text-red-600">Requerido para personas jurídicas</p>
                               )}
                             </label>
@@ -2841,7 +2315,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   })}
                 </div>
               </div>
-              */}
             </div>
           </div>
 

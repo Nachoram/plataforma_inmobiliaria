@@ -914,6 +914,40 @@ export const approveApplicationWithWebhook = async (
   console.log('👤 applicantId:', applicantId);
 
   try {
+    // VALIDACIÓN CRÍTICA: Verificar que la propiedad tenga property_type_characteristics_id
+    console.log('🔍 Validando propiedad antes de aprobar aplicación...');
+    const { data: propertyValidation, error: propertyValidationError } = await supabase
+      .from('properties')
+      .select('id, property_type_characteristics_id, address_street, address_number')
+      .eq('id', propertyId)
+      .single();
+
+    if (propertyValidationError) {
+      console.error('❌ Error consultando propiedad para validación:', propertyValidationError);
+      throw new Error('Error al validar la propiedad. Contacte al administrador.');
+    }
+
+    if (!propertyValidation) {
+      throw new Error('Propiedad no encontrada.');
+    }
+
+    if (!propertyValidation.property_type_characteristics_id) {
+      const addressInfo = `${propertyValidation.address_street || 'Sin calle'} ${propertyValidation.address_number || 'S/N'}`;
+      throw new Error(`La propiedad "${addressInfo}" no tiene configurado el tipo de propiedad. ` +
+                     'Edite la propiedad desde el panel de administración y seleccione un tipo de propiedad válido antes de aprobar postulaciones.');
+    }
+
+    // Validar formato UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(propertyValidation.property_type_characteristics_id)) {
+      throw new Error('El tipo de propiedad de la propiedad tiene un formato inválido. Contacte al administrador.');
+    }
+
+    console.log('✅ Validación de propiedad exitosa:', {
+      property_id: propertyValidation.id,
+      property_type_characteristics_id: propertyValidation.property_type_characteristics_id
+    });
+
     // Get current user (who is approving)
     console.log('🔐 Obteniendo sesión del usuario...');
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();

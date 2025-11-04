@@ -199,3 +199,4 @@ BEGIN
   RAISE NOTICE 'Fix completed! guarantor_characteristic_id values are now consistent between applications and guarantors tables.';
   RAISE NOTICE 'The completed_processes_characteristics view should now display correct guarantor_characteristic_id values.';
 END $$;
+

@@ -206,3 +206,4 @@ BEGIN
         RAISE WARNING 'ADVERTENCIA: La tabla application_guarantors contiene datos. Recrear la tabla eliminará los datos existentes.';
     END IF;
 END $$;
+

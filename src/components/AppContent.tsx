@@ -17,6 +17,9 @@ import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
 import { AdminPropertyDetailView } from './properties/AdminPropertyDetailView';
 import { RentalApplicationPage } from './properties/RentalApplicationPage';
 
+// Application components
+import { PostulationAdminPanel } from './applications/PostulationAdminPanel';
+
 // Diagnostic components - keep loaded
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
 import DatabaseQueryRunner from './DatabaseQueryRunner';
@@ -75,6 +78,16 @@ export const AppContent: React.FC = () => {
         <Layout>
           <RentalApplicationPage />
         </Layout>
+      } />
+
+      {/* Postulation admin routes */}
+      <Route path="/postulation/:id/admin" element={
+        <ProtectedRoute>
+          <Layout>
+            {console.log('🧪 AppContent: Renderizando PostulationAdminPanel')}
+            <PostulationAdminPanel />
+          </Layout>
+        </ProtectedRoute>
       } />
 
       {/* Property publication routes */}

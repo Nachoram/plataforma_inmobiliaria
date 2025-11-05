@@ -21,6 +21,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { 
   Settings, 
@@ -247,10 +248,16 @@ const getUserFriendlyErrorMessage = (error: any, defaultMessage: string = 'Ha oc
  * @param {PostulationAdminPanelProps} props - Props del componente
  * @returns {JSX.Element} Panel de administración de postulaciones
  */
-export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({ 
-  propertyId, 
-  property 
+export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
+  propertyId,
+  property
 }) => {
+  // ========================================================================
+  // HOOKS
+  // ========================================================================
+
+  const navigate = useNavigate();
+
   // ========================================================================
   // STATE MANAGEMENT
   // ========================================================================
@@ -1218,7 +1225,7 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      onClick={() => handleViewDetails(postulation)}
+                      onClick={() => navigate(`/postulation/${postulation.applicationId}/admin`)}
                       className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
                       title="Administrar Postulación"
                     >

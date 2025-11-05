@@ -49,3 +49,4 @@ BEGIN
         RAISE EXCEPTION 'ERROR: La columna application_id no existe. La tabla no está correctamente configurada.';
     END IF;
 END $$;
+

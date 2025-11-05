@@ -29,3 +29,4 @@ console.log('   - Add proper constraints for data validation');
 console.log('   - Support both natural and legal entity owners');
 
 
+

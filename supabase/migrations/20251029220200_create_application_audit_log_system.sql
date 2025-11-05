@@ -155,3 +155,4 @@ GRANT EXECUTE ON FUNCTION application_has_audit_logs TO authenticated;
 
 
 
+

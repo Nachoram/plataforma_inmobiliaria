@@ -399,3 +399,4 @@ function calculateOwnershipTotal(owners: Owner[]): number {
 **Estado**: ✅ Completado y Documentado
 
 
+

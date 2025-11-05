@@ -27,3 +27,4 @@ console.log('✅ This migration will:');
 console.log('   - Make natural person fields nullable for legal entities');
 console.log('   - Add proper constraints for data validation');
 console.log('   - Support both natural and legal entity owners');
+

@@ -278,3 +278,4 @@ BEGIN
   RAISE NOTICE 'RLS policies enabled on both tables';
   RAISE NOTICE 'Existing data migrated successfully';
 END $$;
+

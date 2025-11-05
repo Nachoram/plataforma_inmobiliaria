@@ -200,3 +200,4 @@ BEGIN
   RAISE NOTICE 'The completed_processes_characteristics view should now display correct guarantor_characteristic_id values.';
 END $$;
 
+

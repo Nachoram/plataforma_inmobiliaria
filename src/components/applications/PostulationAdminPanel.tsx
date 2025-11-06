@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 // ========================================================================
 // INTERFACES & TYPES
@@ -43,13 +44,20 @@ interface ContractData {
   start_date: string; // Fecha de inicio
   validity_period_months: number; // Plazo de vigencia en meses
   final_amount: number; // Monto final del contrato
+  final_amount_currency: 'clp' | 'uf'; // Moneda del monto final
   guarantee_amount: number; // Monto garantía
+  guarantee_amount_currency: 'clp' | 'uf'; // Moneda de la garantía
   has_dicom_clause: boolean; // Cláusula de DICOM
 
   // Comunicación
   tenant_email: string; // Mail arrendatario
   landlord_email: string; // Mail arrendador
-  payment_account: string; // Cuenta corriente de pago
+
+  // Pagos - Cuenta corriente
+  account_holder_name: string; // Nombre del titular
+  account_number: string; // Número de cuenta
+  account_bank: string; // Banco
+  account_type: string; // Tipo de cuenta
 
   // Comisión de corretaje
   has_brokerage_commission: boolean;
@@ -58,7 +66,6 @@ interface ContractData {
   broker_rut?: string; // Solo si has_brokerage_commission = true
 
   // Condiciones del inmueble
-  property_type: 'casa' | 'departamento'; // Tipo de inmueble
   allows_pets: boolean; // Se permiten mascotas
   is_furnished: boolean; // Está amoblado
 
@@ -72,13 +79,20 @@ interface ContractFormData {
   start_date: string;
   validity_period_months: number;
   final_amount: number;
+  final_amount_currency: 'clp' | 'uf';
   guarantee_amount: number;
+  guarantee_amount_currency: 'clp' | 'uf';
   has_dicom_clause: boolean;
 
   // Comunicación
   tenant_email: string;
   landlord_email: string;
-  payment_account: string;
+
+  // Pagos - Cuenta corriente
+  account_holder_name: string;
+  account_number: string;
+  account_bank: string;
+  account_type: string;
 
   // Comisión de corretaje
   has_brokerage_commission: boolean;
@@ -87,7 +101,6 @@ interface ContractFormData {
   broker_rut?: string;
 
   // Condiciones del inmueble
-  property_type: 'casa' | 'departamento';
   allows_pets: boolean;
   is_furnished: boolean;
 }
@@ -216,7 +229,6 @@ export const PostulationAdminPanel: React.FC = () => {
             const { data: applicants, error: applicantsError } = await supabase
           .from('application_applicants')
           .select(`
-            id,
             application_id,
             entity_type,
             first_name,
@@ -337,7 +349,6 @@ export const PostulationAdminPanel: React.FC = () => {
         const { data: guarantors, error: guarantorsError } = await supabase
           .from('application_guarantors')
           .select(`
-            id,
             application_id,
             entity_type,
             first_name,
@@ -663,16 +674,20 @@ export const PostulationAdminPanel: React.FC = () => {
         start_date: contractFormData.start_date,
         validity_period_months: contractFormData.validity_period_months,
         final_amount: contractFormData.final_amount,
+        final_amount_currency: contractFormData.final_amount_currency,
         guarantee_amount: contractFormData.guarantee_amount,
+        guarantee_amount_currency: contractFormData.guarantee_amount_currency,
         has_dicom_clause: contractFormData.has_dicom_clause,
         tenant_email: contractFormData.tenant_email,
         landlord_email: contractFormData.landlord_email,
-        payment_account: contractFormData.payment_account,
+        account_holder_name: contractFormData.account_holder_name,
+        account_number: contractFormData.account_number,
+        account_bank: contractFormData.account_bank,
+        account_type: contractFormData.account_type,
         has_brokerage_commission: contractFormData.has_brokerage_commission,
         broker_name: contractFormData.has_brokerage_commission ? contractFormData.broker_name : null,
         broker_amount: contractFormData.has_brokerage_commission ? contractFormData.broker_amount : null,
         broker_rut: contractFormData.has_brokerage_commission ? contractFormData.broker_rut : null,
-        property_type: contractFormData.property_type,
         allows_pets: contractFormData.allows_pets,
         is_furnished: contractFormData.is_furnished,
         status: 'draft',
@@ -783,6 +798,254 @@ export const PostulationAdminPanel: React.FC = () => {
       </div>
     );
   }
+
+  /**
+   * Registra una acción en el historial de auditoría
+   */
+  const logAuditAction = async (
+    actionType: string,
+    previousStatus: string,
+    newStatus: string,
+    actionDetails: any = {},
+    notes: string = ''
+  ) => {
+    if (!applicationId) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuario no autenticado');
+
+      // Obtener property_id de la aplicación
+      const { data: appData } = await supabase
+        .from('applications')
+        .select('property_id')
+        .eq('id', applicationId)
+        .single();
+
+      const { error } = await supabase.rpc('log_application_audit', {
+        p_application_id: applicationId,
+        p_property_id: appData?.property_id || '',
+        p_user_id: user.id,
+        p_action_type: actionType,
+        p_previous_status: previousStatus,
+        p_new_status: newStatus,
+        p_action_details: actionDetails,
+        p_notes: notes
+      });
+
+      if (error) {
+        console.error('❌ Error al registrar auditoría:', error);
+        // No lanzamos error para no interrumpir el flujo principal
+      }
+    } catch (error) {
+      console.error('❌ Error en logAuditAction:', error);
+    }
+  };
+
+  /**
+   * Maneja la aprobación de la postulación cuando hay condiciones de contrato
+   * Envía datos al webhook para generación automática de contrato
+   */
+  const handleApproveApplication = async () => {
+    if (!applicationId) {
+      toast.error('No hay aplicación seleccionada');
+      return;
+    }
+
+    if (!has_contract_conditions) {
+      toast.error('Debe crear las condiciones del contrato antes de aprobar la postulación');
+      return;
+    }
+
+    try {
+      console.log('✅ APROBANDO POSTULACIÓN con webhook - ApplicationId:', applicationId);
+
+      // 1. PRIMERO: Actualizar estado de la aplicación a aprobada
+      const { error: updateError } = await supabase
+        .from('applications')
+        .update({
+          status: 'aprobada',
+          updated_at: new Date().toISOString(),
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', applicationId);
+
+      if (updateError) {
+        console.error('❌ Error actualizando estado:', updateError);
+        toast.error('Error al actualizar el estado de la postulación');
+        return;
+      }
+
+      console.log('✅ Estado de aplicación actualizado a "aprobada"');
+
+      // 2. SEGUNDO: Intentar enviar webhook (no bloquea la aprobación)
+      try {
+        console.log('🚀 WEBHOOK: Intentando enviar webhook...');
+
+        // Obtener los datos requeridos para el webhook
+        const webhookData = await getWebhookData(applicationId);
+
+        if (!webhookData) {
+          console.warn('⚠️ WEBHOOK: No se pudieron obtener datos para webhook, pero aprobación exitosa');
+          toast.success('✅ Postulación aprobada exitosamente');
+          fetchApplicationData();
+          fetchAuditHistory();
+          return;
+        }
+
+        console.log('🚀 WEBHOOK: Enviando POST a /api/webhook/a624f2a0-2294-4c4a-b918-9c02f93964ee (via proxy)');
+        console.log('📦 WEBHOOK: Payload:', JSON.stringify(webhookData, null, 2));
+
+        // Enviar al webhook (usando proxy para evitar CORS en desarrollo)
+        const webhookResponse = await fetch('/api/webhook/a624f2a0-2294-4c4a-b918-9c02f93964ee', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookData),
+        });
+
+        console.log('📡 WEBHOOK: Status response:', webhookResponse.status);
+
+        if (!webhookResponse.ok) {
+          const errorText = await webhookResponse.text();
+          console.error('❌ WEBHOOK: Error response:', errorText);
+          throw new Error(`Error del webhook: ${webhookResponse.status} ${webhookResponse.statusText}`);
+        }
+
+        const webhookResult = await webhookResponse.json();
+        console.log('✅ WEBHOOK: Respuesta exitosa:', webhookResult);
+
+        // Registrar auditoría con webhook exitoso
+        await logAuditAction(
+          'approve',
+          'pendiente',
+          'aprobada',
+          {
+            action: 'approve_application_with_contract',
+            webhook_data: webhookData,
+            webhook_response: webhookResult,
+            has_contract_conditions: true,
+            webhook_success: true
+          },
+          'Postulación aprobada con condiciones de contrato y webhook enviado exitosamente'
+        );
+
+        toast.success('✅ Postulación aprobada y contrato enviado para generación automática');
+
+      } catch (webhookError: any) {
+        console.warn('⚠️ WEBHOOK: Error enviando webhook, pero aprobación exitosa:', webhookError);
+
+        // Registrar auditoría indicando que el webhook falló
+        await logAuditAction(
+          'approve',
+          'pendiente',
+          'aprobada',
+          {
+            action: 'approve_application_contract_only',
+            has_contract_conditions: true,
+            webhook_success: false,
+            webhook_error: webhookError.message
+          },
+          'Postulación aprobada con condiciones de contrato, pero webhook falló'
+        );
+
+        toast.warning('✅ Postulación aprobada, pero hubo un error al enviar el contrato automático. Contacta al administrador.');
+      }
+
+      // Recargar datos
+      fetchApplicationData();
+      fetchAuditHistory();
+
+    } catch (error: any) {
+      console.error('❌ Error en handleApproveApplication:', error);
+      let errorMessage = 'Error al aprobar la postulación';
+
+      if (error.message?.includes('Sesión') || error.message?.includes('session')) {
+        errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+      }
+
+      toast.error(errorMessage);
+    }
+  };
+
+  /**
+   * Obtiene los datos necesarios para enviar al webhook
+   * @param appId ID de la aplicación
+   * @returns Datos para el webhook o null si hay error
+   */
+  const getWebhookData = async (appId: string) => {
+    try {
+      console.log('🔍 WEBHOOK: Obteniendo datos para applicationId:', appId);
+
+      // Verificar sesión primero
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('❌ WEBHOOK: Error de sesión:', sessionError);
+        throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      }
+      if (!session) {
+        throw new Error('No hay sesión activa. Por favor, inicia sesión.');
+      }
+
+      // 1. Obtener property_id de la aplicación
+      const { data: application, error: appError } = await supabase
+        .from('applications')
+        .select('property_id')
+        .eq('id', appId)
+        .single();
+
+      if (appError || !application) {
+        console.error('❌ WEBHOOK: Error obteniendo aplicación:', appError);
+        return null;
+      }
+
+      const propertyId = application.property_id;
+      console.log('🏠 WEBHOOK: Properties.id =', propertyId);
+
+      // Nota: Simplificamos para evitar consultas problemáticas
+      const rentalOwnerPropertyId = propertyId; // Usamos el mismo property_id
+      console.log('👤 WEBHOOK: Usando mismo property_id =', rentalOwnerPropertyId);
+
+      // 3. Obtener application_id de application_applicants
+      const { data: applicants, error: applicantsError } = await supabase
+        .from('application_applicants')
+        .select('application_id')
+        .eq('application_id', appId)
+        .limit(1);
+
+      const applicantApplicationId = applicants && applicants.length > 0
+        ? applicants[0].application_id
+        : appId;
+
+      console.log('📝 WEBHOOK: Application_applicants.application_id =', applicantApplicationId);
+
+      // Datos EXACTOS que solicita el usuario
+      const webhookData = {
+        properties_id: propertyId,                           // tabla properties columna id
+        rental_owners_property_id: rentalOwnerPropertyId,    // tabla rental_owners columna property_id
+        application_applicants_application_id: applicantApplicationId, // tabla application_applicants columna application_id
+        application_id: appId,                              // ID de la aplicación actual
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('📤 WEBHOOK: Datos FINALES para enviar:', webhookData);
+      return webhookData;
+
+    } catch (error: any) {
+      console.error('❌ WEBHOOK: Error obteniendo datos:', error);
+
+      // Si es error de autenticación, mostrar mensaje específico
+      if (error.message?.includes('Sesión') || error.message?.includes('session')) {
+        throw error; // Re-lanzar para que se maneje arriba
+      }
+
+      return null;
+    }
+  };
+
+  // Variable derivada: indica si ya existen condiciones de contrato
+  const has_contract_conditions = contractData !== null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -1002,10 +1265,10 @@ export const PostulationAdminPanel: React.FC = () => {
                     </h4>
                     <div className="space-y-2">
                       <p className="text-sm text-gray-600">
-                        <span className="font-medium">Monto final:</span> {formatPriceCLP(contractData.final_amount)}
+                        <span className="font-medium">Monto final:</span> {contractData.final_amount_currency === 'uf' ? `${contractData.final_amount} UF` : formatPriceCLP(contractData.final_amount)}
                       </p>
                       <p className="text-sm text-gray-600">
-                        <span className="font-medium">Monto garantía:</span> {formatPriceCLP(contractData.guarantee_amount)}
+                        <span className="font-medium">Monto garantía:</span> {contractData.guarantee_amount_currency === 'uf' ? `${contractData.guarantee_amount} UF` : formatPriceCLP(contractData.guarantee_amount)}
                       </p>
                     </div>
                   </div>
@@ -1027,9 +1290,30 @@ export const PostulationAdminPanel: React.FC = () => {
                       <span className="font-medium">Arrendador:</span> {contractData.landlord_email}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    <span className="font-medium">Cuenta corriente:</span> {contractData.payment_account}
-                  </p>
+                </div>
+
+                {/* Información de Pagos */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <svg className="h-4 w-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    Información de Pagos
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Titular:</span> {contractData.account_holder_name}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Número de cuenta:</span> {contractData.account_number}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Banco:</span> {contractData.account_bank}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Tipo de cuenta:</span> {contractData.account_type}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Cláusulas Especiales */}
@@ -1349,7 +1633,20 @@ export const PostulationAdminPanel: React.FC = () => {
               </h3>
 
               <div className="space-y-3">
-                <button className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                <button
+                  onClick={handleApproveApplication}
+                  disabled={!has_contract_conditions}
+                  className={`w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
+                    has_contract_conditions
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  }`}
+                  title={
+                    has_contract_conditions
+                      ? 'Aprobar postulación y enviar contrato para generación automática'
+                      : 'Primero debe crear las condiciones del contrato'
+                  }
+                >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -1407,16 +1704,20 @@ const ContractModal: React.FC<{
     start_date: '',
     validity_period_months: 12,
     final_amount: 0,
+    final_amount_currency: 'clp',
     guarantee_amount: 0,
+    guarantee_amount_currency: 'clp',
     has_dicom_clause: false,
     tenant_email: '',
     landlord_email: '',
-    payment_account: '',
+    account_holder_name: '',
+    account_number: '',
+    account_bank: '',
+    account_type: '',
     has_brokerage_commission: false,
     broker_name: '',
     broker_amount: 0,
     broker_rut: '',
-    property_type: 'departamento',
     allows_pets: false,
     is_furnished: false
   });
@@ -1429,16 +1730,20 @@ const ContractModal: React.FC<{
           start_date: initialData.start_date ? new Date(initialData.start_date).toISOString().split('T')[0] : '',
           validity_period_months: initialData.validity_period_months || 12,
           final_amount: initialData.final_amount || 0,
+          final_amount_currency: initialData.final_amount_currency || 'clp',
           guarantee_amount: initialData.guarantee_amount || 0,
+          guarantee_amount_currency: initialData.guarantee_amount_currency || 'clp',
           has_dicom_clause: initialData.has_dicom_clause || false,
           tenant_email: initialData.tenant_email || '',
           landlord_email: initialData.landlord_email || '',
-          payment_account: initialData.payment_account || '',
+          account_holder_name: initialData.account_holder_name || '',
+          account_number: initialData.account_number || '',
+          account_bank: initialData.account_bank || '',
+          account_type: initialData.account_type || '',
           has_brokerage_commission: initialData.has_brokerage_commission || false,
           broker_name: initialData.broker_name || '',
           broker_amount: initialData.broker_amount || 0,
           broker_rut: initialData.broker_rut || '',
-          property_type: initialData.property_type || 'departamento',
           allows_pets: initialData.allows_pets || false,
           is_furnished: initialData.is_furnished || false
         });
@@ -1447,16 +1752,20 @@ const ContractModal: React.FC<{
           start_date: '',
           validity_period_months: 12,
           final_amount: 0,
+          final_amount_currency: 'clp',
           guarantee_amount: 0,
+          guarantee_amount_currency: 'clp',
           has_dicom_clause: false,
           tenant_email: '',
           landlord_email: '',
-          payment_account: '',
+          account_holder_name: '',
+          account_number: '',
+          account_bank: '',
+          account_type: '',
           has_brokerage_commission: false,
           broker_name: '',
           broker_amount: 0,
           broker_rut: '',
-          property_type: 'departamento',
           allows_pets: false,
           is_furnished: false
         });
@@ -1494,8 +1803,20 @@ const ContractModal: React.FC<{
       newErrors.landlord_email = 'El email del arrendador es obligatorio';
     }
 
-    if (!formData.payment_account.trim()) {
-      newErrors.payment_account = 'La cuenta corriente es obligatoria';
+    if (!formData.account_holder_name.trim()) {
+      newErrors.account_holder_name = 'El nombre del titular es obligatorio';
+    }
+
+    if (!formData.account_number.trim()) {
+      newErrors.account_number = 'El número de cuenta es obligatorio';
+    }
+
+    if (!formData.account_bank.trim()) {
+      newErrors.account_bank = 'El banco es obligatorio';
+    }
+
+    if (!formData.account_type.trim()) {
+      newErrors.account_type = 'El tipo de cuenta es obligatorio';
     }
 
     // Validar comisión de corretaje si está habilitada
@@ -1514,6 +1835,7 @@ const ContractModal: React.FC<{
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1596,39 +1918,59 @@ const ContractModal: React.FC<{
               {errors.validity_period_months && <p className="text-red-500 text-xs mt-1">{errors.validity_period_months}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto Final (CLP) *
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Monto Final *
               </label>
-              <input
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.final_amount}
-                onChange={(e) => setFormData(prev => ({ ...prev, final_amount: parseInt(e.target.value) || 0 }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.final_amount ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Ej: 500000"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.final_amount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, final_amount: parseFloat(e.target.value) || 0 }))}
+                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.final_amount ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 500000"
+                />
+                <select
+                  value={formData.final_amount_currency}
+                  onChange={(e) => setFormData(prev => ({ ...prev, final_amount_currency: e.target.value as 'clp' | 'uf' }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="clp">CLP</option>
+                  <option value="uf">UF</option>
+                </select>
+              </div>
               {errors.final_amount && <p className="text-red-500 text-xs mt-1">{errors.final_amount}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto Garantía (CLP) *
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Monto Garantía *
               </label>
-              <input
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.guarantee_amount}
-                onChange={(e) => setFormData(prev => ({ ...prev, guarantee_amount: parseInt(e.target.value) || 0 }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.guarantee_amount ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Ej: 250000"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.guarantee_amount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, guarantee_amount: parseFloat(e.target.value) || 0 }))}
+                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.guarantee_amount ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 250000"
+                />
+                <select
+                  value={formData.guarantee_amount_currency}
+                  onChange={(e) => setFormData(prev => ({ ...prev, guarantee_amount_currency: e.target.value as 'clp' | 'uf' }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="clp">CLP</option>
+                  <option value="uf">UF</option>
+                </select>
+              </div>
               {errors.guarantee_amount && <p className="text-red-500 text-xs mt-1">{errors.guarantee_amount}</p>}
             </div>
           </div>
@@ -1688,21 +2030,84 @@ const ContractModal: React.FC<{
               {errors.landlord_email && <p className="text-red-500 text-xs mt-1">{errors.landlord_email}</p>}
             </div>
           </div>
+        </div>
 
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cuenta Corriente de Pago *
-            </label>
-            <input
-              type="text"
-              value={formData.payment_account}
-              onChange={(e) => setFormData(prev => ({ ...prev, payment_account: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.payment_account ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="Ej: Banco Estado - 12345678"
-            />
-            {errors.payment_account && <p className="text-red-500 text-xs mt-1">{errors.payment_account}</p>}
+        {/* Información de Pagos */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+            <svg className="h-4 w-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>
+            Información de Pagos
+          </h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre del Titular *
+              </label>
+              <input
+                type="text"
+                value={formData.account_holder_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, account_holder_name: e.target.value }))}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.account_holder_name ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="Ej: Juan Pérez González"
+              />
+              {errors.account_holder_name && <p className="text-red-500 text-xs mt-1">{errors.account_holder_name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Número de Cuenta *
+              </label>
+              <input
+                type="text"
+                value={formData.account_number}
+                onChange={(e) => setFormData(prev => ({ ...prev, account_number: e.target.value }))}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.account_number ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="Ej: 12345678"
+              />
+              {errors.account_number && <p className="text-red-500 text-xs mt-1">{errors.account_number}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Banco *
+              </label>
+              <input
+                type="text"
+                value={formData.account_bank}
+                onChange={(e) => setFormData(prev => ({ ...prev, account_bank: e.target.value }))}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.account_bank ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="Ej: Banco Estado"
+              />
+              {errors.account_bank && <p className="text-red-500 text-xs mt-1">{errors.account_bank}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Cuenta *
+              </label>
+              <select
+                value={formData.account_type}
+                onChange={(e) => setFormData(prev => ({ ...prev, account_type: e.target.value }))}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.account_type ? 'border-red-300' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Seleccionar tipo</option>
+                <option value="corriente">Cuenta Corriente</option>
+                <option value="vista">Cuenta Vista</option>
+                <option value="ahorro">Cuenta de Ahorro</option>
+              </select>
+              {errors.account_type && <p className="text-red-500 text-xs mt-1">{errors.account_type}</p>}
+            </div>
           </div>
         </div>
 
@@ -1791,21 +2196,7 @@ const ContractModal: React.FC<{
             Condiciones del Inmueble
           </h4>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Inmueble *
-              </label>
-              <select
-                value={formData.property_type}
-                onChange={(e) => setFormData(prev => ({ ...prev, property_type: e.target.value as 'casa' | 'departamento' }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="departamento">🏢 Departamento</option>
-                <option value="casa">🏠 Casa</option>
-              </select>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-center">
               <label className="flex items-center">
                 <input

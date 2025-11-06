@@ -623,6 +623,71 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
   };
 
   /**
+   * Obtiene los datos necesarios para enviar al webhook
+   * @param applicationId ID de la aplicación
+   * @returns Datos para el webhook o null si hay error
+   */
+  const getWebhookData = async (applicationId: string) => {
+    try {
+      console.log('🔍 WEBHOOK: Obteniendo datos para applicationId:', applicationId);
+
+      // 1. Obtener property_id de la aplicación
+      const { data: application, error: appError } = await supabase
+        .from('applications')
+        .select('property_id')
+        .eq('id', applicationId)
+        .single();
+
+      if (appError || !application) {
+        console.error('❌ WEBHOOK: Error obteniendo aplicación:', appError);
+        return null;
+      }
+
+      const propertyId = application.property_id;
+      console.log('🏠 WEBHOOK: Properties.id =', propertyId);
+
+      // 2. Obtener property_id de rental_owners
+      const { data: rentalOwner, error: ownerError } = await supabase
+        .from('rental_owners')
+        .select('property_id')
+        .eq('property_id', propertyId)
+        .single();
+
+      const rentalOwnerPropertyId = rentalOwner?.property_id || propertyId;
+      console.log('👤 WEBHOOK: Rental_owners.property_id =', rentalOwnerPropertyId);
+
+      // 3. Obtener application_id de application_applicants
+      const { data: applicants, error: applicantsError } = await supabase
+        .from('application_applicants')
+        .select('application_id')
+        .eq('application_id', applicationId)
+        .limit(1);
+
+      const applicantApplicationId = applicants && applicants.length > 0
+        ? applicants[0].application_id
+        : applicationId;
+
+      console.log('📝 WEBHOOK: Application_applicants.application_id =', applicantApplicationId);
+
+      // Datos EXACTOS que solicita el usuario
+      const webhookData = {
+        properties_id: propertyId,                           // tabla properties columna id
+        rental_owners_property_id: rentalOwnerPropertyId,    // tabla rental_owners columna property_id
+        application_applicants_application_id: applicantApplicationId, // tabla application_applicants columna application_id
+        application_id: applicationId,                       // ID de la aplicación actual
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('📤 WEBHOOK: Datos FINALES para enviar:', webhookData);
+      return webhookData;
+
+    } catch (error) {
+      console.error('❌ WEBHOOK: Error obteniendo datos:', error);
+      return null;
+    }
+  };
+
+  /**
    * Maneja el click en "Aceptar Postulación"
    * Solo disponible si status = 'En Revisión'
    */
@@ -659,21 +724,61 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
       return;
     }
 
-    console.log('✅ [PostulationAdminPanel] Iniciando proceso de aceptación de postulación');
+    console.log('✅ [PostulationAdminPanel] Iniciando proceso de GENERACIÓN DE CONTRATO');
     console.log('👤 Perfil seleccionado:', selectedProfile);
 
-    // Registrar auditoría
-    await logAuditAction(
-      'approve',
-      'pendiente',
-      'aprobada',
-      { action: 'accept_application' },
-      'Inicio del proceso de aceptación de postulación'
-    );
-
-    // Actualizar estado de la aplicación
+    // Actualizar estado de la aplicación y enviar a webhook
     setIsAcceptingApplication(true);
     try {
+      // Obtener los datos requeridos para el webhook
+      const webhookData = await getWebhookData(selectedProfile.applicationId);
+
+      if (!webhookData) {
+        console.error('❌ WEBHOOK: No se pudieron obtener los datos necesarios');
+        toast.error('Error al obtener los datos necesarios para generar el contrato');
+        return;
+      }
+
+      console.log('🚀 WEBHOOK: Enviando POST a https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb');
+      console.log('📦 WEBHOOK: Payload:', JSON.stringify(webhookData, null, 2));
+
+      // Enviar al webhook EXACTAMENTE como solicita el usuario
+      const webhookResponse = await fetch('https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookData),
+      });
+
+      console.log('📡 WEBHOOK: Status response:', webhookResponse.status);
+
+      if (!webhookResponse.ok) {
+        const errorText = await webhookResponse.text();
+        console.error('❌ WEBHOOK: Error response:', errorText);
+        throw new Error(`Error del webhook: ${webhookResponse.status} ${webhookResponse.statusText}`);
+      }
+
+      const webhookResult = await webhookResponse.json();
+      console.log('✅ WEBHOOK: Respuesta exitosa:', webhookResult);
+
+      // Mostrar confirmación clara
+      toast.success(`✅ Contrato enviado para generación automática al webhook!`);
+
+      // Registrar auditoría
+      await logAuditAction(
+        'approve',
+        'pendiente',
+        'aprobada',
+        {
+          action: 'accept_application_webhook',
+          webhook_data: webhookData,
+          webhook_response: webhookResult
+        },
+        'Postulación aceptada y enviada al webhook para generar contrato'
+      );
+
+      // Actualizar estado de la aplicación
       const { error } = await supabase
         .from('applications')
         .update({
@@ -685,24 +790,30 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
 
       if (error) {
         formatErrorDetails(error, 'handleAcceptClick - Error actualizando estado');
-        const userMessage = getUserFriendlyErrorMessage(error, 'Error al aceptar la postulación');
+        const userMessage = getUserFriendlyErrorMessage(error, 'Error al actualizar el estado de la postulación');
         toast.error(userMessage);
         return;
       }
 
-      toast.success('Postulación aceptada correctamente. Ahora puede generar las condiciones del contrato.');
+      toast.success('Postulación aceptada correctamente. Contrato enviado para generación automática.');
 
-      // Cerrar modal de perfil y abrir modal de contrato
+      // Cerrar modal de perfil
       setIsProfileModalOpen(false);
-      setIsContractModalOpen(true);
+      setSelectedProfile(null);
 
       // Recargar postulaciones para reflejar cambios
       fetchPostulations();
 
     } catch (error: any) {
-      formatErrorDetails(error, 'handleAcceptClick - Error en catch');
-      const userMessage = getUserFriendlyErrorMessage(error, 'Error inesperado al aceptar postulación');
-      toast.error(userMessage);
+      console.error('❌ Error en handleAcceptClick:', error);
+      formatErrorDetails(error, 'handleAcceptClick - Error enviando a webhook');
+
+      let errorMessage = 'Error al procesar la postulación';
+      if (error.message?.includes('webhook')) {
+        errorMessage = 'Error al enviar los datos para generar el contrato. Por favor, intenta nuevamente.';
+      }
+
+      toast.error(errorMessage);
     } finally {
       setIsAcceptingApplication(false);
     }
@@ -1493,13 +1604,13 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
                       ) : (
                         <CheckCircle className="h-8 w-8" />
                       )}
-                      <span className="text-sm">Aceptar Postulación</span>
+                      <span className="text-sm">Generar Contrato</span>
                       <span className="text-xs opacity-90">
                         {selectedProfile.status !== 'En Revisión'
                           ? 'No disponible'
                           : selectedProfile.hasContract
                           ? 'Contrato existente'
-                          : 'Generar Contrato'
+                          : 'Enviar a Webhook'
                         }
                       </span>
                     </div>

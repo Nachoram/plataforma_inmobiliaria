@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Mail, Calendar, MapPin, Building, AlertTriangle } from 'lucide-react';
+import { Plus, Mail, Calendar, MapPin, Building, AlertTriangle, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -196,6 +196,13 @@ const MyApplicationsPage: React.FC = () => {
 
                     {/* Actions */}
                     <div className="mt-4 flex flex-wrap gap-2">
+                      <Link to={`/my-applications/${application.id}/admin`}>
+                        <button className="flex items-center gap-1 px-3 py-2 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors">
+                          <Settings className="h-3 w-3" />
+                          Administrar
+                        </button>
+                      </Link>
+
                       <Link to={`/property/${application.property_id}`}>
                         <button className="flex items-center gap-1 px-3 py-2 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
                           Ver Propiedad

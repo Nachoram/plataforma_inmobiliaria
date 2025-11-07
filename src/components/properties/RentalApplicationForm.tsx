@@ -7,6 +7,8 @@ interface RentalApplicationFormProps {
   property: Property;
   onSuccess?: () => void;
   onCancel?: () => void;
+  editMode?: boolean;
+  existingApplicationId?: string;
 }
 
 // Tipos para entidades
@@ -42,6 +44,7 @@ interface ApplicantData {
   legal_representative_first_name?: string;
   legal_representative_paternal_last_name?: string;
   legal_representative_maternal_last_name?: string;
+  legal_representative_rut?: string;
   constitution_type?: ConstitutionType;
   constitution_date?: string;
   constitution_cve?: string;
@@ -74,6 +77,7 @@ interface GuarantorData {
   legal_representative_first_name?: string;
   legal_representative_paternal_last_name?: string;
   legal_representative_maternal_last_name?: string;
+  legal_representative_rut?: string;
   constitution_type?: ConstitutionType;
   constitution_date?: string;
   constitution_cve?: string;
@@ -84,13 +88,162 @@ interface GuarantorData {
 const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   property,
   onSuccess,
-  onCancel
+  onCancel,
+  editMode = false,
+  existingApplicationId
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
+  const [editLoading, setEditLoading] = useState(editMode);
+
+  // Estado para el mensaje de la postulación
+  const [applicationMessage, setApplicationMessage] = useState('');
+
+  // Cargar datos existentes en modo edición
+  useEffect(() => {
+    if (editMode && existingApplicationId) {
+      loadExistingApplication();
+    }
+  }, [editMode, existingApplicationId]);
+
+  const loadExistingApplication = async () => {
+    if (!existingApplicationId) return;
+
+    try {
+      setEditLoading(true);
+
+      // Cargar la postulación con todos los datos relacionados
+      const { data: application, error } = await supabase
+        .from('applications')
+        .select(`
+          *,
+          application_applicants (*),
+          application_guarantors (*)
+        `)
+        .eq('id', existingApplicationId)
+        .single();
+
+      if (error) throw error;
+
+      if (application) {
+        // Cargar mensaje
+        setApplicationMessage(application.message || '');
+
+        // Cargar postulantes
+        if (application.application_applicants && application.application_applicants.length > 0) {
+          const loadedApplicants = application.application_applicants.map((applicant: any, index: number) => ({
+            id: `applicant-${index + 1}`,
+            entityType: applicant.entity_type || 'natural',
+            first_name: applicant.first_name || '',
+            paternal_last_name: applicant.paternal_last_name || '',
+            maternal_last_name: applicant.maternal_last_name || '',
+            rut: applicant.rut || '',
+            profession: applicant.profession || '',
+            monthly_income_clp: applicant.monthly_income_clp?.toString() || '',
+            age: applicant.age?.toString() || '',
+            nationality: applicant.nationality || 'Chile',
+            marital_status: applicant.marital_status,
+            address_street: applicant.address_street || '',
+            address_number: applicant.address_number || '',
+            address_department: applicant.address_department || '',
+            address_commune: applicant.address_commune || '',
+            address_region: applicant.address_region || '',
+            phone: applicant.phone || '',
+            email: applicant.email || '',
+            company_name: applicant.company_name || '',
+            company_rut: applicant.company_rut || '',
+            legal_representative_first_name: '',
+            legal_representative_paternal_last_name: '',
+            legal_representative_maternal_last_name: applicant.legal_representative_name || '',
+            legal_representative_rut: applicant.legal_representative_rut || '',
+            constitution_type: applicant.constitution_type,
+            constitution_date: applicant.constitution_date || '',
+            constitution_cve: applicant.constitution_cve || '',
+            constitution_notary: applicant.constitution_notary || '',
+            repertory_number: applicant.repertory_number || ''
+          }));
+
+          // Si hay más postulantes que el estado inicial, agregar slots
+          while (loadedApplicants.length > applicants.length) {
+            setApplicants(prev => [...prev, {
+              id: `applicant-${prev.length + 1}`,
+              entityType: 'natural',
+              first_name: '',
+              paternal_last_name: '',
+              maternal_last_name: '',
+              rut: '',
+              profession: '',
+              monthly_income_clp: '',
+              age: '',
+              nationality: 'Chile',
+              marital_status: 'soltero',
+              address_street: '',
+              address_number: '',
+              address_department: '',
+              address_commune: '',
+              address_region: '',
+              phone: '',
+              email: '',
+              company_name: '',
+              company_rut: '',
+              legal_representative_first_name: '',
+              legal_representative_paternal_last_name: '',
+              legal_representative_maternal_last_name: '',
+              legal_representative_rut: '',
+              constitution_type: 'tradicional',
+              constitution_date: '',
+              constitution_cve: '',
+              constitution_notary: '',
+              repertory_number: ''
+            }]);
+          }
+
+          setApplicants(loadedApplicants);
+        }
+
+        // Cargar avaladores
+        if (application.application_guarantors && application.application_guarantors.length > 0) {
+          const loadedGuarantors = application.application_guarantors.map((guarantor: any, index: number) => ({
+            id: `guarantor-${index + 1}`,
+            entityType: guarantor.entity_type || 'natural',
+            first_name: guarantor.first_name || '',
+            paternal_last_name: guarantor.paternal_last_name || '',
+            maternal_last_name: guarantor.maternal_last_name || '',
+            rut: guarantor.rut || '',
+            profession: guarantor.profession || '',
+            monthly_income_clp: guarantor.monthly_income?.toString() || '',
+            contact_email: guarantor.contact_email || '',
+            address_street: guarantor.address_street || '',
+            address_number: guarantor.address_number || '',
+            address_department: guarantor.address_department || '',
+            address_commune: guarantor.address_commune || '',
+            address_region: guarantor.address_region || '',
+            company_name: guarantor.company_name || '',
+            company_rut: guarantor.company_rut || '',
+            legal_representative_first_name: '',
+            legal_representative_paternal_last_name: '',
+            legal_representative_maternal_last_name: guarantor.legal_representative_name || '',
+            legal_representative_rut: guarantor.legal_representative_rut || '',
+            constitution_type: guarantor.constitution_type,
+            constitution_date: guarantor.constitution_date || '',
+            constitution_cve: guarantor.constitution_cve || '',
+            constitution_notary: guarantor.constitution_notary || '',
+            repertory_number: guarantor.repertory_number || ''
+          }));
+
+          setGuarantors(loadedGuarantors);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading existing application:', error);
+      setError('Error al cargar los datos de la postulación para editar');
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   // Estado para postulantes múltiples (máximo 3)
   const [applicants, setApplicants] = useState<ApplicantData[]>([
@@ -120,6 +273,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       legal_representative_first_name: '',
       legal_representative_paternal_last_name: '',
       legal_representative_maternal_last_name: '',
+      legal_representative_rut: '',
       constitution_type: undefined,
       constitution_date: '',
       constitution_cve: '',
@@ -204,6 +358,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         legal_representative_first_name: '',
         legal_representative_paternal_last_name: '',
         legal_representative_maternal_last_name: '',
+        legal_representative_rut: '',
         constitution_type: undefined,
         constitution_date: '',
         constitution_cve: '',
@@ -242,6 +397,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             updatedApplicant.legal_representative_first_name = '';
             updatedApplicant.legal_representative_paternal_last_name = '';
             updatedApplicant.legal_representative_maternal_last_name = '';
+            updatedApplicant.legal_representative_rut = '';
             updatedApplicant.net_monthly_income_clp = '';
             updatedApplicant.constitution_type = undefined;
             updatedApplicant.constitution_date = '';
@@ -255,6 +411,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             updatedApplicant.legal_representative_first_name = updatedApplicant.legal_representative_first_name || '';
             updatedApplicant.legal_representative_paternal_last_name = updatedApplicant.legal_representative_paternal_last_name || '';
             updatedApplicant.legal_representative_maternal_last_name = updatedApplicant.legal_representative_maternal_last_name || '';
+            updatedApplicant.legal_representative_rut = updatedApplicant.legal_representative_rut || '';
             updatedApplicant.net_monthly_income_clp = updatedApplicant.net_monthly_income_clp || '';
             updatedApplicant.constitution_type = updatedApplicant.constitution_type || undefined;
             updatedApplicant.constitution_date = updatedApplicant.constitution_date || '';
@@ -293,6 +450,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         legal_representative_first_name: '',
         legal_representative_paternal_last_name: '',
         legal_representative_maternal_last_name: '',
+        legal_representative_rut: '',
         constitution_type: undefined,
         constitution_date: '',
         constitution_cve: '',
@@ -329,6 +487,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             updatedGuarantor.legal_representative_first_name = '';
             updatedGuarantor.legal_representative_paternal_last_name = '';
             updatedGuarantor.legal_representative_maternal_last_name = '';
+            updatedGuarantor.legal_representative_rut = '';
             updatedGuarantor.net_monthly_income_clp = '';
             updatedGuarantor.constitution_type = undefined;
             updatedGuarantor.constitution_date = '';
@@ -342,6 +501,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             updatedGuarantor.legal_representative_first_name = updatedGuarantor.legal_representative_first_name || '';
             updatedGuarantor.legal_representative_paternal_last_name = updatedGuarantor.legal_representative_paternal_last_name || '';
             updatedGuarantor.legal_representative_maternal_last_name = updatedGuarantor.legal_representative_maternal_last_name || '';
+            updatedGuarantor.legal_representative_rut = updatedGuarantor.legal_representative_rut || '';
             updatedGuarantor.net_monthly_income_clp = updatedGuarantor.net_monthly_income_clp || '';
             updatedGuarantor.constitution_type = updatedGuarantor.constitution_type || undefined;
             updatedGuarantor.constitution_date = updatedGuarantor.constitution_date || '';
@@ -369,11 +529,12 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
     if (applicant.entityType === 'natural') {
       if (!applicant.monthly_income_clp) errors.push('Sueldo mensual es requerido');
-    } else if (applicant.entityType === 'juridica') {
+    } else     if (applicant.entityType === 'juridica') {
       if (!applicant.net_monthly_income_clp) errors.push('Ingreso neto mensual es requerido');
       if (!applicant.company_name?.trim()) errors.push('Razón social es requerida');
       if (!applicant.legal_representative_first_name?.trim()) errors.push('Nombre del representante legal es requerido');
       if (!applicant.legal_representative_paternal_last_name?.trim()) errors.push('Apellido paterno del representante legal es requerido');
+      if (!applicant.legal_representative_rut?.trim()) errors.push('RUT del representante legal es requerido');
       if (!applicant.constitution_type) errors.push('Tipo de constitución es requerido');
 
       if (applicant.constitution_type === 'tradicional') {
@@ -402,11 +563,12 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       if (!guarantor.profession?.trim()) errors.push('Profesión es requerida');
       if (!guarantor.contact_email?.trim()) errors.push('Email de contacto es requerido');
       if (!guarantor.monthly_income_clp) errors.push('Sueldo mensual es requerido');
-    } else if (guarantor.entityType === 'juridica') {
+    } else     if (guarantor.entityType === 'juridica') {
       if (!guarantor.net_monthly_income_clp) errors.push('Ingreso neto mensual es requerido');
       if (!guarantor.company_name?.trim()) errors.push('Razón social es requerida');
       if (!guarantor.legal_representative_first_name?.trim()) errors.push('Nombre del representante legal es requerido');
       if (!guarantor.legal_representative_paternal_last_name?.trim()) errors.push('Apellido paterno del representante legal es requerido');
+      if (!guarantor.legal_representative_rut?.trim()) errors.push('RUT del representante legal es requerido');
       if (!guarantor.constitution_type) errors.push('Tipo de constitución es requerido');
 
       if (guarantor.constitution_type === 'tradicional') {
@@ -678,7 +840,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Representante Legal *
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <input
                     type="text"
@@ -709,6 +871,17 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                     onChange={handleApplicantChange(index)}
                     placeholder="Apellido Materno"
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    name="legal_representative_rut"
+                    value={applicant.legal_representative_rut || ''}
+                    onChange={handleApplicantChange(index)}
+                    placeholder="RUT del Representante Legal"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
                   />
                 </div>
               </div>
@@ -1148,7 +1321,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Representante Legal *
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <input
                     type="text"
@@ -1179,6 +1352,17 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
                     onChange={handleGuarantorChange(index)}
                     placeholder="Apellido Materno"
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    name="legal_representative_rut"
+                    value={guarantor.legal_representative_rut || ''}
+                    onChange={handleGuarantorChange(index)}
+                    placeholder="RUT del Representante Legal"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    required
                   />
                 </div>
               </div>
@@ -1451,53 +1635,128 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
       console.log('👤 Usuario autenticado:', user.id);
 
-      // PASO 1: Crear la postulación principal (usando el primer postulante como principal)
-      console.log('📝 Creando postulación principal...');
+      // PASO 1: Crear o actualizar la postulación principal
       const mainApplicant = applicants[0]; // Usar el primer postulante como principal
 
-      // Crear data para la aplicación
-      const applicationData = {
-        property_id: property.id,
-        applicant_id: user.id, // Usuario actual como postulante principal
-        status: 'pendiente',
-        message: 'Postulación enviada a través del formulario web',
-        application_characteristic_id: null, // Por ahora null, se puede generar después
-        // Snapshots del postulante principal
-        snapshot_applicant_first_name: mainApplicant.first_name || '',
-        snapshot_applicant_paternal_last_name: mainApplicant.paternal_last_name || '',
-        snapshot_applicant_maternal_last_name: mainApplicant.maternal_last_name || '',
-        snapshot_applicant_rut: mainApplicant.rut?.substring(0, 12) || '',
-        snapshot_applicant_profession: mainApplicant.profession || '',
-        snapshot_applicant_monthly_income_clp: mainApplicant.entityType === 'natural' ? (parseInt(mainApplicant.monthly_income_clp) || 0) : 0,
-        snapshot_applicant_age: parseInt(mainApplicant.age) || 0,
-        snapshot_applicant_nationality: mainApplicant.nationality,
-        snapshot_applicant_email: mainApplicant.email || '',
-        snapshot_applicant_phone: mainApplicant.phone || '',
-        snapshot_applicant_marital_status: mainApplicant.marital_status || 'soltero',
-        snapshot_applicant_address_street: mainApplicant.address_street,
-        snapshot_applicant_address_number: mainApplicant.address_number?.substring(0, 10) || '',
-        snapshot_applicant_address_department: mainApplicant.address_department?.substring(0, 10) || null,
-        snapshot_applicant_address_commune: mainApplicant.address_commune,
-        snapshot_applicant_address_region: mainApplicant.address_region,
-        structured_applicant_id: null, // Por ahora null
-        structured_guarantor_id: null, // Por ahora null
-        guarantor_characteristic_id: null, // Por ahora null
-      };
+      let application;
 
-      console.log('📋 Datos a enviar a applications:', applicationData);
+      if (editMode && existingApplicationId) {
+        // Modo edición: actualizar postulación existente
+        console.log('📝 Actualizando postulación existente...');
 
-      const { data: newApplication, error: applicationError } = await supabase
-        .from('applications')
-        .insert(applicationData)
-        .select()
-        .single();
+        const updateData = {
+          message: applicationMessage || 'Postulación actualizada a través del formulario web',
+          updated_at: new Date().toISOString(),
+          // Actualizar snapshots del postulante principal
+          snapshot_applicant_first_name: mainApplicant.first_name || '',
+          snapshot_applicant_paternal_last_name: mainApplicant.paternal_last_name || '',
+          snapshot_applicant_maternal_last_name: mainApplicant.maternal_last_name || '',
+          snapshot_applicant_rut: mainApplicant.rut?.substring(0, 12) || '',
+          snapshot_applicant_profession: mainApplicant.profession || '',
+          snapshot_applicant_monthly_income_clp: mainApplicant.entityType === 'natural' ? (parseInt(mainApplicant.monthly_income_clp) || 0) : 0,
+          snapshot_applicant_age: parseInt(mainApplicant.age) || 0,
+          snapshot_applicant_nationality: mainApplicant.nationality,
+          snapshot_applicant_email: mainApplicant.email || '',
+          snapshot_applicant_phone: mainApplicant.phone || '',
+          snapshot_applicant_marital_status: mainApplicant.marital_status || 'soltero',
+          snapshot_applicant_address_street: mainApplicant.address_street,
+          snapshot_applicant_address_number: mainApplicant.address_number?.substring(0, 10) || '',
+          snapshot_applicant_address_department: mainApplicant.address_department?.substring(0, 10) || null,
+          snapshot_applicant_address_commune: mainApplicant.address_commune,
+          snapshot_applicant_address_region: mainApplicant.address_region,
+        };
 
-      if (applicationError) {
-        throw new Error(`Error creando aplicación: ${applicationError.message}`);
+        console.log('📋 Datos a actualizar en applications:', updateData);
+
+        const { data: updatedApplication, error: updateError } = await supabase
+          .from('applications')
+          .update(updateData)
+          .eq('id', existingApplicationId)
+          .eq('applicant_id', user.id) // Asegurar que solo el propietario pueda editar
+          .select()
+          .single();
+
+        if (updateError) {
+          throw new Error(`Error actualizando aplicación: ${updateError.message}`);
+        }
+
+        application = updatedApplication;
+        console.log('✅ Postulación actualizada:', application.id);
+
+        // Registrar la edición en el log de auditoría
+        try {
+          await supabase.rpc('log_application_edit', {
+            p_application_id: existingApplicationId,
+            p_user_id: user.id,
+            p_changes_summary: 'Postulación editada por el postulante',
+            p_ip_address: null,
+            p_user_agent: navigator.userAgent
+          });
+        } catch (auditError) {
+          console.warn('Failed to log application edit:', auditError);
+          // Don't fail the operation if audit logging fails
+        }
+
+        // Limpiar postulantes y avaladores existentes antes de recrearlos
+        console.log('🧹 Limpiando postulantes existentes...');
+        await supabase
+          .from('application_applicants')
+          .delete()
+          .eq('application_id', existingApplicationId);
+
+        console.log('🧹 Limpiando avaladores existentes...');
+        await supabase
+          .from('application_guarantors')
+          .delete()
+          .eq('application_id', existingApplicationId);
+
+      } else {
+        // Modo creación: crear nueva postulación
+        console.log('📝 Creando nueva postulación...');
+
+        const applicationData = {
+          property_id: property.id,
+          applicant_id: user.id, // Usuario actual como postulante principal
+          status: 'pendiente',
+          message: applicationMessage || 'Postulación enviada a través del formulario web',
+          application_characteristic_id: null, // Por ahora null, se puede generar después
+          // Snapshots del postulante principal
+          snapshot_applicant_first_name: mainApplicant.first_name || '',
+          snapshot_applicant_paternal_last_name: mainApplicant.paternal_last_name || '',
+          snapshot_applicant_maternal_last_name: mainApplicant.maternal_last_name || '',
+          snapshot_applicant_rut: mainApplicant.rut?.substring(0, 12) || '',
+          snapshot_applicant_profession: mainApplicant.profession || '',
+          snapshot_applicant_monthly_income_clp: mainApplicant.entityType === 'natural' ? (parseInt(mainApplicant.monthly_income_clp) || 0) : 0,
+          snapshot_applicant_age: parseInt(mainApplicant.age) || 0,
+          snapshot_applicant_nationality: mainApplicant.nationality,
+          snapshot_applicant_email: mainApplicant.email || '',
+          snapshot_applicant_phone: mainApplicant.phone || '',
+          snapshot_applicant_marital_status: mainApplicant.marital_status || 'soltero',
+          snapshot_applicant_address_street: mainApplicant.address_street,
+          snapshot_applicant_address_number: mainApplicant.address_number?.substring(0, 10) || '',
+          snapshot_applicant_address_department: mainApplicant.address_department?.substring(0, 10) || null,
+          snapshot_applicant_address_commune: mainApplicant.address_commune,
+          snapshot_applicant_address_region: mainApplicant.address_region,
+          structured_applicant_id: null, // Por ahora null
+          structured_guarantor_id: null, // Por ahora null
+          guarantor_characteristic_id: null, // Por ahora null
+        };
+
+        console.log('📋 Datos a enviar a applications:', applicationData);
+
+        const { data: newApplication, error: applicationError } = await supabase
+          .from('applications')
+          .insert(applicationData)
+          .select()
+          .single();
+
+        if (applicationError) {
+          throw new Error(`Error creando aplicación: ${applicationError.message}`);
+        }
+
+        application = newApplication;
+        console.log('✅ Nueva postulación creada:', application.id);
       }
-
-      let application = newApplication;
-      console.log('✅ DEBUG: Nueva postulación creada:', application.id);
 
       // PASO 3: Crear postulantes en application_applicants
       console.log('👥 Creando postulantes en application_applicants...');
@@ -1527,7 +1786,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         company_rut: applicant.company_rut?.substring(0, 12) || null,
         legal_representative_name: applicant.entityType === 'juridica' ?
           `${applicant.legal_representative_first_name || ''} ${applicant.legal_representative_paternal_last_name || ''} ${applicant.legal_representative_maternal_last_name || ''}`.trim() || null : null,
-        legal_representative_rut: null, // Ya no usamos RUT del representante
+        legal_representative_rut: applicant.legal_representative_rut?.substring(0, 12) || null,
         constitution_type: applicant.constitution_type || null,
         constitution_date: applicant.constitution_date || null,
         constitution_cve: applicant.constitution_cve?.substring(0, 50) || null,
@@ -1578,7 +1837,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           company_rut: guarantor.company_rut?.substring(0, 12) || null,
           legal_representative_name: guarantor.entityType === 'juridica' ?
             `${guarantor.legal_representative_first_name || ''} ${guarantor.legal_representative_paternal_last_name || ''} ${guarantor.legal_representative_maternal_last_name || ''}`.trim() || null : null,
-          legal_representative_rut: null, // Ya no usamos RUT del representante
+          legal_representative_rut: guarantor.legal_representative_rut?.substring(0, 12) || null,
           constitution_type: guarantor.constitution_type || null,
           constitution_date: guarantor.constitution_date || null,
           constitution_cve: guarantor.constitution_cve?.substring(0, 50) || null,
@@ -1631,7 +1890,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             <FileText className="h-6 w-6 text-white" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-            Postulación de Arriendo
+            {editMode ? 'Editar Postulación' : 'Postulación de Arriendo'}
           </h2>
         </div>
 
@@ -1642,6 +1901,37 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           <p className="text-gray-600 mb-2">{property.address_commune}, {property.address_region}</p>
           <p className="text-2xl font-bold text-green-600">
             {formatPriceCLP(property.price_clp)}/mes
+          </p>
+        </div>
+      </div>
+
+      {/* SECCIÓN 0: Mensaje de la Postulación */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+            <MessageSquarePlus className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Mensaje de la Postulación
+            </h3>
+            <p className="text-sm text-gray-600">Mensaje personalizado para el arrendador</p>
+          </div>
+        </div>
+
+        <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Mensaje (opcional)
+          </label>
+          <textarea
+            value={applicationMessage}
+            onChange={(e) => setApplicationMessage(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Escribe un mensaje personalizado para el arrendador explicando por qué eres el candidato ideal..."
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Este mensaje será visible para el arrendador junto con tu postulación.
           </p>
         </div>
       </div>
@@ -1779,12 +2069,12 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           {loading ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              <span>Enviando postulación...</span>
+              <span>{editMode ? 'Actualizando postulación...' : 'Enviando postulación...'}</span>
             </>
           ) : (
             <>
               <Send className="h-5 w-5" />
-              <span>Enviar Postulación</span>
+              <span>{editMode ? 'Actualizar Postulación' : 'Enviar Postulación'}</span>
             </>
           )}
         </button>

@@ -36,6 +36,25 @@ const CHILE_REGIONS_COMMUNES = {
   }
 };
 
+// Lista de nacionalidades disponibles
+const NATIONALITIES = [
+  'Chilena',
+  'Argentina',
+  'Peruana',
+  'Colombiana',
+  'Venezolana',
+  'Ecuatoriana',
+  'Boliviana',
+  'Uruguaya',
+  'Paraguaya',
+  'Brasileña',
+  'Mexicana',
+  'Española',
+  'Estadounidense',
+  'Canadiense',
+  'Otra'
+];
+
 interface RentalPublicationFormProps {
   initialData?: Property;
   isEditing?: boolean;
@@ -79,6 +98,10 @@ interface Owner {
   owner_address_number?: string;
   owner_region?: string;
   owner_commune?: string;
+  // Nuevo campo: nacionalidad del propietario
+  owner_nationality?: string;
+  // Nuevo campo: número de departamento/casa/oficina
+  owner_apartment_number?: string;
   // Campo para porcentaje de propiedad (opcional)
   ownership_percentage?: number;
 }
@@ -142,6 +165,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       owner_address_number: '',
       owner_region: '',
       owner_commune: '',
+      owner_nationality: '',
+      owner_apartment_number: '',
       marital_status: '',
       property_regime: '',
       ownership_percentage: undefined
@@ -196,8 +221,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         // Campos condicionales - SIEMPRE inicializar con datos existentes
         tieneBodega: boolToYesNo(initialData.tiene_bodega),
         metrosBodega: numberToString(initialData.metros_bodega, ''),
-        ubicacionBodega: '', // Este campo no existe en BD, mantener vacío
-        ubicacionEstacionamiento: initialData.parking_location || '',
+        ubicacionBodega: initialData.ubicacion_bodega || '',
+        ubicacionEstacionamiento: initialData.ubicacion_estacionamiento || initialData.parking_location || '',
         numeroBodega: initialData.storage_number || '',
         parcela_number: initialData.parcela_number || '',
 
@@ -219,6 +244,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         price: formData.price,
         bedrooms: formData.bedrooms,
         tieneBodega: formData.tieneBodega,
+        metrosBodega: formData.metrosBodega,
+        ubicacionBodega: formData.ubicacionBodega,
+        ubicacionEstacionamiento: formData.ubicacionEstacionamiento,
         numeroBodega: formData.numeroBodega,
         documents: formData.documents
       });
@@ -350,7 +378,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
         if (!relationships || relationships.length === 0) {
           console.log('⚠️ No owners found for property, using default owner');
-          setOwners(getInitialOwners());
+          setOwners(getInitialOwners);
           return;
         }
 
@@ -365,6 +393,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             owner_address_number: ownerData.address_number || '',
             owner_region: ownerData.address_region || '',
             owner_commune: ownerData.address_commune || '',
+            owner_nationality: ownerData.nationality || '',
+            owner_apartment_number: ownerData.apartment_number || '',
             // Natural person fields
             owner_first_name: ownerData.first_name || '',
             owner_paternal_last_name: ownerData.paternal_last_name || '',
@@ -404,7 +434,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       } catch (error) {
         console.error('❌ Error loading owners for editing:', error);
         // Fallback to default owner
-        setOwners(getInitialOwners());
+        setOwners(getInitialOwners);
       }
     };
 
@@ -467,6 +497,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       owner_address_number: '',
       owner_region: '',
       owner_commune: '',
+      owner_nationality: '',
+      owner_apartment_number: '',
       marital_status: '',
       property_regime: '',
       ownership_percentage: undefined
@@ -560,6 +592,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         if (!owner.owner_paternal_last_name || !owner.owner_paternal_last_name.trim()) newErrors[`owner_${owner.id}_paternal_last_name`] = `${prefix}El apellido paterno del propietario es requerido`;
         if (!owner.owner_maternal_last_name || !owner.owner_maternal_last_name.trim()) newErrors[`owner_${owner.id}_maternal_last_name`] = `${prefix}El apellido materno del propietario es requerido`;
         if (!owner.owner_rut || !owner.owner_rut.trim()) newErrors[`owner_${owner.id}_rut`] = `${prefix}El RUT del propietario es requerido`;
+        if (!owner.owner_nationality || !owner.owner_nationality.trim()) newErrors[`owner_${owner.id}_nationality`] = `${prefix}La nacionalidad del propietario es requerida`;
         if (!owner.marital_status) newErrors[`owner_${owner.id}_marital_status`] = `${prefix}El estado civil es requerido`;
 
         // Validación de email para personas naturales
@@ -661,8 +694,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     //   newErrors.personeria_certificate = 'El certificado de personería es requerido para personas jurídicas';
     // }
 
-    // Validaciones específicas para oficinas
-    if (propertyType === 'Oficina') {
+    // Validaciones específicas para bodega (Casa, Departamento, Oficina)
+    if (propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina') {
       // Validar M² Bodega si tiene bodega
       if (formData.tieneBodega === 'Sí') {
         if (!formData.metrosBodega || parseFloat(formData.metrosBodega) <= 0) {
@@ -940,7 +973,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         // Campos legacy - solo si existen en BD
         if (formData.numeroBodega) {
           propertyData.numero_bodega = formData.numeroBodega;
-          // propertyData.storage_number = formData.numeroBodega; // Comentar hasta que se aplique migración
+          propertyData.storage_number = formData.numeroBodega;
         }
 
       } else if (formData.tipoPropiedad === 'Estacionamiento') {
@@ -951,7 +984,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         propertyData.metros_utiles = null; // NO aplica
         propertyData.metros_totales = null; // NO aplica
         propertyData.tiene_terraza = false;
-        // propertyData.ubicacion_estacionamiento = formData.ubicacionEstacionamiento || null; // Comentar hasta migración
+        propertyData.ubicacion_estacionamiento = formData.ubicacionEstacionamiento || null;
 
       } else if (formData.tipoPropiedad === 'Parcela') {
         // Parcela: Solo metros totales, parcela_number opcional
@@ -976,18 +1009,26 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         propertyData.sistema_agua_caliente = formData.sistemaAguaCaliente;
         propertyData.tipo_cocina = formData.tipoCocina;
         propertyData.ano_construccion = anoConstruccion; // Can be null
-        // propertyData.ubicacion_estacionamiento = parkingSpaces > 0 ? formData.ubicacionEstacionamiento || null : null; // Comentar hasta migración
+        propertyData.ubicacion_estacionamiento = parkingSpaces > 0 ? formData.ubicacionEstacionamiento || null : null;
 
-        // Campos específicos para Oficina - solo si existen en BD
-        if (formData.tipoPropiedad === 'Oficina') {
-          // propertyData.tiene_bodega = formData.tieneBodega === 'Sí'; // Comentar hasta migración
-          // propertyData.metros_bodega = metrosBodega; // Comentar hasta migración
-          // propertyData.ubicacion_bodega = formData.ubicacionBodega || null; // Comentar hasta migración
+        // Campos específicos de bodega - permitidos para Casa, Departamento y Oficina
+        if (formData.tipoPropiedad === 'Casa' || formData.tipoPropiedad === 'Departamento' || formData.tipoPropiedad === 'Oficina') {
+          propertyData.tiene_bodega = formData.tieneBodega === 'Sí';
+          propertyData.metros_bodega = metrosBodega;
+          propertyData.ubicacion_bodega = formData.ubicacionBodega || null;
         }
       }
 
       // DEBUGGING: Log propertyData to verify all numeric fields are correctly parsed
       console.log('🏠 PropertyData to submit:', JSON.stringify(propertyData, null, 2));
+      console.log('📊 Form data being saved:', {
+        tipoPropiedad: formData.tipoPropiedad,
+        tieneBodega: formData.tieneBodega,
+        metrosBodega: formData.metrosBodega,
+        ubicacionBodega: formData.ubicacionBodega,
+        ubicacionEstacionamiento: formData.ubicacionEstacionamiento,
+        estacionamientos: formData.estacionamientos
+      });
 
       // Insert or update property
       let propertyResult;
@@ -1065,11 +1106,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             // Campos comunes
             address_street: owner.owner_address_street,
             address_number: owner.owner_address_number,
-            address_department: null,
+            address_department: owner.owner_apartment_number || null,
             address_commune: owner.owner_commune,
             address_region: owner.owner_region,
             phone: owner.owner_phone,
             email: owner.owner_email,
+            nationality: owner.owner_nationality,
           };
 
           // Add type-specific fields
@@ -1317,13 +1359,11 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       // Mantener todos los demás campos, tieneBodega/metrosBodega/ubicacionBodega condicionales
 
                     } else {
-                      // Casa, Departamento, Local Comercial - Campos tradicionales completos
-                      // Limpiar campos específicos que no aplican
-                      updatedFormData.tieneBodega = 'No';
-                      updatedFormData.metrosBodega = '';
-                      updatedFormData.ubicacionBodega = '';
-                      updatedFormData.numeroBodega = '';
+                      // Casa, Departamento - Campos tradicionales completos
+                      // Para Casa y Departamento, mantener campos de bodega ya que son permitidos
+                      // Limpiar solo parcela_number que no aplica
                       updatedFormData.parcela_number = '';
+                      // Mantener tieneBodega, metrosBodega, ubicacionBodega, numeroBodega
                       // Mantener bedrooms, bathrooms, estacionamientos, metrosUtiles, metrosTotales, terraza
                     }
 
@@ -1847,7 +1887,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     </label>
                     <select
                       value={formData.tieneBodega}
-                      onChange={(e) => setFormData({ ...formData, tieneBodega: e.target.value, metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega })}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        tieneBodega: e.target.value,
+                        metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega,
+                        ubicacionBodega: e.target.value === 'No' ? '' : formData.ubicacionBodega
+                      })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     >
                       <option value="No">No</option>
@@ -2246,6 +2291,34 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         )}
                       </div>
 
+                      {/* Nacionalidad del Propietario */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Nacionalidad del Propietario *
+                        </label>
+                        <select
+                          required={owner.owner_type === 'natural'}
+                          value={owner.owner_nationality || ''}
+                          onChange={(e) => updateOwner(owner.id, 'owner_nationality', e.target.value)}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors[`owner_${owner.id}_nationality`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="">Seleccionar nacionalidad</option>
+                          {NATIONALITIES.map((nationality) => (
+                            <option key={nationality} value={nationality}>
+                              {nationality}
+                            </option>
+                          ))}
+                        </select>
+                        {errors[`owner_${owner.id}_nationality`] && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            {errors[`owner_${owner.id}_nationality`]}
+                          </p>
+                        )}
+                      </div>
+
                       {/* Estado Civil */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2572,6 +2645,31 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         {errors[`owner_${owner.id}_address_number`]}
                       </p>
                     )}
+                  </div>
+
+                  {/* N° Depto/Casa/Oficina (Opcional) */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      N° Depto/Casa/Oficina (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={owner.owner_apartment_number || ''}
+                      onChange={(e) => updateOwner(owner.id, 'owner_apartment_number', e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        errors[`owner_${owner.id}_apartment_number`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 405B"
+                    />
+                    {errors[`owner_${owner.id}_apartment_number`] && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors[`owner_${owner.id}_apartment_number`]}
+                      </p>
+                    )}
+                    <p className="mt-1 text-sm text-gray-600">
+                      Completa si aplica
+                    </p>
                   </div>
 
                   {/* Región y Comuna del Propietario */}

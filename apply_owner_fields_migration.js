@@ -1,93 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+// Script to apply the owner nationality and apartment number migration
+import fs from 'fs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+console.log('📋 Migration: Add nationality and apartment_number columns to rental_owners table');
+console.log('Copy and paste the following SQL into your Supabase SQL Editor:');
+console.log('https://supabase.com/dashboard/project/phnkervuiijqmapgswkc/sql');
+console.log('');
+console.log('=' .repeat(80));
 
-// Configurar Supabase
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Variables de entorno faltantes:');
-  console.error('- VITE_SUPABASE_URL');
-  console.error('- SUPABASE_SERVICE_ROLE_KEY o VITE_SUPABASE_ANON_KEY');
-  process.exit(1);
+// Read and display the migration file
+try {
+  const migrationSQL = fs.readFileSync('supabase/migrations/20251107113204_add_owner_nationality_and_apartment_number.sql', 'utf8');
+  console.log(migrationSQL);
+} catch (error) {
+  console.error('❌ Error reading migration file:', error);
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-async function applyMigration() {
-  try {
-    console.log('🚀 Aplicando migración de campos del propietario...');
-
-    // Leer el archivo de migración
-    const migrationPath = join(__dirname, '20251015130000_add_owner_fields_to_properties.sql');
-    const migrationSQL = readFileSync(migrationPath, 'utf8');
-
-    console.log('📄 Ejecutando migración SQL...');
-
-    // Ejecutar la migración usando rpc (función SQL)
-    const { data, error } = await supabase.rpc('exec_sql', {
-      sql: migrationSQL
-    });
-
-    if (error) {
-      console.error('❌ Error aplicando migración:', error);
-
-      // Si rpc no funciona, intentar ejecutar directamente
-      console.log('🔄 Intentando método alternativo...');
-
-      // Dividir la migración en sentencias individuales
-      const statements = migrationSQL
-        .split(';')
-        .map(stmt => stmt.trim())
-        .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
-
-      for (const statement of statements) {
-        if (statement.trim()) {
-          console.log(`⚡ Ejecutando: ${statement.substring(0, 50)}...`);
-
-          const { error: stmtError } = await supabase.rpc('exec_sql', {
-            sql: statement + ';'
-          });
-
-          if (stmtError) {
-            console.error(`❌ Error en statement:`, stmtError);
-            // Continuar con el siguiente statement
-          }
-        }
-      }
-    } else {
-      console.log('✅ Migración aplicada exitosamente');
-    }
-
-    // Verificar que los campos se crearon
-    console.log('🔍 Verificando campos creados...');
-
-    const { data: columns, error: columnsError } = await supabase
-      .from('information_schema.columns')
-      .select('column_name')
-      .eq('table_name', 'properties')
-      .in('column_name', [
-        'owner_type',
-        'owner_first_name',
-        'owner_company_name',
-        'owner_representative_first_name'
-      ]);
-
-    if (columnsError) {
-      console.error('❌ Error verificando columnas:', columnsError);
-    } else {
-      console.log('✅ Columnas encontradas:', columns?.map(c => c.column_name));
-    }
-
-  } catch (error) {
-    console.error('❌ Error general:', error);
-    process.exit(1);
-  }
-}
-
-applyMigration();
+console.log('=' .repeat(80));
+console.log('');
+console.log('📝 Instructions:');
+console.log('1. Go to https://supabase.com/dashboard/project/phnkervuiijqmapgswkc/sql');
+console.log('2. Create a new query');
+console.log('3. Copy and paste the SQL above');
+console.log('4. Click "Run" to execute the migration');
+console.log('');
+console.log('✅ This migration will:');
+console.log('   - Add nationality column (required, default "Chilena")');
+console.log('   - Add apartment_number column (optional, varchar 16)');
+console.log('   - Add comments documenting the purpose of each column');

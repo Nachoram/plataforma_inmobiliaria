@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './Layout';
 import { ProtectedRoute } from './ProtectedRoute';
+import { AuthErrorHandler } from './auth/AuthErrorHandler';
 import { useRoutePreloader } from '../hooks/useRoutePreloader';
 import ErrorBoundary from './common/ErrorBoundary';
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
@@ -19,6 +20,7 @@ import { RentalApplicationPage } from './properties/RentalApplicationPage';
 
 // Application components
 import { PostulationAdminPanel } from './applications/PostulationAdminPanel';
+import { PostulantAdminPanel } from './applications/PostulantAdminPanel';
 
 // Diagnostic components - keep loaded
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
@@ -51,7 +53,8 @@ export const AppContent: React.FC = () => {
 
   return (
     <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
-      <Routes>
+      <AuthErrorHandler>
+        <Routes>
       {/* Public routes without layout */}
       <Route path="/auth" element={<AuthPage />} />
 
@@ -140,6 +143,14 @@ export const AppContent: React.FC = () => {
         </ProtectedRoute>
       } />
 
+      <Route path="/my-applications/:applicationId/admin" element={
+        <ProtectedRoute>
+          <Layout>
+            <PostulantAdminPanel />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
       <Route path="/contracts" element={
         <ProtectedRoute>
           <Layout>
@@ -177,7 +188,8 @@ export const AppContent: React.FC = () => {
 
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
+      </AuthErrorHandler>
     </ErrorBoundary>
   );
 };

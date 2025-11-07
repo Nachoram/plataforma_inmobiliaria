@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { sendWebhookGET } from '../../lib/webhook';
 import toast from 'react-hot-toast';
 
 // ========================================================================
@@ -179,6 +180,13 @@ export const PostulationAdminPanel: React.FC = () => {
   // Estados para gestión del contrato
   const [showContractModal, setShowContractModal] = useState(false);
   const [savingContract, setSavingContract] = useState(false);
+  const [contractModalKey, setContractModalKey] = useState(0);
+
+  // Función para abrir el modal de contrato de manera estable
+  const handleOpenContractModal = () => {
+    setContractModalKey(prev => prev + 1); // Fuerza una nueva instancia del modal
+    setShowContractModal(true);
+  };
 
   const fetchPostulationData = async () => {
     try {
@@ -325,18 +333,6 @@ export const PostulationAdminPanel: React.FC = () => {
               : applicant.net_monthly_income_clp || 0
           }));
 
-          // Procesar datos de avales según entity_type
-          guarantorsData = guarantors.map(guarantor => ({
-            ...guarantor,
-            // Para mostrar el nombre correcto según el tipo de entidad
-            display_name: guarantor.entity_type === 'natural'
-              ? `${guarantor.first_name || ''} ${guarantor.paternal_last_name || ''} ${guarantor.maternal_last_name || ''}`.trim()
-              : guarantor.company_name || 'Empresa sin nombre',
-            // Para mostrar el ingreso correcto según el tipo de entidad
-            display_income: guarantor.entity_type === 'natural'
-              ? guarantor.monthly_income || 0
-              : guarantor.net_monthly_income_clp || 0
-          }));
         }
       } catch (error) {
         console.warn('⚠️ Error accediendo a application_applicants:', error);
@@ -567,27 +563,61 @@ export const PostulationAdminPanel: React.FC = () => {
     }
   };
 
-  // Función para cargar datos del contrato
+  // Función para cargar datos de las condiciones del contrato
   const fetchContractData = async () => {
     if (!applicationId) return;
 
     try {
       setLoadingContract(true);
 
+
       const { data, error } = await supabase
-        .from('rental_contracts')
+        .from('rental_contract_conditions')
         .select('*')
         .eq('application_id', applicationId)
         .limit(1);
 
       if (error) {
-        console.warn('⚠️ Error cargando datos del contrato:', error.message);
+        console.warn('⚠️ Error cargando condiciones del contrato:', error.message);
         setContractData(null);
       } else {
-        setContractData(data && data.length > 0 ? data[0] : null);
+
+        // Convertir los datos de rental_contract_conditions al formato esperado por el formulario
+        if (data && data.length > 0) {
+          const conditions = data[0];
+          const mockContractData = {
+            id: conditions.id,
+            application_id: applicationId,
+            start_date: conditions.contract_start_date ? new Date(conditions.contract_start_date).toISOString().split('T')[0] : '',
+            validity_period_months: conditions.contract_duration_months || 12,
+            final_amount: conditions.final_rent_price || 0,
+            final_amount_currency: 'clp',
+            guarantee_amount: conditions.guarantee_amount || 0,
+            guarantee_amount_currency: 'clp',
+            has_dicom_clause: conditions.dicom_clause || false,
+            tenant_email: conditions.official_communication_email || '',
+            landlord_email: conditions.landlord_email || '',
+            account_holder_name: conditions.account_holder_name || '',
+            account_number: conditions.account_number || '',
+            account_bank: conditions.bank_name || '',
+            account_type: conditions.account_type || '',
+            has_brokerage_commission: (conditions.brokerage_commission || 0) > 0,
+            broker_name: conditions.broker_name || (conditions.additional_conditions ? conditions.additional_conditions.split(' (RUT: ')[0].replace('Comisión del corredor: ', '') : ''),
+            broker_amount: conditions.brokerage_commission || 0,
+            broker_rut: conditions.broker_rut || (conditions.additional_conditions ? conditions.additional_conditions.split(' (RUT: ')[1]?.replace(')', '') : ''),
+            allows_pets: conditions.accepts_pets || false,
+            is_furnished: conditions.is_furnished || false,
+            status: 'draft',
+            created_at: conditions.created_at,
+            updated_at: conditions.updated_at
+          };
+          setContractData(mockContractData);
+        } else {
+          setContractData(null);
+        }
       }
     } catch (error) {
-      console.warn('⚠️ Error accediendo a rental_contracts:', error);
+      console.warn('⚠️ Error accediendo a rental_contract_conditions:', error);
       setContractData(null);
     } finally {
       setLoadingContract(false);
@@ -662,14 +692,84 @@ export const PostulationAdminPanel: React.FC = () => {
     setShowAuditHistory(!showAuditHistory);
   };
 
-  // Función para crear/actualizar contrato
+  // Función para crear/actualizar condiciones del contrato
   const saveContract = async (contractFormData: ContractFormData) => {
     if (!applicationId) return;
 
     try {
+      // Agregar un pequeño delay para estabilizar el estado antes de mostrar loading
+      await new Promise(resolve => setTimeout(resolve, 100));
       setSavingContract(true);
 
-      const contractPayload = {
+      // Preparar datos para guardar en rental_contract_conditions
+      const conditionsPayload = {
+        application_id: applicationId,
+        contract_duration_months: contractFormData.validity_period_months,
+        monthly_payment_day: 1, // Día de pago por defecto, podría ser configurable después
+        final_rent_price: contractFormData.final_amount, // Mantener como decimal
+        brokerage_commission: contractFormData.has_brokerage_commission ? contractFormData.broker_amount || 0 : 0, // Mantener como decimal
+        guarantee_amount: contractFormData.guarantee_amount, // Mantener como decimal
+        official_communication_email: contractFormData.tenant_email, // Usar email del arrendatario como comunicación oficial
+        accepts_pets: contractFormData.allows_pets,
+        dicom_clause: contractFormData.has_dicom_clause,
+        additional_conditions: contractFormData.has_brokerage_commission
+          ? `Comisión del corredor: ${contractFormData.broker_name} (RUT: ${contractFormData.broker_rut})`
+          : null,
+        // Nuevas columnas agregadas por migraciones posteriores
+        contract_start_date: contractFormData.start_date,
+        broker_name: contractFormData.has_brokerage_commission ? contractFormData.broker_name : 'Sin corredor',
+        broker_rut: contractFormData.has_brokerage_commission ? contractFormData.broker_rut : 'Sin RUT',
+        account_holder_name: contractFormData.account_holder_name || '',
+        account_holder_rut: '', // No está en el formulario actual
+        bank_name: contractFormData.account_bank || '',
+        account_type: contractFormData.account_type || '',
+        account_number: contractFormData.account_number || '',
+        payment_method: 'transferencia_bancaria', // Valor por defecto
+        landlord_email: contractFormData.landlord_email || '',
+        is_furnished: contractFormData.is_furnished || false,
+        updated_at: new Date().toISOString()
+      };
+
+
+      // Verificar si ya existen condiciones para esta aplicación
+      const { data: existingConditions, error: checkError } = await supabase
+        .from('rental_contract_conditions')
+        .select('id')
+        .eq('application_id', applicationId)
+        .limit(1);
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.warn('⚠️ Error verificando condiciones existentes:', checkError);
+      }
+
+      let result;
+      if (existingConditions && existingConditions.length > 0) {
+        // Actualizar condiciones existentes
+        result = await supabase
+          .from('rental_contract_conditions')
+          .update(conditionsPayload)
+          .eq('application_id', applicationId)
+          .select()
+          .single();
+      } else {
+        // Crear nuevas condiciones
+        result = await supabase
+          .from('rental_contract_conditions')
+          .insert([conditionsPayload])
+          .select()
+          .single();
+      }
+
+      const { data, error } = result;
+
+      if (error) {
+        console.error('Error guardando condiciones del contrato:', error);
+        throw error;
+      }
+
+      // Actualizar estado local (simular que tenemos un contrato con los datos guardados)
+      const mockContractData = {
+        id: data.id,
         application_id: applicationId,
         start_date: contractFormData.start_date,
         validity_period_months: contractFormData.validity_period_months,
@@ -685,60 +785,35 @@ export const PostulationAdminPanel: React.FC = () => {
         account_bank: contractFormData.account_bank,
         account_type: contractFormData.account_type,
         has_brokerage_commission: contractFormData.has_brokerage_commission,
-        broker_name: contractFormData.has_brokerage_commission ? contractFormData.broker_name : null,
-        broker_amount: contractFormData.has_brokerage_commission ? contractFormData.broker_amount : null,
-        broker_rut: contractFormData.has_brokerage_commission ? contractFormData.broker_rut : null,
+        broker_name: contractFormData.broker_name,
+        broker_amount: contractFormData.broker_amount,
+        broker_rut: contractFormData.broker_rut,
         allows_pets: contractFormData.allows_pets,
         is_furnished: contractFormData.is_furnished,
         status: 'draft',
-        created_at: contractData?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: data.created_at,
+        updated_at: data.updated_at
       };
 
-      let result;
-      if (contractData?.id) {
-        // Actualizar contrato existente
-        result = await supabase
-          .from('rental_contracts')
-          .update(contractPayload)
-          .eq('id', contractData.id)
-          .select()
-          .single();
-      } else {
-        // Crear nuevo contrato
-        result = await supabase
-          .from('rental_contracts')
-          .insert([contractPayload])
-          .select()
-          .single();
-      }
-
-      const { data, error } = result;
-
-      if (error) {
-        console.error('Error guardando contrato:', error);
-        throw error;
-      }
-
-      // Actualizar estado local
-      setContractData(data);
+      setContractData(mockContractData);
 
       // Actualizar estado de la postulación
       setPostulation(prev => prev ? {
         ...prev,
-        has_contract: true,
+        has_contract_conditions: true, // Cambiar a has_contract_conditions
         contract_signed: false
       } : null);
 
+      console.log('✅ Condiciones del contrato guardadas exitosamente');
+
+      // Close modal after successful save and state reset
+      setSavingContract(false);
       setShowContractModal(false);
 
-      console.log('✅ Contrato guardado exitosamente');
-
     } catch (error: any) {
-      console.error('❌ Error guardando contrato:', error);
-      throw new Error('Error al guardar el contrato');
-    } finally {
+      console.error('❌ Error guardando condiciones del contrato:', error);
       setSavingContract(false);
+      throw new Error('Error al guardar las condiciones del contrato');
     }
   };
 
@@ -888,35 +963,28 @@ export const PostulationAdminPanel: React.FC = () => {
         if (!webhookData) {
           console.warn('⚠️ WEBHOOK: No se pudieron obtener datos para webhook, pero aprobación exitosa');
           toast.success('✅ Postulación aprobada exitosamente');
-          fetchApplicationData();
+          fetchPostulationData();
           fetchAuditHistory();
           return;
         }
 
-        console.log('🚀 WEBHOOK: Enviando POST a /api/webhook/a624f2a0-2294-4c4a-b918-9c02f93964ee (via proxy)');
-        console.log('📦 WEBHOOK: Payload:', JSON.stringify(webhookData, null, 2));
+        console.log('🚀 WEBHOOK: Enviando notificación de aprobación via GET');
+        console.log('📦 WEBHOOK: Datos:', webhookData);
 
-        // Enviar al webhook (usando proxy para evitar CORS en desarrollo)
-        const webhookResponse = await fetch('/api/webhook/a624f2a0-2294-4c4a-b918-9c02f93964ee', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(webhookData),
+        // Enviar notificación de aprobación usando el cliente webhook
+        const webhookSuccess = await sendWebhookGET({
+          ...webhookData,
+          action: 'application_approved',
+          notification_type: 'approval'
         });
 
-        console.log('📡 WEBHOOK: Status response:', webhookResponse.status);
-
-        if (!webhookResponse.ok) {
-          const errorText = await webhookResponse.text();
-          console.error('❌ WEBHOOK: Error response:', errorText);
-          throw new Error(`Error del webhook: ${webhookResponse.status} ${webhookResponse.statusText}`);
+        if (webhookSuccess) {
+          console.log('✅ WEBHOOK: Notificación de aprobación enviada exitosamente');
+        } else {
+          console.warn('⚠️ WEBHOOK: Notificación de aprobación no pudo enviarse, pero aprobación exitosa');
         }
 
-        const webhookResult = await webhookResponse.json();
-        console.log('✅ WEBHOOK: Respuesta exitosa:', webhookResult);
-
-        // Registrar auditoría con webhook exitoso
+        // Registrar auditoría con resultado del webhook
         await logAuditAction(
           'approve',
           'pendiente',
@@ -924,11 +992,12 @@ export const PostulationAdminPanel: React.FC = () => {
           {
             action: 'approve_application_with_contract',
             webhook_data: webhookData,
-            webhook_response: webhookResult,
             has_contract_conditions: true,
-            webhook_success: true
+            webhook_success: webhookSuccess
           },
-          'Postulación aprobada con condiciones de contrato y webhook enviado exitosamente'
+          webhookSuccess
+            ? 'Postulación aprobada con condiciones de contrato y notificación webhook enviada exitosamente'
+            : 'Postulación aprobada con condiciones de contrato (notificación webhook falló)'
         );
 
         toast.success('✅ Postulación aprobada y contrato enviado para generación automática');
@@ -947,15 +1016,15 @@ export const PostulationAdminPanel: React.FC = () => {
             webhook_success: false,
             webhook_error: webhookError.message
           },
-          'Postulación aprobada con condiciones de contrato, pero webhook falló'
+          'Postulación aprobada con condiciones de contrato, pero notificación webhook falló'
         );
 
-        toast.warning('✅ Postulación aprobada, pero hubo un error al enviar el contrato automático. Contacta al administrador.');
+        toast.error('✅ Postulación aprobada, pero hubo un error al enviar la notificación automática. Contacta al administrador.');
       }
 
       // Recargar datos
-      fetchApplicationData();
-      fetchAuditHistory();
+      fetchPostulationData();
+      fetchAuditLog();
 
     } catch (error: any) {
       console.error('❌ Error en handleApproveApplication:', error);
@@ -1211,7 +1280,7 @@ export const PostulationAdminPanel: React.FC = () => {
                 Datos del Contrato de Arriendo
               </h3>
               <button
-                onClick={() => setShowContractModal(true)}
+                onClick={handleOpenContractModal}
                 className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
                   contractData
                     ? 'bg-green-600 text-white hover:bg-green-700'
@@ -1397,7 +1466,7 @@ export const PostulationAdminPanel: React.FC = () => {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No hay contrato creado</h3>
                 <p className="text-gray-500 mb-4">Crea el contrato de arriendo para esta postulación con todos los datos necesarios.</p>
                 <button
-                  onClick={() => setShowContractModal(true)}
+                  onClick={handleOpenContractModal}
                   className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1677,6 +1746,7 @@ export const PostulationAdminPanel: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <ContractModal
+              key={contractModalKey}
               isOpen={showContractModal}
               onClose={() => setShowContractModal(false)}
               onSave={saveContract}
@@ -1773,6 +1843,35 @@ const ContractModal: React.FC<{
       setErrors({});
     }
   }, [isOpen, initialData]);
+
+  // useEffect para estabilizar el estado del modal al cerrar
+  React.useEffect(() => {
+    if (!isOpen) {
+      // Reset form cuando se cierra el modal
+      setFormData({
+        start_date: '',
+        validity_period_months: 12,
+        final_amount: 0,
+        final_amount_currency: 'clp',
+        guarantee_amount: 0,
+        guarantee_amount_currency: 'clp',
+        has_dicom_clause: false,
+        tenant_email: '',
+        landlord_email: '',
+        account_holder_name: '',
+        account_number: '',
+        account_bank: '',
+        account_type: '',
+        has_brokerage_commission: false,
+        broker_name: '',
+        broker_amount: 0,
+        broker_rut: '',
+        allows_pets: false,
+        is_furnished: false
+      });
+      setErrors({});
+    }
+  }, [isOpen]);
 
   const [errors, setErrors] = useState<Partial<ContractFormData>>({});
 

@@ -29,15 +29,42 @@ export interface ApplicationData {
 }
 
 export interface ContractConditions {
-  lease_term_months: number;
-  payment_day: number;
-  final_price_clp: number;
-  broker_commission_clp: number;
-  guarantee_amount_clp: number;
+  contract_duration_months: number;
+  monthly_payment_day: number;
+  final_rent_price: number;
+  brokerage_commission: number;
+  guarantee_amount: number;
   official_communication_email: string;
   accepts_pets: boolean;
   dicom_clause: boolean;
   additional_conditions: string;
+  // Propiedades adicionales para compatibilidad
+  lease_term_months?: number;
+  payment_day?: number;
+  final_price_clp?: number;
+  broker_commission_clp?: number;
+  guarantee_amount_clp?: number;
+}
+
+/**
+ * Función helper para asegurar compatibilidad con nombres antiguos de propiedades
+ */
+function normalizeContractConditions(conditions: ContractConditions): ContractConditions {
+  return {
+    ...conditions,
+    // Compatibilidad hacia atrás - usar nuevos nombres como primarios
+    lease_term_months: conditions.contract_duration_months || conditions.lease_term_months,
+    payment_day: conditions.monthly_payment_day || conditions.payment_day,
+    final_price_clp: conditions.final_rent_price || conditions.final_price_clp,
+    broker_commission_clp: conditions.brokerage_commission || conditions.broker_commission_clp,
+    guarantee_amount_clp: conditions.guarantee_amount || conditions.guarantee_amount_clp,
+    // Asegurar que las nuevas propiedades estén presentes
+    contract_duration_months: conditions.contract_duration_months || conditions.lease_term_months || 12,
+    monthly_payment_day: conditions.monthly_payment_day || conditions.payment_day || 1,
+    final_rent_price: conditions.final_rent_price || conditions.final_price_clp || 0,
+    brokerage_commission: conditions.brokerage_commission || conditions.broker_commission_clp || 0,
+    guarantee_amount: conditions.guarantee_amount || conditions.guarantee_amount_clp || 0,
+  };
 }
 
 export interface ContractSection {
@@ -54,6 +81,9 @@ export function generateContractContent(
   application: ApplicationData,
   conditions: ContractConditions
 ): ContractSection[] {
+  // Normalizar las condiciones para compatibilidad
+  const normalizedConditions = normalizeContractConditions(conditions);
+
   const property = application.properties;
   const owner = property.profiles;
 
@@ -160,27 +190,27 @@ export function generateContractContent(
       title: 'CUARTA: PLAZO Y CONDICIONES',
       content: `
         <h4>Plazo del contrato</h4>
-        <p>El presente contrato se celebra por un plazo de ${conditions.lease_term_months} meses, contados desde la fecha de entrega de las llaves.</p>
+        <p>El presente contrato se celebra por un plazo de ${normalizedConditions.lease_term_months} meses, contados desde la fecha de entrega de las llaves.</p>
 
         <h4 style="margin-top: 15px;">Precio y forma de pago</h4>
-        <p>El precio mensual del arriendo es de ${formatPrice(conditions.final_price_clp)}, pagadero por adelantado el día ${conditions.payment_day} de cada mes.</p>
+        <p>El precio mensual del arriendo es de ${formatPrice(normalizedConditions.final_price_clp)}, pagadero por adelantado el día ${normalizedConditions.payment_day} de cada mes.</p>
 
         <h4 style="margin-top: 15px;">Garantía</h4>
-        <p>Se deja en garantía la cantidad de ${formatPrice(conditions.guarantee_amount_clp)}, equivalente a un mes de arriendo.</p>
+        <p>Se deja en garantía la cantidad de ${formatPrice(normalizedConditions.guarantee_amount_clp)}, equivalente a un mes de arriendo.</p>
 
-        ${conditions.broker_commission_clp > 0 ? `
+        ${normalizedConditions.broker_commission_clp > 0 ? `
         <h4 style="margin-top: 15px;">Comisión corredor</h4>
-        <p>Se deja constancia que el corredor inmobiliario recibe una comisión de ${formatPrice(conditions.broker_commission_clp)}.</p>
+        <p>Se deja constancia que el corredor inmobiliario recibe una comisión de ${formatPrice(normalizedConditions.broker_commission_clp)}.</p>
         ` : ''}
 
         <h4 style="margin-top: 15px;">Comunicaciones oficiales</h4>
-        <p>Todas las comunicaciones oficiales se realizarán al email: ${conditions.official_communication_email}</p>
+        <p>Todas las comunicaciones oficiales se realizarán al email: ${normalizedConditions.official_communication_email}</p>
 
         <h4 style="margin-top: 15px;">Condiciones especiales</h4>
         <ul>
-          <li>Mascotas: ${conditions.accepts_pets ? 'Se permite el ingreso de mascotas al inmueble.' : 'No se permite el ingreso de mascotas al inmueble.'}</li>
-          <li>DICOM: ${conditions.dicom_clause ? 'Se incluye cláusula DICOM (Derecho a Crédito por Cobranza Indebida).' : 'No se incluye cláusula DICOM.'}</li>
-          ${conditions.additional_conditions ? `<li>${conditions.additional_conditions}</li>` : ''}
+          <li>Mascotas: ${normalizedConditions.accepts_pets ? 'Se permite el ingreso de mascotas al inmueble.' : 'No se permite el ingreso de mascotas al inmueble.'}</li>
+          <li>DICOM: ${normalizedConditions.dicom_clause ? 'Se incluye cláusula DICOM (Derecho a Crédito por Cobranza Indebida).' : 'No se incluye cláusula DICOM.'}</li>
+          ${normalizedConditions.additional_conditions ? `<li>${normalizedConditions.additional_conditions}</li>` : ''}
         </ul>
       `,
       editable: true

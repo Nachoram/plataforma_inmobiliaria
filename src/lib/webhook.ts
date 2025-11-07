@@ -560,8 +560,8 @@ class WebhookClient {
 export const webhookClient = new WebhookClient();
 
 // Función alternativa usando GET para webhooks simples
-export const sendWebhookGET = async (data: Record<string, unknown>) => {
-  const baseURL = import.meta.env.DEV 
+export const sendWebhookGET = async (data: Record<string, unknown>): Promise<boolean> => {
+  const baseURL = import.meta.env.DEV
     ? '/api/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb'
     : 'https://primary-production-bafdc.up.railway.app/webhook/8e33ac40-acdd-4baf-a0dc-c2b7f0b886eb';
 
@@ -590,11 +590,14 @@ export const sendWebhookGET = async (data: Record<string, unknown>) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.warn(`⚠️ Webhook GET falló: ${response.status}`, errorText);
+      return false;
     } else {
       const result = await response.text();
       console.log('✅ Webhook GET exitoso:', result);
+      return true;
     }
   } catch (error) {
     console.error('❌ Error en webhook GET:', error);
+    return false;
   }
 };

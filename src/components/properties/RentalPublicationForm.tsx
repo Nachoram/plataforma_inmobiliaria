@@ -73,7 +73,6 @@ interface Owner {
   owner_rut?: string;
   owner_email?: string;
   owner_phone?: string;
-  marital_status?: string;
   property_regime?: string;
   // Campos para persona jurídica
   owner_company_name?: string;
@@ -167,7 +166,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       owner_commune: '',
       owner_nationality: '',
       owner_apartment_number: '',
-      marital_status: '',
       property_regime: '',
       ownership_percentage: undefined
     };
@@ -402,7 +400,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             owner_rut: ownerData.rut || '',
             owner_email: ownerData.email || '',
             owner_phone: ownerData.phone || '',
-            marital_status: ownerData.marital_status || '',
             property_regime: ownerData.property_regime || '',
             // Legal entity fields
             owner_company_name: ownerData.company_name || '',
@@ -499,7 +496,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       owner_commune: '',
       owner_nationality: '',
       owner_apartment_number: '',
-      marital_status: '',
       property_regime: '',
       ownership_percentage: undefined
     };
@@ -593,17 +589,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         if (!owner.owner_maternal_last_name || !owner.owner_maternal_last_name.trim()) newErrors[`owner_${owner.id}_maternal_last_name`] = `${prefix}El apellido materno del propietario es requerido`;
         if (!owner.owner_rut || !owner.owner_rut.trim()) newErrors[`owner_${owner.id}_rut`] = `${prefix}El RUT del propietario es requerido`;
         if (!owner.owner_nationality || !owner.owner_nationality.trim()) newErrors[`owner_${owner.id}_nationality`] = `${prefix}La nacionalidad del propietario es requerida`;
-        if (!owner.marital_status) newErrors[`owner_${owner.id}_marital_status`] = `${prefix}El estado civil es requerido`;
 
         // Validación de email para personas naturales
         if (!owner.owner_email || !owner.owner_email.trim()) {
           newErrors[`owner_${owner.id}_email`] = `${prefix}El email del propietario es requerido`;
         }
 
-        // Validate property_regime if married (solo para personas naturales)
-        if (owner.marital_status === 'casado' && !owner.property_regime) {
-          newErrors[`owner_${owner.id}_property_regime`] = `${prefix}El régimen patrimonial es requerido para personas casadas`;
-        }
       } else if (owner.owner_type === 'juridica') {
         if (!owner.owner_company_name || !owner.owner_company_name.trim()) newErrors[`owner_${owner.id}_company_name`] = `${prefix}La razón social es requerida`;
         if (!owner.owner_company_rut || !owner.owner_company_rut.trim()) newErrors[`owner_${owner.id}_company_rut`] = `${prefix}El RUT de la empresa es requerido`;
@@ -1121,8 +1112,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               paternal_last_name: owner.owner_paternal_last_name,
               maternal_last_name: owner.owner_maternal_last_name || null,
               rut: owner.owner_rut,
-              marital_status: owner.marital_status,
-              property_regime: owner.marital_status === 'casado' ? owner.property_regime : null,
             });
           } else if (owner.owner_type === 'juridica') {
             // Add company fields - explicitly exclude natural person fields
@@ -1132,8 +1121,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               paternal_last_name: null,
               maternal_last_name: null,
               rut: null,
-              marital_status: null,
-              property_regime: null,
               // Company fields
               company_name: owner.owner_company_name,
               company_rut: owner.owner_company_rut,
@@ -2319,63 +2306,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         )}
                       </div>
 
-                      {/* Estado Civil */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Estado Civil *
-                        </label>
-                        <select
-                          required={owner.owner_type === 'natural'}
-                          value={owner.marital_status || ''}
-                          onChange={(e) => {
-                            updateOwner(owner.id, 'marital_status', e.target.value);
-                            updateOwner(owner.id, 'property_regime', '');
-                          }}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors[`owner_${owner.id}_marital_status`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                          }`}
-                        >
-                          <option value="">Seleccionar estado civil</option>
-                          <option value="soltero">Soltero(a)</option>
-                          <option value="casado">Casado(a)</option>
-                          <option value="divorciado">Divorciado(a)</option>
-                          <option value="viudo">Viudo(a)</option>
-                        </select>
-                        {errors[`owner_${owner.id}_marital_status`] && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors[`owner_${owner.id}_marital_status`]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Régimen Patrimonial (condicional) */}
-                      {owner.marital_status === 'casado' && (
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Régimen Patrimonial *
-                          </label>
-                          <select
-                            required
-                            value={owner.property_regime || ''}
-                            onChange={(e) => updateOwner(owner.id, 'property_regime', e.target.value)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                              errors[`owner_${owner.id}_property_regime`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                          >
-                            <option value="">Seleccionar régimen</option>
-                            <option value="sociedad_conyugal">Sociedad conyugal</option>
-                            <option value="separacion_bienes">Separación total de bienes</option>
-                            <option value="participacion_gananciales">Participación en los gananciales</option>
-                          </select>
-                          {errors[`owner_${owner.id}_property_regime`] && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center">
-                              <AlertCircle className="h-4 w-4 mr-1" />
-                              {errors[`owner_${owner.id}_property_regime`]}
-                            </p>
-                          )}
-                        </div>
-                      )}
 
                       {/* Email y Teléfono del Propietario */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

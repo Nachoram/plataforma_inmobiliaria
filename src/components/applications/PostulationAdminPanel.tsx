@@ -7,6 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { sendWebhookGET } from '../../lib/webhook';
 import toast from 'react-hot-toast';
+import ContractSummaryCard from '../contracts/ContractSummaryCard';
 
 // ========================================================================
 // INTERFACES & TYPES
@@ -181,11 +182,182 @@ export const PostulationAdminPanel: React.FC = () => {
   const [showContractModal, setShowContractModal] = useState(false);
   const [savingContract, setSavingContract] = useState(false);
   const [contractModalKey, setContractModalKey] = useState(0);
+  const [showRevertModal, setShowRevertModal] = useState(false);
+
+  // Loading states for contract actions
+  const [isDownloadingContract, setIsDownloadingContract] = useState(false);
+  const [isViewingContract, setIsViewingContract] = useState(false);
+  const [isCancellingContract, setIsCancellingContract] = useState(false);
 
   // Función para abrir el modal de contrato de manera estable
   const handleOpenContractModal = () => {
     setContractModalKey(prev => prev + 1); // Fuerza una nueva instancia del modal
     setShowContractModal(true);
+  };
+
+  // Función para ver el contrato
+  const handleViewContract = async () => {
+    if (!contractData?.signed_contract_url && !contractData?.contract_html) {
+      toast.error('No hay archivo de contrato disponible para visualizar');
+      return;
+    }
+
+    setIsViewingContract(true);
+    try {
+      if (contractData.signed_contract_url) {
+        window.open(contractData.signed_contract_url, '_blank');
+      } else if (contractData.contract_html) {
+        // Abrir en una nueva ventana o modal
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(contractData.contract_html);
+          newWindow.document.close();
+        }
+      }
+    } catch (error) {
+      console.error('Error viewing contract:', error);
+      toast.error('Error al abrir el contrato');
+    } finally {
+      setIsViewingContract(false);
+    }
+  };
+
+  // Función para descargar el contrato
+  const handleDownloadContract = async () => {
+    if (!contractData?.id) {
+      toast.error('No hay contrato disponible para descargar');
+      return;
+    }
+
+    setIsDownloadingContract(true);
+    try {
+      // Use secure download endpoint
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+
+      // Get Supabase URL from environment or construct it
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/download-contract?contract_id=${contractData.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al descargar el contrato');
+      }
+
+      // If it's a redirect (signed_contract_url), follow it
+      if (response.status === 302) {
+        const redirectUrl = response.headers.get('Location');
+        if (redirectUrl) {
+          window.open(redirectUrl, '_blank');
+          toast.success('Contrato abierto en nueva pestaña');
+          return;
+        }
+      }
+
+      // If it's file content, create download
+      const contentType = response.headers.get('content-type');
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `contrato_${postulation.id.slice(-8)}`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+
+      if (contentType?.includes('text/html')) {
+        filename += '.html';
+      } else {
+        filename += '.pdf'; // Default assumption
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Descarga iniciada');
+    } catch (error) {
+      console.error('Error descargando contrato:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al descargar el contrato');
+    } finally {
+      setIsDownloadingContract(false);
+    }
+  };
+
+  // Función para editar contrato (solo si está en draft)
+  const handleEditContract = () => {
+    if (contractData?.status === 'draft') {
+      handleOpenContractModal();
+    } else {
+      toast.error('El contrato no puede ser editado en su estado actual');
+    }
+  };
+
+  // Función para cancelar contrato
+  const handleCancelContract = async () => {
+    if (!contractData?.id) return;
+
+    const confirmed = window.confirm('¿Está seguro de que desea cancelar este contrato? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
+
+    setIsCancellingContract(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/update-contract-status`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contract_id: contractData.id,
+          action: 'cancel',
+          notes: 'Cancelado desde panel administrativo'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al cancelar el contrato');
+      }
+
+      const result = await response.json();
+      toast.success('Contrato cancelado exitosamente');
+      // Recargar datos
+      fetchPostulationData();
+    } catch (error) {
+      console.error('Error cancelando contrato:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al cancelar el contrato');
+    } finally {
+      setIsCancellingContract(false);
+    }
   };
 
   const fetchPostulationData = async () => {
@@ -1039,6 +1211,77 @@ export const PostulationAdminPanel: React.FC = () => {
   };
 
   /**
+   * Maneja la anulación de la aprobación de la postulación
+   */
+  const handleRevertApproval = () => {
+    setShowRevertModal(true);
+  };
+
+  /**
+   * Confirma y ejecuta la anulación de la aprobación
+   */
+  const confirmRevertApproval = async () => {
+    if (!applicationId) {
+      toast.error('No hay aplicación seleccionada');
+      return;
+    }
+
+    try {
+      setShowRevertModal(false);
+      toast.loading('Anulando aprobación...', { id: 'revert-loading' });
+
+      // Obtener usuario actual
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        toast.error('Error de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+
+      console.log('🔄 Anulando aprobación para applicationId:', applicationId);
+
+      // Llamar a la Edge Function
+      const { data, error } = await supabase.functions.invoke('undo-application-approval', {
+        body: {
+          application_id: applicationId,
+          undo_requested_by: user.id,
+          undo_reason: 'Anulado desde panel administrativo'
+        }
+      });
+
+      if (error) {
+        console.error('❌ Error al anular aprobación:', error);
+        toast.error('Error al anular la aprobación');
+        return;
+      }
+
+      if (!data.success) {
+        console.error('❌ Error en respuesta:', data);
+        toast.error(data.error || 'Error al anular la aprobación');
+        return;
+      }
+
+      console.log('✅ Aprobación anulada exitosamente');
+      toast.success('✅ Aprobación anulada exitosamente');
+
+      // Actualizar datos de la postulación
+      fetchPostulationData();
+      fetchAuditHistory();
+
+    } catch (error: any) {
+      console.error('❌ Error en confirmRevertApproval:', error);
+      let errorMessage = 'Error al anular la aprobación';
+
+      if (error.message?.includes('Sesión') || error.message?.includes('session')) {
+        errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      toast.dismiss('revert-loading');
+    }
+  };
+
+  /**
    * Obtiene los datos necesarios para enviar al webhook
    * @param appId ID de la aplicación
    * @returns Datos para el webhook o null si hay error
@@ -1268,6 +1511,42 @@ export const PostulationAdminPanel: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Contract Summary Card - Only show if contract exists */}
+        {contractData && (
+          <div className="mb-8">
+            <ContractSummaryCard
+              status={contractData.status || 'draft'}
+              createdAt={contractData.created_at || postulation.created_at}
+              approvedAt={contractData.approved_at}
+              finalAmount={contractData.final_amount}
+              finalAmountCurrency={contractData.final_amount_currency || 'clp'}
+              guaranteeAmount={contractData.guarantee_amount}
+              guaranteeAmountCurrency={contractData.guarantee_amount_currency || 'clp'}
+              startDate={contractData.start_date}
+              validityPeriodMonths={contractData.validity_period_months}
+              landlordEmail={contractData.landlord_email}
+              tenantEmail={contractData.tenant_email}
+              guarantorEmail={contractData.guarantor_email}
+              signatures={{
+                owner: contractData.owner_signed_at ? new Date(contractData.owner_signed_at) : null,
+                tenant: contractData.tenant_signed_at ? new Date(contractData.tenant_signed_at) : null,
+                guarantor: contractData.guarantor_signed_at ? new Date(contractData.guarantor_signed_at) : null,
+              }}
+              contractUrl={contractData.contract_html}
+              signedContractUrl={contractData.signed_contract_url}
+              onDownload={handleDownloadContract}
+              onView={handleViewContract}
+              onEdit={handleEditContract}
+              onCancel={handleCancelContract}
+              canEdit={contractData.status === 'draft'}
+              canCancel={contractData.status !== 'cancelled' && contractData.status !== 'fully_signed'}
+              isDownloading={isDownloadingContract}
+              isViewing={isViewingContract}
+              isCancelling={isCancellingContract}
+            />
+          </div>
+        )}
 
         {/* Formulario del Contrato */}
         {showContractForm && (
@@ -1704,14 +1983,16 @@ export const PostulationAdminPanel: React.FC = () => {
               <div className="space-y-3">
                 <button
                   onClick={handleApproveApplication}
-                  disabled={!has_contract_conditions}
+                  disabled={!has_contract_conditions || postulation?.status === 'aprobada'}
                   className={`w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
-                    has_contract_conditions
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    (!has_contract_conditions || postulation?.status === 'aprobada')
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                   title={
-                    has_contract_conditions
+                    postulation?.status === 'aprobada'
+                      ? 'Postulación ya aprobada - no se puede aprobar nuevamente'
+                      : has_contract_conditions
                       ? 'Aprobar postulación y enviar contrato para generación automática'
                       : 'Primero debe crear las condiciones del contrato'
                   }
@@ -1721,6 +2002,19 @@ export const PostulationAdminPanel: React.FC = () => {
                   </svg>
                   <span>Aprobar Postulación</span>
                 </button>
+
+                {postulation?.status === 'aprobada' && (
+                  <button
+                    onClick={handleRevertApproval}
+                    className="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+                    title="Revertir la aprobación de esta postulación"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    <span>Anular Aprobación</span>
+                  </button>
+                )}
 
                 <button className="w-full bg-yellow-600 text-white px-4 py-3 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1757,6 +2051,42 @@ export const PostulationAdminPanel: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmación para anular aprobación */}
+      {showRevertModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                ¿Anular Aprobación?
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Esta acción revertirá el estado de la postulación a "pendiente" y eliminará el contrato generado si existe (solo si no está firmado). Esta acción no se puede deshacer.
+              </p>
+              <div className="flex space-x-3 justify-center">
+                <button
+                  onClick={() => setShowRevertModal(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmRevertApproval}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Anular Aprobación
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

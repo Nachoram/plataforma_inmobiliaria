@@ -727,6 +727,13 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
     console.log('✅ [PostulationAdminPanel] Iniciando proceso de GENERACIÓN DE CONTRATO');
     console.log('👤 Perfil seleccionado:', selectedProfile);
 
+    // Obtener el usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('No se pudo obtener la información del usuario actual');
+      return;
+    }
+
     // Actualizar estado de la aplicación y enviar a webhook
     setIsAcceptingApplication(true);
     try {
@@ -784,7 +791,8 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
         .update({
           status: 'aprobada',
           updated_at: new Date().toISOString(),
-          approved_at: new Date().toISOString()
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
         })
         .eq('id', selectedProfile.applicationId);
 
@@ -793,6 +801,39 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
         const userMessage = getUserFriendlyErrorMessage(error, 'Error al actualizar el estado de la postulación');
         toast.error(userMessage);
         return;
+      }
+
+      // Crear contrato automáticamente
+      console.log('🏗️ Creando contrato automáticamente para la postulación aprobada...');
+      console.log('👤 Usuario actual:', user?.id);
+      console.log('📄 Application ID:', selectedProfile.applicationId);
+
+      try {
+        const { data: contractId, error: contractError } = await supabase
+          .rpc('create_rental_contract_on_approval', {
+            p_application_id: selectedProfile.applicationId,
+            p_approved_by: user?.id
+          });
+
+        console.log('📨 RPC Response - Data:', contractId, 'Error:', contractError);
+
+        if (contractError) {
+          console.error('❌ Error creando contrato automáticamente:', contractError);
+          console.error('❌ Detalles del error:', {
+            message: contractError.message,
+            details: contractError.details,
+            hint: contractError.hint,
+            code: contractError.code
+          });
+          toast.warning('Postulación aprobada, pero hubo un error creando el contrato automáticamente. El contrato se puede crear manualmente después.');
+        } else {
+          console.log('✅ Contrato creado automáticamente:', contractId);
+          toast.success('Postulación aprobada y contrato creado automáticamente.');
+        }
+      } catch (contractError) {
+        console.error('❌ Error en la llamada RPC para crear contrato:', contractError);
+        console.error('❌ Detalles del error:', contractError);
+        toast.warning('Postulación aprobada, pero no se pudo crear el contrato automáticamente.');
       }
 
       toast.success('Postulación aceptada correctamente. Contrato enviado para generación automática.');
@@ -816,6 +857,80 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
       toast.error(errorMessage);
     } finally {
       setIsAcceptingApplication(false);
+    }
+  };
+
+  /**
+   * Maneja el click en "Anular Aprobación"
+   * Solo disponible si status = 'Aprobado'
+   */
+  const handleRevertApproval = async () => {
+    if (!selectedProfile) {
+      toast.error('No hay postulación seleccionada');
+      return;
+    }
+
+    // Validaciones de reglas de negocio
+    if (selectedProfile.status !== 'Aprobado') {
+      toast.error('Solo se pueden anular postulaciones en estado "Aprobado"');
+      return;
+    }
+
+    if (selectedProfile.contractSigned) {
+      toast.error('No se puede anular una postulación con contrato firmado');
+      return;
+    }
+
+    // Confirmación del usuario
+    const confirmed = window.confirm(
+      `¿Estás seguro de anular la aprobación de esta postulación?\n\n` +
+      `• Se eliminará cualquier contrato generado automáticamente\n` +
+      `• La postulación volverá al estado "En Revisión"\n` +
+      `• Se podrá aprobar nuevamente después`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    console.log('🔄 [PostulationAdminPanel] Iniciando proceso de ANULAR APROBACIÓN');
+    console.log('👤 Perfil seleccionado:', selectedProfile);
+
+    setIsUndoingAcceptance(true);
+    try {
+      // Llamar a la función RPC para revertir la aprobación
+      const { data: result, error: revertError } = await supabase
+        .rpc('revert_application_approval', {
+          p_application_id: selectedProfile.applicationId,
+          p_reverted_by: user?.id
+        });
+
+      if (revertError) {
+        console.error('❌ Error revirtiendo aprobación:', revertError);
+        toast.error('Error al anular la aprobación. Por favor, intenta nuevamente.');
+        return;
+      }
+
+      if (result) {
+        console.log('✅ Aprobación revertida exitosamente');
+        toast.success('Aprobación anulada correctamente. La postulación vuelve a estar en revisión.');
+
+        // Cerrar modal de perfil
+        setIsProfileModalOpen(false);
+        setSelectedProfile(null);
+
+        // Recargar postulaciones para reflejar cambios
+        fetchPostulations();
+      } else {
+        toast.error('No se pudo anular la aprobación. Verifica que la postulación esté aprobada.');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error en handleRevertApproval:', error);
+      formatErrorDetails(error, 'handleRevertApproval - Error revirtiendo aprobación');
+      toast.error('Error al anular la aprobación. Por favor, intenta nuevamente.');
+    } finally {
+      setIsUndoingAcceptance(false);
     }
   };
 
@@ -1580,7 +1695,7 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Botón: Aceptar Postulación */}
                   <button
                     onClick={handleAcceptClick}
@@ -1768,7 +1883,7 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Botón: Deshacer Aceptación */}
                     <button
                       onClick={handleUndoAcceptance}
@@ -1793,6 +1908,39 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
                       </div>
                     </button>
 
+                    {/* Botón: Anular Aprobación */}
+                    <button
+                      onClick={handleRevertApproval}
+                      disabled={isUndoingAcceptance || selectedProfile.contractSigned}
+                      className={`group relative font-bold py-6 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+                        !selectedProfile.contractSigned && !isUndoingAcceptance
+                          ? 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:shadow-xl hover:from-red-700 hover:to-red-800'
+                          : 'bg-gray-400 text-gray-200'
+                      }`}
+                      title={
+                        selectedProfile.contractSigned
+                          ? 'No se puede anular con contrato firmado'
+                          : 'Elimina contrato y revierte a "En Revisión"'
+                      }
+                    >
+                      <div className="flex flex-col items-center space-y-3">
+                        {isUndoingAcceptance ? (
+                          <>
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+                            <span className="text-base">Procesando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <X className="h-10 w-10" />
+                            <div className="text-center">
+                              <span className="text-base block">Anular Aprobación</span>
+                              <span className="text-xs opacity-90 block mt-1">Elimina contrato creado</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </button>
+
                     {/* Botón: Modificar Aceptación */}
                     <button
                       onClick={handleModifyAcceptance}
@@ -1811,7 +1959,8 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
                   {/* Información adicional */}
                   <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
                     <p className="text-xs text-gray-700">
-                      <strong>ℹ️ Importante:</strong> Deshacer la aceptación revertirá el estado y puede requerir regenerar el contrato. 
+                      <strong>ℹ️ Importante:</strong> Deshacer la aceptación revierte el estado a "En Revisión".
+                      Anular aprobación elimina el contrato creado y revierte el estado.
                       Modificar la aceptación te permite ajustar términos sin cambiar el estado principal.
                     </p>
                   </div>

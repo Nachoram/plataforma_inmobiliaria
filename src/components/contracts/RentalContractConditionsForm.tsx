@@ -72,6 +72,9 @@ interface ContractConditionsFormData {
   // DICOM clause
   dicom_clause: boolean;
 
+  // Auto renewal clause
+  autoRenewalClause: boolean;
+
   // Email notification
   notification_email: string;
 
@@ -288,6 +291,7 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
     property_type_characteristics_id: (property as any)?.property_type_characteristics_id || '',
     special_conditions_house: '',
     dicom_clause: false,
+    autoRenewalClause: false,
     notification_email: '',
     payment_conditions: '',
     bank_name: '',
@@ -654,183 +658,7 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
     }
   };
 
-  /**
-   * Crea o actualiza el registro del contrato en rental_contracts
-   */
-  const createOrUpdateRentalContract = async (applicationId: string) => {
-    try {
-      console.log('📝 Creando/actualizando registro en rental_contracts...');
 
-      if (!user?.id) {
-        console.error('❌ No hay usuario autenticado');
-        throw new Error('Usuario no autenticado');
-      }
-
-      // Verificar si ya existe un contrato
-      const { data: existingContract, error: checkError } = await supabase
-        .from('rental_contracts')
-        .select('id, status, version')
-        .eq('application_id', applicationId)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('❌ Error verificando contrato existente:', checkError);
-        throw checkError;
-      }
-
-      if (existingContract) {
-        console.log('📄 Contrato existente encontrado:', existingContract.id);
-
-        // Actualizar contrato existente
-        const { data: updatedContract, error: updateError } = await supabase
-          .from('rental_contracts')
-          .update({
-            status: 'draft',
-            updated_at: new Date().toISOString(),
-            version: (existingContract.version || 1) + 1,
-            notes: `Contrato regenerado el ${new Date().toLocaleString('es-CL')}`,
-          })
-          .eq('id', existingContract.id)
-          .select()
-          .single();
-
-        if (updateError) {
-          console.error('❌ Error actualizando contrato:', updateError);
-          throw updateError;
-        }
-
-        console.log('✅ Contrato actualizado:', updatedContract.id);
-        return updatedContract;
-
-      } else {
-        console.log('🆕 Creando nuevo contrato...');
-
-        // Crear nuevo registro
-        const { data: newContract, error: insertError } = await supabase
-          .from('rental_contracts')
-          .insert({
-            application_id: applicationId,
-            status: 'draft',
-            created_by: user.id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            contract_format: 'hybrid',
-            version: 1,
-            notes: `Contrato generado el ${new Date().toLocaleString('es-CL')}`,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('❌ Error creando contrato:', insertError);
-          throw insertError;
-        }
-
-        console.log('✅ Nuevo contrato creado:', newContract.id);
-        return newContract;
-      }
-
-    } catch (error) {
-      console.error('❌ Error en createOrUpdateRentalContract:', error);
-      throw error;
-    }
-  };
-
-  /**
-   * Mapea los datos del formulario a la estructura de la base de datos rental_contract_conditions
-   */
-  const mapFormDataToDatabase = (formData: ContractConditionsFormData, currentUserId: string, applicationId: string) => {
-    console.log('🔄 [mapFormDataToDatabase] Mapeando datos del formulario a estructura de BD');
-
-    // Conversión y validación de campos numéricos
-    const finalRentPrice = formData.final_rent_price === '' ? 0 : Number(formData.final_rent_price);
-    const warrantyAmount = formData.warranty_amount === '' ? 0 : Number(formData.warranty_amount);
-    const brokerCommission = formData.broker_commission === '' ? 0 : Number(formData.broker_commission);
-    const durationMonths = Number(formData.duration);
-
-    // Validaciones requeridas por la tabla rental_contract_conditions
-    if (!applicationId) {
-      throw new Error('ID de aplicación es requerido');
-    }
-    if (!formData.broker_name?.trim()) {
-      throw new Error('El nombre del corredor es obligatorio');
-    }
-    if (!formData.broker_rut?.trim()) {
-      throw new Error('El RUT del corredor es obligatorio');
-    }
-    if (!formData.contract_start_date) {
-      throw new Error('La fecha de inicio del contrato es obligatoria');
-    }
-    if (isNaN(finalRentPrice) || finalRentPrice <= 0) {
-      throw new Error('El precio final del arriendo debe ser mayor a 0');
-    }
-    if (isNaN(warrantyAmount) || warrantyAmount <= 0) {
-      throw new Error('El monto de garantía debe ser mayor a 0');
-    }
-    if (isNaN(durationMonths) || durationMonths <= 0) {
-      throw new Error('La duración del contrato debe ser mayor a 0 meses');
-    }
-    if (!formData.payment_day || formData.payment_day < 1 || formData.payment_day > 31) {
-      throw new Error('El día de pago debe estar entre 1 y 31');
-    }
-    if (!formData.notification_email?.trim()) {
-      throw new Error('El correo electrónico de notificación es obligatorio');
-    }
-
-    // Validación de formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.notification_email.trim())) {
-      throw new Error('El formato del correo electrónico no es válido');
-    }
-
-    // Construir objeto de datos para inserción/actualización
-    const contractData = {
-      // Campos requeridos por la tabla
-      application_id: applicationId,
-      final_rent_price: finalRentPrice,
-      broker_name: formData.broker_name.trim(),
-      broker_rut: formData.broker_rut.trim(),
-      contract_duration_months: durationMonths,
-      monthly_payment_day: formData.payment_day,
-      guarantee_amount: warrantyAmount,
-      contract_start_date: formData.contract_start_date,
-
-      // Campos opcionales con valores por defecto
-      accepts_pets: Boolean(formData.allows_pets),
-      additional_conditions: formData.special_conditions_house?.trim() || null,
-      brokerage_commission: brokerCommission || null,
-
-      // Información bancaria
-      bank_name: formData.bank_name?.trim() || null,
-      account_type: formData.account_type?.trim() || null,
-      account_number: formData.account_number?.trim() || null,
-      account_holder_name: formData.account_holder_name?.trim() || null,
-      account_holder_rut: formData.account_holder_rut?.trim() || null,
-
-      // Método de pago
-      payment_method: (formData.payment_method === 'transferencia_bancaria' || formData.payment_method === 'plataforma')
-                     ? formData.payment_method
-                     : 'transferencia_bancaria',
-
-      // Campos adicionales de versiones recientes
-      dicom_clause: Boolean(formData.dicom_clause),
-      notification_email: formData.notification_email.trim(),
-
-      // Metadata
-      created_by: currentUserId,
-      updated_at: new Date().toISOString(),
-    };
-
-    console.log('✅ [mapFormDataToDatabase] Datos mapeados exitosamente:', {
-      application_id: contractData.application_id,
-      final_rent_price: contractData.final_rent_price,
-      broker_name: contractData.broker_name,
-      has_banking_info: !!(contractData.bank_name && contractData.account_number),
-      has_additional_conditions: !!contractData.additional_conditions
-    });
-
-    return contractData;
-  };
 
   // ========================================================================
   // FORM SUBMISSION
@@ -945,16 +773,17 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
   };
 
   /**
-   * Maneja la generación y envío del contrato
+   * Maneja la creación del contrato a través de condiciones contractuales
+   * El trigger se encarga automáticamente de crear el contrato en rental_contracts
    */
   const handleGenerateContract = async () => {
     if (isGenerating) {
-      console.log('⚠️ Ya hay una generación de contrato en proceso.');
+      console.log('⚠️ Ya hay una creación de contrato en proceso.');
       return;
     }
 
     try {
-      console.log('🚀 [handleGenerateContract] INICIANDO proceso de generación de contrato');
+      console.log('🚀 [handleGenerateContract] INICIANDO creación de contrato vía condiciones');
 
       setIsGenerating(true);
       setError(null);
@@ -972,293 +801,133 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
 
       console.log('✅ Validación final del formulario exitosa');
 
-      // 1. Validación previa: verificar que la aplicación existe
-      console.log('🔍 Verificando existencia de la aplicación...');
-      const { data: appExists, error: appCheckError } = await supabase
+      // Verificar permisos: usuario debe ser propietario de la propiedad
+      console.log('🔐 Verificando permisos...');
+      const { data: appData, error: appError } = await supabase
         .from('applications')
-        .select('id')
+        .select(`
+          id,
+          property_id,
+          properties!inner(owner_id)
+        `)
         .eq('id', selectedProfile.applicationId)
         .single();
 
-      if (appCheckError || !appExists) {
-        console.error('❌ La aplicación no existe:', selectedProfile.applicationId);
-        toast.error('La postulación seleccionada no existe o ha sido eliminada. Por favor, recarga la página e intenta nuevamente.');
+      if (appError || !appData) {
+        console.error('❌ Error obteniendo datos de la aplicación:', appError);
+        toast.error('Error al verificar permisos de la aplicación');
         setIsGenerating(false);
         return;
       }
 
-      console.log('✅ Aplicación verificada:', appExists.id);
-
-      // 2. Obtener datos de características con validación robusta
-      console.log('🔍 Obteniendo datos de características...');
-      let characteristicIds;
-      try {
-        characteristicIds = await fetchContractData(selectedProfile.applicationId);
-        console.log('✅ Datos de características obtenidos:', characteristicIds);
-      } catch (fetchError: any) {
-        console.error('❌ Error al obtener datos de características:', fetchError);
-        const errorMessage = fetchError.message || 'Error al obtener datos de la propiedad y aplicación';
-        toast.error(`Error de datos: ${errorMessage}`);
+      if (appData.properties.owner_id !== user?.id) {
+        console.error('❌ Usuario no es propietario de la propiedad');
+        toast.error('Solo el propietario de la propiedad puede crear contratos');
         setIsGenerating(false);
         return;
       }
 
-      // Validación defensiva de datos de características
-      if (!validateCharacteristicIds(characteristicIds)) {
-        toast.error('Los datos requeridos para generar el contrato están incompletos. Verifique la configuración de la propiedad y el propietario.');
-        setIsGenerating(false);
-        return;
-      }
-
-      // 4. Obtener property_type_characteristics
-      const validatedPropertyTypeId = safeUUIDQuery(
-        characteristicIds.property_type_characteristics_id,
-        'property_type_characteristics',
-        'id'
-      );
-
-      const { data: propertyTypeData, error: propertyTypeError } = await supabase
-        .from('property_type_characteristics')
-        .select('name')
-        .eq('id', validatedPropertyTypeId)
+      // Verificar que no existe ya un contrato para esta aplicación
+      console.log('🔍 Verificando que no existe contrato previo...');
+      const { data: existingContract, error: contractCheckError } = await supabase
+        .from('rental_contracts')
+        .select('id')
+        .eq('application_id', selectedProfile.applicationId)
         .maybeSingle();
 
-      if (propertyTypeError) {
-        formatErrorDetails(propertyTypeError, 'handleGenerateContract - Error obteniendo property_type_characteristics');
-        toast.error('Error al obtener datos del tipo de propiedad');
+      if (contractCheckError) {
+        console.error('❌ Error verificando contratos existentes:', contractCheckError);
+        toast.error('Error al verificar contratos existentes');
         setIsGenerating(false);
         return;
       }
 
-      if (!propertyTypeData) {
-        console.error('❌ property_type_characteristics no encontrado');
-        toast.error('No se encontraron las características del tipo de propiedad');
+      if (existingContract) {
+        console.error('❌ Ya existe un contrato para esta aplicación');
+        toast.error('Ya existe un contrato para esta postulación');
         setIsGenerating(false);
         return;
       }
 
-      // 5. Obtener datos de la propiedad para validación
-      const { data: propertyValidationData, error: propertyValidationError } = await supabase
-        .from('applications')
-        .select('property_id, properties!inner(id)')
-        .eq('id', selectedProfile.applicationId)
-        .single();
+      // 1. Preparar datos para las condiciones contractuales
+      console.log('📦 Preparando datos de condiciones contractuales...');
 
-      if (propertyValidationError || !propertyValidationData?.property_id) {
-        console.error('❌ Error obteniendo property_id de la aplicación');
-        toast.error('No se pudo obtener la información de la propiedad de la aplicación');
-        setIsGenerating(false);
-        return;
-      }
-
-      // 6. Obtener datos completos del owner desde rental_owners
-      // NOTA: No usamos rental_owner_characteristics porque rental_owner_characteristic_id
-      // es TEXT (formato "RENTAL_OWNER_XXXXXXX"), no un UUID FK
-      const { data: ownerFullData, error: ownerFullError } = await supabase
-        .from('rental_owners')
-        .select('first_name, paternal_last_name, maternal_last_name, rut, email, phone, rental_owner_characteristic_id')
-        .eq('property_id', propertyValidationData.property_id)
-        .single();
-
-      if (ownerFullError) {
-        formatErrorDetails(ownerFullError, 'handleGenerateContract - Error obteniendo datos completos del owner');
-        toast.error('Error al obtener datos del propietario');
-        setIsGenerating(false);
-        return;
-      }
-
-      if (!ownerFullData) {
-        console.error('❌ Datos completos del owner no encontrados');
-        toast.error('No se encontraron los datos del propietario');
-        setIsGenerating(false);
-        return;
-      }
-
-      // Construir el nombre completo del owner
-      const ownerFullName = `${ownerFullData.first_name} ${ownerFullData.paternal_last_name}${
-        ownerFullData.maternal_last_name ? ' ' + ownerFullData.maternal_last_name : ''
-      }`.trim();
-
-      console.log('✅ Datos completos del owner obtenidos:', { 
-        name: ownerFullName, 
-        rut: ownerFullData.rut,
-        characteristic_id: ownerFullData.rental_owner_characteristic_id
-      });
-
-      // 6. Guardar condiciones del contrato en rental_contract_conditions
-      console.log('💾 Guardando condiciones del contrato en rental_contract_conditions...');
-      const contractConditionsData = mapFormDataToDatabase(formData, user?.id || '', selectedProfile.applicationId);
-
-      // Usar INSERT en lugar de UPSERT para asegurar que el trigger genere el characteristic_id
-      const { data: insertedContractData, error: insertError } = await supabase
-        .from('rental_contract_conditions')
-        .insert(contractConditionsData)
-        .select('id, rental_contract_conditions_characteristic_id, created_at')
-        .single();
-
-      let contractConditionsResult;
-
-      if (insertError) {
-        // Si ya existe un registro, intentar UPDATE
-        if (insertError.code === '23505') { // unique constraint violation
-          console.log('⚠️ Registro ya existe, intentando actualizar...');
-
-          const { data: updatedContractData, error: updateError } = await supabase
-            .from('rental_contract_conditions')
-            .update({
-              ...contractConditionsData,
-              updated_at: new Date().toISOString()
-            })
-            .eq('application_id', selectedProfile.applicationId)
-            .select('id, rental_contract_conditions_characteristic_id, updated_at')
-            .single();
-
-          if (updateError) {
-            formatErrorDetails(updateError, 'handleGenerateContract - Error actualizando condiciones');
-            const errorMessage = getUserFriendlyErrorMessage(updateError, 'Error al actualizar las condiciones del contrato');
-            throw new Error(errorMessage);
-          }
-
-          console.log('✅ Condiciones actualizadas exitosamente');
-          contractConditionsResult = updatedContractData;
-        } else {
-          formatErrorDetails(insertError, 'handleGenerateContract - Error guardando condiciones');
-          const errorMessage = getUserFriendlyErrorMessage(insertError, 'Error al guardar las condiciones del contrato');
-          throw new Error(errorMessage);
-        }
-      } else {
-        console.log('✅ Condiciones guardadas exitosamente');
-        contractConditionsResult = insertedContractData;
-      }
-
-      // Validar que se obtuvo el characteristic_id
-      if (!contractConditionsResult?.rental_contract_conditions_characteristic_id) {
-        console.error('❌ Error crítico: No se pudo obtener rental_contract_conditions_characteristic_id');
-        throw new Error('Error crítico del sistema: No se pudo generar el identificador único del contrato. Contacte al administrador.');
-      }
-
-      const contractConditionsCharacteristicId = contractConditionsResult.rental_contract_conditions_characteristic_id;
-      console.log('🎯 Characteristic ID del contrato obtenido:', contractConditionsCharacteristicId);
-
-      // 7. Crear o actualizar registro en rental_contracts
-      console.log('📝 Creando registro del contrato...');
-      const contractRecord = await createOrUpdateRentalContract(selectedProfile.applicationId);
-      console.log('✅ Registro del contrato creado/actualizado:', contractRecord.id);
-
-      // 8. Preparar y enviar payload simplificado al webhook (solo IDs característicos)
-      const webhookPayload = {
-        application_characteristic_id: characteristicIds.application_characteristic_id,
-        property_characteristic_id: characteristicIds.property_characteristic_id,
-        applicant_characteristic_id: characteristicIds.application_characteristic_id, // Para applicant usamos el mismo que application
-        rental_owner_characteristic_id: characteristicIds.rental_owner_characteristic_id,
-        guarantor_characteristic_id: characteristicIds.guarantor_characteristic_id,
-        contract_conditions_characteristic_id: contractConditionsCharacteristicId,
-        contract_characteristic_id: contractRecord.contract_characteristic_id || contractRecord.id,
-        action: "contract_generated",
-        timestamp: new Date().toISOString(),
-        application_uuid: selectedProfile.applicationId,
-        property_uuid: property?.id,
-        applicant_uuid: selectedProfile.applicationId,
-        owner_uuid: characteristicIds.rental_owner_characteristic_id,
-        guarantor_uuid: characteristicIds.guarantor_characteristic_id
+      const conditionsData = {
+        application_id: selectedProfile.applicationId,
+        contract_start_date: formData.contract_start_date,
+        contract_duration_months: Number(formData.duration),
+        final_rent_price: Number(formData.final_rent_price),
+        guarantee_amount: Number(formData.warranty_amount) || Number(formData.final_rent_price),
+        monthly_payment_day: formData.payment_day,
+        broker_name: formData.broker_name?.trim() || '',
+        broker_rut: formData.broker_rut?.trim() || '',
+        brokerage_commission: formData.broker_commission ? Number(formData.broker_commission) : null,
+        accepts_pets: formData.allows_pets || false,
+        dicom_clause: formData.dicom_clause || false,
+        auto_renewal_clause: formData.autoRenewalClause || false,
+        notification_email: formData.notification_email?.trim(),
+        bank_name: formData.bank_name?.trim(),
+        account_type: formData.account_type,
+        account_number: formData.account_number?.trim(),
+        account_holder_name: formData.account_holder_name?.trim(),
+        account_holder_rut: formData.account_holder_rut?.trim(),
+        additional_conditions: formData.special_conditions_house?.trim(),
+        payment_method: formData.payment_method || 'transferencia_bancaria',
+        landlord_email: formData.notification_email?.trim(), // Usar el email de notificación como landlord
+        is_furnished: false, // Default
+        created_by: user?.id
       };
 
-      // Validar que todos los IDs requeridos estén presentes
-      const missingIds = [];
-      if (!webhookPayload.application_characteristic_id) missingIds.push('application_characteristic_id');
-      if (!webhookPayload.property_characteristic_id) missingIds.push('property_characteristic_id');
-      if (!webhookPayload.applicant_characteristic_id) missingIds.push('applicant_characteristic_id');
-      if (!webhookPayload.rental_owner_characteristic_id) missingIds.push('rental_owner_characteristic_id');
-      if (!webhookPayload.contract_conditions_characteristic_id) missingIds.push('contract_conditions_characteristic_id');
-      if (!webhookPayload.contract_characteristic_id) missingIds.push('contract_characteristic_id');
+      console.log('📊 Datos preparados para condiciones:', conditionsData);
 
-      if (missingIds.length > 0) {
-        console.warn('⚠️ Algunos IDs característicos no están disponibles:', missingIds);
-        console.warn('📊 Payload actual:', webhookPayload);
-      }
+      // 2. Insertar condiciones contractuales (el trigger creará el contrato automáticamente)
+      console.log('💾 Insertando condiciones contractuales...');
 
-      console.log('📤 Enviando payload simplificado al webhook de n8n (solo IDs característicos)...');
-      console.log('📊 Payload a enviar:', webhookPayload);
+      const { data: conditionsResult, error: conditionsError } = await supabase
+        .from('rental_contract_conditions')
+        .insert(conditionsData)
+        .select('id, rental_contract_conditions_characteristic_id')
+        .single();
 
-      // Use proxy URL instead of direct external URL to avoid CORS issues
-      const webhookId = import.meta.env.VITE_N8N_CONTRACT_WEBHOOK_ID;
+      if (conditionsError) {
+        console.error('❌ Error insertando condiciones:', conditionsError);
 
-      if (!webhookId) {
-        console.error('❌ ID del webhook de contratos (N8N) no configurada');
-        const errorMessage = `
-          La variable de entorno VITE_N8N_CONTRACT_WEBHOOK_ID no está configurada.
+        let errorMessage = 'Error al guardar las condiciones del contrato';
+        if (conditionsError.message.includes('duplicate key') || conditionsError.message.includes('unique_application_conditions')) {
+          errorMessage = 'Ya existen condiciones contractuales para esta postulación';
+        } else if (conditionsError.message.includes('violates check constraint')) {
+          errorMessage = 'Los datos ingresados no cumplen con las validaciones requeridas';
+        }
 
-          Para generar contratos automáticamente, necesitas:
-
-          1. Configurar un webhook en n8n para generación de contratos
-          2. Agregar la siguiente variable a tu archivo .env:
-
-             VITE_N8N_CONTRACT_WEBHOOK_ID=tu-webhook-id
-
-          3. Reiniciar el servidor de desarrollo
-
-          El proxy de desarrollo se encargará de redirigir las peticiones al servidor externo.
-          Consulta INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md para más detalles.
-        `.trim();
-
-        toast.error('Configuración incompleta: Webhook de contratos no configurado');
-        setError(errorMessage);
+        toast.error(errorMessage);
         setIsGenerating(false);
         return;
       }
 
-      // Use proxy URL to avoid CORS issues in development
-      const proxyWebhookUrl = `/api/webhook/${webhookId}`;
+      console.log('✅ Condiciones guardadas exitosamente:', conditionsResult.id);
 
-      // Convert payload to flat parameters for GET request (like webhook client)
-      const queryParams = new URLSearchParams();
-      Object.entries(webhookPayload).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
+      // 3. Verificar que el contrato se creó automáticamente
+      console.log('🔍 Verificando creación automática del contrato...');
 
-      const fullUrl = `${proxyWebhookUrl}?${queryParams.toString()}`;
-      console.log('🔗 URL completa del webhook (primeros 200 caracteres):', fullUrl.substring(0, 200) + '...');
+      // Pequeña pausa para asegurar que el trigger se ejecutó
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const webhookResponse = await fetch(fullUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'PropiedadesApp/1.0',
-          'X-Webhook-Source': 'contract-generation'
-        }
-      });
+      const { data: createdContract, error: verifyError } = await supabase
+        .from('rental_contracts')
+        .select('id, contract_characteristic_id, contract_number, status')
+        .eq('application_id', selectedProfile.applicationId)
+        .single();
 
-      if (!webhookResponse.ok) {
-        let errorText = '';
-        try {
-          errorText = await webhookResponse.text();
-        } catch (parseError) {
-          errorText = `HTTP ${webhookResponse.status}: ${webhookResponse.statusText}`;
-        }
-
-        console.error('❌ Error del webhook n8n:', errorText);
-        
-        let userMessage = 'Error al generar el contrato en el servidor';
-        if (webhookResponse.status === 400) {
-          userMessage = 'Datos inválidos enviados al generador de contratos.';
-        } else if (webhookResponse.status === 500) {
-          userMessage = 'Error interno en el servidor de generación de contratos.';
-        }
-        
-        throw new Error(`${userMessage} (HTTP ${webhookResponse.status})`);
+      if (verifyError || !createdContract) {
+        console.error('❌ Error: El contrato no se creó automáticamente:', verifyError);
+        toast.error('Las condiciones se guardaron pero el contrato no se creó automáticamente. Contacte al administrador.');
+        setIsGenerating(false);
+        return;
       }
 
-      let webhookResult;
-      try {
-        webhookResult = await webhookResponse.text();
-        console.log('✅ Respuesta del webhook exitosa:', webhookResult);
-      } catch {
-        console.log('✅ Webhook ejecutado exitosamente (sin respuesta)');
-      }
+      console.log('✅ Contrato creado automáticamente:', createdContract);
 
-      toast.success('Contrato generado y enviado exitosamente');
+      toast.success('Contrato creado exitosamente');
 
       // Llamar callback de éxito
       if (onSuccess) {
@@ -1269,21 +938,16 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
       onClose();
 
     } catch (error: any) {
-      formatErrorDetails(error, 'handleGenerateContract - Error al generar contrato');
-      
-      let errorMessage = getUserFriendlyErrorMessage(error, 'Error al generar el contrato');
-      
-      if (error?.message && (
-        error.message.includes('obligatorio') ||
-        error.message.includes('debe ser') ||
-        error.message.includes('inválido') ||
-        error.message.includes('HTTP')
-      )) {
+      console.error('❌ Error en handleGenerateContract:', error);
+
+      let errorMessage = 'Error al crear el contrato';
+
+      if (error?.message) {
         errorMessage = error.message;
       }
 
       toast.error(errorMessage);
-      setError(error?.message || 'Error desconocido al generar el contrato');
+      setError(errorMessage);
 
     } finally {
       setIsGenerating(false);
@@ -1293,6 +957,7 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
   // ========================================================================
   // RENDER
   // ========================================================================
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
@@ -1727,6 +1392,40 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
               </div>
             </div>
 
+            {/* Cláusula de Renovación Automática */}
+            <div className="mt-8 p-6 bg-green-50 rounded-xl border-2 border-green-200">
+              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <FileText className="w-5 h-5 text-green-600 mr-2" />
+                Cláusula de Renovación Automática
+              </h4>
+              <div className="bg-white rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="autoRenewalClause"
+                    checked={formData.autoRenewalClause}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      autoRenewalClause: e.target.checked
+                    }))}
+                    className="mt-1 w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="autoRenewalClause" className="cursor-pointer">
+                      <span className="text-sm font-medium text-gray-900 block mb-1">
+                        Incluir Cláusula de Renovación Automática
+                      </span>
+                      <p className="text-xs text-gray-600">
+                        Si se marca, el contrato incluirá una cláusula que permite la renovación
+                        automática del contrato por un período igual al original, bajo las mismas
+                        condiciones, a menos que alguna de las partes notifique lo contrario.
+                      </p>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Condiciones de Pago */}
             <div className="mt-8 p-6 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border-2 border-emerald-300">
               <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
@@ -1942,7 +1641,7 @@ export const RentalContractConditionsForm: React.FC<RentalContractConditionsForm
               ) : (
                 <>
                   <FileText className="w-5 h-5 mr-2" />
-                  Generar y Enviar Contrato
+                  Crear Contrato
                 </>
               )}
             </button>

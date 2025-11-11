@@ -37,6 +37,7 @@ export interface ContractConditions {
   official_communication_email: string;
   accepts_pets: boolean;
   dicom_clause: boolean;
+  auto_renewal_clause: boolean;
   additional_conditions: string;
   // Propiedades adicionales para compatibilidad
   lease_term_months?: number;
@@ -210,6 +211,7 @@ export function generateContractContent(
         <ul>
           <li>Mascotas: ${normalizedConditions.accepts_pets ? 'Se permite el ingreso de mascotas al inmueble.' : 'No se permite el ingreso de mascotas al inmueble.'}</li>
           <li>DICOM: ${normalizedConditions.dicom_clause ? 'Se incluye cláusula DICOM (Derecho a Crédito por Cobranza Indebida).' : 'No se incluye cláusula DICOM.'}</li>
+          <li>Renovación automática: ${normalizedConditions.auto_renewal_clause ? 'Se incluye cláusula de renovación automática por período igual bajo las mismas condiciones, salvo aviso en contrario.' : 'No se incluye cláusula de renovación automática.'}</li>
           ${normalizedConditions.additional_conditions ? `<li>${normalizedConditions.additional_conditions}</li>` : ''}
         </ul>
       `,

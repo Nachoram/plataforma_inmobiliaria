@@ -99,6 +99,8 @@ interface Owner {
   owner_commune?: string;
   // Nuevo campo: nacionalidad del propietario
   owner_nationality?: string;
+  // Nuevo campo: tipo de unidad (Casa/Departamento/Oficina)
+  owner_unit_type?: string;
   // Nuevo campo: número de departamento/casa/oficina
   owner_apartment_number?: string;
   // Campo para porcentaje de propiedad (opcional)
@@ -165,6 +167,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       owner_region: '',
       owner_commune: '',
       owner_nationality: '',
+      owner_unit_type: 'Casa', // Valor por defecto
       owner_apartment_number: '',
       property_regime: '',
       ownership_percentage: undefined
@@ -392,6 +395,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             owner_region: ownerData.address_region || '',
             owner_commune: ownerData.address_commune || '',
             owner_nationality: ownerData.nationality || '',
+            owner_unit_type: ownerData.unit_type || 'Casa', // Nuevo campo con valor por defecto
             owner_apartment_number: ownerData.apartment_number || '',
             // Natural person fields
             owner_first_name: ownerData.first_name || '',
@@ -495,6 +499,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       owner_region: '',
       owner_commune: '',
       owner_nationality: '',
+      owner_unit_type: 'Casa', // Valor por defecto
       owner_apartment_number: '',
       property_regime: '',
       ownership_percentage: undefined
@@ -632,24 +637,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       if (!owner.owner_address_number || !owner.owner_address_number.trim()) newErrors[`owner_${owner.id}_address_number`] = `${prefix}El número del propietario es requerido`;
       if (!owner.owner_region) newErrors[`owner_${owner.id}_region`] = `${prefix}La región del propietario es requerida`;
       if (!owner.owner_commune) newErrors[`owner_${owner.id}_commune`] = `${prefix}La comuna del propietario es requerida`;
-
-      // Validación de porcentaje de propiedad
-      if (owner.ownership_percentage !== undefined && owner.ownership_percentage !== null) {
-        const percentage = parseFloat(owner.ownership_percentage.toString());
-        if (isNaN(percentage) || percentage < 0 || percentage > 100) {
-          newErrors[`owner_${owner.id}_ownership_percentage`] = `${prefix}El porcentaje de propiedad debe estar entre 0 y 100`;
-        }
-      }
+      if (!owner.owner_unit_type || !['Casa', 'Departamento', 'Oficina'].includes(owner.owner_unit_type)) newErrors[`owner_${owner.id}_unit_type`] = `${prefix}El tipo de unidad es requerido`;
     });
-
-    // Validación de suma total de porcentajes si todos los propietarios tienen porcentaje definido
-    const ownersWithPercentage = owners.filter(owner => owner.ownership_percentage !== undefined && owner.ownership_percentage !== null && owner.ownership_percentage !== '');
-    if (ownersWithPercentage.length === owners.length && owners.length > 1) {
-      const totalPercentage = ownersWithPercentage.reduce((sum, owner) => sum + parseFloat(owner.ownership_percentage!.toString()), 0);
-      if (Math.abs(totalPercentage - 100) > 0.01) { // Tolerancia para errores de redondeo
-        newErrors.ownership_percentage_total = `La suma de los porcentajes de propiedad debe ser igual a 100%. Actualmente suma ${totalPercentage.toFixed(2)}%`;
-      }
-    }
 
     // Validación de duplicados: RUTs y emails únicos entre propietarios
     const ruts = new Map<string, number>();
@@ -1103,6 +1092,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             phone: owner.owner_phone,
             email: owner.owner_email,
             nationality: owner.owner_nationality,
+            unit_type: owner.owner_unit_type || 'Casa', // Nuevo campo requerido
           };
 
           // Add type-specific fields
@@ -2573,6 +2563,37 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       <p className="mt-1 text-sm text-red-600 flex items-center">
                         <AlertCircle className="h-4 w-4 mr-1" />
                         {errors[`owner_${owner.id}_address_number`]}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Tipo de Unidad */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Tipo de unidad *
+                    </label>
+                    <div className="flex gap-6">
+                      {['Casa', 'Departamento', 'Oficina'].map((unitType) => (
+                        <label key={unitType} className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`unitType_${owner.id}`}
+                            value={unitType}
+                            checked={owner.owner_unit_type === unitType}
+                            onChange={(e) => updateOwner(owner.id, 'owner_unit_type', e.target.value)}
+                            className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500 focus:ring-2"
+                            required
+                          />
+                          <span className="ml-2 text-sm font-medium text-gray-700">
+                            {unitType}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {errors[`owner_${owner.id}_unit_type`] && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors[`owner_${owner.id}_unit_type`]}
                       </p>
                     )}
                   </div>

@@ -50,6 +50,7 @@ interface ContractData {
   guarantee_amount: number; // Monto garantía
   guarantee_amount_currency: 'clp' | 'uf'; // Moneda de la garantía
   has_dicom_clause: boolean; // Cláusula de DICOM
+  has_auto_renewal_clause: boolean; // Cláusula de renovación automática
 
   // Comunicación
   tenant_email: string; // Mail arrendatario
@@ -85,6 +86,7 @@ interface ContractFormData {
   guarantee_amount: number;
   guarantee_amount_currency: 'clp' | 'uf';
   has_dicom_clause: boolean;
+  has_auto_renewal_clause: boolean;
 
   // Comunicación
   tenant_email: string;
@@ -767,8 +769,10 @@ export const PostulationAdminPanel: React.FC = () => {
             guarantee_amount: conditions.guarantee_amount || 0,
             guarantee_amount_currency: 'clp',
             has_dicom_clause: conditions.dicom_clause || false,
-            tenant_email: conditions.official_communication_email || '',
-            landlord_email: conditions.landlord_email || '',
+            has_auto_renewal_clause: conditions.auto_renewal_clause || false,
+            // Mapear nombres de BD a nombres de frontend
+            tenant_email: conditions.official_arrendatario_communication_email || '',
+            landlord_email: conditions.notificaficacion_email_arrendador || '',
             account_holder_name: conditions.account_holder_name || '',
             account_number: conditions.account_number || '',
             account_bank: conditions.bank_name || '',
@@ -874,34 +878,56 @@ export const PostulationAdminPanel: React.FC = () => {
       setSavingContract(true);
 
       // Preparar datos para guardar en rental_contract_conditions
+      console.log('🔍 [saveContract] Form data recibida:', contractFormData);
+
       const conditionsPayload = {
         application_id: applicationId,
-        contract_duration_months: contractFormData.validity_period_months,
+        contract_duration_months: contractFormData.validity_period_months || 12,
         monthly_payment_day: 1, // Día de pago por defecto, podría ser configurable después
-        final_rent_price: contractFormData.final_amount, // Mantener como decimal
-        brokerage_commission: contractFormData.has_brokerage_commission ? contractFormData.broker_amount || 0 : 0, // Mantener como decimal
-        guarantee_amount: contractFormData.guarantee_amount, // Mantener como decimal
-        official_communication_email: contractFormData.tenant_email, // Usar email del arrendatario como comunicación oficial
-        accepts_pets: contractFormData.allows_pets,
-        dicom_clause: contractFormData.has_dicom_clause,
+        final_rent_price: Number(contractFormData.final_amount) || 0, // Asegurar que sea número
+        brokerage_commission: contractFormData.has_brokerage_commission ? Number(contractFormData.broker_amount) || 0 : 0, // Asegurar que sea número
+        guarantee_amount: Number(contractFormData.guarantee_amount) || 0, // Asegurar que sea número
+        // Mapear nombres de columnas correctos según la base de datos
+        official_arrendatario_communication_email: contractFormData.tenant_email || '', // Nombre correcto en BD
+        accepts_pets: contractFormData.allows_pets || false,
+        dicom_clause: contractFormData.has_dicom_clause || false,
+        auto_renewal_clause: contractFormData.has_auto_renewal_clause || false,
         additional_conditions: contractFormData.has_brokerage_commission
           ? `Comisión del corredor: ${contractFormData.broker_name} (RUT: ${contractFormData.broker_rut})`
           : null,
         // Nuevas columnas agregadas por migraciones posteriores
-        contract_start_date: contractFormData.start_date,
-        broker_name: contractFormData.has_brokerage_commission ? contractFormData.broker_name : 'Sin corredor',
-        broker_rut: contractFormData.has_brokerage_commission ? contractFormData.broker_rut : 'Sin RUT',
+        contract_start_date: contractFormData.start_date || null,
+        broker_name: contractFormData.has_brokerage_commission ? contractFormData.broker_name || '' : 'Sin corredor',
+        broker_rut: contractFormData.has_brokerage_commission ? contractFormData.broker_rut || '' : 'Sin RUT',
         account_holder_name: contractFormData.account_holder_name || '',
         account_holder_rut: '', // No está en el formulario actual
         bank_name: contractFormData.account_bank || '',
         account_type: contractFormData.account_type || '',
         account_number: contractFormData.account_number || '',
         payment_method: 'transferencia_bancaria', // Valor por defecto
-        landlord_email: contractFormData.landlord_email || '',
+        // Mapear landlord_email al nombre correcto en BD
+        notificaficacion_email_arrendador: contractFormData.landlord_email || '',
         is_furnished: contractFormData.is_furnished || false,
+        created_by: applicationId ? undefined : auth?.user?.id, // Solo establecer en creación
         updated_at: new Date().toISOString()
       };
 
+      console.log('📤 [saveContract] Payload a enviar:', conditionsPayload);
+
+      // Verificar que todos los campos requeridos estén presentes
+      const requiredFields = ['application_id', 'payment_method', 'broker_name', 'broker_rut', 'official_arrendatario_communication_email'];
+      const missingFields = requiredFields.filter(field => !conditionsPayload[field as keyof typeof conditionsPayload]);
+
+      if (missingFields.length > 0) {
+        console.error('❌ [saveContract] Campos requeridos faltantes:', missingFields);
+        throw new Error(`Campos requeridos faltantes: ${missingFields.join(', ')}`);
+      }
+
+      // Validar tipos de datos
+      if (typeof conditionsPayload.final_rent_price !== 'number' || isNaN(conditionsPayload.final_rent_price)) {
+        console.error('❌ [saveContract] final_rent_price no es un número válido:', conditionsPayload.final_rent_price);
+        throw new Error('El precio final del arriendo debe ser un número válido');
+      }
 
       // Verificar si ya existen condiciones para esta aplicación
       const { data: existingConditions, error: checkError } = await supabase
@@ -1681,6 +1707,14 @@ export const PostulationAdminPanel: React.FC = () => {
                         {contractData.has_dicom_clause ? 'Sí' : 'No'}
                       </span>
                     </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      <span className="font-medium">Renovación Automática:</span>
+                      <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                        contractData.has_auto_renewal_clause ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {contractData.has_auto_renewal_clause ? 'Sí' : 'No'}
+                      </span>
+                    </p>
                   </div>
 
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -2108,6 +2142,7 @@ const ContractModal: React.FC<{
     guarantee_amount: 0,
     guarantee_amount_currency: 'clp',
     has_dicom_clause: false,
+    has_auto_renewal_clause: false,
     tenant_email: '',
     landlord_email: '',
     account_holder_name: '',
@@ -2134,6 +2169,7 @@ const ContractModal: React.FC<{
           guarantee_amount: initialData.guarantee_amount || 0,
           guarantee_amount_currency: initialData.guarantee_amount_currency || 'clp',
           has_dicom_clause: initialData.has_dicom_clause || false,
+          has_auto_renewal_clause: initialData.has_auto_renewal_clause || false,
           tenant_email: initialData.tenant_email || '',
           landlord_email: initialData.landlord_email || '',
           account_holder_name: initialData.account_holder_name || '',
@@ -2156,6 +2192,7 @@ const ContractModal: React.FC<{
           guarantee_amount: 0,
           guarantee_amount_currency: 'clp',
           has_dicom_clause: false,
+          has_auto_renewal_clause: false,
           tenant_email: '',
           landlord_email: '',
           account_holder_name: '',
@@ -2413,6 +2450,18 @@ const ContractModal: React.FC<{
                 className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
               />
               <span className="ml-2 text-sm text-gray-700">Incluir Cláusula DICOM</span>
+            </label>
+          </div>
+
+          <div className="mt-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.has_auto_renewal_clause}
+                onChange={(e) => setFormData(prev => ({ ...prev, has_auto_renewal_clause: e.target.checked }))}
+                className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">Incluir Cláusula de Renovación Automática</span>
             </label>
           </div>
         </div>

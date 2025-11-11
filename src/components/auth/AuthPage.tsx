@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Eye, EyeOff, User, Mail, Lock, Building } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock } from 'lucide-react';
 
 export const AuthPage: React.FC = () => {
   const { user, signIn, signUp } = useAuth();
@@ -52,7 +52,11 @@ export const AuthPage: React.FC = () => {
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <Building className="h-12 w-12 text-blue-700" />
+            <img
+              src="/propai-logo.svg"
+              alt="PROPAI Logo"
+              className="h-33 w-auto drop-shadow-lg"
+            />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">
             {isSignUp ? 'Crear Cuenta' : 'Iniciar Sesión'}

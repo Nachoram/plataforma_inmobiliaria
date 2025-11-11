@@ -255,3 +255,4 @@ GRANT EXECUTE ON FUNCTION mark_message_as_read TO authenticated;
 GRANT EXECUTE ON FUNCTION get_application_messages TO authenticated;
 GRANT EXECUTE ON FUNCTION get_unread_messages_count TO authenticated;
 
+

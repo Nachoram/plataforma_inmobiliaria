@@ -50,3 +50,4 @@ FROM profiles p
 JOIN auth.users au ON p.id = au.id
 ORDER BY p.created_at DESC
 LIMIT 3;
+

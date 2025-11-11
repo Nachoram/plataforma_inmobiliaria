@@ -167,3 +167,4 @@ Los logs se generan en:
 - **Audit:** Tabla `application_audit_log` con `event_type = 'approval_reverted'`
 
 ¡La funcionalidad está lista para usar! 🚀 Ahora puedes anular completamente las aprobaciones de postulaciones cuando sea necesario.
+

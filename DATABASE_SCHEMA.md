@@ -237,6 +237,7 @@ Esta documentación describe el esquema simplificado y optimizado de la base de 
 | contract_html | text | HTML contrato | ❌ |
 | contract_format | varchar(20) | Formato contrato | ✅ |
 | contract_number | varchar(50) | Número contrato | ❌ |
+| has_auto_renewal_clause | boolean | Incluye cláusula renovación automática | ✅ |
 | created_at | timestamptz | Fecha creación | ✅ |
 | updated_at | timestamptz | Fecha actualización | ❌ |
 

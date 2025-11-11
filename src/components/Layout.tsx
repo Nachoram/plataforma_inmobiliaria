@@ -75,82 +75,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Header - Desktop */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-40 hidden md:block backdrop-blur-sm bg-opacity-95">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-          <div className="flex justify-between items-center h-14 gap-2">
+          <div className="flex justify-between items-center h-20 gap-2">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2 group flex-shrink-0">
-              <div className="relative flex-shrink-0">
-                <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
-                  {/* Definiciones */}
-                  <defs>
-                    <linearGradient id="gradient-desktop" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#1e40af" />
-                      <stop offset="50%" stopColor="#2563eb" />
-                      <stop offset="100%" stopColor="#3b82f6" />
-                    </linearGradient>
-                    <linearGradient id="gradient-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#fbbf24" />
-                      <stop offset="100%" stopColor="#f59e0b" />
-                    </linearGradient>
-                    <filter id="shadow">
-                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3"/>
-                    </filter>
-                  </defs>
-                  
-                  {/* Base circular con degradado y sombra */}
-                  <circle cx="24" cy="24" r="23" fill="url(#gradient-desktop)" filter="url(#shadow)" className="group-hover:opacity-95 transition-all"/>
-                  
-                  {/* Anillo exterior sutil */}
-                  <circle cx="24" cy="24" r="23" fill="none" stroke="white" strokeWidth="0.5" opacity="0.3"/>
-                  
-                  {/* Edificio principal - Torre izquierda */}
-                  <rect x="12" y="16" width="11" height="20" rx="1" fill="white" opacity="0.97"/>
-                  
-                  {/* Edificio principal - Torre derecha */}
-                  <rect x="25" y="13" width="11" height="23" rx="1" fill="white" opacity="0.97"/>
-                  
-                  {/* Ventanas torre izquierda */}
-                  <rect x="14" y="19" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="19" y="19" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="14" y="23" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="19" y="23" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="14" y="27" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="19" y="27" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  
-                  {/* Ventanas torre derecha */}
-                  <rect x="27" y="16" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="32" y="16" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="27" y="20" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="32" y="20" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="27" y="24" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="32" y="24" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="27" y="28" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  <rect x="32" y="28" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                  
-                  {/* Puerta principal torre izquierda */}
-                  <rect x="16" y="31" width="5" height="5" rx="0.5" fill="#1e40af"/>
-                  
-                  {/* Puerta principal torre derecha */}
-                  <rect x="29" y="32" width="5" height="4" rx="0.5" fill="#1e40af"/>
-                  
-                  {/* Techo decorativo torre izquierda */}
-                  <path d="M17.5 13 L23 16 L12 16 Z" fill="white" opacity="0.95"/>
-                  
-                  {/* Techo decorativo torre derecha */}
-                  <path d="M30.5 10 L36 13 L25 13 Z" fill="white" opacity="0.95"/>
-                  
-                  {/* Estrella dorada en techo */}
-                  <circle cx="17.5" cy="14.5" r="1.8" fill="url(#gradient-accent)" className="group-hover:scale-125 transition-transform origin-center"/>
-                  <circle cx="30.5" cy="11.5" r="1.8" fill="url(#gradient-accent)" className="group-hover:scale-125 transition-transform origin-center"/>
-                </svg>
-              </div>
-              <div className="flex flex-col -space-y-1 hidden lg:flex">
-                <span className="text-lg font-black bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 bg-clip-text text-transparent group-hover:from-blue-700 group-hover:via-blue-600 group-hover:to-blue-500 transition-all duration-300 leading-tight tracking-tight">
-                  PropiedadesApp
-                </span>
-                <span className="text-[9px] font-bold tracking-widest text-blue-600 group-hover:text-blue-700 transition-colors uppercase">
-                  Plataforma Inmobiliaria
-                </span>
-              </div>
+              <img
+                src="/propai-logo.svg"
+                alt="PROPAI Logo"
+                className="h-52 w-auto drop-shadow-lg"
+              />
             </Link>
 
             {/* Desktop Navigation */}
@@ -240,82 +172,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Mobile Header */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-40 md:hidden backdrop-blur-sm bg-opacity-95">
-        <div className="flex justify-between items-center h-12 px-3">
+        <div className="flex justify-between items-center h-16 px-3">
           {/* Mobile Logo */}
           <Link to="/" className="flex items-center space-x-1.5 group">
-            <div className="relative flex-shrink-0">
-              <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
-                {/* Definiciones */}
-                <defs>
-                  <linearGradient id="gradient-mobile" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#1e40af" />
-                    <stop offset="50%" stopColor="#2563eb" />
-                    <stop offset="100%" stopColor="#3b82f6" />
-                  </linearGradient>
-                  <linearGradient id="gradient-accent-mobile" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#fbbf24" />
-                    <stop offset="100%" stopColor="#f59e0b" />
-                  </linearGradient>
-                  <filter id="shadow-mobile">
-                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3"/>
-                  </filter>
-                </defs>
-                
-                {/* Base circular con degradado y sombra */}
-                <circle cx="24" cy="24" r="23" fill="url(#gradient-mobile)" filter="url(#shadow-mobile)"/>
-                
-                {/* Anillo exterior sutil */}
-                <circle cx="24" cy="24" r="23" fill="none" stroke="white" strokeWidth="0.5" opacity="0.3"/>
-                
-                {/* Edificio principal - Torre izquierda */}
-                <rect x="12" y="16" width="11" height="20" rx="1" fill="white" opacity="0.97"/>
-                
-                {/* Edificio principal - Torre derecha */}
-                <rect x="25" y="13" width="11" height="23" rx="1" fill="white" opacity="0.97"/>
-                
-                {/* Ventanas torre izquierda */}
-                <rect x="14" y="19" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="19" y="19" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="14" y="23" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="19" y="23" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="14" y="27" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="19" y="27" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                
-                {/* Ventanas torre derecha */}
-                <rect x="27" y="16" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="32" y="16" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="27" y="20" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="32" y="20" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="27" y="24" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="32" y="24" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="27" y="28" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                <rect x="32" y="28" width="3" height="2.5" rx="0.3" fill="#1e40af" opacity="0.7"/>
-                
-                {/* Puerta principal torre izquierda */}
-                <rect x="16" y="31" width="5" height="5" rx="0.5" fill="#1e40af"/>
-                
-                {/* Puerta principal torre derecha */}
-                <rect x="29" y="32" width="5" height="4" rx="0.5" fill="#1e40af"/>
-                
-                {/* Techo decorativo torre izquierda */}
-                <path d="M17.5 13 L23 16 L12 16 Z" fill="white" opacity="0.95"/>
-                
-                {/* Techo decorativo torre derecha */}
-                <path d="M30.5 10 L36 13 L25 13 Z" fill="white" opacity="0.95"/>
-                
-                {/* Estrella dorada en techo */}
-                <circle cx="17.5" cy="14.5" r="1.8" fill="url(#gradient-accent-mobile)"/>
-                <circle cx="30.5" cy="11.5" r="1.8" fill="url(#gradient-accent-mobile)"/>
-              </svg>
-            </div>
-            <div className="flex flex-col -space-y-0.5">
-              <span className="text-sm font-black bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 bg-clip-text text-transparent leading-tight tracking-tight">
-                PropiedadesApp
-              </span>
-              <span className="text-[8px] font-bold tracking-widest text-blue-600 uppercase">
-                Inmobiliaria
-              </span>
-            </div>
+            <img
+              src="/propai-logo.svg"
+              alt="PROPAI Logo"
+              className="h-44 w-auto drop-shadow-lg"
+            />
           </Link>
 
           {/* Mobile Menu Button */}

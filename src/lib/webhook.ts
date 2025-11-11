@@ -243,7 +243,7 @@ class WebhookClient {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'PropiedadesApp/1.0',
+          'User-Agent': 'PROPAI/1.0',
           'X-Webhook-Source': 'plataforma-inmobiliaria',
           ...(import.meta.env.VITE_WEBHOOK_SECRET && {
             'Authorization': `Bearer ${import.meta.env.VITE_WEBHOOK_SECRET}`
@@ -466,7 +466,7 @@ class WebhookClient {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'PropiedadesApp/1.0',
+          'User-Agent': 'PROPAI/1.0',
           'X-Webhook-Optimized': 'true' // Indicador de que usa characteristic IDs
         }
       });
@@ -536,7 +536,7 @@ class WebhookClient {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'PropiedadesApp/1.0'
+          'User-Agent': 'PROPAI/1.0'
         }
       });
 
@@ -581,7 +581,7 @@ export const sendWebhookGET = async (data: Record<string, unknown>): Promise<boo
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'PropiedadesApp/1.0'
+        'User-Agent': 'PROPAI/1.0'
       }
     });
 

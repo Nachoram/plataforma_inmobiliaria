@@ -61,3 +61,4 @@ GRANT SELECT ON application_audit_log TO authenticated;
 
 
 
+

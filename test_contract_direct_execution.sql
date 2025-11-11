@@ -42,3 +42,4 @@ FROM valid_user;
 --
 --     RAISE NOTICE 'Contrato creado con usuario ID: %', selected_user_id;
 -- END $$;
+

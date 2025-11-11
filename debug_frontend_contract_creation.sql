@@ -65,3 +65,4 @@ BEGIN
     RAISE NOTICE 'Contrato creado: %', test_contract_id;
 
 END $$;
+

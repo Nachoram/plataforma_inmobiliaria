@@ -27,6 +27,7 @@ interface ApplicantData {
   rut: string;
   profession?: string;
   monthly_income_clp: string;
+  unit_type?: 'Casa' | 'Departamento' | 'Oficina';
   age?: string;
   nationality: string;
   marital_status?: 'soltero' | 'casado' | 'divorciado' | 'viudo';
@@ -64,6 +65,7 @@ interface GuarantorData {
   rut: string;
   profession?: string;
   monthly_income_clp?: string;
+  unit_type?: 'Casa' | 'Departamento' | 'Oficina';
   contact_email?: string;
   address_street?: string;
   address_number?: string;
@@ -143,6 +145,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             rut: applicant.rut || '',
             profession: applicant.profession || '',
             monthly_income_clp: applicant.monthly_income_clp?.toString() || '',
+            unit_type: applicant.unit_type || 'Casa',
             age: applicant.age?.toString() || '',
             nationality: applicant.nationality || 'Chile',
             marital_status: applicant.marital_status,
@@ -177,6 +180,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               rut: '',
               profession: '',
               monthly_income_clp: '',
+              unit_type: 'Casa',
               age: '',
               nationality: 'Chile',
               marital_status: 'soltero',
@@ -215,6 +219,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             rut: guarantor.rut || '',
             profession: guarantor.profession || '',
             monthly_income_clp: guarantor.monthly_income?.toString() || '',
+            unit_type: guarantor.unit_type || 'Casa',
             contact_email: guarantor.contact_email || '',
             address_street: guarantor.address_street || '',
             address_number: guarantor.address_number || '',
@@ -257,6 +262,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       profession: '',
       monthly_income_clp: '',
       net_monthly_income_clp: '',
+      unit_type: 'Casa',
       age: '',
       nationality: 'Chilena',
       marital_status: 'soltero',
@@ -342,6 +348,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         profession: '',
         monthly_income_clp: '',
         net_monthly_income_clp: '',
+        unit_type: 'Casa',
         age: '',
         nationality: 'Chilena',
         marital_status: 'soltero',
@@ -438,6 +445,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         profession: '',
         monthly_income_clp: '',
         net_monthly_income_clp: '',
+        unit_type: 'Casa',
         contact_email: '',
         address_street: '',
         address_number: '',
@@ -522,6 +530,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     const errors: string[] = [];
 
     // Validaciones comunes
+    if (!applicant.unit_type) errors.push('Tipo de Unidad es requerido');
     if (!applicant.address_street?.trim()) errors.push('Calle es requerida');
     if (!applicant.address_number?.trim()) errors.push('Número es requerido');
     if (!applicant.address_commune?.trim()) errors.push('Comuna es requerida');
@@ -554,6 +563,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     const errors: string[] = [];
 
     // Validaciones comunes
+    if (!guarantor.unit_type) errors.push('Tipo de Unidad es requerido');
     if (!guarantor.address_street?.trim()) errors.push('Calle es requerida');
     if (!guarantor.address_number?.trim()) errors.push('Número es requerido');
     if (!guarantor.address_commune?.trim()) errors.push('Comuna es requerida');
@@ -1026,6 +1036,78 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               required
             />
           </div>
+
+          {/* Selector de Tipo de Unidad */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Tipo de Unidad *
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="relative">
+                <input
+                  type="radio"
+                  name={`unit_type-${applicantId}`}
+                  value="Casa"
+                  checked={applicant.unit_type === 'Casa'}
+                  onChange={() => updateApplicant(index, 'unit_type', 'Casa')}
+                  className="sr-only"
+                />
+                <div className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  applicant.unit_type === 'Casa'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-300'
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <Home className="h-5 w-5 text-purple-600" />
+                    <div className="font-medium text-gray-900 text-center">Casa</div>
+                  </div>
+                </div>
+              </label>
+
+              <label className="relative">
+                <input
+                  type="radio"
+                  name={`unit_type-${applicantId}`}
+                  value="Departamento"
+                  checked={applicant.unit_type === 'Departamento'}
+                  onChange={() => updateApplicant(index, 'unit_type', 'Departamento')}
+                  className="sr-only"
+                />
+                <div className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  applicant.unit_type === 'Departamento'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-300'
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <Building className="h-5 w-5 text-purple-600" />
+                    <div className="font-medium text-gray-900 text-center">Departamento</div>
+                  </div>
+                </div>
+              </label>
+
+              <label className="relative">
+                <input
+                  type="radio"
+                  name={`unit_type-${applicantId}`}
+                  value="Oficina"
+                  checked={applicant.unit_type === 'Oficina'}
+                  onChange={() => updateApplicant(index, 'unit_type', 'Oficina')}
+                  className="sr-only"
+                />
+                <div className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  applicant.unit_type === 'Oficina'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-300'
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <Building2 className="h-5 w-5 text-purple-600" />
+                    <div className="font-medium text-gray-900 text-center">Oficina</div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
               type="text"
@@ -1507,6 +1589,78 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               required
             />
           </div>
+
+          {/* Selector de Tipo de Unidad */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Tipo de Unidad *
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="relative">
+                <input
+                  type="radio"
+                  name={`guarantor_unit_type-${guarantorId}`}
+                  value="Casa"
+                  checked={guarantor.unit_type === 'Casa'}
+                  onChange={() => updateGuarantor(index, 'unit_type', 'Casa')}
+                  className="sr-only"
+                />
+                <div className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  guarantor.unit_type === 'Casa'
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 hover:border-emerald-300'
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <Home className="h-5 w-5 text-emerald-600" />
+                    <div className="font-medium text-gray-900 text-center">Casa</div>
+                  </div>
+                </div>
+              </label>
+
+              <label className="relative">
+                <input
+                  type="radio"
+                  name={`guarantor_unit_type-${guarantorId}`}
+                  value="Departamento"
+                  checked={guarantor.unit_type === 'Departamento'}
+                  onChange={() => updateGuarantor(index, 'unit_type', 'Departamento')}
+                  className="sr-only"
+                />
+                <div className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  guarantor.unit_type === 'Departamento'
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 hover:border-emerald-300'
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <Building className="h-5 w-5 text-emerald-600" />
+                    <div className="font-medium text-gray-900 text-center">Departamento</div>
+                  </div>
+                </div>
+              </label>
+
+              <label className="relative">
+                <input
+                  type="radio"
+                  name={`guarantor_unit_type-${guarantorId}`}
+                  value="Oficina"
+                  checked={guarantor.unit_type === 'Oficina'}
+                  onChange={() => updateGuarantor(index, 'unit_type', 'Oficina')}
+                  className="sr-only"
+                />
+                <div className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  guarantor.unit_type === 'Oficina'
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 hover:border-emerald-300'
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <Building2 className="h-5 w-5 text-emerald-600" />
+                    <div className="font-medium text-gray-900 text-center">Oficina</div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
               type="text"
@@ -1771,6 +1925,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         profession: applicant.profession || null,
         monthly_income_clp: applicant.entityType === 'natural' ? (parseInt(applicant.monthly_income_clp) || 0) : 0,
         net_monthly_income_clp: applicant.entityType === 'juridica' ? (parseInt(applicant.net_monthly_income_clp || '0') || 0) : 0,
+        unit_type: applicant.unit_type || 'Casa',
         age: parseInt(applicant.age) || null,
         nationality: applicant.nationality,
         marital_status: applicant.marital_status || null,
@@ -1825,6 +1980,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           profession: guarantor.profession || null,
           monthly_income: guarantor.entityType === 'natural' ? (parseInt(guarantor.monthly_income_clp || '0') || 0) : 0,
           net_monthly_income_clp: guarantor.entityType === 'juridica' ? (parseInt(guarantor.net_monthly_income_clp || '0') || 0) : 0,
+          unit_type: guarantor.unit_type || 'Casa',
           contact_email: guarantor.contact_email || null,
           contact_phone: null, // Campo requerido por la tabla pero no usado en el formulario
           address_street: guarantor.address_street || null,

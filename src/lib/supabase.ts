@@ -869,7 +869,7 @@ export const updateApplicationStatus = async (
             email,
             phone
           ),
-          property_images!inner (image_url)
+          property_images (image_url)
         ),
         profiles!applicant_id (
           first_name,

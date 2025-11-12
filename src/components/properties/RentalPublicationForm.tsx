@@ -235,8 +235,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         availableDays: [],
         availableTimeSlots: [],
 
-        // Documentos - inicializar con documentos existentes o array vacío
-      documents: initialData.documents || [],
+        // Documentos - inicializar con documentos existentes o objeto vacío
+      documents: initialData.documents || {},
       };
 
       console.log('✅ GET INITIAL FORM DATA: Final initialized formData:', {
@@ -295,7 +295,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       photos_urls: [] as string[],
       availableDays: [] as string[],
       availableTimeSlots: [] as string[],
-      documents: []
+      documents: {}
     };
   }, [isEditing, initialData]);
 
@@ -349,7 +349,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         price: formData.price,
         bedrooms: formData.bedrooms,
         tieneBodega: formData.tieneBodega,
-        documentsCount: formData.documents?.length || 0
+        documentsCount: Object.keys(formData.documents || {}).length
       });
     }
   }, [formData, isEditing]);
@@ -546,16 +546,28 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
   // Handle document upload
   const handleDocumentUpload = (documentType: string, file: File) => {
-    // Por ahora, solo agregamos el archivo al estado de archivos para subir
-    // En una implementación completa, esto debería manejar la subida inmediata
+    // Actualizar el estado del formulario con el archivo subido
+    setFormData(prev => ({
+      ...prev,
+      documents: {
+        ...prev.documents,
+        [documentType]: file
+      }
+    }));
     console.log('Document upload:', documentType, file.name);
-    // TODO: Implementar subida de documentos
   };
 
-  // Remove document - por ahora no implementado para documentos existentes
+  // Remove document
   const removeDocument = (documentType: string) => {
+    setFormData(prev => {
+      const newDocuments = { ...prev.documents };
+      delete newDocuments[documentType];
+      return {
+        ...prev,
+        documents: newDocuments
+      };
+    });
     console.log('Remove document:', documentType);
-    // TODO: Implementar eliminación de documentos
   };
 
   // Validation
@@ -578,6 +590,17 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       }
       if (!formData.metrosTotales || !formData.metrosTotales.trim()) newErrors.metrosTotales = 'Los M² de la bodega son requeridos';
       // Descripción opcional para bodegas
+    } else if (propertyType === 'Estacionamiento') {
+      // Validación específica para Estacionamiento
+      if (!formData.ubicacionEstacionamiento || formData.ubicacionEstacionamiento.trim() === '') {
+        newErrors.ubicacionEstacionamiento = 'El número de estacionamiento es obligatorio para propiedades de tipo Estacionamiento';
+      } else {
+        // Validar que solo contenga letras, números y algunos caracteres especiales comunes
+        const parkingNumberRegex = /^[a-zA-Z0-9\s\-_.]+$/;
+        if (!parkingNumberRegex.test(formData.ubicacionEstacionamiento.trim())) {
+          newErrors.ubicacionEstacionamiento = 'El número de estacionamiento solo puede contener letras, números y caracteres como guion, punto o guion bajo';
+        }
+      }
     } else {
       // M² son requeridos solo si NO es estacionamiento, NO es bodega y NO es Parcela
       if (!isParking && propertyType !== 'Parcela' && (!formData.metrosUtiles || !formData.metrosUtiles.trim())) newErrors.metrosUtiles = 'Los metros útiles son requeridos';
@@ -1211,6 +1234,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   const requiredDocuments = [
     { key: 'ownership_certificate', label: 'Certificado de Dominio Vigente' },
     { key: 'tax_assessment', label: 'Certificado de Avalúo Fiscal' },
+    { key: 'mortgage_lien_certificate', label: 'Certificado de Hipoteca y Gravamen' },
     { key: 'owner_id_copy', label: 'Fotocopia de Cédula de Identidad del Propietario' },
   ];
 
@@ -1438,6 +1462,32 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   </p>
                 )}
               </div>
+
+              {/* Número de Estacionamiento - solo para tipo Estacionamiento */}
+              {formData.tipoPropiedad === 'Estacionamiento' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Número de Estacionamiento *
+                  </label>
+                  <input
+                    type="text"
+                    required={formData.tipoPropiedad === 'Estacionamiento'}
+                    value={formData.ubicacionEstacionamiento || ''}
+                    onChange={(e) => setFormData({ ...formData, ubicacionEstacionamiento: e.target.value })}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      errors.ubicacionEstacionamiento ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: 25B"
+                    maxLength="16"
+                  />
+                  {errors.ubicacionEstacionamiento && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.ubicacionEstacionamiento}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Departamento / Oficina - Ocultar si es Estacionamiento, Bodega o Parcela */}
               {!isParking && propertyType !== 'Bodega' && propertyType !== 'Parcela' && (
@@ -2789,7 +2839,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
             <div className="space-y-6">
               {/* Documentos Existentes */}
-              {formData.documents && formData.documents.length > 0 && (
+              {formData.documents && Object.keys(formData.documents).length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Documentos Existentes</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

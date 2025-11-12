@@ -70,6 +70,7 @@ export const PropertyDetailsPage: React.FC = () => {
           bedrooms,
           bathrooms,
           estacionamientos,
+          ubicacion_estacionamiento,
           metros_utiles,
           metros_totales,
           ano_construccion,
@@ -79,7 +80,7 @@ export const PropertyDetailsPage: React.FC = () => {
           tipo_cocina,
           description,
           created_at,
-          property_images!inner (
+          property_images (
             image_url,
             storage_path
           ),
@@ -344,8 +345,15 @@ export const PropertyDetailsPage: React.FC = () => {
                 </div>
                 <div className="text-center">
                   <Car className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-                  <div className="text-lg font-semibold text-gray-900">{property.estacionamientos || 0}</div>
-                  <div className="text-sm text-gray-500">Estacionamientos</div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {property.tipo_propiedad === 'Estacionamiento' && property.ubicacion_estacionamiento
+                      ? property.ubicacion_estacionamiento
+                      : (property.estacionamientos || 0)
+                    }
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {property.tipo_propiedad === 'Estacionamiento' ? 'Número de Estacionamiento' : 'Estacionamientos'}
+                  </div>
                 </div>
                 <div className="text-center">
                   <Square className="h-6 w-6 text-blue-600 mx-auto mb-2" />

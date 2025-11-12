@@ -134,3 +134,4 @@ USING (
 -- FROM pg_tables
 -- WHERE tablename = 'rental_contract_conditions';
 -- =====================================================
+

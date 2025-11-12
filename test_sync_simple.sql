@@ -70,3 +70,4 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION '❌ Error en prueba: %', SQLERRM;
 END $$;
+

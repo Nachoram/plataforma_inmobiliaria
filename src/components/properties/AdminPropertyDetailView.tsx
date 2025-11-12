@@ -88,7 +88,7 @@ export const AdminPropertyDetailView: React.FC = () => {
           metros_totales,
           ano_construccion,
           created_at,
-          property_images!inner (
+          property_images (
             image_url,
             storage_path
           )

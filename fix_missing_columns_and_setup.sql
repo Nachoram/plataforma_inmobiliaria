@@ -183,6 +183,7 @@ BEGIN
         allows_pets,
         is_furnished,
         has_dicom_clause,
+        has_auto_renewal_clause,
         tenant_email,
         landlord_email,
         created_by,
@@ -215,6 +216,7 @@ BEGIN
         COALESCE(NEW.accepts_pets, false),
         COALESCE(NEW.is_furnished, false),
         COALESCE(NEW.dicom_clause, false),
+        COALESCE(NEW.auto_renewal_clause, NEW.automatic_renewal, false),
         tenant_email,
         landlord_email,
         NEW.created_by,
@@ -313,3 +315,4 @@ BEGIN
 
     RAISE NOTICE '==================================================';
 END $$;
+

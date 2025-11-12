@@ -73,3 +73,4 @@ WHERE table_schema = 'public'
         'contract_content',
         'contract_html'
     );
+

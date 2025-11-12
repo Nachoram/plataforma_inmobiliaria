@@ -103,7 +103,7 @@ export const OfferModal: React.FC<OfferModalProps> = ({ property, onClose, onSuc
           .from('properties')
           .select(`
             *,
-            property_images!inner (*)
+            property_images (*)
           `)
           .eq('id', property.id)
           .single();

@@ -226,3 +226,4 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE NOTICE '❌ Error: %', SQLERRM;
 END $$;
+

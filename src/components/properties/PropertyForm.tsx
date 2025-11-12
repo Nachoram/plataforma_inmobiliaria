@@ -269,7 +269,7 @@ export const PropertyForm: React.FC = () => {
         .from('properties')
         .select(`
           *,
-          property_images!inner (
+          property_images (
             id,
             image_url,
             storage_path

@@ -170,3 +170,4 @@ SELECT
         WHEN EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_contract_has_content' AND conrelid = 'rental_contracts'::regclass) THEN '✅ Constraint existe'
         ELSE '❌ Constraint no existe'
     END as constraint_status;
+

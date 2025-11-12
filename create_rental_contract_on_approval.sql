@@ -213,3 +213,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Otorgar permisos
 GRANT EXECUTE ON FUNCTION create_rental_contract_on_approval(UUID, UUID) TO authenticated;
 
+

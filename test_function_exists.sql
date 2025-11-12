@@ -51,3 +51,4 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION '❌ Error en verificación: %', SQLERRM;
 END $$;
+

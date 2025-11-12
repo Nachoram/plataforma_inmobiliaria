@@ -113,3 +113,4 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION '❌ Error en prueba minimalista: %', SQLERRM;
 END $$;
+

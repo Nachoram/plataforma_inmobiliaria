@@ -168,3 +168,4 @@ Los logs se generan en:
 
 ¡La funcionalidad está lista para usar! 🚀 Ahora puedes anular completamente las aprobaciones de postulaciones cuando sea necesario.
 
+

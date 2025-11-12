@@ -108,3 +108,4 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION '❌ Error: % (Estado: %)', SQLERRM, SQLSTATE;
 END $$;
+

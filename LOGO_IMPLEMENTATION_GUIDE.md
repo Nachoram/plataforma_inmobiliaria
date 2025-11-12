@@ -109,3 +109,4 @@ Una vez que hayas reemplazado el archivo del logo:
 2. Revisa que no haya errores de TypeScript o ESLint
 3. Prueba en diferentes navegadores y dispositivos
 4. Considera añadir un logo alternativo para modo oscuro si es necesario
+

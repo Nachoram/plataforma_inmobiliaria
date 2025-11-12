@@ -69,3 +69,4 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION '❌ Error en sincronización: %', SQLERRM;
 END $$;
+

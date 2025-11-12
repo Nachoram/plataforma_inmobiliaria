@@ -114,3 +114,4 @@ WHERE table_schema = 'public'
         'contract_html'
     )
 ORDER BY column_name;
+

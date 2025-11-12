@@ -200,3 +200,4 @@ BEGIN
 
     RAISE NOTICE '=== MIGRACIÓN COMPLETADA ===';
 END $$;
+

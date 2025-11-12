@@ -31,3 +31,4 @@ CREATE INDEX IF NOT EXISTS idx_rental_owners_unit_type ON rental_owners(unit_typ
 -- FROM pg_constraint c
 -- WHERE conrelid = 'rental_owners'::regclass AND conname LIKE '%unit_type%';
 -- =====================================================
+

@@ -882,32 +882,30 @@ export const PostulationAdminPanel: React.FC = () => {
 
       const conditionsPayload = {
         application_id: applicationId,
+        // Usar nombres de columnas que existen en la base de datos
         contract_duration_months: contractFormData.validity_period_months || 12,
         monthly_payment_day: 1, // Día de pago por defecto, podría ser configurable después
         final_rent_price: Number(contractFormData.final_amount) || 0, // Asegurar que sea número
         brokerage_commission: contractFormData.has_brokerage_commission ? Number(contractFormData.broker_amount) || 0 : 0, // Asegurar que sea número
         guarantee_amount: Number(contractFormData.guarantee_amount) || 0, // Asegurar que sea número
-        // Mapear nombres de columnas correctos según la base de datos
-        official_arrendatario_communication_email: contractFormData.tenant_email || '', // Nombre correcto en BD
+        // Columnas que existen en la base de datos
+        notification_email: contractFormData.landlord_email || '',
         accepts_pets: contractFormData.allows_pets || false,
         dicom_clause: contractFormData.has_dicom_clause || false,
-        auto_renewal_clause: contractFormData.has_auto_renewal_clause || false,
         additional_conditions: contractFormData.has_brokerage_commission
           ? `Comisión del corredor: ${contractFormData.broker_name} (RUT: ${contractFormData.broker_rut})`
           : null,
-        // Nuevas columnas agregadas por migraciones posteriores
-        contract_start_date: contractFormData.start_date || null,
+        // Columnas requeridas por validación
         broker_name: contractFormData.has_brokerage_commission ? contractFormData.broker_name || '' : 'Sin corredor',
         broker_rut: contractFormData.has_brokerage_commission ? contractFormData.broker_rut || '' : 'Sin RUT',
-        account_holder_name: contractFormData.account_holder_name || '',
-        account_holder_rut: '', // No está en el formulario actual
+        // Columnas adicionales
+        contract_start_date: contractFormData.start_date || null,
         bank_name: contractFormData.account_bank || '',
         account_type: contractFormData.account_type || '',
         account_number: contractFormData.account_number || '',
+        account_holder_name: contractFormData.account_holder_name || '',
+        account_holder_rut: contractFormData.account_holder_rut || '',
         payment_method: 'transferencia_bancaria', // Valor por defecto
-        // Mapear landlord_email al nombre correcto en BD
-        notificaficacion_email_arrendador: contractFormData.landlord_email || '',
-        is_furnished: contractFormData.is_furnished || false,
         created_by: applicationId ? undefined : auth?.user?.id, // Solo establecer en creación
         updated_at: new Date().toISOString()
       };
@@ -915,7 +913,7 @@ export const PostulationAdminPanel: React.FC = () => {
       console.log('📤 [saveContract] Payload a enviar:', conditionsPayload);
 
       // Verificar que todos los campos requeridos estén presentes
-      const requiredFields = ['application_id', 'payment_method', 'broker_name', 'broker_rut', 'official_arrendatario_communication_email'];
+      const requiredFields = ['application_id', 'payment_method', 'broker_name', 'broker_rut', 'notification_email'];
       const missingFields = requiredFields.filter(field => !conditionsPayload[field as keyof typeof conditionsPayload]);
 
       if (missingFields.length > 0) {

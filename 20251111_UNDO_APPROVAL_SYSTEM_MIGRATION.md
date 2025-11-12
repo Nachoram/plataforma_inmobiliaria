@@ -118,3 +118,4 @@ Cada anulación queda registrada en `application_audit_log` con:
 **Estado**: ✅ Listo para aplicar
 **Prioridad**: Alta (completa funcionalidad crítica)
 **Tiempo estimado de aplicación**: 2-3 minutos
+

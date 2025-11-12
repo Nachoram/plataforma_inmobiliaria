@@ -133,3 +133,4 @@ async function testAutoRenewalClause() {
 
 // Ejecutar la prueba
 testAutoRenewalClause();
+

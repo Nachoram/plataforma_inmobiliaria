@@ -313,6 +313,15 @@ export const PostulationAdminPanel: React.FC = () => {
     }
   };
 
+  // Función para abrir el editor de contratos (canvas editor)
+  const handleOpenEditor = () => {
+    if (!contractData?.id) {
+      toast.error('No hay contrato disponible para editar');
+      return;
+    }
+    navigate(`/contracts/${contractData.id}/canvas-editor`);
+  };
+
   // Función para cancelar contrato
   const handleCancelContract = async () => {
     if (!contractData?.id) return;
@@ -1559,10 +1568,12 @@ export const PostulationAdminPanel: React.FC = () => {
               }}
               contractUrl={contractData.contract_html}
               signedContractUrl={contractData.signed_contract_url}
+              contractId={contractData.id}
               onDownload={handleDownloadContract}
               onView={handleViewContract}
               onEdit={handleEditContract}
               onCancel={handleCancelContract}
+              onOpenEditor={handleOpenEditor}
               canEdit={contractData.status === 'draft'}
               canCancel={contractData.status !== 'cancelled' && contractData.status !== 'fully_signed'}
               isDownloading={isDownloadingContract}

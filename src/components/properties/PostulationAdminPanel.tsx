@@ -445,6 +445,7 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
           hasContractConditions: !!contractConditions,
           hasContract: !!contract,
           contractSigned: contract?.status === 'signed' || false,
+          contractId: contract?.id || undefined,
           lastModified: app.updated_at,
           modificationCount: modificationCount || 0,
           auditLogCount: auditCount || 0
@@ -1792,6 +1793,21 @@ export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
                       </span>
                     </div>
                   </button>
+
+                  {/* Botón: Abrir Editor (solo si hay contrato) */}
+                  {selectedProfile.hasContract && selectedProfile.contractId && (
+                    <button
+                      onClick={() => navigate(`/contracts/${selectedProfile.contractId}/canvas-editor`)}
+                      className="group relative font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:shadow-xl hover:from-orange-700 hover:to-amber-700 hover:-translate-y-1"
+                      title="Editar el contrato asociado a esta postulación"
+                    >
+                      <div className="flex flex-col items-center space-y-2">
+                        <Edit className="h-8 w-8" />
+                        <span className="text-sm">Abrir Editor</span>
+                        <span className="text-xs opacity-90">Editar contrato</span>
+                      </div>
+                    </button>
+                  )}
                 </div>
 
                 {/* Acciones adicionales (siempre disponibles) */}

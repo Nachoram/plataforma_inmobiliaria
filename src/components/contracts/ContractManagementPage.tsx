@@ -392,18 +392,11 @@ const ContractManagementPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Actions mejoradas */}
+                  {/* Actions removed - Now in PostulationAdminPanel */}
                   <div className="mt-4">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditContract(contract);
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-lg hover:from-orange-700 hover:to-amber-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
-                    >
-                      <Edit3 className="h-4 w-4" />
-                      <span>Abrir Editor</span>
-                    </button>
+                    <p className="text-xs text-center text-gray-500 italic">
+                      Ver detalles para más acciones
+                    </p>
                   </div>
                 </div>
               </div>

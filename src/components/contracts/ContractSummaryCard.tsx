@@ -48,6 +48,10 @@ interface ContractSummaryCardProps {
   onView?: () => void;
   onEdit?: () => void;
   onCancel?: () => void;
+  onOpenEditor?: () => void; // NEW: Opens contract canvas editor
+
+  // Contract ID for editor
+  contractId?: string;
 
   // Permissions
   canEdit?: boolean;
@@ -80,6 +84,8 @@ const ContractSummaryCard: React.FC<ContractSummaryCardProps> = ({
   onView,
   onEdit,
   onCancel,
+  onOpenEditor,
+  contractId,
   canEdit = false,
   canCancel = false,
   isDownloading = false,
@@ -271,6 +277,18 @@ const ContractSummaryCard: React.FC<ContractSummaryCardProps> = ({
             Acciones Disponibles
           </h4>
           <div className="flex flex-wrap gap-3">
+            {/* PRIMARY ACTION: Open Editor - Prominent styling */}
+            {contractId && onOpenEditor && (
+              <button
+                onClick={onOpenEditor}
+                className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-lg hover:from-orange-700 hover:to-amber-700 transition-all duration-200 font-semibold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                title="Editar el contrato asociado a esta postulación"
+              >
+                <Edit3 className="h-5 w-5 mr-2" />
+                Abrir Editor
+              </button>
+            )}
+
             {hasContractFile && onView && (
               <button
                 onClick={onView}

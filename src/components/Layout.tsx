@@ -65,7 +65,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
     { path: '/portfolio', icon: Home, label: 'Portafolio', shortLabel: 'Prop.' },
     { path: '/my-applications', icon: Mail, label: 'Mis Postulaciones', shortLabel: 'Post.' },
-    { path: '/contracts', icon: FileText, label: 'Contratos', shortLabel: 'Cont.' },
   ] : [
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
   ];
@@ -121,17 +120,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   >
                     <Mail className="h-4 w-4 flex-shrink-0" />
                     <span className="hidden xl:inline">Mis Postulaciones</span>
-                  </Link>
-                  <Link
-                    to="/contracts"
-                    className={`px-2 lg:px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center space-x-1.5 flex-shrink-0 ${
-                      isActive('/contracts')
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
-                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm'
-                    }`}
-                  >
-                    <FileText className="h-4 w-4 flex-shrink-0" />
-                    <span className="hidden xl:inline">Contratos</span>
                   </Link>
                 </>
               )}
@@ -231,14 +219,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               <Mail className="h-4 w-4" />
               <span>Mis Postulaciones</span>
-            </Link>
-            <Link
-              to="/contracts"
-              className="flex items-center space-x-2 px-2 py-1.5 text-xs font-medium rounded-lg text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <FileText className="h-4 w-4" />
-              <span>Contratos</span>
             </Link>
             <button
               onClick={() => {

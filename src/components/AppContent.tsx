@@ -32,6 +32,7 @@ import MyApplicationsPage from './dashboard/MyApplicationsPage';
 import ContractManagementPage from './contracts/ContractManagementPage';
 import ContractViewerPage from './contracts/ContractViewerPage';
 import ContractCanvasEditorPage from './contracts/ContractCanvasEditorPage';
+import { ContractRedirectPage } from './contracts/ContractRedirectPage';
 import PropertyFormPage from './properties/PropertyFormPage';
 
 // Loading component for lazy loaded routes
@@ -154,7 +155,7 @@ export const AppContent: React.FC = () => {
       <Route path="/contracts" element={
         <ProtectedRoute>
           <Layout>
-            <ContractManagementPage />
+            <ContractRedirectPage />
           </Layout>
         </ProtectedRoute>
       } />

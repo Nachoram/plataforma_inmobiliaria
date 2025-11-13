@@ -62,6 +62,16 @@ interface RentalPublicationFormProps {
   onCancel?: () => void;
 }
 
+// Interface para documentos de propietario
+interface RentalOwnerDocument {
+  type: string;
+  label: string;
+  required: boolean;
+  file?: File;
+  url?: string;
+  uploaded?: boolean;
+}
+
 // Interface para propietario individual
 interface Owner {
   id: string;
@@ -105,6 +115,8 @@ interface Owner {
   owner_apartment_number?: string;
   // Campo para porcentaje de propiedad (opcional)
   ownership_percentage?: number;
+  // Documentos del propietario
+  documents?: RentalOwnerDocument[];
 }
 
 export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
@@ -170,10 +182,72 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       owner_unit_type: 'Casa', // Valor por defecto
       owner_apartment_number: '',
       property_regime: '',
-      ownership_percentage: undefined
+      ownership_percentage: undefined,
+      documents: [] // Inicializar vacío, se poblará en useEffect
     };
     return [defaultOwner];
   }, [isEditing, initialData]);
+
+  // Inicializar documentos de propietarios cuando el componente se monte
+  useEffect(() => {
+    setOwners(prev => prev.map(owner => ({
+      ...owner,
+      documents: owner.documents && owner.documents.length > 0
+        ? owner.documents
+        : getRequiredOwnerDocuments(owner.owner_type)
+    })));
+  }, []);
+
+  // Función para obtener documentos requeridos según tipo de propietario
+  const getRequiredOwnerDocuments = (ownerType: 'natural' | 'juridica'): RentalOwnerDocument[] => {
+    if (ownerType === 'natural') {
+      return [{
+        type: 'cedula_identidad',
+        label: 'Cédula de Identidad del Propietario',
+        required: true
+      }];
+    } else if (ownerType === 'juridica') {
+      return [
+        {
+          type: 'constitucion_sociedad',
+          label: 'Escritura de Constitución de la Sociedad',
+          required: true
+        },
+        {
+          type: 'poder_representante',
+          label: 'Poder del Representante Legal',
+          required: false
+        },
+        {
+          type: 'cedula_representante',
+          label: 'Cédula de Identidad del Representante Legal',
+          required: true
+        }
+      ];
+    }
+    return [];
+  };
+
+  // Función auxiliar para obtener el label de un documento por tipo
+  const getDocumentLabel = (docType: string): string => {
+    const labels: Record<string, string> = {
+      'cedula_identidad': 'Cédula de Identidad del Propietario',
+      'constitucion_sociedad': 'Escritura de Constitución de la Sociedad',
+      'poder_representante': 'Poder del Representante Legal',
+      'cedula_representante': 'Cédula de Identidad del Representante Legal'
+    };
+    return labels[docType] || docType;
+  };
+
+  // Función auxiliar para verificar si un documento es requerido
+  const isDocumentRequired = (docType: string, ownerType: string): boolean => {
+    if (ownerType === 'natural') {
+      return docType === 'cedula_identidad';
+    } else if (ownerType === 'juridica') {
+      return docType === 'constitucion_sociedad' || docType === 'cedula_representante';
+    }
+    return false;
+  };
 
   // Función para inicializar formData
   const getInitialFormData = useMemo(() => {
@@ -384,8 +458,37 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         }
 
         // Convert database records to Owner interface
-        const loadedOwners: Owner[] = relationships.map((rel: any, index: number) => {
+        const loadedOwners: Owner[] = await Promise.all(relationships.map(async (rel: any, index: number) => {
           const ownerData = rel.rental_owners;
+          const rentalOwnerId = ownerData.id;
+
+          // Load documents for this owner
+          let ownerDocuments: RentalOwnerDocument[] = [];
+          try {
+            const { data: documents, error: docsError } = await supabase
+              .from('rental_owner_documents')
+              .select('*')
+              .eq('rental_owner_id', rentalOwnerId);
+
+            if (!docsError && documents) {
+              // Convert database documents to RentalOwnerDocument format
+              ownerDocuments = documents.map(doc => ({
+                type: doc.doc_type,
+                label: getDocumentLabel(doc.doc_type),
+                required: isDocumentRequired(doc.doc_type, ownerData.owner_type),
+                url: doc.file_url,
+                uploaded: true
+              }));
+            }
+          } catch (docError) {
+            console.warn(`⚠️ Could not load documents for owner ${rentalOwnerId}:`, docError);
+          }
+
+          // If no documents loaded, initialize with default required documents
+          if (ownerDocuments.length === 0) {
+            ownerDocuments = getRequiredOwnerDocuments(ownerData.owner_type || 'natural');
+          }
+
           const owner: Owner = {
             id: `loaded-owner-${index}`,
             owner_type: ownerData.owner_type || 'natural',
@@ -424,10 +527,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             notary_name: ownerData.notary_name,
             repertory_number: ownerData.repertory_number,
             // Ownership percentage
-            ownership_percentage: rel.ownership_percentage
+            ownership_percentage: rel.ownership_percentage,
+            // Documents
+            documents: ownerDocuments
           };
           return owner;
-        });
+        }));
 
         console.log('✅ Loaded owners for editing:', loadedOwners.length);
         setOwners(loadedOwners);
@@ -515,8 +620,46 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   };
 
   const updateOwner = (ownerId: string, field: keyof Owner, value: string) => {
+    setOwners(prev => prev.map(owner => {
+      if (owner.id === ownerId) {
+        const updatedOwner = { ...owner, [field]: value };
+
+        // Si cambió el tipo de propietario, actualizar documentos
+        if (field === 'owner_type' && value) {
+          // Forzar la inicialización de documentos para el nuevo tipo
+          updatedOwner.documents = getRequiredOwnerDocuments(value as 'natural' | 'juridica');
+        }
+
+        return updatedOwner;
+      }
+      return owner;
+    }));
+  };
+
+  // Funciones para manejar documentos de propietarios
+  const handleOwnerDocumentUpload = (ownerId: string, documentType: string, file: File) => {
     setOwners(prev => prev.map(owner =>
-      owner.id === ownerId ? { ...owner, [field]: value } : owner
+      owner.id === ownerId ? {
+        ...owner,
+        documents: owner.documents?.map(doc =>
+          doc.type === documentType
+            ? { ...doc, file, uploaded: false, url: undefined }
+            : doc
+        )
+      } : owner
+    ));
+  };
+
+  const handleOwnerDocumentRemove = (ownerId: string, documentType: string) => {
+    setOwners(prev => prev.map(owner =>
+      owner.id === ownerId ? {
+        ...owner,
+        documents: owner.documents?.map(doc =>
+          doc.type === documentType
+            ? { ...doc, file: undefined, uploaded: false, url: undefined }
+            : doc
+        )
+      } : owner
     ));
   };
 
@@ -688,6 +831,22 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         } else {
           emails.set(emailKey, index);
         }
+      }
+    });
+
+    // Validar documentos de propietarios (solo si ya están inicializados)
+    owners.forEach((owner, index) => {
+      const ownerPrefix = owners.length > 1 ? `Propietario ${index + 1}` : '';
+
+      if (owner.documents && owner.documents.length > 0) {
+        owner.documents.forEach(doc => {
+          if (doc.required) {
+            const isUploaded = doc.uploaded || (doc.file || doc.url);
+            if (!isUploaded) {
+              newErrors[`owner_${owner.id}_${doc.type}`] = `${ownerPrefix} ${doc.label} es requerido${ownerPrefix ? '' : ''}`;
+            }
+          }
+        });
       }
     });
 
@@ -864,6 +1023,71 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     }
     
     console.log('🎉 Upload de archivos completado exitosamente');
+  };
+
+  // Función para subir documentos de un propietario específico
+  const uploadOwnerDocuments = async (rentalOwnerId: string, documents: RentalOwnerDocument[]) => {
+    const documentsToUpload = documents.filter(doc => doc.file && !doc.url);
+
+    if (documentsToUpload.length === 0) return;
+
+    console.log(`📄 Subiendo ${documentsToUpload.length} documentos para propietario:`, rentalOwnerId);
+
+    for (const doc of documentsToUpload) {
+      if (!doc.file) continue;
+
+      try {
+        // Generar nombre único para el archivo
+        const fileName = `${rentalOwnerId}/${doc.type}/${Date.now()}_${doc.file.name}`;
+        const filePath = `rental-owner-documents/${fileName}`;
+
+        // Subir archivo a Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('user-documents')
+          .upload(filePath, doc.file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error(`Error uploading owner document ${doc.type}:`, uploadError);
+          throw new Error(`Error al subir ${doc.label}`);
+        }
+
+        // Obtener URL pública del archivo
+        const { data: urlData } = supabase.storage
+          .from('user-documents')
+          .getPublicUrl(filePath);
+
+        if (!urlData.publicUrl) {
+          throw new Error(`Error al obtener URL pública para ${doc.label}`);
+        }
+
+        // Guardar registro del documento en la tabla rental_owner_documents
+        const { error: dbError } = await supabase
+          .from('rental_owner_documents')
+          .insert({
+            rental_owner_id: rentalOwnerId,
+            doc_type: doc.type,
+            file_name: doc.file.name,
+            file_url: urlData.publicUrl,
+            storage_path: filePath,
+            uploaded_by: user?.id,
+            uploaded_at: new Date().toISOString(),
+            created_at: new Date().toISOString()
+          });
+
+        if (dbError) {
+          console.error('❌ Error insertando registro de documento de propietario:', dbError);
+          throw new Error(`Error guardando registro de documento: ${dbError.message}`);
+        }
+
+        console.log(`✅ Documento ${doc.type} guardado exitosamente`);
+      } catch (error) {
+        console.error(`❌ Error procesando documento ${doc.type}:`, error);
+        throw error;
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1204,6 +1428,18 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               : ownerResult.company_name,
             percentage: relationshipData.ownership_percentage
           });
+
+          // Upload owner documents if they exist
+          if (owner.documents && owner.documents.length > 0) {
+            try {
+              await uploadOwnerDocuments(ownerResult.id, owner.documents);
+              console.log('✅ Documentos del propietario subidos exitosamente');
+            } catch (docError) {
+              console.error('⚠️ Error al subir documentos del propietario:', docError);
+              // No fallar la publicación por error en documentos, pero mostrar advertencia
+              alert(`Propiedad creada exitosamente, pero hubo un error al subir algunos documentos del propietario: ${docError instanceof Error ? docError.message : 'Error desconocido'}`);
+            }
+          }
         }
       }
 
@@ -2757,6 +2993,83 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                             {errors[`owner_${owner.id}_ownership_percentage`]}
                           </p>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Documentos específicos del propietario */}
+                  {owner.documents && owner.documents.length > 0 && owner.documents.some(doc => doc.type) && (
+                    <div className="border-t pt-6">
+                      <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center">
+                        <FileText className="h-5 w-5 mr-2 text-emerald-600" />
+                        Documentos Requeridos
+                      </h4>
+
+                      <div className="grid gap-3">
+                        {owner.documents.map((doc) => {
+                          const isUploaded = doc.uploaded || (doc.file || doc.url);
+
+                          return (
+                            <div key={doc.type} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                              <div className="flex-shrink-0">
+                                <FileText className="h-5 w-5 text-gray-400" />
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900 truncate">{doc.label}</span>
+                                  {doc.required && (
+                                    <span className="text-xs text-red-600 font-medium">*</span>
+                                  )}
+                                </div>
+                                {isUploaded && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                    <span className="text-sm text-green-700">
+                                      {doc.file?.name || 'Documento subido'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {isUploaded ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOwnerDocumentRemove(owner.id, doc.type)}
+                                    className="flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                                  >
+                                    <X className="h-4 w-4" />
+                                    Remover
+                                  </button>
+                                ) : (
+                                  <label className="flex items-center gap-1 px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer">
+                                    <Upload className="h-4 w-4" />
+                                    Subir
+                                    <input
+                                      type="file"
+                                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          handleOwnerDocumentUpload(owner.id, doc.type, file);
+                                        }
+                                      }}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                        <p className="text-xs text-emerald-800">
+                          <strong>Nota:</strong> Los documentos marcados con (*) son obligatorios según la normativa chilena.
+                          El poder del representante es opcional y solo requerido en casos específicos.
+                        </p>
                       </div>
                     </div>
                   )}

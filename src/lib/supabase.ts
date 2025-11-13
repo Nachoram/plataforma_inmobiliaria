@@ -204,6 +204,66 @@ export interface Offer {
   created_at: string;
 }
 
+// Interfaces for Sale Offers System
+export type SaleOfferStatus = 
+  | 'pendiente'
+  | 'en_revision'
+  | 'info_solicitada'
+  | 'aceptada'
+  | 'rechazada'
+  | 'contraoferta'
+  | 'estudio_titulo'
+  | 'finalizada';
+
+export interface PropertySaleOffer {
+  id: string;
+  property_id: string;
+  buyer_id: string;
+  buyer_name: string;
+  buyer_email: string;
+  buyer_phone: string | null;
+  offer_amount: number;
+  offer_amount_currency: string;
+  financing_type: string | null;
+  message: string | null;
+  requests_title_study: boolean;
+  requests_property_inspection: boolean;
+  status: SaleOfferStatus;
+  seller_response: string | null;
+  seller_notes: string | null;
+  counter_offer_amount: number | null;
+  counter_offer_terms: string | null;
+  created_at: string;
+  updated_at: string;
+  responded_at: string | null;
+}
+
+export interface PropertySaleOfferDocument {
+  id: string;
+  offer_id: string;
+  doc_type: string;
+  file_name: string;
+  file_url: string;
+  storage_path: string;
+  file_size_bytes: number | null;
+  mime_type: string | null;
+  uploaded_by: string | null;
+  uploaded_at: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface PropertySaleOfferHistory {
+  id: string;
+  offer_id: string;
+  action: string;
+  old_status: SaleOfferStatus | null;
+  new_status: SaleOfferStatus | null;
+  changed_by: string | null;
+  change_notes: string | null;
+  created_at: string;
+}
+
 export interface Document {
   id: string;
   uploader_id: string;
@@ -1071,6 +1131,321 @@ export const approveApplicationWithWebhook = async (
     return updatedApplication;
   } catch (error) {
     console.error('Error approving application with webhook:', error);
+    throw error;
+  }
+};
+
+// =====================================================
+// SALE OFFERS MANAGEMENT FUNCTIONS
+// =====================================================
+
+/**
+ * Create a new sale offer for a property
+ */
+export const createSaleOffer = async (offerData: {
+  property_id: string;
+  buyer_name: string;
+  buyer_email: string;
+  buyer_phone?: string;
+  offer_amount: number;
+  offer_amount_currency?: string;
+  financing_type?: string;
+  message?: string;
+  requests_title_study?: boolean;
+  requests_property_inspection?: boolean;
+}): Promise<PropertySaleOffer> => {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data, error } = await supabase
+      .from('property_sale_offers')
+      .insert({
+        ...offerData,
+        buyer_id: user.id,
+        offer_amount_currency: offerData.offer_amount_currency || 'CLP',
+        requests_title_study: offerData.requests_title_study || false,
+        requests_property_inspection: offerData.requests_property_inspection || false,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    console.log('✅ Oferta creada exitosamente:', data);
+    return data;
+  } catch (error) {
+    console.error('Error creating sale offer:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all offers for a specific property
+ */
+export const getPropertySaleOffers = async (propertyId: string): Promise<PropertySaleOffer[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('property_sale_offers')
+      .select('*')
+      .eq('property_id', propertyId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching property sale offers:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get offers made by the current user
+ */
+export const getUserSaleOffers = async (): Promise<PropertySaleOffer[]> => {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data, error } = await supabase
+      .from('property_sale_offers')
+      .select(`
+        *,
+        properties:property_id (
+          id,
+          address_street,
+          address_number,
+          address_commune,
+          price_clp,
+          listing_type,
+          property_images (
+            image_url
+          )
+        )
+      `)
+      .eq('buyer_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching user sale offers:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get offers received for user's properties
+ */
+export const getReceivedSaleOffers = async (): Promise<PropertySaleOffer[]> => {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data, error } = await supabase
+      .from('property_sale_offers')
+      .select(`
+        *,
+        properties:property_id!inner (
+          id,
+          address_street,
+          address_number,
+          address_commune,
+          price_clp,
+          owner_id,
+          property_images (
+            image_url
+          )
+        )
+      `)
+      .eq('properties.owner_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching received sale offers:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update sale offer status
+ */
+export const updateSaleOfferStatus = async (
+  offerId: string,
+  status: SaleOfferStatus,
+  additionalData?: {
+    seller_response?: string;
+    seller_notes?: string;
+    counter_offer_amount?: number;
+    counter_offer_terms?: string;
+  }
+): Promise<PropertySaleOffer> => {
+  try {
+    const updateData: any = {
+      status,
+      ...additionalData,
+    };
+
+    const { data, error } = await supabase
+      .from('property_sale_offers')
+      .update(updateData)
+      .eq('id', offerId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    console.log('✅ Estado de oferta actualizado:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating sale offer status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Upload document to a sale offer
+ */
+export const uploadSaleOfferDocument = async (
+  offerId: string,
+  file: File,
+  docType: string,
+  notes?: string
+): Promise<PropertySaleOfferDocument> => {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // Generate unique file path
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `sale_offers/${offerId}/${fileName}`;
+
+    // Upload file to storage
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath);
+
+    // Save document metadata
+    const { data, error } = await supabase
+      .from('property_sale_offer_documents')
+      .insert({
+        offer_id: offerId,
+        doc_type: docType,
+        file_name: file.name,
+        file_url: publicUrl,
+        storage_path: filePath,
+        file_size_bytes: file.size,
+        mime_type: file.type,
+        uploaded_by: user.id,
+        notes: notes,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    console.log('✅ Documento subido exitosamente:', data);
+    return data;
+  } catch (error) {
+    console.error('Error uploading sale offer document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get documents for a sale offer
+ */
+export const getSaleOfferDocuments = async (offerId: string): Promise<PropertySaleOfferDocument[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('property_sale_offer_documents')
+      .select('*')
+      .eq('offer_id', offerId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching sale offer documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get offer history
+ */
+export const getSaleOfferHistory = async (offerId: string): Promise<PropertySaleOfferHistory[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('property_sale_offer_history')
+      .select('*')
+      .eq('offer_id', offerId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching sale offer history:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get sale properties owned by current user
+ */
+export const getUserSaleProperties = async (): Promise<Property[]> => {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data, error } = await supabase
+      .from('properties')
+      .select(`
+        *,
+        property_images (
+          image_url,
+          storage_path
+        )
+      `)
+      .eq('owner_id', user.id)
+      .eq('listing_type', 'venta')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching user sale properties:', error);
     throw error;
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, FileText, Menu, X } from 'lucide-react';
+import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, Menu, X, DollarSign } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
@@ -64,7 +64,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const mobileNavItems = user ? [
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
     { path: '/portfolio', icon: Home, label: 'Portafolio', shortLabel: 'Prop.' },
-    { path: '/my-applications', icon: Mail, label: 'Mis Postulaciones', shortLabel: 'Post.' },
+    { path: '/my-applications', icon: Mail, label: 'Postulaciones', shortLabel: 'Post.' },
+    { path: '/my-offers', icon: DollarSign, label: 'Ofertas', shortLabel: 'Ofer.' },
+    { path: '/perfil', icon: UserCircle, label: 'Mi Perfil', shortLabel: 'Perfil' },
   ] : [
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
   ];
@@ -119,7 +121,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     }`}
                   >
                     <Mail className="h-4 w-4 flex-shrink-0" />
-                    <span className="hidden xl:inline">Mis Postulaciones</span>
+                    <span className="hidden xl:inline">Postulaciones</span>
+                  </Link>
+                  <Link
+                    to="/my-offers"
+                    className={`px-2 lg:px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center space-x-1.5 flex-shrink-0 ${
+                      isActive('/my-offers')
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm'
+                    }`}
+                  >
+                    <DollarSign className="h-4 w-4 flex-shrink-0" />
+                    <span className="hidden xl:inline">Mis Ofertas</span>
+                  </Link>
+                  <Link
+                    to="/perfil"
+                    className={`px-2 lg:px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center space-x-1.5 flex-shrink-0 ${
+                      isActive('/perfil')
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+                        : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm'
+                    }`}
+                  >
+                    <UserCircle className="h-4 w-4 flex-shrink-0" />
+                    <span className="hidden xl:inline">Mi Perfil</span>
                   </Link>
                 </>
               )}
@@ -218,7 +242,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               onClick={() => setMobileMenuOpen(false)}
             >
               <Mail className="h-4 w-4" />
-              <span>Mis Postulaciones</span>
+              <span>Postulaciones</span>
+            </Link>
+            <Link
+              to="/my-offers"
+              className="flex items-center space-x-2 px-2 py-1.5 text-xs font-medium rounded-lg text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <DollarSign className="h-4 w-4" />
+              <span>Mis Ofertas</span>
+            </Link>
+            <Link
+              to="/perfil"
+              className="flex items-center space-x-2 px-2 py-1.5 text-xs font-medium rounded-lg text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <UserCircle className="h-4 w-4" />
+              <span>Mi Perfil</span>
             </Link>
             <button
               onClick={() => {

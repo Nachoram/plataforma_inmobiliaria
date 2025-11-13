@@ -22,6 +22,9 @@ import { RentalApplicationPage } from './properties/RentalApplicationPage';
 import { PostulationAdminPanel } from './applications/PostulationAdminPanel';
 import { PostulantAdminPanel } from './applications/PostulantAdminPanel';
 
+// Sales components
+import SaleOfferManagementPage from './sales/SaleOfferManagementPage';
+
 // Diagnostic components - keep loaded
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
 import DatabaseQueryRunner from './DatabaseQueryRunner';
@@ -29,11 +32,16 @@ import DatabaseQueryRunner from './DatabaseQueryRunner';
 // Temporarily disable lazy loading to debug the issue
 import PortfolioPage from './portfolio/PortfolioPage';
 import MyApplicationsPage from './dashboard/MyApplicationsPage';
+import MyOffersPage from './dashboard/MyOffersPage';
+import MySalesPage from './dashboard/MySalesPage';
 import ContractManagementPage from './contracts/ContractManagementPage';
 import ContractViewerPage from './contracts/ContractViewerPage';
 import ContractCanvasEditorPage from './contracts/ContractCanvasEditorPage';
 import { ContractRedirectPage } from './contracts/ContractRedirectPage';
 import PropertyFormPage from './properties/PropertyFormPage';
+import UserProfilePage from './profile/UserProfilePage';
+import SalePropertyAdminPanel from './sales/SalePropertyAdminPanel';
+import SaleOfferPage from './sales/SaleOfferPage';
 
 // Loading component for lazy loaded routes
 const LoadingSpinner = () => (
@@ -84,12 +92,35 @@ export const AppContent: React.FC = () => {
         </Layout>
       } />
 
+      {/* Sale offer routes */}
+      <Route path="/ofertas/nueva/:propertyId" element={
+        <Layout>
+          <SaleOfferPage />
+        </Layout>
+      } />
+
+      <Route path="/offers/new/:propertyId" element={
+        <Layout>
+          <SaleOfferPage />
+        </Layout>
+      } />
+
       {/* Postulation admin routes */}
       <Route path="/postulation/:id/admin" element={
         <ProtectedRoute>
           <Layout>
             {console.log('🧪 AppContent: Renderizando PostulationAdminPanel')}
             <PostulationAdminPanel />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      {/* Sale offer admin routes */}
+      <Route path="/offer/:id/admin" element={
+        <ProtectedRoute>
+          <Layout>
+            {console.log('🧪 AppContent: Renderizando SaleOfferManagementPage')}
+            <SaleOfferManagementPage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -148,6 +179,56 @@ export const AppContent: React.FC = () => {
         <ProtectedRoute>
           <Layout>
             <PostulantAdminPanel />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-offers" element={
+        <ProtectedRoute>
+          <Layout>
+            <MyOffersPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-offers/:offerId/admin" element={
+        <ProtectedRoute>
+          <Layout>
+            <MyOffersPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-offers/:offerId/seller-admin" element={
+        <ProtectedRoute>
+          <Layout>
+            <MyOffersPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      {/* DEPRECATED: /my-sales routes - Now integrated into /portfolio with tabs */}
+      {/* Keeping for backwards compatibility, redirects to portfolio */}
+      <Route path="/my-sales" element={
+        <ProtectedRoute>
+          <Layout>
+            <MySalesPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-sales/:id" element={
+        <ProtectedRoute>
+          <Layout>
+            <SalePropertyAdminPanel />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/perfil" element={
+        <ProtectedRoute>
+          <Layout>
+            <UserProfilePage />
           </Layout>
         </ProtectedRoute>
       } />

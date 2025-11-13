@@ -8,6 +8,7 @@ import './AdminPropertyDetailView.css';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { PostulationAdminPanel } from './PostulationAdminPanel';
+import SaleOfferAdminPanel from '../sales/SaleOfferAdminPanel';
 
 interface PropertyWithImages extends Property {
   property_images?: Array<{
@@ -316,17 +317,19 @@ export const AdminPropertyDetailView: React.FC = () => {
           </div>
         </div>
 
-        {/* Sección: Link de Postulación Único */}
-        {isOwner && (
+        {/* Sección: Link de Postulación/Oferta Único */}
+        {isOwner && property && (property.listing_type === 'arriendo' || property.listing_type === 'venta') && (
           <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl shadow-md border-2 border-blue-200 p-6">
             <div className="flex items-center mb-3">
               <div className="h-12 w-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-md mr-4">
                 <FileText className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-gray-900">Link de Postulación para Candidatos</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Link de {property.listing_type === 'arriendo' ? 'Postulación para Candidatos' : 'Oferta para Compradores'}
+                </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Comparte este enlace con los interesados que encuentres en portales externos para centralizar todas las postulaciones aquí.
+                  Comparte este enlace con los interesados que encuentres en portales externos para centralizar todas las {property.listing_type === 'arriendo' ? 'postulaciones' : 'ofertas'} aquí.
                 </p>
               </div>
             </div>
@@ -377,9 +380,11 @@ export const AdminPropertyDetailView: React.FC = () => {
         {/* Métricas - Grid de 3 columnas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Métrica 1: Postulaciones por Semana */}
+          {/* Métrica 1: Postulaciones/Ofertas por Semana */}
           <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Postulaciones por Semana</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {property.listing_type === 'arriendo' ? 'Postulaciones' : 'Ofertas'} por Semana
+            </h3>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={weeklyApplications}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -405,7 +410,9 @@ export const AdminPropertyDetailView: React.FC = () => {
               <div className="text-3xl font-bold text-emerald-600">
                 {weeklyApplications[weeklyApplications.length - 1].count}
               </div>
-              <div className="text-sm text-gray-500">Postulaciones esta semana</div>
+              <div className="text-sm text-gray-500">
+                {property.listing_type === 'arriendo' ? 'Postulaciones' : 'Ofertas'} esta semana
+              </div>
             </div>
           </div>
 
@@ -477,9 +484,14 @@ export const AdminPropertyDetailView: React.FC = () => {
 
         </div>
 
-        {/* Panel de Administración de Postulaciones - Componente Separado */}
-        {id && property && isOwner && (
+        {/* Panel de Administración de Postulaciones - Solo para Arriendos */}
+        {id && property && isOwner && property.listing_type === 'arriendo' && (
           <PostulationAdminPanel propertyId={id} property={property} />
+        )}
+
+        {/* Panel de Administración de Ofertas - Solo para Ventas */}
+        {id && property && isOwner && property.listing_type === 'venta' && (
+          <SaleOfferAdminPanel propertyId={id} property={property} />
         )}
       </div>
 

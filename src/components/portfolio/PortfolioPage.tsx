@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Building } from 'lucide-react';
+import { Plus, Building, Home, TrendingUp, Package } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import CustomButton from '../common/CustomButton';
@@ -33,11 +33,14 @@ interface PropertyWithImages extends Property {
 
 
 
+type TabType = 'todos' | 'arriendo' | 'venta';
+
 const PortfolioPage: React.FC = () => {
   const { user } = useAuth();
   const [properties, setProperties] = useState<PropertyWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedPropertyId, setExpandedPropertyId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('todos');
 
   const fetchPortfolioData = useCallback(async () => {
     // Verify user is authenticated before making any database queries
@@ -118,17 +121,34 @@ const PortfolioPage: React.FC = () => {
           } else {
             console.log('✅ [FALLBACK SUCCESS] Propiedades cargadas con método de respaldo:', fallbackData?.length || 0);
             
-            // Agregar conteos de postulaciones manualmente
+            // Agregar conteos de postulaciones y ofertas manualmente
             const propertiesWithCounts = await Promise.all(
               (fallbackData || []).map(async (property) => {
-                const { count } = await supabase
-                  .from('applications')
-                  .select('*', { count: 'exact', head: true })
-                  .eq('property_id', property.id);
-                
+                let postulationCount = 0;
+                let offerCount = 0;
+
+                // Obtener conteo de postulaciones para arriendos
+                if (property.listing_type === 'arriendo') {
+                  const { count: postCount } = await supabase
+                    .from('applications')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', property.id);
+                  postulationCount = postCount || 0;
+                }
+
+                // Obtener conteo de ofertas para ventas
+                if (property.listing_type === 'venta') {
+                  const { count: offerCountResult } = await supabase
+                    .from('property_sale_offers')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', property.id);
+                  offerCount = offerCountResult || 0;
+                }
+
                 return {
                   ...property,
-                  postulation_count: count || 0,
+                  postulation_count: postulationCount,
+                  offer_count: offerCount,
                   postulations: [] // Vacío por ahora, se cargará al expandir
                 };
               })
@@ -143,7 +163,34 @@ const PortfolioPage: React.FC = () => {
       } else {
         console.log('✅ [SUCCESS] Properties loaded:', propertiesData?.length || 0, 'properties');
         console.log('📊 [DATA] Properties:', propertiesData);
-        setProperties(propertiesData || []);
+
+        // Agregar conteos de postulaciones y ofertas
+        const propertiesWithCounts = await Promise.all(
+          (propertiesData || []).map(async (property) => {
+            let postulationCount = property.postulation_count || 0;
+            let offerCount = 0;
+
+            // Obtener conteo de ofertas para ventas si no viene de la RPC
+            if (property.listing_type === 'venta' && !property.offer_count) {
+              const { count: offerCountResult } = await supabase
+                .from('property_sale_offers')
+                .select('*', { count: 'exact', head: true })
+                .eq('property_id', property.id);
+              offerCount = offerCountResult || 0;
+            } else {
+              offerCount = property.offer_count || 0;
+            }
+
+            return {
+              ...property,
+              postulation_count: postulationCount,
+              offer_count: offerCount,
+              postulations: property.postulations || []
+            };
+          })
+        );
+
+        setProperties(propertiesWithCounts);
       }
 
     } catch (error) {
@@ -255,24 +302,65 @@ const PortfolioPage: React.FC = () => {
     );
   }
 
+  // Filtrar propiedades según tab activo
+  const filteredProperties = properties.filter(property => {
+    if (activeTab === 'todos') return true;
+    return property.listing_type === activeTab;
+  });
+
+  // Contar propiedades por tipo
+  const arriendoCount = properties.filter(p => p.listing_type === 'arriendo').length;
+  const ventaCount = properties.filter(p => p.listing_type === 'venta').length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Mi Portafolio</h1>
-        <p className="text-gray-600 mb-6">Gestiona tus propiedades y las interacciones relacionadas</p>
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg border p-6 text-white">
+        <h1 className="text-3xl font-bold mb-2">Mi Portafolio</h1>
+        <p className="text-blue-100 mb-6">Gestiona tus propiedades y las interacciones relacionadas</p>
+        
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <Package className="h-8 w-8 text-blue-200" />
+              <div>
+                <p className="text-2xl font-bold">{properties.length}</p>
+                <p className="text-sm text-blue-200">Total Propiedades</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <Home className="h-8 w-8 text-emerald-200" />
+              <div>
+                <p className="text-2xl font-bold">{arriendoCount}</p>
+                <p className="text-sm text-blue-200">En Arriendo</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <TrendingUp className="h-8 w-8 text-yellow-200" />
+              <div>
+                <p className="text-2xl font-bold">{ventaCount}</p>
+                <p className="text-sm text-blue-200">En Venta</p>
+              </div>
+            </div>
+          </div>
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-4">
           <Link
             to="/property/new?type=venta"
-            className="flex items-center justify-center space-x-2 bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors"
+            className="flex items-center justify-center space-x-2 bg-white text-blue-700 px-6 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors"
           >
             <Plus className="h-5 w-5" />
             <span>Publicar Propiedad en Venta</span>
           </Link>
           <Link
             to="/property/new/rental"
-            className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+            className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors border-2 border-white/20"
           >
             <Plus className="h-5 w-5" />
             <span>Publicar Propiedad en Arriendo</span>
@@ -280,34 +368,95 @@ const PortfolioPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('todos')}
+            className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+              activeTab === 'todos'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <Package className="h-5 w-5" />
+              <span>Todas ({properties.length})</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('arriendo')}
+            className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+              activeTab === 'arriendo'
+                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <Home className="h-5 w-5" />
+              <span>Mis Arriendos ({arriendoCount})</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('venta')}
+            className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+              activeTab === 'venta'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <TrendingUp className="h-5 w-5" />
+              <span>Mis Ventas ({ventaCount})</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {/* Properties Section */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
         {/* Properties Grid */}
-        {properties.length === 0 ? (
+        {filteredProperties.length === 0 ? (
           <div className="text-center py-12">
             <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes propiedades aún</h3>
-            <p className="text-gray-500 mb-6">Comienza publicando tu primera propiedad</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {activeTab === 'todos' 
+                ? 'No tienes propiedades aún' 
+                : activeTab === 'arriendo' 
+                  ? 'No tienes propiedades en arriendo' 
+                  : 'No tienes propiedades en venta'}
+            </h3>
+            <p className="text-gray-500 mb-6">
+              {activeTab === 'todos'
+                ? 'Comienza publicando tu primera propiedad'
+                : activeTab === 'arriendo'
+                  ? 'Publica tu primera propiedad en arriendo'
+                  : 'Publica tu primera propiedad en venta'}
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/property/new?type=venta"
-                className="flex items-center justify-center space-x-2 bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Publicar en Venta</span>
-              </Link>
-              <Link
-                to="/property/new/rental"
-                className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Publicar en Arriendo</span>
-              </Link>
+              {(activeTab === 'todos' || activeTab === 'venta') && (
+                <Link
+                  to="/property/new?type=venta"
+                  className="flex items-center justify-center space-x-2 bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>Publicar en Venta</span>
+                </Link>
+              )}
+              {(activeTab === 'todos' || activeTab === 'arriendo') && (
+                <Link
+                  to="/property/new/rental"
+                  className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>Publicar en Arriendo</span>
+                </Link>
+              )}
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => (
+            {filteredProperties.map((property) => (
               <PropertyCard
                 key={property.id}
                 property={property}

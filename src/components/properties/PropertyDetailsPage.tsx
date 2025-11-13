@@ -169,35 +169,16 @@ export const PropertyDetailsPage: React.FC = () => {
   const isOwner = user?.id === property.owner_id;
   const canInteract = user && !isOwner;
 
-  const handleQuickOffer = async () => {
-    if (!user || !property) return;
-    
-    setActionLoading(true);
-    
-    try {
-      const offerAmount = prompt('¿Cuánto quieres ofrecer por esta propiedad?');
-      if (!offerAmount) return;
-      
-      const message = prompt('Mensaje para el propietario (opcional):') || '';
-      
-      const { error } = await supabase
-        .from('offers')
-        .insert({
-          property_id: property.id,
-          offerer_id: user.id,
-          offer_amount: parseFloat(offerAmount),
-          message: message,
-          status: 'pendiente'
-        });
-
-      if (error) throw error;
-      
-      alert('¡Oferta enviada exitosamente!');
-    } catch (error: any) {
-      alert('Error enviando oferta: ' + error.message);
-    } finally {
-      setActionLoading(false);
+  const handleQuickOffer = () => {
+    console.log('🔵 handleQuickOffer called', { user, property });
+    if (!user || !property) {
+      console.log('❌ User or property is null', { user, property });
+      return;
     }
+    // Navigate to the new offer form page
+    const path = `/ofertas/nueva/${property.id}`;
+    console.log('🚀 Navigating to:', path);
+    navigate(path);
   };
 
   const handleApplicationClick = () => {
@@ -215,8 +196,15 @@ export const PropertyDetailsPage: React.FC = () => {
               <Check className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-green-800 font-semibold">¡Postulación enviada exitosamente!</h3>
-              <p className="text-green-700 text-sm">El propietario revisará tu solicitud pronto.</p>
+              <h3 className="text-green-800 font-semibold">
+                {property.listing_type === 'venta' ? '¡Oferta enviada exitosamente!' : '¡Postulación enviada exitosamente!'}
+              </h3>
+              <p className="text-green-700 text-sm">
+                {property.listing_type === 'venta'
+                  ? 'El propietario revisará tu oferta pronto.'
+                  : 'El propietario revisará tu solicitud pronto.'
+                }
+              </p>
             </div>
           </div>
           <button
@@ -548,8 +536,6 @@ export const PropertyDetailsPage: React.FC = () => {
           )}
         </div>
       </div>
-
-
     </div>
   );
 };

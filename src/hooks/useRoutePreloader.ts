@@ -42,7 +42,6 @@ export const usePropertyRoutePreloader = () => {
   useEffect(() => {
     // Preload inmediato de componentes relacionados con propiedades
     import('../components/properties/RentalApplicationForm');
-    import('../components/panel/OfferModal');
 
     // Prefetch de formularios de publicación
     setTimeout(() => {

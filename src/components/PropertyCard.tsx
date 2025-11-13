@@ -31,6 +31,7 @@ interface PropertyWithImages extends SupabaseProperty {
     storage_path: string;
   }>;
   postulation_count?: number;
+  offer_count?: number;
   postulations?: Postulation[];
   tipo_propiedad?: string; // Campo agregado para el tipo de propiedad
 }
@@ -373,7 +374,12 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
         <div className="card-footer px-3 xs:px-4 py-2 bg-gray-50 border-t border-gray-100">
           <div className="flex items-center justify-between text-mobile-sm">
             <span className="metric text-gray-600">
-              Postulaciones: <strong className="text-gray-900">{property.postulation_count || 0}</strong>
+              {property.listing_type === 'venta' ? 'Ofertas' : 'Postulaciones'}: <strong className="text-gray-900">
+                {property.listing_type === 'venta'
+                  ? (property.offer_count || 0)
+                  : (property.postulation_count || 0)
+                }
+              </strong>
             </span>
             <span className={`status-badge px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
               {getStatusLabel(property.status)}
@@ -394,8 +400,8 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
       )}
       </div>
 
-      {/* Postulations List - Only show when expanded and in portfolio context */}
-      {isExpanded && context === 'portfolio' && (
+      {/* Applications/Offer List - Only show when expanded and in portfolio context */}
+      {isExpanded && context === 'portfolio' && property.listing_type === 'arriendo' && (
         <div className="mt-4 px-4 py-4 bg-gray-50 rounded-lg border border-gray-200">
           {(() => {
             console.log('🔍 [PropertyCard] Mostrando PostulationsList para property:', property.id);

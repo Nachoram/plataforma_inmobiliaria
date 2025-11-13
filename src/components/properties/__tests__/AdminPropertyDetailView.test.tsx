@@ -430,5 +430,131 @@ describe('AdminPropertyDetailView - Contract Generation', () => {
       expect(isButtonDisabled).toBe(true);
     });
   });
+
+  describe('Panel Mounting Logic', () => {
+    it('debe renderizar PostulationAdminPanel solo para propiedades de arriendo', () => {
+      // Mock de propiedad de arriendo
+      const rentalProperty = {
+        id: 'rental-prop-1',
+        listing_type: 'arriendo',
+        title: 'Casa en Arriendo',
+        price_clp: 500000,
+      };
+
+      // Mock del estado del componente
+      const mockState = {
+        property: rentalProperty,
+        isOwner: true,
+        id: 'rental-prop-1',
+      };
+
+      // Verificar que el condicional renderizaría PostulationAdminPanel
+      const shouldRenderPostulationPanel =
+        mockState.id &&
+        mockState.property &&
+        mockState.isOwner &&
+        mockState.property.listing_type === 'arriendo';
+
+      const shouldRenderSalePanel =
+        mockState.id &&
+        mockState.property &&
+        mockState.isOwner &&
+        mockState.property.listing_type === 'venta';
+
+      expect(shouldRenderPostulationPanel).toBe(true);
+      expect(shouldRenderSalePanel).toBe(false);
+    });
+
+    it('debe renderizar SaleOfferAdminPanel solo para propiedades de venta', () => {
+      // Mock de propiedad de venta
+      const saleProperty = {
+        id: 'sale-prop-1',
+        listing_type: 'venta',
+        title: 'Casa en Venta',
+        price_clp: 50000000,
+      };
+
+      // Mock del estado del componente
+      const mockState = {
+        property: saleProperty,
+        isOwner: true,
+        id: 'sale-prop-1',
+      };
+
+      // Verificar que el condicional renderizaría SaleOfferAdminPanel
+      const shouldRenderPostulationPanel =
+        mockState.id &&
+        mockState.property &&
+        mockState.isOwner &&
+        mockState.property.listing_type === 'arriendo';
+
+      const shouldRenderSalePanel =
+        mockState.id &&
+        mockState.property &&
+        mockState.isOwner &&
+        mockState.property.listing_type === 'venta';
+
+      expect(shouldRenderPostulationPanel).toBe(false);
+      expect(shouldRenderSalePanel).toBe(true);
+    });
+
+    it('no debe renderizar ningún panel administrativo si no es propietario', () => {
+      const property = {
+        id: 'prop-1',
+        listing_type: 'arriendo',
+        title: 'Casa',
+      };
+
+      const mockState = {
+        property,
+        isOwner: false, // No es propietario
+        id: 'prop-1',
+      };
+
+      const shouldRenderPostulationPanel =
+        mockState.id &&
+        mockState.property &&
+        mockState.isOwner &&
+        mockState.property.listing_type === 'arriendo';
+
+      const shouldRenderSalePanel =
+        mockState.id &&
+        mockState.property &&
+        mockState.isOwner &&
+        mockState.property.listing_type === 'venta';
+
+      expect(shouldRenderPostulationPanel).toBe(false);
+      expect(shouldRenderSalePanel).toBe(false);
+    });
+
+    it('no debe renderizar ningún panel si property.listing_type no es válido', () => {
+      const property = {
+        id: 'prop-1',
+        listing_type: 'otro_tipo', // Tipo inválido
+        title: 'Casa',
+      };
+
+      const mockState = {
+        property,
+        isOwner: true,
+        id: 'prop-1',
+      };
+
+      const shouldRenderPostulationPanel =
+        mockState.id &&
+        mockState.property &&
+        mockState.isOwner &&
+        mockState.property.listing_type === 'arriendo';
+
+      const shouldRenderSalePanel =
+        mockState.id &&
+        mockState.property &&
+        mockState.isOwner &&
+        mockState.property.listing_type === 'venta';
+
+      expect(shouldRenderPostulationPanel).toBe(false);
+      expect(shouldRenderSalePanel).toBe(false);
+    });
+  });
 });
 

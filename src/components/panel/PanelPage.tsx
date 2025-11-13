@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Building, Heart, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
-import { OfferModal } from './OfferModal';
 import { useAuth } from '../../hooks/useAuth';
 import PropertyCard from '../PropertyCard';
 import { usePropertyRoutePreloader } from '../../hooks/useRoutePreloader';
@@ -16,8 +15,6 @@ export const PanelPage: React.FC = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showOfferModal, setShowOfferModal] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -55,27 +52,44 @@ export const PanelPage: React.FC = () => {
 
   const fetchProperties = async () => {
     try {
-      const { data, error } = await supabase
+      // First fetch properties
+      const { data: propertiesData, error: propertiesError } = await supabase
         .from('properties')
-        .select(`
-          *,
-          property_images!inner (
-            image_url,
-            storage_path
-          )
-        `)
+        .select('*')
         .eq('status', 'disponible')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        // Handle RLS policy violations specifically
-        if (error.message.includes('permission denied') || error.message.includes('RLS')) {
-          console.error('RLS Policy violation: Cannot access public properties');
-          // For panel, this shouldn't happen with public properties, but log it
-        } else {
-          throw error;
-        }
+      if (propertiesError) {
+        console.error('Error fetching properties:', propertiesError);
+        throw propertiesError;
       }
+
+      // Then fetch images for all properties
+      const propertyIds = (propertiesData || []).map(p => p.id);
+      const { data: imagesData, error: imagesError } = await supabase
+        .from('property_images')
+        .select('property_id, image_url, storage_path, id, created_at')
+        .in('property_id', propertyIds);
+
+      if (imagesError) {
+        console.error('Error fetching property images:', imagesError);
+        // Don't throw here, just log and continue with empty images
+      }
+
+      // Group images by property_id
+      const imagesByProperty = (imagesData || []).reduce((acc, img) => {
+        if (!acc[img.property_id]) {
+          acc[img.property_id] = [];
+        }
+        acc[img.property_id].push(img);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Combine properties with their images
+      const data = (propertiesData || []).map(property => ({
+        ...property,
+        property_images: imagesByProperty[property.id] || []
+      }));
 
       // Filtrar propiedades inválidas - usar campos correctos de la BD
       const validProperties = (data || [])
@@ -221,13 +235,13 @@ export const PanelPage: React.FC = () => {
       // window.location.href = '/auth';
       return;
     }
-    setSelectedProperty(property);
-    setShowOfferModal(true);
+    // Navigate to the new offer form page
+    navigate(`/ofertas/nueva/${property.id}`);
   };
 
   const handleApply = (property: Property) => {
     if (!user || !user.id) {
-      alert('Debes iniciar sesión para postular a esta propiedad');
+      alert('Debes iniciar sesión para postular a esta propiedad en arriendo');
       // Optionally redirect to login page
       // window.location.href = '/auth';
       return;
@@ -235,11 +249,6 @@ export const PanelPage: React.FC = () => {
     navigate(`/property/${property.id}/apply`);
   };
 
-  const onOfferSuccess = () => {
-    setShowOfferModal(false);
-    setSelectedProperty(null);
-    // Opcional: refrescar propiedades
-  };
 
 
   if (loading) {
@@ -437,16 +446,6 @@ export const PanelPage: React.FC = () => {
           ))}
         </div>
       )}
-
-      {/* Modals */}
-      {showOfferModal && selectedProperty && (
-        <OfferModal
-          property={selectedProperty}
-          onClose={() => setShowOfferModal(false)}
-          onSuccess={onOfferSuccess}
-        />
-      )}
-
     </div>
   );
 };

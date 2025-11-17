@@ -237,13 +237,23 @@ const PropertyFormPage: React.FC = () => {
   // Renderizar formulario correspondiente
   if (formType === 'arriendo') {
     return (
-      <RentalPublicationForm />
+      <RentalPublicationForm
+        initialData={undefined}
+        isEditing={false}
+        onSuccess={handleSuccess}
+        onCancel={handleCancel}
+      />
     );
   }
 
   if (formType === 'venta') {
     return (
-      <SalePublicationForm />
+      <SalePublicationForm
+        initialData={undefined}
+        isEditing={false}
+        onSuccess={handleSuccess}
+        onCancel={handleCancel}
+      />
     );
   }
 

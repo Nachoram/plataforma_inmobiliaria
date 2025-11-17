@@ -9,6 +9,7 @@ export { MainLayout } from './MainLayout';
 export { Header } from './Header';
 export { Footer } from './Footer';
 export { Sidebar } from './Sidebar';
+export { default as BottomNavigation } from './BottomNavigation';
 
 // Re-export types for convenience
 export type { BreadcrumbItem } from './AdminLayout';

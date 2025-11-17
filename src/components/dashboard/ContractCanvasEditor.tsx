@@ -100,7 +100,9 @@ const EditableContent: React.FC<EditableContentProps> = ({
       onClick={() => onToggleEdit(id)}
       className={`cursor-pointer hover:bg-blue-50 hover:ring-2 hover:ring-blue-200 rounded-md transition-all duration-200 p-2 -m-2 relative group ${viewClassName}`}
     >
-      {value || <span className="text-gray-400 italic">{placeholder}</span>}
+      <span className={value ? '' : 'text-gray-400 italic'}>
+        {value || placeholder}
+      </span>
       <Edit2 className="absolute top-2 right-2 h-4 w-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity pdf-hide" />
     </div>
   );
@@ -175,7 +177,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   const addClause = () => {
-    const newId = Date.now().toString();
+    const newId = `clause-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setContract(prev => ({
       ...prev,
       clausulas: [
@@ -202,7 +204,7 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
   };
 
   const addFirmante = () => {
-    const newId = Date.now().toString();
+    const newId = `firmante-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setContract(prev => ({
       ...prev,
       firmantes: [

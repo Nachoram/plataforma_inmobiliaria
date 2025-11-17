@@ -150,7 +150,7 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
     <div className="property-card-wrapper">
       <div className="mobile-card overflow-hidden hover:shadow-medium transition-all duration-300 hover:-translate-y-0.5 active:scale-98" onClick={onToggleExpand}>
       {/* Property Image */}
-      <div className="h-40 xs:h-48 bg-gray-200 relative overflow-hidden">
+      <div className="h-40 sm:h-48 md:h-56 lg:h-64 bg-gray-200 relative overflow-hidden">
         {property.property_images && property.property_images.length > 0 ? (
           <button
             onClick={handleImageClick}
@@ -207,7 +207,7 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
                 aria-pressed={isFavorite}
               >
                 <Heart
-                  className={`h-4 w-4 ${
+                  className={`size-6 sm:size-8 ${
                     isFavorite
                       ? 'text-red-500 fill-current'
                       : 'text-gray-600'
@@ -228,10 +228,10 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
       </div>
 
       {/* Property Info */}
-      <div className="p-3 xs:p-4">
+      <div className="p-3 sm:p-4">
         {/* Header with title and actions */}
         <div className="flex items-start justify-between mb-2">
-          <h3 className="text-base xs:text-lg font-semibold text-gray-900 mobile-line-clamp-2 flex-1 mr-2">
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-2 flex-1 mr-2">
             {context === 'marketplace'
               ? `${property.address_street || ''} ${property.address_number || ''}${property.address_department ? `, ${property.address_department}` : ''}`
               : property.address_street || 'Dirección no especificada'
@@ -279,34 +279,26 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
           </span>
         </div>
 
-        {/* Description */}
-        {property.description && (
-          <p className="text-gray-600 text-mobile-sm mb-3 mobile-line-clamp-2">
-            {property.description}
-          </p>
-        )}
 
         {/* Property Features */}
-        <div className="flex items-center justify-between text-mobile-sm text-gray-500 mb-3">
-          <div className="flex space-x-3 xs:space-x-4">
-            <div className="flex items-center">
-              <Bed className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
-              <span>{property.bedrooms || 0}</span>
-            </div>
-            <div className="flex items-center">
-              <Bath className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
-              <span>{property.bathrooms || 0}</span>
-            </div>
-            <div className="flex items-center">
-              <Square className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
-              <span>{property.surface_m2 || 0}m²</span>
-            </div>
+        <div className="flex flex-wrap gap-1 text-xs text-gray-500 mb-3">
+          <div className="flex items-center">
+            <Bed className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
+            <span>{property.bedrooms || 0}</span>
+          </div>
+          <div className="flex items-center">
+            <Bath className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
+            <span>{property.bathrooms || 0}</span>
+          </div>
+          <div className="flex items-center">
+            <Square className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
+            <span>{property.surface_m2 || 0}m²</span>
           </div>
         </div>
 
         {/* Price and additional info */}
         <div className="flex items-center justify-between mb-3">
-          <div className="text-lg xs:text-xl font-bold text-green-600">
+          <div className="text-xl sm:text-2xl font-bold text-green-600">
             {formatPriceCLP(isValidPrice(property.price_clp) ? property.price_clp : 0)}
           </div>
           {context === 'marketplace' && isValidPrice(property.common_expenses_clp) && property.common_expenses_clp > 0 && (
@@ -327,44 +319,42 @@ const PropertyCard: React.FC<PropertyCardProps> = memo(({
 
         {/* Action Buttons - Only for panel context */}
         {context === 'panel' && showActions && (
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              {property.listing_type === 'venta' ? (
-                <CustomButton
-                  onClick={handleMakeOffer}
-                  variant="primary"
-                  size="sm"
-                  className="w-full mobile-btn text-mobile-sm"
-                >
-                  <TrendingUp className="h-4 w-4 mr-1 xs:mr-2" />
-                  <span className="hidden xs:inline">Ofertar</span>
-                  <span className="xs:hidden">Oferta</span>
-                </CustomButton>
-              ) : (
-                <CustomButton
-                  onClick={handleApply}
-                  variant="primary"
-                  size="sm"
-                  className="w-full mobile-btn text-mobile-sm"
-                >
-                  <MessageSquare className="h-4 w-4 mr-1 xs:mr-2" />
-                  <span className="hidden xs:inline">Postular</span>
-                  <span className="xs:hidden">Postular</span>
-                </CustomButton>
-              )}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {property.listing_type === 'venta' ? (
+              <CustomButton
+                onClick={handleMakeOffer}
+                variant="primary"
+                size="sm"
+                className="w-full sm:w-auto py-2.5 px-3 sm:py-2 sm:px-4 text-sm"
+              >
+                <TrendingUp className="h-4 w-4 mr-1 xs:mr-2" />
+                <span className="hidden xs:inline">Ofertar</span>
+                <span className="xs:hidden">Oferta</span>
+              </CustomButton>
+            ) : (
+              <CustomButton
+                onClick={handleApply}
+                variant="primary"
+                size="sm"
+                className="w-full sm:w-auto py-2.5 px-3 sm:py-2 sm:px-4 text-sm"
+              >
+                <MessageSquare className="h-4 w-4 mr-1 xs:mr-2" />
+                <span className="hidden xs:inline">Postular</span>
+                <span className="xs:hidden">Postular</span>
+              </CustomButton>
+            )}
 
-              <Link to={`/property/${property.id}`} className="w-full">
-                <CustomButton
-                  variant="outline"
-                  size="sm"
-                  className="w-full mobile-btn text-mobile-sm"
-                >
-                  <Eye className="h-4 w-4 mr-1 xs:mr-2" />
-                  <span className="hidden xs:inline">Ver detalles</span>
-                  <span className="xs:hidden">Ver</span>
-                </CustomButton>
-              </Link>
-            </div>
+            <Link to={`/property/${property.id}`} className="w-full sm:w-auto">
+              <CustomButton
+                variant="outline"
+                size="sm"
+                className="w-full py-2.5 px-3 sm:py-2 sm:px-4 text-sm"
+              >
+                <Eye className="h-4 w-4 mr-1 xs:mr-2" />
+                <span className="hidden xs:inline">Ver detalles</span>
+                <span className="xs:hidden">Ver</span>
+              </CustomButton>
+            </Link>
           </div>
         )}
       </div>

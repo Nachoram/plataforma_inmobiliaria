@@ -993,7 +993,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Tipo de Postulante *
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <label className="relative">
               <input
                 type="radio"
@@ -1050,7 +1050,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Tipo de Trabajador *
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <label className="relative">
                 <input
                   type="radio"
@@ -1106,7 +1106,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         {applicant.entityType === 'natural' ? (
           // Campos para persona natural
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nombres *
@@ -1135,7 +1135,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Apellido Materno
@@ -1179,7 +1179,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         ) : (
           // Campos para persona jurídica
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Razón Social *
@@ -1212,7 +1212,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Representante Legal *
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
                 <div>
                   <input
                     type="text"
@@ -1276,7 +1276,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               </select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Fecha Constitución
@@ -1378,7 +1378,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Dirección *
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-2">
             <input
               type="text"
               name="address_street"
@@ -1669,7 +1669,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Tipo de Aval *
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <label className="relative">
               <input
                 type="radio"
@@ -1726,7 +1726,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Tipo de Trabajador *
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <label className="relative">
                 <input
                   type="radio"
@@ -1782,7 +1782,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         {guarantor.entityType === 'natural' ? (
           // Campos para persona natural
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nombres *
@@ -1811,7 +1811,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Apellido Materno
@@ -1855,7 +1855,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         ) : (
           // Campos para persona jurídica
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Razón Social *
@@ -1888,7 +1888,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Representante Legal *
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
                 <div>
                   <input
                     type="text"
@@ -1952,7 +1952,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
               </select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Fecha Constitución
@@ -2054,7 +2054,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Dirección *
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-2">
             <input
               type="text"
               name="address_street"
@@ -2695,7 +2695,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             value={applicationMessage}
             onChange={(e) => setApplicationMessage(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-3 text-base border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Escribe un mensaje personalizado para el arrendador explicando por qué eres el candidato ideal..."
           />
           <p className="text-xs text-gray-500 mt-1">

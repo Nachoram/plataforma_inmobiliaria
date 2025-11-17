@@ -839,7 +839,7 @@ export const PropertyForm: React.FC = () => {
               </div>
 
               {/* Fila 2: Calle y Número (se auto-completan desde la dirección) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Calle *
@@ -913,7 +913,7 @@ export const PropertyForm: React.FC = () => {
               </div>
 
               {/* Fila 4: Región y Comuna */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Región *
@@ -1096,7 +1096,7 @@ export const PropertyForm: React.FC = () => {
                     )}
 
                     {/* Campos de área condicionales */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                       {/* Campo: M² Útiles - OCULTAR PARA BODEGA Y ESTACIONAMIENTO */}
                       {requiresUsefulArea && (
                         <div className="transition-all duration-300">
@@ -1164,7 +1164,7 @@ export const PropertyForm: React.FC = () => {
                     {/* Campos estándar: Dormitorios, Baños, Estacionamientos - OCULTAR PARA BODEGA Y ESTACIONAMIENTO */}
                     {showStandardFields && (
                       <>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                           <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                               Dormitorios *
@@ -1278,7 +1278,7 @@ export const PropertyForm: React.FC = () => {
                     )}
 
                     {/* Fila: Precio y Gastos Comunes */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Precio ({formData.type === 'venta' ? 'Venta' : 'Arriendo mensual'}) *
@@ -1420,7 +1420,7 @@ export const PropertyForm: React.FC = () => {
               {photoPreviews.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Vista Previa de Fotos</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     {photoPreviews.map((preview, index) => (
                       <div key={index} className="relative group">
                         <img 
@@ -1445,7 +1445,7 @@ export const PropertyForm: React.FC = () => {
               {formData.photos_urls.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Fotos Actuales</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     {formData.photos_urls.map((url, index) => (
                       <div key={index} className="relative group">
                         <img 
@@ -1473,7 +1473,7 @@ export const PropertyForm: React.FC = () => {
             {/* Documentos Principales */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800">Documentos Importantes</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 {requiredDocuments.map(({ key, label }) => (
                   <div key={key} className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
                     <div className="mb-3">
@@ -1519,7 +1519,7 @@ export const PropertyForm: React.FC = () => {
             {/* Documentos Adicionales */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800">Documentos Adicionales</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 {optionalDocuments.map(({ key, label }) => (
                   <div key={key} className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
                     <div className="mb-3">

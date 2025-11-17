@@ -94,7 +94,8 @@ const MyOffersPage: React.FC = () => {
 
   const fetchReceivedOffers = async () => {
     try {
-      const { data, error } = await supabase
+      // First, get the offers with property data
+      const { data: offersData, error: offersError } = await supabase
         .from('property_sale_offers')
         .select(`
           *,
@@ -105,21 +106,31 @@ const MyOffersPage: React.FC = () => {
             address_commune,
             price_clp,
             listing_type
-          ),
-          buyer_profile:profiles!property_sale_offers_buyer_id_fkey(
-            id,
-            first_name,
-            paternal_last_name,
-            maternal_last_name,
-            email
           )
         `)
         .eq('properties.owner_id', user?.id)
         .neq('buyer_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setReceivedOffers(data || []);
+      if (offersError) throw offersError;
+
+      // Then, fetch buyer profiles for each offer
+      const offersWithProfiles = await Promise.all(
+        (offersData || []).map(async (offer) => {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, first_name, paternal_last_name, maternal_last_name, email')
+            .eq('id', offer.buyer_id)
+            .single();
+
+          return {
+            ...offer,
+            buyer_profile: profileError ? null : profile
+          };
+        })
+      );
+
+      setReceivedOffers(offersWithProfiles);
     } catch (error) {
       console.error('Error fetching received offers:', error);
     }

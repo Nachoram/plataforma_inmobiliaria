@@ -27,12 +27,16 @@ interface SidebarProps {
   variant?: 'admin' | 'applicant';
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  mobileDrawer?: boolean;
+  onCloseMobileDrawer?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   variant = 'admin',
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  mobileDrawer = false,
+  onCloseMobileDrawer
 }) => {
   const location = useLocation();
 
@@ -160,6 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={mobileDrawer ? onCloseMobileDrawer : undefined}
                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group ${
                   active
                     ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'

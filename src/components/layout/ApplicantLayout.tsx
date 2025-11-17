@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, Home, User } from 'lucide-react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { BottomNavigation } from './BottomNavigation';
 
 interface BreadcrumbItem {
   label: string;
@@ -64,7 +65,7 @@ export const ApplicantLayout: React.FC<ApplicantLayoutProps> = ({
         {/* Main Content */}
         <main className={`flex-1 transition-all duration-300 ${
           sidebarCollapsed ? 'ml-16' : 'ml-0'
-        }`}>
+        } pb-20 sm:pb-0`}>
           <div className="p-6">
             {/* Breadcrumbs */}
             <nav className="flex mb-6" aria-label="Breadcrumb">
@@ -116,6 +117,9 @@ export const ApplicantLayout: React.FC<ApplicantLayoutProps> = ({
           </div>
         </main>
       </div>
+
+      {/* Bottom Navigation - Mobile Only */}
+      <BottomNavigation />
 
       {/* Toast Notification Area */}
       <div id="toast-container" className="fixed top-4 right-4 z-50 space-y-2" />

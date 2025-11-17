@@ -13,6 +13,9 @@ export { default as ApplicationsAdmin } from './ApplicationsAdmin';
 // Editor Components
 export { default as EditorButton, EditorButtonCompact, useContractEditor } from './EditorButton';
 
+// Dashboard Layout
+export { default as DashboardLayout } from './DashboardLayout';
+
 // Re-export existing dashboard components
 export { default as ApplicationsPage } from './ApplicationsPage';
 export { default as MyApplicationsPage } from './MyApplicationsPage';

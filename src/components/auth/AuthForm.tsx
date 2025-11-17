@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { isValidEmail, VALIDATION_RULES, ERROR_MESSAGES } from '../../lib/supabase';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 
 interface AuthFormProps {
   onSuccess?: () => void;

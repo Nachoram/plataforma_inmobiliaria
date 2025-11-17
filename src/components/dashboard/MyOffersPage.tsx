@@ -3,7 +3,7 @@ import { Plus, DollarSign, Calendar, MapPin, Building, Settings, Send, Inbox, Se
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 
 interface OfferWithDetails {
   id: string;

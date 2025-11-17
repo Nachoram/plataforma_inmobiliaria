@@ -3,7 +3,7 @@ import { Plus, Building, MapPin, DollarSign, Eye, Search, Filter, TrendingUp, Us
 import { Link, useNavigate } from 'react-router-dom';
 import { getUserSaleProperties, Property, formatPriceCLP } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 import toast from 'react-hot-toast';
 
 interface PropertyWithOffers extends Property {

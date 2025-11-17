@@ -2,8 +2,8 @@ import React, { useState, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, Building, Heart, TrendingUp, MessageSquare, Eye, Edit, Trash2, Home } from 'lucide-react';
 import { Property as SupabaseProperty, formatPriceCLP, isValidPrice, getPropertyTypeInfo } from '../lib/supabase';
-import CustomButton from './common/CustomButton';
-import ImageGallery from './common/ImageGallery';
+import { CustomButton } from './common';
+import { ImageGallery } from './common';
 import PostulationsList from './portfolio/PostulationsList';
 
 // Usar la interfaz Property de supabase.ts para consistencia

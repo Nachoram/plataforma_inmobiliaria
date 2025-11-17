@@ -15,7 +15,7 @@ import {
   SaleOfferStatus
 } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 import toast from 'react-hot-toast';
 
 interface PropertyWithImages extends Property {

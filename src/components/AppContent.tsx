@@ -4,7 +4,7 @@ import { Layout } from './Layout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { AuthErrorHandler } from './auth/AuthErrorHandler';
 import { useRoutePreloader } from '../hooks/useRoutePreloader';
-import ErrorBoundary from './common/ErrorBoundary';
+import { ErrorBoundary } from './common';
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
 
 // Auth components - keep loaded for fast auth
@@ -34,10 +34,7 @@ import PortfolioPage from './portfolio/PortfolioPage';
 import MyApplicationsPage from './dashboard/MyApplicationsPage';
 import MyOffersPage from './dashboard/MyOffersPage';
 import MySalesPage from './dashboard/MySalesPage';
-import ContractManagementPage from './contracts/ContractManagementPage';
-import ContractViewerPage from './contracts/ContractViewerPage';
-import ContractCanvasEditorPage from './contracts/ContractCanvasEditorPage';
-import { ContractRedirectPage } from './contracts/ContractRedirectPage';
+import { ContractCanvasEditorPage } from './dashboard';
 import PropertyFormPage from './properties/PropertyFormPage';
 import UserProfilePage from './profile/UserProfilePage';
 import SalePropertyAdminPanel from './sales/SalePropertyAdminPanel';
@@ -233,23 +230,9 @@ export const AppContent: React.FC = () => {
         </ProtectedRoute>
       } />
 
-      <Route path="/contracts" element={
-        <ProtectedRoute>
-          <Layout>
-            <ContractRedirectPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
-
       <Route path="/contracts/:contractId/canvas-editor" element={
         <ProtectedRoute>
           <ContractCanvasEditorPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/contract/:contractId" element={
-        <ProtectedRoute>
-          <ContractViewerPage />
         </ProtectedRoute>
       } />
 

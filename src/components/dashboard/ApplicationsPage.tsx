@@ -3,7 +3,7 @@ import { Check, X, Clock, Mail, Calendar, MapPin, Building, FileText, AlertTrian
 import { supabase, updateApplicationStatus, approveApplicationWithWebhook, getPropertyTypeInfo } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { webhookClient } from '../../lib/webhook';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 
 interface ApplicationWithDetails {
   id: string;

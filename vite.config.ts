@@ -38,15 +38,7 @@ export default defineConfig({
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-ui': ['lucide-react'],
 
-          // Feature chunks
-          'contracts': [
-            './src/components/contracts/ContractManagementPage.tsx',
-            './src/components/contracts/ContractViewerPage.tsx',
-            './src/components/contracts/ContractViewer.tsx',
-            './src/components/contracts/ContractEditor.tsx',
-            './src/components/contracts/HTMLContractViewer.tsx',
-            './src/components/contracts/ContractApprovalWorkflow.tsx'
-          ],
+          // Feature chunks - contracts moved to admin dashboard
           'properties': [
             './src/components/properties/PropertyFormPage.tsx',
             './src/components/properties/PropertyForm.tsx',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { generateWorkflowOutput, getHtmlContentFromStorage, WORKFLOW_TYPES } from '@/lib/api/workflow';
-import { HTMLCanvasViewer } from '@/components/common/HTMLCanvasViewer';
+import { HTMLCanvasViewer } from '@/components/common/misc';
 
 interface WorkflowError {
   message?: string;

@@ -3,7 +3,7 @@ import { Plus, Mail, Calendar, MapPin, Building, AlertTriangle, Settings, Send, 
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 
 interface ApplicationWithDetails {
   id: string;

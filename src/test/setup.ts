@@ -197,7 +197,7 @@ vi.mock('jspdf', () => ({
 vi.mock('../hooks/useRoutePreloader', () => ({
   useRoutePreloader: vi.fn(),
   usePropertyRoutePreloader: vi.fn(),
-  useContractRoutePreloader: vi.fn(),
+  // useContractRoutePreloader removed - contracts now admin-only
   preloadRoute: vi.fn(),
 }))
 

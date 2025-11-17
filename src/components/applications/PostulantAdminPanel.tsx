@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 import toast from 'react-hot-toast';
 
 // Lazy load del formulario de edición

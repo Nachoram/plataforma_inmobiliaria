@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Upload, X, FileText, Image, Check, AlertCircle, Loader2, Building } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import ParkingSpaceForm, { ParkingSpace } from './ParkingSpaceForm';
 
 // Datos de regiones y comunas de Chile
 const CHILE_REGIONS_COMMUNES = {
@@ -301,6 +302,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         numeroBodega: initialData.storage_number || '',
         parcela_number: initialData.parcela_number || '',
 
+        // Parking Spaces - inicializar con datos existentes o vacío
+        parkingSpaces: [] as ParkingSpace[],
+
         // Amenidades - Tabla eliminada, inicializar vacío
         amenidades: [],
 
@@ -364,6 +368,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
       // Campo específico para Parcela
       parcela_number: '',
+
+      // Parking Spaces
+      parkingSpaces: [] as ParkingSpace[],
 
       // Archivos
       photos_urls: [] as string[],
@@ -1090,6 +1097,31 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     }
   };
 
+  const saveParkingSpaces = async (propertyId: string, parkingSpaces: ParkingSpace[]) => {
+    try {
+      // For now, we'll store this information in the property metadata
+      // In a real implementation, you'd have a parking_spaces table
+      const parkingData = {
+        parking_spaces: parkingSpaces
+      };
+
+      const { error } = await supabase
+        .from('properties')
+        .update({ parking_spaces: parkingData })
+        .eq('id', propertyId);
+
+      if (error) {
+        console.error('Error saving parking spaces:', error);
+        throw error;
+      }
+
+      console.log('✅ Parking spaces saved successfully');
+    } catch (error) {
+      console.error('Error saving parking spaces:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🚀 Iniciando handleSubmit...');
@@ -1443,6 +1475,11 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         }
       }
 
+      // Handle parking spaces
+      if (propertyResult?.id && formData.parkingSpaces.length > 0) {
+        console.log('🚗 Guardando espacios de estacionamiento:', formData.parkingSpaces.length);
+        await saveParkingSpaces(propertyResult.id, formData.parkingSpaces);
+      }
 
       alert(isEditing ? 'Propiedad actualizada exitosamente!' : 'Propiedad publicada exitosamente!');
 
@@ -2269,6 +2306,27 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Sección 3.7: Estacionamientos */}
+          {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Parcela') && (
+            <div className="space-y-6">
+              <div className="border-b pb-2">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                  <Car className="h-6 w-6 mr-2 text-blue-600" />
+                  Estacionamientos
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Configura los espacios de estacionamiento disponibles
+                </p>
+              </div>
+
+              <ParkingSpaceForm
+                parkingSpaces={formData.parkingSpaces}
+                onChange={(parkingSpaces) => setFormData({ ...formData, parkingSpaces })}
+                propertyId={isEditing ? initialData?.id : undefined}
+              />
             </div>
           )}
 

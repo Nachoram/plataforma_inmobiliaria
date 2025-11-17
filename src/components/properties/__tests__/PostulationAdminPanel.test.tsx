@@ -56,8 +56,8 @@ vi.mock('lucide-react', () => ({
   Shield: () => <div>Shield Icon</div>,
 }));
 
-vi.mock('../contracts/RentalContractConditionsForm', () => ({
-  RentalContractConditionsForm: ({ onClose }: any) => (
+vi.mock('../dashboard/RentalContractConditionsForm', () => ({
+  default: ({ onClose }: any) => (
     <div data-testid="contract-modal">
       <button onClick={onClose}>Cerrar Contrato</button>
     </div>

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Building, Home, TrendingUp, Package } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 import PropertyCard from '../PropertyCard';
 
 interface Postulation {

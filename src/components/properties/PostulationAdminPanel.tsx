@@ -40,7 +40,7 @@ import {
   Shield
 } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
-import { RentalContractConditionsForm } from '../contracts/RentalContractConditionsForm';
+import RentalContractConditionsForm from '../dashboard/RentalContractConditionsForm';
 
 // ========================================================================
 // INTERFACES & TYPES

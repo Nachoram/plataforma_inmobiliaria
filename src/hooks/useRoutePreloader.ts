@@ -25,10 +25,7 @@ export const useRoutePreloader = () => {
         import('../components/portfolio/PortfolioPage');
       }, 2000); // Delay de 2 segundos
 
-      setTimeout(() => {
-        // Prefetch de contratos (menos frecuente pero importante)
-        import('../components/contracts/ContractManagementPage');
-      }, 5000); // Delay de 5 segundos
+      // Contracts are now admin-only and don't need public preloading
     };
 
     prefetchCommonRoutes();
@@ -50,22 +47,7 @@ export const usePropertyRoutePreloader = () => {
   }, []);
 };
 
-/**
- * Hook para precargar rutas de contratos cuando se accede a secciones relacionadas
- */
-export const useContractRoutePreloader = () => {
-  useEffect(() => {
-    // Preload de visor de contratos
-    import('../components/contracts/ContractViewerPage');
-    import('../components/contracts/HTMLContractViewer');
-
-    // Prefetch de editor de contratos
-    setTimeout(() => {
-      import('../components/contracts/ContractEditor');
-      import('../components/contracts/ContractApprovalWorkflow');
-    }, 1500);
-  }, []);
-};
+// Contract route preloader removed - contracts are now admin-only
 
 /**
  * Función utilitaria para precargar manualmente una ruta específica
@@ -84,9 +66,6 @@ export const preloadRoute = async (routeName: string) => {
         break;
       case 'applications':
         await import('../components/dashboard/ApplicationsPage');
-        break;
-      case 'contracts':
-        await import('../components/contracts/ContractManagementPage');
         break;
       case 'property-form':
         await import('../components/properties/PropertyFormPage');

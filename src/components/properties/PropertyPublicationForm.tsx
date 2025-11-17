@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, Property, formatPriceCLP, CHILE_REGIONS, LISTING_TYPE_OPTIONS, FILE_SIZE_LIMITS } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 
 interface PropertyPublicationFormProps {
   property?: Property;

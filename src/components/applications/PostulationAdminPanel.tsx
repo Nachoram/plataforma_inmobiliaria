@@ -7,7 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { sendWebhookGET } from '../../lib/webhook';
 import toast from 'react-hot-toast';
-import ContractSummaryCard from '../contracts/ContractSummaryCard';
+import ContractSummaryCard from '../dashboard/ContractSummaryCard';
 
 // ========================================================================
 // INTERFACES & TYPES

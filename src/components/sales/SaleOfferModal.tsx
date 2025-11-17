@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, DollarSign, FileText, Upload, CheckCircle, AlertCircle, Send } from 'lucide-react';
 import { Property, createSaleOffer, uploadSaleOfferDocument, supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import CustomButton from '../common/CustomButton';
+import { CustomButton } from '../common';
 import toast from 'react-hot-toast';
 
 interface SaleOfferModalProps {

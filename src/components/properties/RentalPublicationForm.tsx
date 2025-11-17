@@ -1523,7 +1523,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     return (
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-xl shadow-sm border">
-          <div className="p-6 border-b bg-gradient-to-r from-emerald-50 to-green-50">
+          <div className="p-4 border-b bg-gradient-to-r from-emerald-50 to-green-50">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Modificar Propiedad en Arriendo
             </h1>
@@ -1541,7 +1541,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto publication-form">
       <div className="bg-white rounded-xl shadow-sm border">
         {/* Header */}
         <div className="p-6 border-b bg-gradient-to-r from-emerald-50 to-green-50">
@@ -1556,9 +1556,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+        <form onSubmit={handleSubmit} className="p-4 space-y-6">
           {/* Sección 1: Información de la Propiedad */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="border-b pb-2">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
                 <Building className="h-6 w-6 mr-2 text-emerald-600" />
@@ -1566,7 +1566,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-3">
               {/* Tipo de Propiedad */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1643,7 +1643,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
                     setFormData(updatedFormData);
                   }}
-                  className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 >
                   <option value="Casa">Casa</option>
                   <option value="Departamento">Departamento</option>
@@ -1673,7 +1673,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       placeholder="Ej: B-115 (piso -1)"
                       maxLength={50}
                       required={propertyType === 'Bodega'}
-                      className={`w-full px-3 sm:px-4 py-3 text-base border-2 sm:border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      className={`w-full px-3 py-2 text-sm border-2 sm:border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                         errors.numeroBodega ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                     />
@@ -1683,7 +1683,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         {errors.numeroBodega}
                       </p>
                     )}
-                    <p className="mt-2 text-xs text-gray-600">
+                    <p className="mt-1.5 text-xs text-gray-600">
                       Ingrese el número o ubicación específica de la bodega
                     </p>
                   </div>
@@ -1700,7 +1700,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   required
                   value={formData.address_street}
                   onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
-                  className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                  className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                     errors.address_street ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
                   placeholder="Ej: Av. Libertador"
@@ -1723,7 +1723,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   required
                   value={formData.address_number}
                   onChange={(e) => setFormData({ ...formData, address_number: e.target.value })}
-                  className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                  className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                     errors.address_number ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
                   placeholder="Ej: 1234"
@@ -1747,7 +1747,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     required={formData.tipoPropiedad === 'Estacionamiento'}
                     value={formData.ubicacionEstacionamiento || ''}
                     onChange={(e) => setFormData({ ...formData, ubicacionEstacionamiento: e.target.value })}
-                    className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                       errors.ubicacionEstacionamiento ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
                     placeholder="Ej: 25B"
@@ -1772,14 +1772,14 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     type="text"
                     value={formData.address_department}
                     onChange={(e) => setFormData({ ...formData, address_department: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     placeholder="Ej: 45A"
                   />
                 </div>
               )}
 
               {/* Región y Comuna */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Región *
@@ -1788,7 +1788,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     required
                     value={formData.region}
                     onChange={(e) => handleRegionChange(e.target.value)}
-                    className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                       errors.region ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
                   >
@@ -1814,7 +1814,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     value={formData.commune}
                     onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
                     disabled={!formData.region}
-                    className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                       errors.commune ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     } ${!formData.region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   >
@@ -1847,7 +1847,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     min="0"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                    className={`w-full pl-8 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                       errors.price ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
                     placeholder="500000"
@@ -1873,7 +1873,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     min="0"
                     value={formData.common_expenses}
                     onChange={(e) => setFormData({ ...formData, common_expenses: e.target.value })}
-                    className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     placeholder="50000"
                   />
                 </div>
@@ -1881,7 +1881,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
               {/* Dormitorios y Baños - Solo para Casa y Departamento */}
               {['Casa', 'Departamento'].includes(propertyType) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Dormitorios
@@ -1889,7 +1889,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <select
                       value={formData.bedrooms}
                       onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
-                      className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     >
                       <option value="1">1</option>
                       <option value="2">2</option>
@@ -1906,7 +1906,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <select
                       value={formData.bathrooms}
                       onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
-                      className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     >
                       <option value="1">1</option>
                       <option value="2">2</option>
@@ -1927,7 +1927,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   <select
                     value={formData.estacionamientos}
                     onChange={(e) => setFormData({ ...formData, estacionamientos: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   >
                     <option value="0">0</option>
                     <option value="1">1</option>
@@ -1949,14 +1949,14 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     type="text"
                     value={formData.ubicacionEstacionamiento}
                     onChange={(e) => setFormData({ ...formData, ubicacionEstacionamiento: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     placeholder="Ej: E-21, E-22 (piso -2)"
                   />
                 </div>
               )}
 
               {/* Campos de área condicionales */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 transition-all duration-300">
                 {/* M² Útiles - Ocultar si es Estacionamiento o Bodega */}
                 {!isParking && propertyType !== 'Bodega' && (
                   <div>
@@ -1969,7 +1969,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       min="0"
                       value={formData.metrosUtiles}
                       onChange={(e) => setFormData({ ...formData, metrosUtiles: e.target.value })}
-                      className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                         errors.metrosUtiles ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Ej: 85"
@@ -1995,7 +1995,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       min="0"
                       value={formData.metrosTotales}
                       onChange={(e) => setFormData({ ...formData, metrosTotales: e.target.value })}
-                      className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                         errors.metrosTotales ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder={propertyType === 'Bodega' ? "Ej: 8.5" : "Ej: 95"}
@@ -2028,9 +2028,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     onChange={(e) => setFormData({ ...formData, parcela_number: e.target.value })}
                     placeholder="Ej: Parcela 21"
                     maxLength={30}
-                    className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   />
-                  <p className="mt-2 text-xs text-gray-600">
+                  <p className="mt-1.5 text-xs text-gray-600">
                     Indique el número o ubicación específica de la parcela si aplica
                   </p>
                 </div>
@@ -2045,7 +2045,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   <select
                     value={formData.tieneTerraza}
                     onChange={(e) => setFormData({ ...formData, tieneTerraza: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   >
                     <option value="No">No</option>
                     <option value="Sí">Sí</option>
@@ -2064,7 +2064,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   max={new Date().getFullYear()}
                   value={formData.anoConstruccion}
                   onChange={(e) => setFormData({ ...formData, anoConstruccion: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   placeholder="Ej: 2020"
                 />
               </div>
@@ -2105,7 +2105,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   rows={4}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                  className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                     errors.description ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
                   placeholder={
@@ -2126,12 +2126,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
           {/* Sección 2: Características Internas - Solo para Casa y Departamento */}
           {['Casa', 'Departamento'].includes(propertyType) && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="border-b pb-2">
                 <h2 className="text-xl font-bold text-gray-900">Características Internas</h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-3">
                 {/* Sistema de Agua Caliente */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2140,7 +2140,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   <select
                     value={formData.sistemaAguaCaliente}
                     onChange={(e) => setFormData({ ...formData, sistemaAguaCaliente: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   >
                     <option value="Calefón">Calefón</option>
                     <option value="Termo Eléctrico">Termo Eléctrico</option>
@@ -2156,7 +2156,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   <select
                     value={formData.tipoCocina}
                     onChange={(e) => setFormData({ ...formData, tipoCocina: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   >
                     <option value="Cerrada">Cerrada</option>
                     <option value="Americana">Americana</option>
@@ -2172,7 +2172,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   <select
                     value={formData.tieneSalaEstar}
                     onChange={(e) => setFormData({ ...formData, tieneSalaEstar: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   >
                     <option value="No">No</option>
                     <option value="Sí">Sí</option>
@@ -2180,7 +2180,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 </div>
 
                 {/* Bodega - Solo para Casa y Departamento */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       ¿Tiene Bodega?
@@ -2193,7 +2193,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega,
                         ubicacionBodega: e.target.value === 'No' ? '' : formData.ubicacionBodega
                       })}
-                      className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     >
                       <option value="No">No</option>
                       <option value="Sí">Sí</option>
@@ -2211,7 +2211,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           min="0"
                           value={formData.metrosBodega}
                           onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
-                          className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                           placeholder="Ej: 5"
                         />
                       </div>
@@ -2223,7 +2223,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           type="text"
                           value={formData.ubicacionBodega}
                           onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
-                          className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                           placeholder="Ej: B-115 (piso -1)"
                         />
                       </div>
@@ -2237,14 +2237,14 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
           {/* Sección 3.5: Características de Oficina - Solo para Oficinas */}
           {propertyType === 'Oficina' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="border-b pb-2">
                 <h2 className="text-xl font-bold text-gray-900">Características de Oficina</h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-3">
                 {/* Bodega para Oficinas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       ¿Tiene Bodega?
@@ -2257,7 +2257,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega,
                         ubicacionBodega: e.target.value === 'No' ? '' : formData.ubicacionBodega
                       })}
-                      className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     >
                       <option value="No">No</option>
                       <option value="Sí">Sí</option>
@@ -2277,7 +2277,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={formData.tieneBodega === 'Sí'}
                           value={formData.metrosBodega}
                           onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors.metrosBodega ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: 5"
@@ -2298,7 +2298,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           maxLength={50}
                           value={formData.ubicacionBodega}
                           onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
-                          className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                           placeholder="Ej: B-115 (piso -1)"
                         />
                       </div>
@@ -2311,7 +2311,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
           {/* Sección 3.7: Estacionamientos */}
           {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Parcela') && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="border-b pb-2">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center">
                   <Car className="h-6 w-6 mr-2 text-blue-600" />
@@ -2331,7 +2331,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           )}
 
           {/* Sección 4: Datos del Propietario */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="border-b pb-2 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">Datos del Propietario</h2>
               <div className="flex items-center gap-2">
@@ -2349,7 +2349,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             </div>
 
             {owners.map((owner, index) => (
-              <div key={owner.id} className="border border-gray-200 rounded-lg p-6 space-y-6">
+              <div key={owner.id} className="border border-gray-200 rounded-lg p-4 space-y-4">
                 <div className="flex justify-between items-center border-b pb-2">
                   <h3 className="text-lg font-semibold text-gray-800">
                     Propietario {index + 1}
@@ -2365,7 +2365,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-3">
                   {/* Selector de Tipo de Propietario */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2375,7 +2375,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       required
                       value={owner.owner_type}
                       onChange={(e) => updateOwner(owner.id, 'owner_type', e.target.value)}
-                      className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     >
                       <option value="natural">Persona Natural</option>
                       <option value="juridica">Persona Jurídica</option>
@@ -2398,7 +2398,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'juridica'}
                           value={owner.constitution_type || ''}
                           onChange={(e) => updateOwner(owner.id, 'constitution_type', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_constitution_type`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                         >
@@ -2427,7 +2427,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                               required={owner.owner_type === 'juridica'}
                               value={owner.constitution_date || ''}
                               onChange={(e) => updateOwner(owner.id, 'constitution_date', e.target.value)}
-                              className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                              className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                                 errors[`owner_${owner.id}_constitution_date`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                               }`}
                             />
@@ -2450,7 +2450,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                                 required={owner.constitution_type === 'empresa_en_un_dia'}
                                 value={owner.cve_code || ''}
                                 onChange={(e) => updateOwner(owner.id, 'cve_code', e.target.value)}
-                                className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                                className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                                   errors[`owner_${owner.id}_cve_code`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                                 }`}
                                 placeholder="Ej: CVE123456789"
@@ -2476,7 +2476,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                                   required={owner.constitution_type === 'tradicional'}
                                   value={owner.notary_name || ''}
                                   onChange={(e) => updateOwner(owner.id, 'notary_name', e.target.value)}
-                                  className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                                  className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                                     errors[`owner_${owner.id}_notary_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                                   }`}
                                   placeholder="Ej: Notaría Central de Santiago"
@@ -2498,7 +2498,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                                   required={owner.constitution_type === 'tradicional'}
                                   value={owner.repertory_number || ''}
                                   onChange={(e) => updateOwner(owner.id, 'repertory_number', e.target.value)}
-                                  className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                                  className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                                     errors[`owner_${owner.id}_repertory_number`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                                   }`}
                                   placeholder="Ej: 12345"
@@ -2530,7 +2530,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'natural'}
                           value={owner.owner_first_name || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_first_name', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_first_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: Juan Carlos"
@@ -2553,7 +2553,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'natural'}
                           value={owner.owner_paternal_last_name || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_paternal_last_name', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_paternal_last_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: Pérez"
@@ -2576,7 +2576,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'natural'}
                           value={owner.owner_maternal_last_name || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_maternal_last_name', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_maternal_last_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: González"
@@ -2599,7 +2599,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'natural'}
                           value={owner.owner_rut || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_rut', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_rut`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: 12.345.678-9"
@@ -2621,7 +2621,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'natural'}
                           value={owner.owner_nationality || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_nationality', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_nationality`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                         >
@@ -2642,7 +2642,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
 
                       {/* Email y Teléfono del Propietario */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Email */}
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2653,7 +2653,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                             required={owner.owner_type === 'natural'}
                             value={owner.owner_email || ''}
                             onChange={(e) => updateOwner(owner.id, 'owner_email', e.target.value)}
-                            className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                               errors[`owner_${owner.id}_email`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
                             placeholder="Ej: propietario@ejemplo.com"
@@ -2675,7 +2675,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                             type="tel"
                             value={owner.owner_phone || ''}
                             onChange={(e) => updateOwner(owner.id, 'owner_phone', e.target.value)}
-                            className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                            className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                             placeholder="Ej: +56 9 1234 5678"
                           />
                         </div>
@@ -2698,7 +2698,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'juridica'}
                           value={owner.owner_company_name || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_company_name', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_company_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: Inmobiliaria XYZ Ltda."
@@ -2721,7 +2721,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'juridica'}
                           value={owner.owner_company_rut || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_company_rut', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_company_rut`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: 76.123.456-7"
@@ -2746,7 +2746,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'juridica'}
                           value={owner.owner_representative_first_name || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_representative_first_name', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_representative_first_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: María José"
@@ -2769,7 +2769,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'juridica'}
                           value={owner.owner_representative_paternal_last_name || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_representative_paternal_last_name', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_representative_paternal_last_name`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: Silva"
@@ -2791,7 +2791,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           type="text"
                           value={owner.owner_representative_maternal_last_name || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_representative_maternal_last_name', e.target.value)}
-                          className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                           placeholder="Ej: Torres"
                         />
                       </div>
@@ -2806,7 +2806,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           required={owner.owner_type === 'juridica'}
                           value={owner.owner_representative_rut || ''}
                           onChange={(e) => updateOwner(owner.id, 'owner_representative_rut', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_representative_rut`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: 15.678.901-2"
@@ -2820,7 +2820,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       </div>
 
                       {/* Email y Teléfono del Representante Legal */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Email */}
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2831,7 +2831,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                             required={owner.owner_type === 'juridica'}
                             value={owner.owner_representative_email || ''}
                             onChange={(e) => updateOwner(owner.id, 'owner_representative_email', e.target.value)}
-                            className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                               errors[`owner_${owner.id}_representative_email`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
                             placeholder="Ej: representante@empresa.com"
@@ -2853,7 +2853,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                             type="tel"
                             value={owner.owner_representative_phone || ''}
                             onChange={(e) => updateOwner(owner.id, 'owner_representative_phone', e.target.value)}
-                            className="w-full px-3 sm:px-4 py-3 text-base border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                            className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                             placeholder="Ej: +56 9 1234 5678"
                           />
                         </div>
@@ -2875,7 +2875,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       required
                       value={owner.owner_address_street || ''}
                       onChange={(e) => updateOwner(owner.id, 'owner_address_street', e.target.value)}
-                      className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                         errors[`owner_${owner.id}_address_street`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Ej: Av. Providencia"
@@ -2898,7 +2898,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       required
                       value={owner.owner_address_number || ''}
                       onChange={(e) => updateOwner(owner.id, 'owner_address_number', e.target.value)}
-                      className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                         errors[`owner_${owner.id}_address_number`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Ej: 2500"
@@ -2951,7 +2951,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       type="text"
                       value={owner.owner_apartment_number || ''}
                       onChange={(e) => updateOwner(owner.id, 'owner_apartment_number', e.target.value)}
-                      className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                         errors[`owner_${owner.id}_apartment_number`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Ej: 405B"
@@ -2968,7 +2968,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   </div>
 
                   {/* Región y Comuna del Propietario */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Región del Propietario *
@@ -2977,7 +2977,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         required
                         value={owner.owner_region || ''}
                         onChange={(e) => updateOwner(owner.id, 'owner_region', e.target.value)}
-                        className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                           errors[`owner_${owner.id}_region`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                         }`}
                       >
@@ -3003,7 +3003,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         value={owner.owner_commune || ''}
                         onChange={(e) => updateOwner(owner.id, 'owner_commune', e.target.value)}
                         disabled={!owner.owner_region}
-                        className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                        className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                           errors[`owner_${owner.id}_commune`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                         } ${!owner.owner_region ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       >
@@ -3037,7 +3037,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           step="0.01"
                           value={owner.ownership_percentage || ''}
                           onChange={(e) => updateOwner(owner.id, 'ownership_percentage', e.target.value)}
-                          className={`w-full px-3 sm:px-4 py-3 text-base min-h-[120px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 text-sm min-h-[100px] border-2 sm:border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
                             errors[`owner_${owner.id}_ownership_percentage`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           placeholder="Ej: 50.00"
@@ -3137,7 +3137,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             </div>
 
           {/* Sección 3: Fotos de la Propiedad */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="border-b pb-2">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
                 <Image className="h-6 w-6 mr-2 text-emerald-600" />
@@ -3151,7 +3151,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Subir Fotos
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-emerald-400 transition-colors">
                   <input
                     type="file"
                     multiple
@@ -3176,7 +3176,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Fotos Seleccionadas
                   </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {photoPreviews.map((preview, index) => (
                       <div key={index} className="relative group">
                         <img
@@ -3200,7 +3200,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           </div>
 
           {/* Sección 4: Documentos */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="border-b pb-2">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
                 <FileText className="h-6 w-6 mr-2 text-emerald-600" />
@@ -3208,12 +3208,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               </h2>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Documentos Existentes */}
               {formData.documents && Object.keys(formData.documents).length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Documentos Existentes</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {formData.documents.map((doc: any) => (
                       <div key={doc.id} className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                         <Check className="h-5 w-5 text-green-600" />
@@ -3232,7 +3232,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               {/* Documentos Requeridos */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Documentos Requeridos</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {requiredDocuments.map((doc) => (
                     <div key={doc.key} className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
@@ -3248,7 +3248,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                         />
                         <label htmlFor={`doc-${doc.key}`} className="cursor-pointer">
                           <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                          <p className="mt-1 text-xs text-gray-600">Subir documento</p>
+                          <p className="mt-1.5 text-xs text-gray-600">Subir documento</p>
                         </label>
                       </div>
                     </div>
@@ -3260,7 +3260,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               {/*
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Documentos Opcionales</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {optionalDocuments.map((doc) => {
                     // Solo mostrar certificado de personería para persona jurídica
                     const hasLegalEntity = owners.some(owner => owner.owner_type === 'juridica');
@@ -3299,7 +3299,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                             />
                             <label htmlFor={`doc-${doc.key}`} className="cursor-pointer">
                               <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                              <p className="mt-1 text-xs text-gray-600">Subir documento</p>
+                              <p className="mt-1.5 text-xs text-gray-600">Subir documento</p>
                               {doc.conditional && hasLegalEntity && (
                                 <p className="mt-1 text-xs text-red-600">Requerido para personas jurídicas</p>
                               )}
@@ -3317,7 +3317,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
           {/* Estado de carga */}
           {uploading && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-6 py-4 rounded-lg flex items-center">
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-2 rounded-lg flex items-center">
               <Loader2 className="h-5 w-5 mr-3 animate-spin" />
               Subiendo archivos...
             </div>
@@ -3325,7 +3325,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
           {/* Error de envío */}
           {errors.submit && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg flex items-center">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg flex items-center">
               <AlertCircle className="h-5 w-5 mr-3" />
               {errors.submit}
             </div>
@@ -3336,14 +3336,14 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             <button
               type="button"
               onClick={() => navigate('/portfolio')}
-              className="w-full sm:w-auto px-8 py-3 text-base border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="w-full sm:w-auto px-8 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading || uploading}
-              className="w-full sm:w-auto px-8 py-3 text-base bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center space-x-2"
+              className="w-full sm:w-auto px-8 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center space-x-2"
             >
               {loading ? (
                 <>

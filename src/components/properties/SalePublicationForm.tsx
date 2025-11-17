@@ -661,7 +661,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
                 });
               }
             }}
-            className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="Casa">Casa</option>
             <option value="Departamento">Departamento</option>
@@ -683,7 +683,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
             value={formData.title}
             onChange={(e) => updateFormData({ title: e.target.value })}
             placeholder="Ej: Hermosa casa en Las Condes"
-            className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -697,12 +697,12 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
             onChange={(e) => updateFormData({ description: e.target.value })}
             rows={4}
             placeholder="Describe detalladamente la propiedad, sus características principales, ubicación, etc."
-            className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
         {/* Price */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Precio de Venta (CLP) *
@@ -713,7 +713,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               onChange={(e) => updateFormData({ price: e.target.value })}
               placeholder="150000000"
               min="0"
-              className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
@@ -727,7 +727,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               onChange={(e) => updateFormData({ common_expenses: e.target.value })}
               placeholder="50000"
               min="0"
-              className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
@@ -742,7 +742,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
     >
       <div className="space-y-6">
         {/* Street and Number */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Calle *
@@ -752,7 +752,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               value={formData.address_street}
               onChange={(e) => updateFormData({ address_street: e.target.value })}
               placeholder="Ej: Avenida Providencia"
-              className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
@@ -765,7 +765,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               value={formData.address_number}
               onChange={(e) => updateFormData({ address_number: e.target.value })}
               placeholder="123"
-              className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
@@ -780,12 +780,12 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
             value={formData.address_department}
             onChange={(e) => updateFormData({ address_department: e.target.value })}
             placeholder="Ej: 401"
-            className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
         {/* Region and Commune */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Región *
@@ -793,7 +793,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
             <select
               value={formData.region}
               onChange={(e) => updateFormData({ region: e.target.value, commune: '' })}
-              className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Seleccionar región</option>
               {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
@@ -812,7 +812,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               value={formData.commune}
               onChange={(e) => updateFormData({ commune: e.target.value })}
               disabled={!formData.region}
-              className="w-full px-3 py-3 text-base border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
             >
               <option value="">Seleccionar comuna</option>
               {formData.region && getAvailableCommunes(formData.region).map(commune => (
@@ -835,7 +835,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
       <div className="space-y-6">
         {/* Bedrooms and Bathrooms - Only for habitable properties */}
         {!isParking && !isPropertyType('Bodega') && !isPropertyType('Parcela') && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Dormitorios *
@@ -843,7 +843,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               <select
                 value={formData.bedrooms}
                 onChange={(e) => updateFormData({ bedrooms: e.target.value })}
-                className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                   <option key={num} value={num}>{num}</option>
@@ -858,7 +858,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               <select
                 value={formData.bathrooms}
                 onChange={(e) => updateFormData({ bathrooms: e.target.value })}
-                className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(num => (
                   <option key={num} value={num}>{num}</option>
@@ -869,7 +869,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
         )}
 
         {/* Surface Area */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Metros Totales (m²) *
@@ -881,7 +881,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               placeholder="120"
               min="0"
               step="0.01"
-              className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
@@ -896,7 +896,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               placeholder="100"
               min="0"
               step="0.01"
-              className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
@@ -913,7 +913,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
             placeholder="2020"
             min="1900"
             max={new Date().getFullYear()}
-            className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -921,7 +921,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
         <div className="space-y-4">
           <h4 className="text-sm font-medium text-gray-900">Características Adicionales</h4>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 ¿Tiene terraza?
@@ -929,7 +929,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               <select
                 value={formData.tieneTerraza}
                 onChange={(e) => updateFormData({ tieneTerraza: e.target.value })}
-                className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="No">No</option>
                 <option value="Sí">Sí</option>
@@ -943,7 +943,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               <select
                 value={formData.tieneSalaEstar}
                 onChange={(e) => updateFormData({ tieneSalaEstar: e.target.value })}
-                className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="No">No</option>
                 <option value="Sí">Sí</option>
@@ -963,7 +963,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
                 value={formData.parcela_number}
                 onChange={(e) => updateFormData({ parcela_number: e.target.value })}
                 placeholder="Ej: Parcela 15, Manzana A"
-                className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           )}
@@ -973,7 +973,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
         <div className="space-y-4">
           <h4 className="text-sm font-medium text-gray-900">Servicios e Instalaciones</h4>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Sistema de Agua Caliente
@@ -981,7 +981,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               <select
                 value={formData.sistemaAguaCaliente}
                 onChange={(e) => updateFormData({ sistemaAguaCaliente: e.target.value })}
-                className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Seleccionar</option>
                 <option value="Calefón">Calefón</option>
@@ -997,7 +997,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               <select
                 value={formData.tipoCocina}
                 onChange={(e) => updateFormData({ tipoCocina: e.target.value })}
-                className="w-full px-3 py-3 text-base min-h-[120px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Seleccionar</option>
                 <option value="Cerrada">Cerrada</option>
@@ -1016,7 +1016,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
       title="Estacionamientos y Bodegas"
       description="Configuración detallada de espacios de estacionamiento y bodegas"
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Parking Spaces Section */}
         <ParkingSpaceForm
           parkingSpaces={formData.parkingSpaces}
@@ -1095,7 +1095,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
             <h4 className="text-sm font-medium text-gray-900 mb-3">
               Imágenes seleccionadas ({formData.property_images.length})
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {formData.property_images.map((file, index) => (
                 <div key={index} className="relative">
                   <img
@@ -1181,7 +1181,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               </div>
 
               <div className="flex items-center space-x-2">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                <span className={`inline-flex items-center px-3 py-2 rounded-full text-xs font-medium ${
                   doc.required ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
                 }`}>
                   {doc.required ? 'Requerido' : 'Opcional'}
@@ -1223,7 +1223,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
   }));
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-4 publication-form">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">

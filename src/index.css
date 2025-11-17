@@ -10,10 +10,18 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Improved touch targets for mobile */
-  button, a, input, select, textarea {
+  /* Improved touch targets for mobile - Excluding form publication inputs */
+  button, a {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Allow compact inputs in publication forms */
+  .publication-form input,
+  .publication-form select,
+  .publication-form textarea {
+    min-height: auto;
+    min-width: auto;
   }
 
   /* Better scrolling on mobile */
@@ -71,11 +79,18 @@
     padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
   }
 
-  /* Touch-friendly form inputs */
-  .mobile-input {
+  /* Touch-friendly form inputs - Excluding publication forms */
+  .mobile-input:not(.publication-form *) {
     @apply min-h-[44px] px-4 py-3 rounded-lg border border-gray-300;
     @apply focus:ring-2 focus:ring-blue-500 focus:border-transparent;
     @apply text-base; /* Prevents zoom on iOS */
+  }
+
+  /* Standard size inputs for publication forms */
+  .publication-form .mobile-input {
+    @apply min-h-[36px] px-3 py-2 rounded-lg border border-gray-300;
+    @apply focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply text-sm;
   }
 
   /* Date input improvements */

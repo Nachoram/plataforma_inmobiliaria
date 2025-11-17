@@ -11,9 +11,12 @@
 - [📝 Formularios Avanzados](#-formularios-avanzados)
 - [🗃️ Manejo de Archivos](#️-manejo-de-archivos)
 - [📊 Consultas de Base de Datos](#-consultas-de-base-de-datos)
+- [🏗️ Flujo de Contratos (Actualizado)](#️-flujo-de-contratos-actualizado)
+- [👤 Flujo de Postulantes (Nuevo)](#-flujo-de-postulantes-nuevo)
 - [🎨 Componentes UI](#-componentes-ui)
 - [🧪 Testing](#-testing)
 - [⚡ Optimización](#-optimización)
+- [🎯 Mejores Prácticas](#-mejores-prácticas)
 
 ---
 
@@ -1720,6 +1723,328 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
 
 ---
 
+## 🏗️ **Flujo de Contratos (Actualizado)**
+
+> **IMPORTANTE**: Los contratos se gestionan **EXCLUSIVAMENTE** desde el panel de administración. **NO** son accesibles desde rutas públicas del frontend.
+
+### **Componentes de Gestión de Contratos**
+
+#### **AdminPropertyDetailView (Componente Principal)**
+```typescript
+// src/components/properties/AdminPropertyDetailView.tsx
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { ContractEditor } from '../contracts/ContractEditor';
+
+export const AdminPropertyDetailView: React.FC = () => {
+  const { propertyId } = useParams<{ propertyId: string }>();
+  const [property, setProperty] = useState(null);
+  const [applications, setApplications] = useState([]);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+
+  // Solo administradores pueden acceder a esta ruta
+  // Gestiona edición de condiciones contractuales
+  // Permite aprobar/rechazar postulaciones
+  // Crea contratos basados en postulaciones aprobadas
+
+  const handleContractCreation = async (applicationId: string) => {
+    // Lógica de creación de contrato desde admin
+    const contract = await createContractFromApplication(applicationId);
+    // Redirige a ContractEditor para edición
+  };
+
+  return (
+    <div className="admin-property-detail">
+      {/* Vista completa de propiedad con panel de admin */}
+      {/* Lista de postulaciones con acciones de aprobar/rechazar */}
+      {/* Editor de contratos integrado */}
+    </div>
+  );
+};
+```
+
+#### **ApplicationsPage (Gestión Centralizada)**
+```typescript
+// src/components/dashboard/ApplicationsPage.tsx
+import React from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
+
+export const ApplicationsPage: React.FC = () => {
+  const { user } = useAuth();
+
+  // Solo propietarios pueden ver sus postulaciones
+  // Administradores ven todas las postulaciones para gestión
+  // Punto central para revisar y gestionar contratos
+
+  const handleApplicationAction = async (applicationId: string, action: 'approve' | 'reject') => {
+    if (action === 'approve') {
+      // Crear contrato y redirigir a editor
+      const contractId = await createContractFromApplication(applicationId);
+      navigate(`/admin/contracts/${contractId}/edit`);
+    }
+  };
+
+  return (
+    <div className="applications-management">
+      {/* Dashboard de postulaciones */}
+      {/* Acciones de aprobación/rechazo */}
+      {/* Enlaces a editores de contratos */}
+    </div>
+  );
+};
+```
+
+### **Estructura del Flujo Contractual**
+
+```
+🏠 Propiedad Publicada
+    ↓
+📝 Postulación Recibida (ApplicationsPage)
+    ↓
+✅ Aprobación por Propietario (AdminPropertyDetailView)
+    ↓
+📄 Creación de Contrato (ContractEditor)
+    ↓
+✏️ Edición de Condiciones (ContractCanvasEditor)
+    ↓
+📋 Firma y Finalización (ContractViewer)
+```
+
+### **Consideraciones de Seguridad**
+- 🔒 **Acceso Restringido**: Solo administradores y propietarios autorizados
+- 🚫 **No Público**: Los contratos nunca se exponen en rutas públicas
+- 🔐 **Validación**: Verificación de permisos en cada paso
+- 📊 **Auditoría**: Registro completo de todas las acciones contractuales
+
+---
+
+## 👤 **Flujo de Postulantes (Nuevo)**
+
+### **Perfil Avanzado de Postulante**
+
+#### **Tipos de Perfil de Usuario**
+```typescript
+// src/components/profile/UserProfilePage.tsx
+type ProfileType =
+  | 'corredor_independiente'    // Corredor independiente
+  | 'empresa_corretaje'        // Empresa de corretaje
+  | 'buscar_arriendo'          // Busca arrendar propiedad
+  | 'buscar_compra';           // Busca comprar propiedad
+
+type EntityType = 'natural' | 'juridica';
+```
+
+#### **Estructura Completa del Perfil**
+```typescript
+interface ProfileData {
+  // Información básica
+  first_name: string;
+  paternal_last_name: string;
+  maternal_last_name: string;
+  rut: string;
+
+  // Tipo de entidad y empleo
+  entity_type: EntityType;
+  employment_type?: 'dependiente' | 'independiente';
+
+  // Tipos de perfil (múltiples permitidos)
+  user_profile_type: ProfileType[];
+
+  // Información profesional
+  professional_type: string;
+  company_legal_name?: string;
+  company_rut?: string;
+  legal_representative_name?: string;
+  legal_representative_rut?: string;
+
+  // Información de contacto
+  address_street?: string;
+  address_number?: string;
+  address_commune?: string;
+  address_region?: string;
+  contact_email?: string;
+  phone?: string;
+}
+
+interface UserDocument {
+  id?: string;
+  doc_type: string;
+  file_name: string;
+  file_url: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_at?: string;
+}
+
+interface UserGuarantor {
+  // Información completa del garante
+  entity_type: EntityType;
+  // Campos específicos según tipo de entidad
+  documents?: UserDocument[];
+}
+```
+
+### **Documentos Requeridos por Tipo**
+
+#### **Persona Natural - Dependiente**
+```typescript
+const DOCUMENT_TYPES_NATURAL_DEPENDIENTE = [
+  { value: 'dicom_personal', label: 'Informe DICOM Personal' },
+  { value: 'carpeta_tributaria', label: 'Carpeta Tributaria' },
+  { value: 'cedula_identidad', label: 'Cédula de Identidad' },
+  { value: 'certificado_antiguedad_laboral', label: 'Certificado Antigüedad Laboral' },
+  { value: 'liquidaciones_sueldo', label: 'Liquidaciones de Sueldo (últimos 3 meses)' },
+  { value: 'contrato_trabajo', label: 'Contrato de Trabajo' },
+];
+```
+
+#### **Persona Natural - Independiente**
+```typescript
+const DOCUMENT_TYPES_NATURAL_INDEPENDIENTE = [
+  { value: 'dicom_personal', label: 'Informe DICOM Personal' },
+  { value: 'carpeta_tributaria', label: 'Carpeta Tributaria' },
+  { value: 'cedula_identidad', label: 'Cédula de Identidad' },
+  { value: 'declaracion_impuestos', label: 'Declaración de Impuestos (últimos 2 años)' },
+  { value: 'boletas_honorarios', label: 'Boletas de Honorarios (últimos 6 meses)' },
+  { value: 'certificado_cotizaciones', label: 'Certificado de Cotizaciones' },
+  { value: 'inicio_actividades', label: 'Inicio de Actividades' },
+];
+```
+
+### **Flujo de Postulación Completo**
+
+```
+👤 Usuario se registra
+    ↓
+🔧 Completa perfil avanzado (tipo de broker, intención)
+    ↓
+📄 Sube documentos de applicant
+    ↓
+👥 Agrega información de garante (guarantor)
+    ↓
+📄 Sube documentos de garante
+    ↓
+🏠 Busca propiedades en marketplace
+    ↓
+🏷️ Visualiza propiedades marcadas como "oferta"
+    ↓
+📝 Envía postulación completa
+    ↓
+⏳ Espera respuesta del propietario (via admin)
+```
+
+### **Componente de Perfil de Postulante**
+```typescript
+// src/components/profile/UserProfilePage.tsx
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
+import { DocumentUploader } from '../common/DocumentUploader';
+
+export const UserProfilePage: React.FC = () => {
+  const { user } = useAuth();
+  const [profileData, setProfileData] = useState<ProfileData>(null);
+  const [documents, setDocuments] = useState<UserDocument[]>([]);
+  const [guarantor, setGuarantor] = useState<UserGuarantor>(null);
+
+  // Hook para determinar si es corredor o busca propiedad
+  const isBroker = profileData?.user_profile_type?.includes('corredor_independiente') ||
+                   profileData?.user_profile_type?.includes('empresa_corretaje');
+
+  const isSeekingRental = profileData?.user_profile_type?.includes('buscar_arriendo');
+  const isSeekingPurchase = profileData?.user_profile_type?.includes('buscar_compra');
+
+  return (
+    <div className="user-profile-container">
+      {/* Selector de tipos de perfil */}
+      <div className="profile-type-selector">
+        <h3>¿Qué tipo de usuario eres?</h3>
+        <div className="profile-options">
+          <label>
+            <input type="checkbox" value="corredor_independiente" />
+            Corredor Independiente
+          </label>
+          <label>
+            <input type="checkbox" value="empresa_corretaje" />
+            Empresa de Corretaje
+          </label>
+          <label>
+            <input type="checkbox" value="buscar_arriendo" />
+            Busco Arrendar
+          </label>
+          <label>
+            <input type="checkbox" value="buscar_compra" />
+            Busco Comprar
+          </label>
+        </div>
+      </div>
+
+      {/* Formulario de perfil basado en selecciones */}
+      {isBroker && (
+        <BrokerProfileForm
+          data={profileData}
+          onChange={setProfileData}
+        />
+      )}
+
+      {(isSeekingRental || isSeekingPurchase) && (
+        <ApplicantProfileForm
+          data={profileData}
+          onChange={setProfileData}
+        />
+      )}
+
+      {/* Uploader de documentos */}
+      <DocumentUploader
+        documents={documents}
+        onDocumentsChange={setDocuments}
+        documentTypes={getRequiredDocumentTypes(profileData)}
+      />
+
+      {/* Sección de garante */}
+      {(isSeekingRental || isSeekingPurchase) && (
+        <GuarantorSection
+          guarantor={guarantor}
+          onGuarantorChange={setGuarantor}
+        />
+      )}
+    </div>
+  );
+};
+```
+
+### **Etiquetas de Propiedades "Oferta"**
+```typescript
+// En PropertyCard y listados
+const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
+  const isOffer = property.is_featured && property.listing_type === 'venta';
+
+  return (
+    <div className="property-card">
+      {isOffer && (
+        <div className="offer-badge">
+          🏷️ OFERTA
+        </div>
+      )}
+
+      {/* Resto del componente */}
+      <h3>{property.title}</h3>
+      <p>{property.description}</p>
+
+      {isOffer && (
+        <div className="offer-highlight">
+          ¡Propiedad en oferta especial!
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+---
+
 ## 🔗 **Integración de Webhooks**
 
 ### **Uso de Webhooks en Componentes**
@@ -1944,5 +2269,31 @@ VITE_RAILWAY_WEBHOOK_URL=https://primary-production-bafdc.up.railway.app/webhook
 - 👥 **[README-CONTRIBUCION.md](README-CONTRIBUCION.md)** - Guías de contribución y estándares
 
 ---
+
+## 🎯 **Mejores Prácticas**
+
+### **🔐 Seguridad y Arquitectura**
+- 🔒 **Contratos deben gestionarse desde admin**: Nunca expongas contratos públicamente en el frontend
+- 👤 **Postulantes acceden solo a su perfil**: Los usuarios solo pueden ver/editar su propio perfil y documentos
+- 🛡️ **Validación de permisos**: Verifica roles en cada componente administrativo
+- 📊 **Auditoría completa**: Registra todas las acciones contractuales y de perfil
+
+### **👥 Gestión de Perfiles de Usuario**
+- 🔧 **Perfiles especializados**: Usa tipos de perfil para mostrar campos relevantes (broker vs applicant)
+- 📄 **Documentos obligatorios**: Valida que se suban todos los documentos requeridos según el tipo
+- 👥 **Garante integral**: Incluye toda la información del garante en el perfil del postulante
+- 🏷️ **Etiquetas de oferta**: Destaca propiedades marcadas como oferta en el marketplace
+
+### **📝 Formularios y Validación**
+- ✅ **Validación en tiempo real**: Muestra errores inmediatamente al usuario
+- 📋 **Campos condicionales**: Solo muestra campos relevantes según selecciones del usuario
+- 💾 **Guardado automático**: Implementa auto-save para formularios largos
+- 🔄 **Estado consistente**: Mantén estado sincronizado entre componentes
+
+### **⚡ Optimización de Performance**
+- 🎯 **Lazy loading estratégico**: Carga componentes pesados solo cuando sean necesarios
+- 📦 **Code splitting**: Divide el código por funcionalidades críticas
+- 🖼️ **Imágenes optimizadas**: Usa lazy loading y formatos modernos
+- 🔍 **Búsqueda eficiente**: Implementa debouncing en búsquedas
 
 **✅ Con estos ejemplos y mejores prácticas, puedes desarrollar funcionalidades robustas y escalables.**

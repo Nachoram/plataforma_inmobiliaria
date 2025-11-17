@@ -67,3 +67,4 @@ COMMENT ON POLICY "Users can update their own documents" ON storage.objects IS
 COMMENT ON POLICY "Users can delete their own documents" ON storage.objects IS
 'Permite a los usuarios eliminar sus propios documentos';
 
+

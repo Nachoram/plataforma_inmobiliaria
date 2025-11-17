@@ -171,3 +171,4 @@ SELECT
         ELSE '❌ Constraint no existe'
     END as constraint_status;
 
+

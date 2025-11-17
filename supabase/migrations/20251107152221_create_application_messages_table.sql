@@ -257,3 +257,4 @@ GRANT EXECUTE ON FUNCTION get_unread_messages_count TO authenticated;
 
 
 
+

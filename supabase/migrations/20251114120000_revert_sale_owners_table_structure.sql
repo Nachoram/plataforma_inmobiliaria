@@ -162,3 +162,4 @@ BEGIN
     RAISE NOTICE '🔍 Índices removidos';
     RAISE NOTICE '👁️ Vista contract_data_view recreada con estructura simplificada';
 END $$;
+

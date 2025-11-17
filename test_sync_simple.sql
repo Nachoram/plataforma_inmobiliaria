@@ -71,3 +71,4 @@ EXCEPTION
         RAISE EXCEPTION '❌ Error en prueba: %', SQLERRM;
 END $$;
 
+

@@ -178,3 +178,4 @@ WHERE contract_content IS NULL AND contract_html IS NULL
 ORDER BY created_at DESC
 LIMIT 5;
 
+

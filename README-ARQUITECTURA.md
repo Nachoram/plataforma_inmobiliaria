@@ -7,6 +7,9 @@
 ## 📋 **Índice**
 - [🎯 Visión General](#-visión-general)
 - [📊 Esquema de Base de Datos](#-esquema-de-base-de-datos)
+- [🔄 Flujo de Datos](#-flujo-de-datos)
+- [🔐 Row Level Security (RLS)](#-row-level-security-rls)
+- [⚡ Escalabilidad y Performance](#-escalabilidad-y-performance)
 - [🔧 Arquitectura Frontend](#-arquitectura-frontend)
 - [⚡ Sistema de Providers](#-sistema-de-providers)
 - [🗃️ Gestión de Estado](#️-gestión-de-estado)
@@ -127,10 +130,15 @@
          └──────────│     offers      │
                     └─────────────────┘
 
-    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+                    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
     │   documents     │    │ property_images │    │ user_favorites  │
     │                 │    │                 │    │                 │
     └─────────────────┘    └─────────────────┘    └─────────────────┘
+
+    ┌─────────────────┐    ┌─────────────────┐
+    │applicant_docs   │    │guarantor_docs   │
+    │                 │    │                 │
+    └─────────────────┘    └─────────────────┘
 ```
 
 ### **Tablas Principales**
@@ -228,6 +236,52 @@ CREATE TABLE applications (
 - ✅ **Estados de aplicación** completos
 - ✅ **Integridad referencial** con cascadas
 
+#### **📄 applicant_documents**
+```sql
+CREATE TABLE applicant_documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id uuid NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  doc_type text NOT NULL,
+  file_name text NOT NULL,
+  file_url text NOT NULL,
+  file_size bigint,
+  mime_type text,
+  uploaded_at timestamptz DEFAULT now()
+);
+
+-- Índice para búsqueda eficiente
+CREATE INDEX idx_applicant_documents_application_id ON applicant_documents(application_id);
+```
+
+**Funcionalidades:**
+- ✅ **Documentos de postulantes** (Dicom, Carpeta Tributaria, Cédula, etc.)
+- ✅ **Vinculación con applications** para trazabilidad
+- ✅ **Almacenamiento en Supabase Storage**
+- ✅ **Validación de tipos de archivo**
+
+#### **👥 guarantor_documents**
+```sql
+CREATE TABLE guarantor_documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id uuid NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  doc_type text NOT NULL,
+  file_name text NOT NULL,
+  file_url text NOT NULL,
+  file_size bigint,
+  mime_type text,
+  uploaded_at timestamptz DEFAULT now()
+);
+
+-- Índice para búsqueda eficiente
+CREATE INDEX idx_guarantor_documents_application_id ON guarantor_documents(application_id);
+```
+
+**Funcionalidades:**
+- ✅ **Documentos de garantes** (avalistas)
+- ✅ **Separación clara** de documentos del postulante
+- ✅ **Mismo esquema** que applicant_documents
+- ✅ **Validación independiente** por garante
+
 ### **Enums y Types**
 ```sql
 -- Estados y tipos del sistema
@@ -260,7 +314,228 @@ CREATE TRIGGER on_auth_user_created
 
 ---
 
-## 🔧 **Arquitectura Frontend**
+## 🔄 **Flujo de Datos**
+
+### **Flujo de Publicación y Postulación (Actualizado)**
+
+```
+🏠 PROPIETARIO PUBLICA PROPIEDAD
+    ↓
+📝 USUARIO POSTULA (Public Frontend)
+    ↓
+📄 SUBE DOCUMENTOS (applicant_documents)
+    ↓
+👥 AGREGA GARANTE (opcional)
+    ↓
+📋 SUBE DOCUMENTOS DE GARANTE (guarantor_documents)
+    ↓
+⏳ ESPERA APROBACIÓN (ApplicationsPage - Admin)
+    ↓
+✅ PROPIETARIO APRUEBA (AdminPropertyDetailView)
+    ↓
+📄 CREA CONTRATO (ContractEditor - Admin Only)
+    ↓
+✏️ EDITA CONDICIONES (ContractCanvasEditor - Admin Only)
+    ↓
+📋 FIRMA Y FINALIZA (ContractViewer - Admin Only)
+```
+
+**Cambios Arquitecturales:**
+- ❌ **ANTIGUO**: Publicación → Postulación → Contrato (público)
+- ✅ **NUEVO**: Publicación → Postulación → Contrato (admin-only, después de aceptación)
+
+### **Separación de Responsabilidades**
+
+#### **Frontend Público (Usuario Final)**
+- 🔍 **Búsqueda y visualización** de propiedades
+- 📝 **Creación de postulaciones** con documentos
+- 👤 **Gestión de perfil** de postulante
+- 🏷️ **Visualización de ofertas** especiales
+
+#### **Panel de Administración (Admin Only)**
+- ✅ **Revisión de postulaciones** (ApplicationsPage)
+- 📄 **Creación de contratos** desde postulaciones aprobadas
+- ✏️ **Edición de condiciones contractuales** (AdminPropertyDetailView)
+- 📋 **Gestión completa del ciclo** contractual
+
+### **Buckets de Storage por Rol**
+
+#### **Público (Usuario)**
+```
+📁 property-images/     # Imágenes públicas de propiedades
+📁 applicant-docs/      # Documentos del postulante (privado)
+📁 guarantor-docs/      # Documentos del garante (privado)
+```
+
+#### **Administrativo (Admin)**
+```
+📁 contract-files/      # Archivos de contratos generados
+📁 legal-docs/          # Documentos legales procesados
+```
+
+---
+
+## 🔐 **Row Level Security (RLS)**
+
+### **Políticas de Seguridad por Tabla**
+
+#### **profiles (Usuario autenticado)**
+```sql
+-- Solo el propietario puede ver/modificar su perfil
+CREATE POLICY "Users can view own profile" ON profiles
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
+```
+
+#### **applications (Postulaciones)**
+```sql
+-- Propietarios ven postulaciones a sus propiedades
+CREATE POLICY "Owners can view applications to their properties" ON applications
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM properties
+      WHERE properties.id = applications.property_id
+      AND properties.owner_id = auth.uid()
+    )
+  );
+
+-- Postulantes ven solo sus propias postulaciones
+CREATE POLICY "Applicants can view own applications" ON applications
+  FOR SELECT USING (auth.uid() = applicant_id);
+
+-- Solo postulantes pueden crear aplicaciones
+CREATE POLICY "Applicants can create applications" ON applications
+  FOR INSERT WITH CHECK (auth.uid() = applicant_id);
+```
+
+#### **applicant_documents (Documentos de postulantes)**
+```sql
+-- Postulantes ven solo sus documentos
+CREATE POLICY "Applicants can view own documents" ON applicant_documents
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM applications
+      WHERE applications.id = applicant_documents.application_id
+      AND applications.applicant_id = auth.uid()
+    )
+  );
+
+-- Propietarios ven documentos de postulaciones a sus propiedades
+CREATE POLICY "Owners can view applicant documents for their properties" ON applicant_documents
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM applications a
+      JOIN properties p ON p.id = a.property_id
+      WHERE a.id = applicant_documents.application_id
+      AND p.owner_id = auth.uid()
+    )
+  );
+
+-- Solo postulantes pueden subir sus documentos
+CREATE POLICY "Applicants can upload own documents" ON applicant_documents
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM applications
+      WHERE applications.id = applicant_documents.application_id
+      AND applications.applicant_id = auth.uid()
+    )
+  );
+```
+
+#### **guarantor_documents (Documentos de garantes)**
+```sql
+-- Postulantes ven documentos de sus garantes
+CREATE POLICY "Applicants can view guarantor documents for own applications" ON guarantor_documents
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM applications
+      WHERE applications.id = guarantor_documents.application_id
+      AND applications.applicant_id = auth.uid()
+    )
+  );
+
+-- Propietarios ven documentos de garantes para sus propiedades
+CREATE POLICY "Owners can view guarantor documents for their properties" ON guarantor_documents
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM applications a
+      JOIN properties p ON p.id = a.property_id
+      WHERE a.id = guarantor_documents.application_id
+      AND p.owner_id = auth.uid()
+    )
+  );
+
+-- Solo postulantes pueden subir documentos de garantes
+CREATE POLICY "Applicants can upload guarantor documents" ON guarantor_documents
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM applications
+      WHERE applications.id = guarantor_documents.application_id
+      AND applications.applicant_id = auth.uid()
+    )
+  );
+```
+
+#### **properties (Propiedades públicas con acceso restringido)**
+```sql
+-- Propiedades disponibles son públicas para lectura
+CREATE POLICY "Available properties are public" ON properties
+  FOR SELECT USING (status = 'disponible' OR is_visible = true);
+
+-- Solo propietarios pueden modificar sus propiedades
+CREATE POLICY "Owners can update own properties" ON properties
+  FOR UPDATE USING (auth.uid() = owner_id);
+
+CREATE POLICY "Owners can delete own properties" ON properties
+  FOR DELETE USING (auth.uid() = owner_id);
+```
+
+### **Principios de Seguridad**
+- 🔒 **Acceso granular**: Cada tabla tiene políticas específicas por rol
+- 👤 **Usuario autenticado**: Todas las operaciones requieren autenticación
+- 🏠 **Propietarios**: Solo acceden a postulaciones de sus propiedades
+- 📝 **Postulantes**: Solo acceden a sus propias postulaciones y documentos
+- 🛡️ **Admin override**: Administradores tienen acceso completo para gestión
+
+---
+
+## ⚡ **Escalabilidad y Performance**
+
+### **Optimizaciones Arquitecturales**
+
+#### **Separación Frontend/Backend**
+- ✅ **Lazy loading** de componentes de contratos (solo carga admin)
+- ✅ **Code splitting** por funcionalidad crítica
+- ✅ **Bundle optimization** eliminando rutas no utilizadas
+
+#### **Beneficios de Arquitectura Actualizada**
+- 🚀 **Reducción de bundle size**: Eliminación de contratos públicos (-892KB)
+- ⚡ **Mejor performance inicial**: Frontend más ligero para usuarios finales
+- 📦 **Carga condicional**: Componentes admin solo para administradores
+- 🧠 **Memoria optimizada**: Menos componentes en memoria del navegador
+
+#### **Métricas de Performance**
+```typescript
+// Bundle sizes optimizados
+const bundleSizes = {
+  'react-vendor': '141 kB',    // React + DOM
+  'supabase': '125 kB',        // Cliente Supabase
+  'properties': '126 kB',      // Gestión de propiedades
+  'contracts': '892 kB',       // Solo carga en admin panel
+  'marketplace': '25 kB',      // Marketplace principal
+  'profile': '31 kB'           // Perfiles de usuario
+};
+```
+
+#### **Estrategias de Caché**
+- 📊 **Server state**: React Query para datos del servidor
+- 💾 **Local storage**: Persistencia de filtros y preferencias
+- 🖼️ **Image lazy loading**: Intersection Observer para imágenes
+- 🔄 **Preload estratégico**: Recursos críticos precargados
+
+---
 
 ### **Stack Tecnológico**
 
@@ -658,8 +933,9 @@ src/components/
 │   └── AuthRecoveryGuard.tsx  # Recuperación de sesión
 │
 ├── 📊 dashboard/
-│   ├── ApplicationsPage.tsx   # Gestión de postulaciones
-│   └── OffersPage.tsx         # Gestión de ofertas
+│   ├── ApplicationsPage.tsx   # Gestión de postulaciones (ADMIN)
+│   ├── MyApplicationsPage.tsx # Mis postulaciones (Usuario)
+│   └── MyOffersPage.tsx       # Mis ofertas (Usuario)
 │
 ├── 🛒 marketplace/
 │   ├── MarketplacePage.tsx    # Página principal
@@ -670,26 +946,52 @@ src/components/
 │   └── PortfolioPage.tsx      # Portafolio personal
 │
 ├── 👤 profile/
-│   ├── UserProfile.tsx        # Perfil público
-│   └── UserProfileForm.tsx    # Formulario de perfil
+│   ├── UserProfilePage.tsx    # Perfil avanzado de postulante
+│   └── UserProfileForm.tsx    # Formulario de perfil completo
 │
 ├── 🏠 properties/
-│   ├── PropertyForm.tsx           # Formulario base
-│   ├── PropertyPublicationForm.tsx# Publicación completa
-│   ├── PropertyDetailsPage.tsx    # Detalles de propiedad
-│   ├── PublicPropertiesPage.tsx   # Listado público
-│   ├── RentalApplicationForm.tsx  # Formulario postulación
-│   ├── AdvancedOfferForm.tsx      # Formulario ofertas
-│   ├── OfferForm.tsx              # Oferta simple
-│   ├── RentalPublicationForm.tsx  # Publicación arriendo
-│   └── PropertyCard.tsx           # Tarjeta de propiedad
+│   ├── AdminPropertyDetailView.tsx # Vista admin de propiedades
+│   ├── PropertyForm.tsx            # Formulario base
+│   ├── PropertyPublicationForm.tsx # Publicación completa
+│   ├── PropertyDetailsPage.tsx     # Detalles de propiedad
+│   ├── PublicPropertiesPage.tsx    # Listado público
+│   ├── RentalApplicationForm.tsx   # Formulario postulación
+│   ├── AdvancedOfferForm.tsx       # Formulario ofertas
+│   ├── OfferForm.tsx               # Oferta simple
+│   ├── RentalPublicationForm.tsx   # Publicación arriendo
+│   └── PropertyCard.tsx            # Tarjeta de propiedad
+│
+├── 📋 contracts/              # COMPONENTES ADMIN-ONLY
+│   ├── ContractEditor.tsx         # Editor de contratos
+│   ├── ContractCanvasEditor.tsx   # Editor visual
+│   ├── ContractManagementPage.tsx # Gestión de contratos
+│   ├── ContractViewer.tsx         # Visualizador de contratos
+│   └── WorkflowContractsPage.tsx  # Flujo de contratos
+│
+├── 📄 applications/           # Gestión de applicants
+│   ├── PostulantAdminPanel.tsx    # Panel admin de postulantes
+│   └── PostulationAdminPanel.tsx  # Panel de postulaciones
 │
 ├── 🧩 common/
-│   └── CustomButton.tsx       # Botones reutilizables
+│   ├── CustomButton.tsx       # Botones reutilizables
+│   ├── DocumentUploader.tsx   # Upload de documentos
+│   └── FileDropzone.tsx       # Zona de arrastrar archivos
 │
 ├── 🛡️ Layout.tsx              # Layout principal
 ├── 🔒 ProtectedRoute.tsx       # Rutas protegidas
 └── 📱 AppContent.tsx           # Contenido principal
+```
+
+### **Flujo de Componentes por Rol**
+
+#### **Usuario Final (Frontend Público)**
+```
+🏠 Marketplace → 🏷️ Ver Ofertas → 📝 Postular → 👤 Completar Perfil → 📄 Subir Documentos
+```
+
+#### **Administrador (Panel Admin)**
+```
+📊 Dashboard → 📋 ApplicationsPage → ✅ Aprobar Postulación → 📄 AdminPropertyDetailView → ✏️ ContractEditor
 ```
 
 ### **Patrones de Componentes**

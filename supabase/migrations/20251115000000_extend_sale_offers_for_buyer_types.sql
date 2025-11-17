@@ -256,3 +256,4 @@ BEGIN
     RAISE NOTICE '🔒 Políticas RLS configuradas correctamente';
 END $$;
 
+

@@ -109,3 +109,4 @@ WHERE table_schema = 'public'
   AND table_name IN ('application_applicants', 'application_guarantors')
 ORDER BY table_name, ordinal_position;
 
+

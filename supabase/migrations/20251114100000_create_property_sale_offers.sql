@@ -407,3 +407,4 @@ BEGIN
     RAISE NOTICE '⚡ Triggers y funciones auxiliares creados';
 END $$;
 
+

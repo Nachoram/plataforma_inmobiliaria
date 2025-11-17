@@ -136,3 +136,4 @@ COMMENT ON TABLE sale_owner_documents IS 'Documentos específicos de cada propie
 COMMENT ON COLUMN sale_owner_documents.doc_type IS 'Tipo de documento requerido según el tipo de propietario';
 COMMENT ON COLUMN sale_owner_documents.sale_owner_id IS 'Referencia al propietario específico';
 COMMENT ON COLUMN sale_owner_documents.file_url IS 'URL pública del documento en Supabase Storage';
+

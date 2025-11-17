@@ -32,6 +32,9 @@ Esta es una **plataforma inmobiliaria completa** diseñada para facilitar la ges
 - ⭐ **Sistema de favoritos**
 - 📱 **Interfaz mobile-friendly**
 - 📊 **Seguimiento de postulaciones enviadas**
+- 🔧 **Área de perfil avanzada con tipo de broker e intención de compra/arriendo**
+- 📄 **Carga de documentos de solicitante y avalista (garantía)**
+- 🏷️ **Visualización de propiedades etiquetadas como 'oferta'**
 
 #### 🔐 **Sistema de Seguridad**
 - 🔒 **Autenticación robusta con Supabase Auth**
@@ -165,11 +168,13 @@ npm run dev
 plataforma_inmobiliaria/
 ├── 📁 src/
 │   ├── 📁 components/
+│   │   ├── 📁 applications/   # Gestión de postulantes y applications
 │   │   ├── 📁 auth/           # Sistema de autenticación
+│   │   ├── 📁 contracts/      # Sistema de contratos (admin-only)
 │   │   ├── 📁 dashboard/      # Paneles de gestión avanzada
 │   │   ├── 📁 marketplace/    # Marketplace con filtros
 │   │   ├── 📁 portfolio/      # Gestión de portafolio
-│   │   ├── 📁 profile/        # Perfiles completos
+│   │   ├── 📁 profile/        # Perfiles de usuario y postulantes
 │   │   └── 📁 properties/     # Gestión completa de propiedades
 │   ├── 📁 hooks/              # Custom hooks avanzados
 │   ├── 📁 lib/                # Configuraciones y utilidades
@@ -234,11 +239,14 @@ La documentación está organizada en archivos especializados para facilitar la 
 - ✅ **Gestión completa de propiedades** (venta/arriendo)
 - ✅ **Sistema bidireccional de postulaciones** con garantes
 - ✅ **Gestión completa de ofertas de compra**
+- ✅ **Sistema de contratos** (admin-only, gestión centralizada)
 - ✅ **Sistema de notificaciones** con integración n8n
 - ✅ **Gestión de documentos y archivos**
 - ✅ **Interfaz responsive moderna**
 - ✅ **Configuración automática de storage**
 - ✅ **Arquitectura escalable de providers**
+- ✅ **Sección de perfil de postulantes con documentos**
+- ✅ **Etiquetado de propiedades como 'oferta' en marketplace**
 
 ### **📋 Funcionalidades en Desarrollo**
 - [ ] 🔔 **Notificaciones push en tiempo real**
@@ -302,6 +310,35 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 ---
 
 ## 📋 **Últimos Cambios**
+
+### 🔄 **Refactorización Q4 2025: Eliminación de Sección Contracts Pública**
+**Fecha:** Noviembre 2025
+
+**✅ Contratos ahora gestionados exclusivamente desde admin panel**
+- **Motivo:** Centralización de gestión contractual para mejor control administrativo
+- **Cambio:** Eliminación completa de gestión pública de contratos en UI
+- **Beneficios:**
+  - ✅ Mejor control administrativo sobre contratos
+  - ✅ Reducción de complejidad en interfaz de usuario
+  - ✅ Gestión unificada en panel de administración
+  - ✅ Mayor seguridad en procesos contractuales
+
+**✅ Nueva sección de applicants con perfiles mejorados**
+- **Funcionalidad añadida:** Área de perfil avanzada para postulantes
+- **Características:** Tipo de broker e intención de compra/arriendo
+- **Documentos:** Carga de documentos de applicant y guarantor
+- **Marketplace:** Etiquetado de propiedades como 'oferta'
+
+**Archivos afectados:**
+- 🔄 Modificado: `src/components/profile/` - Perfiles mejorados para postulantes
+- 🔄 Modificado: `src/components/applications/` - Gestión de applicants
+- 🔄 Modificado: `src/components/contracts/` - Solo admin access
+- ✅ Añadido: Etiquetado 'oferta' en marketplace
+- ✅ Validado: Build exitoso con nuevas funcionalidades
+
+**Flujo actual:** Los contratos se gestionan SOLO desde administración. Los postulantes tienen perfiles avanzados con carga de documentos.
+
+---
 
 ### 🔄 **Refactorización: Eliminación de RentalContractConditionsForm**
 **Fecha:** Octubre 2025

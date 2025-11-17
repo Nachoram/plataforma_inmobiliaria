@@ -882,3 +882,4 @@ const SaleOfferManagementPage: React.FC = () => {
 };
 
 export default SaleOfferManagementPage;
+

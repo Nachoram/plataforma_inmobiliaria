@@ -135,3 +135,4 @@ USING (
 -- WHERE tablename = 'rental_contract_conditions';
 -- =====================================================
 
+

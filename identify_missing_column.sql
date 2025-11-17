@@ -86,3 +86,4 @@ SELECT
         ELSE '❌ FALTAN COLUMNAS - REVISAR ARRIBA'
     END as status;
 
+

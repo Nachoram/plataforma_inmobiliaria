@@ -68,3 +68,4 @@ EXCEPTION
         RAISE EXCEPTION '❌ Error en sincronización existente: %', SQLERRM;
 END $$;
 
+

@@ -82,3 +82,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION revert_application_approval(UUID, UUID) TO authenticated;
 
 
+

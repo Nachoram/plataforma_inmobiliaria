@@ -6,11 +6,12 @@
 
 ## 📋 **Índice**
 - [🗄️ API de Supabase](#️-api-de-supabase)
+- [👤 Applicant Profile Endpoints](#-applicant-profile-endpoints)
 - [📧 Sistema de Webhooks](#-sistema-de-webhooks)
 - [⚡ Edge Functions](#-edge-functions)
 - [🔌 Integraciones Externas](#-integraciones-externas)
 - [📊 Endpoints Customizados](#-endpoints-customizados)
-- [🔐 Autenticación de API](#-autenticación-de-api)
+- [🔐 Autenticación y Autorización](#-autenticación-y-autorización)
 - [📈 Monitoreo y Logs](#-monitoreo-y-logs)
 - [🧪 Testing de APIs](#-testing-de-apis)
 
@@ -547,6 +548,208 @@ export const getDocumentUrl = async (documentPath: string) => {
 };
 ```
 
+### **Applicant Profile API**
+
+#### **👤 Applicant Profile Endpoints**
+
+```typescript
+// POST /api/applicants - Crear/actualizar perfil de postulante
+export const createOrUpdateApplicantProfile = async (profileData: ApplicantProfileData) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuario no autenticado');
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: user.id,
+      ...profileData,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'id'
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// GET /api/applicants/:id - Obtener perfil de postulante
+export const getApplicantProfile = async (applicantId: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuario no autenticado');
+
+  // Solo el propietario puede ver su perfil
+  if (user.id !== applicantId) {
+    throw new Error('Acceso denegado');
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', applicantId)
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// PUT /api/applicants/:id - Actualizar datos de postulante
+export const updateApplicantProfile = async (
+  applicantId: string,
+  updates: Partial<ApplicantProfileData>
+) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuario no autenticado');
+
+  // Solo el propietario puede actualizar su perfil
+  if (user.id !== applicantId) {
+    throw new Error('Acceso denegado');
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', applicantId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// POST /api/applicants/:id/documents - Subir documentos (applicant/guarantor)
+export const uploadApplicantDocument = async (
+  applicantId: string,
+  file: File,
+  documentType: string,
+  entityType: 'applicant' | 'guarantor' = 'applicant'
+) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuario no autenticado');
+
+  // Solo el propietario puede subir sus documentos
+  if (user.id !== applicantId) {
+    throw new Error('Acceso denegado');
+  }
+
+  // Determinar tabla destino
+  const tableName = entityType === 'applicant' ? 'applicant_documents' : 'guarantor_documents';
+  const entityTypeValue = entityType === 'applicant' ? 'application_applicant' : 'application_guarantor';
+
+  // Subir archivo a storage
+  const fileExt = file.name.split('.').pop()?.toLowerCase();
+  const fileName = `${user.id}/${entityType}/${Date.now()}_${documentType}.${fileExt}`;
+
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from('user-documents')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (uploadError) throw uploadError;
+
+  // Registrar en base de datos
+  const { data, error } = await supabase
+    .from(tableName)
+    .insert([{
+      application_id: applicantId, // Nota: ajustar según lógica de negocio
+      doc_type: documentType,
+      file_name: file.name,
+      file_url: supabase.storage.from('user-documents').getPublicUrl(uploadData.path).data.publicUrl,
+      file_size: file.size,
+      storage_path: uploadData.path
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// GET /api/applicants/:id/documents - Listar documentos de postulante
+export const getApplicantDocuments = async (applicantId: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuario no autenticado');
+
+  // Solo el propietario puede ver sus documentos
+  if (user.id !== applicantId) {
+    throw new Error('Acceso denegado');
+  }
+
+  // Obtener documentos de applicant y guarantor
+  const [applicantDocs, guarantorDocs] = await Promise.all([
+    supabase
+      .from('applicant_documents')
+      .select('*')
+      .eq('application_id', applicantId), // Ajustar según lógica de negocio
+
+    supabase
+      .from('guarantor_documents')
+      .select('*')
+      .eq('application_id', applicantId) // Ajustar según lógica de negocio
+  ]);
+
+  if (applicantDocs.error) throw applicantDocs.error;
+  if (guarantorDocs.error) throw guarantorDocs.error;
+
+  return {
+    applicant_documents: applicantDocs.data || [],
+    guarantor_documents: guarantorDocs.data || []
+  };
+};
+
+// DELETE /api/applicants/:id/documents/:doc_id - Eliminar documento
+export const deleteApplicantDocument = async (
+  applicantId: string,
+  documentId: string,
+  entityType: 'applicant' | 'guarantor' = 'applicant'
+) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuario no autenticado');
+
+  // Solo el propietario puede eliminar sus documentos
+  if (user.id !== applicantId) {
+    throw new Error('Acceso denegado');
+  }
+
+  // Determinar tabla
+  const tableName = entityType === 'applicant' ? 'applicant_documents' : 'guarantor_documents';
+
+  // Obtener documento para storage path
+  const { data: document, error: fetchError } = await supabase
+    .from(tableName)
+    .select('storage_path')
+    .eq('id', documentId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // Eliminar archivo de storage
+  const { error: storageError } = await supabase.storage
+    .from('user-documents')
+    .remove([document.storage_path]);
+
+  if (storageError) throw storageError;
+
+  // Eliminar registro de base de datos
+  const { error: dbError } = await supabase
+    .from(tableName)
+    .delete()
+    .eq('id', documentId);
+
+  if (dbError) throw dbError;
+};
+```
+
+---
+
+## 📧 **Sistema de Webhooks**
+
 ---
 
 ## 📧 **Sistema de Webhooks**
@@ -588,12 +791,19 @@ VITE_RAILWAY_WEBHOOK_URL=https://primary-production-bafdc.up.railway.app/webhook
 'property_published'    // Nueva propiedad publicada
 ```
 
+#### **Eventos de Perfiles de Postulantes**
+```typescript
+// Perfiles de applicants
+'applicant_profile_updated'  // Perfil de postulante actualizado
+'applicant_documents_uploaded'  // Documentos subidos por postulante
+```
+
 #### **Payload Structure**
 ```typescript
 // Estructura de datos enviada a n8n
 interface WebhookPayload {
   // Información básica del evento
-  action: 'application_received' | 'application_approved' | 'application_rejected' | 'offer_received' | 'offer_accepted' | 'offer_rejected' | 'property_published';
+  action: 'application_received' | 'application_approved' | 'application_rejected' | 'offer_received' | 'offer_accepted' | 'offer_rejected' | 'property_published' | 'applicant_profile_updated' | 'applicant_documents_uploaded';
   decision?: 'approved' | 'rejected' | 'accepted';
   status: string;
   timestamp: string;
@@ -844,6 +1054,67 @@ class WebhookClient {
 
     await this.send(payload);
   }
+
+  async sendApplicantProfileEvent(
+    action: 'updated',
+    applicant: any,
+    changes?: any
+  ): Promise<void> {
+    const payload: WebhookPayload = {
+      action: `applicant_profile_${action}` as any,
+      status: 'updated',
+      timestamp: new Date().toISOString(),
+
+      applicant: {
+        id: applicant.id,
+        full_name: `${applicant.first_name} ${applicant.paternal_last_name}`,
+        contact_email: applicant.email,
+        contact_phone: applicant.phone,
+        profession: applicant.profession,
+        monthly_income: applicant.monthly_income_clp
+      },
+
+      metadata: {
+        source: 'plataforma-inmobiliaria',
+        user_agent: navigator.userAgent,
+        url: window.location.href,
+        environment: import.meta.env.MODE as 'development' | 'production',
+        changes: changes // Detalles de qué campos cambiaron
+      }
+    };
+
+    await this.send(payload);
+  }
+
+  async sendApplicantDocumentEvent(
+    applicant: any,
+    documentType: string,
+    documentCount: number
+  ): Promise<void> {
+    const payload: WebhookPayload = {
+      action: 'applicant_documents_uploaded',
+      status: 'uploaded',
+      timestamp: new Date().toISOString(),
+
+      applicant: {
+        id: applicant.id,
+        full_name: `${applicant.first_name} ${applicant.paternal_last_name}`,
+        contact_email: applicant.email,
+        contact_phone: applicant.phone
+      },
+
+      metadata: {
+        source: 'plataforma-inmobiliaria',
+        user_agent: navigator.userAgent,
+        url: window.location.href,
+        environment: import.meta.env.MODE as 'development' | 'production',
+        document_type: documentType,
+        total_documents: documentCount
+      }
+    };
+
+    await this.send(payload);
+  }
 }
 
 export const webhookClient = new WebhookClient();
@@ -860,12 +1131,12 @@ const handleApproveApplication = async (applicationId: string) => {
   try {
     // Actualizar estado en base de datos
     const updatedApplication = await updateApplicationStatus(applicationId, 'aprobada');
-    
+
     // Obtener datos completos para webhook
     const property = await getProperty(updatedApplication.property_id);
     const applicant = await getProfile(updatedApplication.applicant_id);
     const propertyOwner = await getProfile(property.owner_id);
-    
+
     // Enviar webhook
     await webhookClient.sendApplicationEvent(
       'approved',
@@ -874,10 +1145,10 @@ const handleApproveApplication = async (applicationId: string) => {
       applicant,
       propertyOwner
     );
-    
+
     // Actualizar UI
     refetchReceivedApplications();
-    
+
     toast({
       title: 'Postulación aprobada',
       description: 'Se ha enviado la notificación al postulante.',
@@ -887,6 +1158,65 @@ const handleApproveApplication = async (applicationId: string) => {
     toast({
       title: 'Error',
       description: 'No se pudo aprobar la postulación.',
+      variant: 'destructive',
+    });
+  }
+};
+
+const handleApplicantProfileUpdate = async (profileData: ApplicantProfileData) => {
+  try {
+    // Actualizar perfil en base de datos
+    const updatedProfile = await updateApplicantProfile(profileData);
+
+    // Enviar webhook de actualización de perfil
+    await webhookClient.sendApplicantProfileEvent(
+      'updated',
+      updatedProfile,
+      profileData // Detalles de cambios
+    );
+
+    toast({
+      title: 'Perfil actualizado',
+      description: 'Tu perfil ha sido actualizado exitosamente.',
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    toast({
+      title: 'Error',
+      description: 'No se pudo actualizar el perfil.',
+      variant: 'destructive',
+    });
+  }
+};
+
+const handleDocumentUpload = async (file: File, documentType: string) => {
+  try {
+    // Subir documento
+    const uploadedDoc = await uploadApplicantDocument(file, documentType);
+
+    // Obtener perfil del usuario
+    const userProfile = await getCurrentProfile();
+
+    // Contar documentos totales del usuario
+    const documents = await getApplicantDocuments();
+    const totalDocs = documents.applicant_documents.length + documents.guarantor_documents.length;
+
+    // Enviar webhook de documentos subidos
+    await webhookClient.sendApplicantDocumentEvent(
+      userProfile,
+      documentType,
+      totalDocs
+    );
+
+    toast({
+      title: 'Documento subido',
+      description: 'El documento ha sido subido exitosamente.',
+    });
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    toast({
+      title: 'Error',
+      description: 'No se pudo subir el documento.',
       variant: 'destructive',
     });
   }
@@ -1660,7 +1990,27 @@ export const getDashboardMetrics = async (): Promise<DashboardMetrics> => {
 
 ---
 
-## 🔐 **Autenticación de API**
+## 🔐 **Autenticación y Autorización**
+
+### **Reglas de Acceso por Rol**
+
+#### **Postulantes (Applicants)**
+- 👤 **Acceso limitado**: Solo pueden ver/editar su propio perfil y documentos
+- 📄 **Documentos personales**: Acceso exclusivo a applicant_documents y guarantor_documents
+- 🚫 **Sin acceso a contratos**: Los contratos nunca son visibles para postulantes
+- 🔒 **Validación estricta**: Verificación de ownership en cada endpoint
+
+#### **Propietarios (Owners)**
+- 🏠 **Propiedades propias**: Solo pueden modificar sus propias propiedades
+- 📝 **Postulaciones recibidas**: Pueden ver y gestionar postulaciones a sus propiedades
+- 📄 **Documentos de postulantes**: Acceso a documentos de quienes postulan a sus propiedades
+- ✅ **Acceso a contratos**: Pueden crear contratos después de aprobar postulaciones
+
+#### **Administradores (Admins)**
+- 👑 **Acceso completo**: Pueden gestionar todo el sistema
+- 📋 **Panel administrativo**: Acceso a AdminPropertyDetailView y ApplicationsPage
+- 📄 **Contratos**: Creación y edición completa de contratos
+- 🔧 **Gestión de usuarios**: Acceso a todos los perfiles y documentos
 
 ### **JWT Token Management**
 
@@ -1733,6 +2083,44 @@ export const testRLSPolicy = async (
   }
 };
 ```
+
+### **Consideraciones de Rate Limiting**
+
+#### **Límites por Endpoint**
+
+```typescript
+// Configuración recomendada de rate limits
+const rateLimits = {
+  // Endpoints de perfil - moderados
+  'POST /api/applicants': { requests: 10, window: '1m' }, // 10 por minuto
+  'PUT /api/applicants/:id': { requests: 30, window: '1h' }, // 30 por hora
+
+  // Endpoints de documentos - restrictivos por tamaño
+  'POST /api/applicants/:id/documents': {
+    requests: 5, // Máximo 5 archivos
+    window: '1h',
+    maxFileSize: '10MB', // Límite por archivo
+    maxTotalSize: '50MB' // Límite total por hora
+  },
+
+  // Endpoints de búsqueda - generosos
+  'GET /properties': { requests: 100, window: '1m' },
+  'GET /applications': { requests: 50, window: '1m' },
+
+  // Endpoints administrativos - restrictivos
+  'GET /admin/applications/:id/contract': { requests: 20, window: '1m' },
+  'PUT /admin/applications/:id/contract': { requests: 10, window: '1h' }
+};
+```
+
+#### **Recomendaciones para Archivos Pesados**
+
+- 📁 **Documentos de applicants**: Pueden ser archivos grandes (PDF, imágenes de alta resolución)
+- 🕒 **Timeouts extendidos**: Considerar timeouts de 60-120 segundos para uploads
+- 📊 **Progreso de carga**: Implementar indicadores de progreso para mejor UX
+- 🔄 **Reintentos inteligentes**: Retry automático para fallos de red temporales
+- 🗂️ **Compresión**: Comprimir imágenes automáticamente antes del upload
+- 📈 **Monitoreo**: Alertas cuando se acerque a límites de storage
 
 ---
 

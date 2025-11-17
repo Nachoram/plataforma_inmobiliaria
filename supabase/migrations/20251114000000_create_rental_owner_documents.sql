@@ -149,3 +149,4 @@ BEGIN
     RAISE NOTICE '📊 Índices de optimización agregados';
     RAISE NOTICE '🔄 Trigger updated_at configurado';
 END $$;
+

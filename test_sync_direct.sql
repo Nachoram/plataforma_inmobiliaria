@@ -94,3 +94,4 @@ EXCEPTION
         RAISE EXCEPTION '❌ Error en prueba directa: % (Código: %)', SQLERRM, SQLSTATE;
 END $$;
 
+

@@ -9,6 +9,7 @@
 - [🔐 Sistema de Autenticación](#-sistema-de-autenticación)
 - [👥 Roles y Permisos](#-roles-y-permisos)
 - [📁 Políticas de Storage](#-políticas-de-storage)
+- [🔐 Privacidad de Documentos](#-privacidad-de-documentos)
 - [🔒 Validaciones y Restricciones](#-validaciones-y-restricciones)
 - [🚨 Auditoría y Monitoreo](#-auditoría-y-monitoreo)
 - [🧪 Testing de Seguridad](#-testing-de-seguridad)
@@ -28,6 +29,9 @@ ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE guarantors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE applicant_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guarantor_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE property_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_favorites ENABLE ROW LEVEL SECURITY;
@@ -394,6 +398,241 @@ WITH CHECK (
   auth.uid() IS NOT NULL AND
   -- Ensure the property exists and is available
   EXISTS (
+    SELECT 1 FROM properties
+    WHERE id = property_id
+    AND status = 'disponible'
+    AND is_visible = true
+  )
+);
+
+-- UPDATE: Generally not needed for favorites (simple add/remove)
+-- If needed, users can only update their own favorites
+CREATE POLICY "user_favorites_update_policy" ON user_favorites
+FOR UPDATE
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- DELETE: Users can only delete their own favorites
+CREATE POLICY "user_favorites_delete_policy" ON user_favorites
+FOR DELETE
+USING (auth.uid() = user_id);
+```
+
+### **Políticas de Contracts (Admin-Only)**
+
+#### **Políticas para Contratos**
+```sql
+-- SELECT: Only admins and approved property owners can view contracts
+CREATE POLICY "contracts_select_policy" ON contracts
+FOR SELECT
+USING (
+  -- Admin users can view all contracts
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  ) OR
+  -- Property owners can view contracts for their approved applications
+  EXISTS (
+    SELECT 1 FROM applications a
+    JOIN properties p ON a.property_id = p.id
+    WHERE a.id = contracts.application_id
+    AND p.owner_id = auth.uid()
+    AND a.status = 'aprobada'
+  )
+);
+
+-- INSERT: Only admins can create contracts
+CREATE POLICY "contracts_insert_policy" ON contracts
+FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  ) AND
+  auth.uid() IS NOT NULL
+);
+
+-- UPDATE: Only admins can update contracts
+CREATE POLICY "contracts_update_policy" ON contracts
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+-- DELETE: Contracts cannot be deleted (audit requirement)
+-- No DELETE policy - contracts are immutable once created
+```
+
+### **Políticas de Applicant Documents**
+
+#### **Políticas para Documentos de Postulantes**
+```sql
+-- SELECT: Applicants can view their own documents, property owners can view documents for their properties
+CREATE POLICY "applicant_documents_select_policy" ON applicant_documents
+FOR SELECT
+USING (
+  -- Applicants can view their own documents
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = applicant_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  ) OR
+  -- Property owners can view documents from applications to their properties
+  EXISTS (
+    SELECT 1 FROM applications a
+    JOIN properties p ON a.property_id = p.id
+    WHERE a.id = applicant_documents.application_id
+    AND p.owner_id = auth.uid()
+  ) OR
+  -- Admins can view all documents
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+-- INSERT: Only applicants can upload their own documents
+CREATE POLICY "applicant_documents_insert_policy" ON applicant_documents
+FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = applicant_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  ) AND
+  auth.uid() IS NOT NULL
+);
+
+-- UPDATE: Only applicants can update their own documents
+CREATE POLICY "applicant_documents_update_policy" ON applicant_documents
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = applicant_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = applicant_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  )
+);
+
+-- DELETE: Only applicants can delete their own documents
+CREATE POLICY "applicant_documents_delete_policy" ON applicant_documents
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = applicant_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  )
+);
+```
+
+### **Políticas de Guarantor Documents**
+
+#### **Políticas para Documentos de Garantes**
+```sql
+-- SELECT: Applicants can view guarantor documents for their applications, property owners can view for their properties
+CREATE POLICY "guarantor_documents_select_policy" ON guarantor_documents
+FOR SELECT
+USING (
+  -- Applicants can view guarantor documents for their own applications
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = guarantor_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  ) OR
+  -- Property owners can view guarantor documents from applications to their properties
+  EXISTS (
+    SELECT 1 FROM applications a
+    JOIN properties p ON a.property_id = p.id
+    WHERE a.id = guarantor_documents.application_id
+    AND p.owner_id = auth.uid()
+  ) OR
+  -- Admins can view all documents
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+-- INSERT: Only applicants can upload guarantor documents for their applications
+CREATE POLICY "guarantor_documents_insert_policy" ON guarantor_documents
+FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = guarantor_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  ) AND
+  auth.uid() IS NOT NULL
+);
+
+-- UPDATE: Only applicants can update guarantor documents for their applications
+CREATE POLICY "guarantor_documents_update_policy" ON guarantor_documents
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = guarantor_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = guarantor_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  )
+);
+
+-- DELETE: Only applicants can delete guarantor documents for their applications
+CREATE POLICY "guarantor_documents_delete_policy" ON guarantor_documents
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM applications
+    WHERE applications.id = guarantor_documents.application_id
+    AND applications.applicant_id = auth.uid()
+  )
+);
+```
+
+#### **Políticas para Favoritos**
+```sql
+-- SELECT: Users can only view their own favorites
+CREATE POLICY "user_favorites_select_policy" ON user_favorites
+FOR SELECT
+USING (auth.uid() = user_id);
+
+-- INSERT: Users can only create their own favorites
+CREATE POLICY "user_favorites_insert_policy" ON user_favorites
+FOR INSERT
+WITH CHECK (
+  auth.uid() = user_id AND
+  auth.uid() IS NOT NULL AND
+  -- Ensure the property exists and is available
+  EXISTS (
     SELECT 1 FROM properties 
     WHERE id = property_id 
     AND status = 'disponible' 
@@ -648,25 +887,25 @@ export const authManager = new AuthManager();
 
 ## 👥 **Roles y Permisos**
 
-### **Sistema de Roles Básico**
+### **Sistema de Roles y Tipos de Perfil**
 
-#### **Roles en User Metadata**
+#### **Roles Administrativos**
 ```typescript
-// Tipos de roles
-export type UserRole = 'user' | 'admin' | 'moderator';
+// Tipos de roles administrativos
+export type AdminRole = 'user' | 'admin' | 'moderator';
 
 export interface UserMetadata {
-  role: UserRole;
+  role: AdminRole;
   permissions: string[];
   created_at: string;
   last_login: string;
 }
 
-// Asignar rol durante registro
+// Asignar rol administrativo durante registro
 export const signUpWithRole = async (
-  email: string, 
-  password: string, 
-  role: UserRole = 'user'
+  email: string,
+  password: string,
+  role: AdminRole = 'user'
 ) => {
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -674,7 +913,7 @@ export const signUpWithRole = async (
     options: {
       data: {
         role,
-        permissions: getRolePermissions(role),
+        permissions: getAdminPermissions(role),
         created_at: new Date().toISOString()
       }
     }
@@ -683,8 +922,8 @@ export const signUpWithRole = async (
   return { data, error };
 };
 
-// Obtener permisos por rol
-const getRolePermissions = (role: UserRole): string[] => {
+// Obtener permisos administrativos
+const getAdminPermissions = (role: AdminRole): string[] => {
   const permissions = {
     user: [
       'create_property',
@@ -693,20 +932,26 @@ const getRolePermissions = (role: UserRole): string[] => {
       'create_application',
       'view_own_applications',
       'create_offer',
-      'view_own_offers'
+      'view_own_offers',
+      'update_own_profile',
+      'upload_own_documents'
     ],
     moderator: [
-      ...getRolePermissions('user'),
+      ...getAdminPermissions('user'),
       'moderate_content',
       'view_user_reports',
-      'suspend_listings'
+      'suspend_listings',
+      'view_applications_for_owned_properties'
     ],
     admin: [
-      ...getRolePermissions('moderator'),
+      ...getAdminPermissions('moderator'),
       'view_all_data',
       'manage_users',
       'access_admin_panel',
-      'modify_system_settings'
+      'modify_system_settings',
+      'create_contracts',
+      'update_contracts',
+      'view_all_documents'
     ]
   };
 
@@ -745,10 +990,10 @@ export const requirePermission = (permission: string) => {
 // Hook para verificar permisos
 export const usePermissions = () => {
   const { user } = useAuth();
-  
+
   return {
     hasPermission: (permission: string) => hasPermission(user, permission),
-    userRole: user?.user_metadata?.role as UserRole || 'user',
+    userRole: user?.user_metadata?.role as AdminRole || 'user',
     permissions: user?.user_metadata?.permissions || []
   };
 };
@@ -787,9 +1032,52 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
 </PermissionGuard>
 ```
 
----
+#### **Tipos de Perfil de Usuario (Applicant Types)**
+```typescript
+// Tipos de perfil de applicant (almacenados en profiles.user_profile_type)
+export type ApplicantProfileType =
+  | 'corredor_independiente'    // Corredor independiente
+  | 'empresa_corretaje'        // Empresa de corretaje
+  | 'buscar_arriendo'          // Busca arrendar propiedad
+  | 'buscar_compra';           // Busca comprar propiedad
 
-## 📁 **Políticas de Storage**
+export type EntityType = 'natural' | 'juridica';
+export type EmploymentType = 'dependiente' | 'independiente';
+
+// Función para determinar permisos basados en tipos de perfil
+export const getApplicantPermissions = (profileTypes: ApplicantProfileType[]): string[] => {
+  const permissions: string[] = [];
+
+  // Permisos base para todos los applicants
+  permissions.push('update_own_profile', 'upload_own_documents');
+
+  // Permisos adicionales basados en tipos de perfil
+  if (profileTypes.includes('corredor_independiente') || profileTypes.includes('empresa_corretaje')) {
+    permissions.push('broker_profile', 'manage_listings');
+  }
+
+  if (profileTypes.includes('buscar_arriendo') || profileTypes.includes('buscar_compra')) {
+    permissions.push('apply_to_properties', 'view_property_details');
+  }
+
+  return permissions;
+};
+
+// Hook para obtener tipos de perfil del usuario actual
+export const useApplicantProfile = () => {
+  const { user } = useAuth();
+
+  // Obtener tipos de perfil desde profiles.user_profile_type
+  const profileTypes = user?.user_metadata?.profile_types as ApplicantProfileType[] || [];
+
+  return {
+    profileTypes,
+    isBroker: profileTypes.includes('corredor_independiente') || profileTypes.includes('empresa_corretaje'),
+    isSeekingRental: profileTypes.includes('buscar_arriendo'),
+    isSeekingPurchase: profileTypes.includes('buscar_compra'),
+    permissions: getApplicantPermissions(profileTypes)
+  };
+};
 
 ### **Bucket Configuration**
 
@@ -945,6 +1233,102 @@ export const validateUserDocument = (file: File): string | null => {
 };
 ```
 
+## 🔐 **Privacidad de Documentos**
+
+### **Clasificación de Documentos por Sensibilidad**
+
+#### **Contratos (Máxima Sensibilidad - Admin Only)**
+- 📋 **Acceso restringido**: Solo administradores y propietarios aprobados
+- 🔒 **No público**: Los contratos nunca se exponen en rutas públicas del frontend
+- 📊 **Auditoría completa**: Registro de todas las visualizaciones y modificaciones
+- 🗂️ **Almacenamiento seguro**: Encriptados en Supabase Storage con políticas RLS estrictas
+
+#### **Documentos de Postulantes (Alta Sensibilidad)**
+- 👤 **Acceso limitado**: Solo el postulante propietario y administradores
+- 🏠 **Propietarios**: Pueden ver documentos de postulantes a sus propiedades
+- 🔐 **Encriptación**: Almacenados en buckets privados de Supabase Storage
+- 📋 **Tipos validados**: Solo documentos permitidos (Dicom, Tributaria, Cédula, etc.)
+
+#### **Documentos de Garantes (Alta Sensibilidad)**
+- 👥 **Acceso restringido**: Postulante, garante, propietarios y admins
+- 🔒 **Separación clara**: Tabla independiente de applicant_documents
+- ✅ **Verificación requerida**: Admin debe validar identidad del garante antes de aceptar
+- 🛡️ **Cadena de custodia**: Registro de quién accede y cuándo
+
+### **Políticas de Encriptación y Almacenamiento**
+
+#### **Buckets de Supabase Storage**
+```typescript
+// Configuración de buckets por nivel de sensibilidad
+const storageConfig = {
+  // Público - solo imágenes de propiedades
+  'property-images': {
+    public: true,
+    allowedTypes: ['image/*'],
+    maxSize: '10MB'
+  },
+
+  // Privado - documentos sensibles
+  'user-documents': {
+    public: false,
+    allowedTypes: ['application/pdf', 'image/*', 'application/msword'],
+    maxSize: '50MB',
+    encryption: 'AES256'
+  },
+
+  // Ultra privado - contratos legales
+  'contract-files': {
+    public: false,
+    allowedTypes: ['application/pdf'],
+    maxSize: '100MB',
+    encryption: 'AES256',
+    accessLogging: true
+  }
+};
+```
+
+#### **Controles de Acceso por Nivel**
+
+```typescript
+// Función para determinar nivel de acceso a documentos
+export const getDocumentAccessLevel = (
+  documentType: 'contract' | 'applicant_doc' | 'guarantor_doc',
+  userRole: AdminRole,
+  userId: string,
+  documentOwnerId: string
+): 'none' | 'read' | 'write' | 'admin' => {
+
+  switch (documentType) {
+    case 'contract':
+      // Solo admins y propietarios aprobados
+      if (userRole === 'admin') return 'admin';
+      if (userRole === 'user' && isApprovedOwner(userId, contractId)) return 'read';
+      return 'none';
+
+    case 'applicant_doc':
+    case 'guarantor_doc':
+      // Postulante propietario tiene acceso completo
+      if (userId === documentOwnerId) return 'write';
+      // Admins tienen acceso completo
+      if (userRole === 'admin') return 'admin';
+      // Propietarios pueden leer documentos de sus postulantes
+      if (userRole === 'user' && isPropertyOwner(userId, applicationPropertyId)) return 'read';
+      return 'none';
+
+    default:
+      return 'none';
+  }
+};
+```
+
+### **Mejores Prácticas de Privacidad**
+
+- 🔒 **Principio de menor privilegio**: Otorgar solo el acceso mínimo necesario
+- 📊 **Registro de accesos**: Auditar todas las visualizaciones de documentos sensibles
+- 🗑️ **Eliminación segura**: Los documentos eliminados se marcan, no se borran físicamente
+- 🔄 **Rotación de claves**: Las claves de encriptación se rotan periódicamente
+- 🚨 **Alertas de seguridad**: Notificaciones automáticas de accesos sospechosos
+
 ---
 
 ## 🔒 **Validaciones y Restricciones**
@@ -987,8 +1371,36 @@ ALTER TABLE applications ADD CONSTRAINT valid_age_check
 CHECK (snapshot_applicant_age >= 18 AND snapshot_applicant_age <= 120);
 
 -- Constraint para validar ingresos
-ALTER TABLE applications ADD CONSTRAINT valid_income_check 
+ALTER TABLE applications ADD CONSTRAINT valid_income_check
 CHECK (snapshot_applicant_monthly_income_clp > 0);
+
+-- Constraints para tipos de perfil de applicant
+ALTER TABLE profiles ADD CONSTRAINT valid_profile_types_check
+CHECK (
+  user_profile_type IS NULL OR
+  user_profile_type <@ ARRAY['corredor_independiente', 'empresa_corretaje', 'buscar_arriendo', 'buscar_compra']::text[]
+);
+
+-- Constraint para validar que applicants tengan al menos un tipo de perfil
+ALTER TABLE profiles ADD CONSTRAINT applicant_profile_required_check
+CHECK (
+  user_profile_type IS NOT NULL AND
+  array_length(user_profile_type, 1) > 0
+);
+
+-- Constraints para documentos de applicants
+ALTER TABLE applicant_documents ADD CONSTRAINT valid_applicant_doc_types_check
+CHECK (doc_type IN ('dicom_personal', 'carpeta_tributaria', 'cedula_identidad', 'certificado_antiguedad_laboral', 'liquidaciones_sueldo', 'contrato_trabajo', 'declaracion_impuestos', 'boletas_honorarios', 'certificado_cotizaciones', 'inicio_actividades'));
+
+ALTER TABLE guarantor_documents ADD CONSTRAINT valid_guarantor_doc_types_check
+CHECK (doc_type IN ('dicom_personal', 'carpeta_tributaria', 'cedula_identidad', 'certificado_antiguedad_laboral', 'liquidaciones_sueldo', 'contrato_trabajo', 'declaracion_impuestos', 'boletas_honorarios', 'certificado_cotizaciones', 'inicio_actividades'));
+
+-- Constraint para tamaño máximo de archivos (50MB)
+ALTER TABLE applicant_documents ADD CONSTRAINT max_file_size_check
+CHECK (file_size <= 52428800);
+
+ALTER TABLE guarantor_documents ADD CONSTRAINT max_file_size_guarantor_check
+CHECK (file_size <= 52428800);
 ```
 
 #### **Unique Constraints**
@@ -1606,6 +2018,9 @@ export const testRLSViolation = async (
 - [ ] Tests de validación
 - [ ] Tests de rate limiting
 - [ ] Penetration testing básico
+- [ ] Tests de acceso a contratos (solo admin)
+- [ ] Tests de privacidad de documentos de applicants
+- [ ] Tests de tipos de perfil de usuario
 
 ### **Configuración de Producción**
 
@@ -1694,6 +2109,26 @@ export class IncidentResponse {
   }
 }
 ```
+
+### **Reglas Específicas para Nueva Arquitectura**
+
+#### **Gestión de Contratos**
+- 🚫 **Nunca exponer rutas de contratos en frontend público**: Los contratos solo existen en panel admin
+- 👑 **Solo administradores pueden crear contratos**: Después de aprobación de postulaciones
+- 🔒 **Acceso restringido**: Propietarios solo ven contratos de sus propiedades aprobadas
+- 📊 **Auditoría obligatoria**: Registro de todas las acciones contractuales
+
+#### **Privacidad de Postulantes**
+- 👤 **Postulantes solo acceden a su perfil**: Validar ownership en cada endpoint
+- 📄 **Documentos personales**: Solo el propietario puede subir/ver sus documentos
+- 👥 **Garante verificado**: Admin debe validar identidad antes de aceptar aplicación
+- 🏷️ **Tipos de perfil**: Validar que applicants tengan al menos un tipo válido
+
+#### **Validaciones de Seguridad**
+- ✅ **Tipo de broker**: Validar enum ('corredor_independiente', 'empresa_corretaje')
+- 🎯 **Intención**: Validar enum ('buscar_arriendo', 'buscar_compra')
+- 📋 **Documentos**: Validar tipos permitidos y tamaño máximo (50MB)
+- 🔐 **Encriptación**: Todos los documentos sensibles en buckets privados
 
 ---
 

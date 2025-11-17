@@ -55,3 +55,4 @@ ON rental_contract_conditions(auto_renewal_clause);
 --      OR indexname LIKE '%lease_term_months%' OR indexname LIKE '%auto_renewal_clause%');
 -- =====================================================
 
+

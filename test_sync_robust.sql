@@ -178,3 +178,4 @@ EXCEPTION
         RAISE EXCEPTION '❌ Error en pruebas: % (Detalle: %)', SQLERRM, SQLSTATE;
 END $$;
 
+

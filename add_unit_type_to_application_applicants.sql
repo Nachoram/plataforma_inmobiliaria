@@ -32,3 +32,4 @@ CREATE INDEX IF NOT EXISTS idx_application_applicants_unit_type ON application_a
 -- WHERE conrelid = 'application_applicants'::regclass AND conname LIKE '%unit_type%';
 -- =====================================================
 
+

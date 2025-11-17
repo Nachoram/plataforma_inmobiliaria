@@ -69,7 +69,7 @@ cp .env.example .env
 VITE_SUPABASE_URL=https://phnkervuiijqmapgswkc.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobmtlcnZ1aWlqcW1hcGdzd2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNzQ2MjUsImV4cCI6MjA3MjY1MDYyNX0.va6jOCJN6MnbHSbbDFJaO2rN_3oCSVQlaYaPkPmXS2w
 
-# Configuración de contratos (requerida para generar contratos automáticamente)
+# Configuración de contratos (opcional - solo para generación automática en admin panel)
 VITE_N8N_CONTRACT_WEBHOOK_URL=https://tu-n8n-instance.com/webhook/generate-contract
 
 # Configuración opcional de notificaciones
@@ -110,13 +110,16 @@ supabase/migrations/20250101000000_complete_real_estate_schema.sql
 SELECT tablename FROM pg_tables WHERE schemaname = 'public';
 ```
 
-**Tablas esperadas (8+ tablas):**
+**Tablas esperadas (12+ tablas):**
 - ✅ `profiles` - Perfiles de usuario
 - ✅ `properties` - Propiedades
 - ✅ `applications` - Postulaciones
 - ✅ `offers` - Ofertas de compra
 - ✅ `guarantors` - Garantes
-- ✅ `documents` - Documentos
+- ✅ `contracts` - Contratos (admin-only)
+- ✅ `applicant_documents` - Documentos de postulantes
+- ✅ `guarantor_documents` - Documentos de garantes
+- ✅ `documents` - Documentos generales
 - ✅ `property_images` - Imágenes de propiedades
 - ✅ `user_favorites` - Favoritos
 
@@ -191,10 +194,11 @@ La migración crea automáticamente los siguientes buckets:
 - **Límite**: 10MB por archivo
 
 #### **2. user-documents (Privado)**
-- **Propósito**: Documentos de usuarios y aplicaciones
-- **Acceso**: Privado, solo el propietario
+- **Propósito**: Documentos de usuarios, postulantes y garantes
+- **Acceso**: Privado, solo el propietario o admin autorizado
 - **Tipos**: PDF, DOC, DOCX, JPEG, PNG
 - **Límite**: 50MB por archivo
+- **Nota**: Incluye documentos de applicant_documents y guarantor_documents
 
 ### **Verificar Storage**
 ```sql
@@ -227,7 +231,7 @@ console.log('Upload test:', { data, error });
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-clave-anonima
 
-# ⚠️ REQUERIDA PARA FUNCIONALIDAD DE CONTRATOS
+# ⚠️ OPCIONAL PARA FUNCIONALIDAD DE CONTRATOS (solo admin panel)
 VITE_N8N_CONTRACT_WEBHOOK_URL=https://tu-n8n-instance.com/webhook/generate-contract
 ```
 
@@ -280,9 +284,10 @@ VITE_SENTRY_DSN=https://tu-sentry-dsn
 
 ### **Configuración de Webhooks**
 
-#### **Webhook de Contratos (N8N)**
-- ⚠️ **Variable Requerida**: `VITE_N8N_CONTRACT_WEBHOOK_URL`
-- 📄 **Propósito**: Generar contratos automáticamente usando n8n
+#### **Webhook de Contratos (N8N) - Admin Only**
+- ⚠️ **Variable Opcional**: `VITE_N8N_CONTRACT_WEBHOOK_URL`
+- 📄 **Propósito**: Generar contratos automáticamente desde admin panel usando n8n
+- 📋 **Nota**: Solo accesible para administradores después de aprobar postulaciones
 - 📋 **Configuración**: Ver [INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md](INSTRUCCIONES_CONTRATOS_WORKFLOW_N8N.md)
 
 #### **Estado Actual del Webhook de Notificaciones**
@@ -298,8 +303,8 @@ VITE_SENTRY_DSN=https://tu-sentry-dsn
 - `offer_accepted` - Oferta aceptada
 - `offer_rejected` - Oferta rechazada
 
-#### **Configuración de N8N para Contratos**
-Para habilitar la generación automática de contratos:
+#### **Configuración de N8N para Contratos (Admin Only)**
+Para habilitar la generación automática de contratos desde el panel de administración:
 
 1. **Configurar Workflow en N8N**
    - Crear un workflow que reciba datos de contrato
@@ -436,10 +441,10 @@ testImageUpload();
 
 #### ✅ **Backend/Database**
 - [ ] Supabase proyecto conectado
-- [ ] 8+ tablas creadas en PostgreSQL
+- [ ] 12+ tablas creadas en PostgreSQL (incluyendo contracts, applicant_documents, guarantor_documents)
 - [ ] Trigger de profiles funcionando
-- [ ] RLS policies activadas
-- [ ] Storage buckets creados
+- [ ] RLS policies activadas (incluyendo políticas para contracts admin-only)
+- [ ] Storage buckets creados (property-images, user-documents)
 
 #### ✅ **Frontend**
 - [ ] Aplicación inicia sin errores
@@ -451,10 +456,12 @@ testImageUpload();
 #### ✅ **Funcionalidades Core**
 - [ ] Registro de usuario funciona
 - [ ] Login/logout funciona
-- [ ] Creación de perfil automática
+- [ ] Creación de perfil automática con tipos de applicant
 - [ ] Formularios sin errores 403/406
 - [ ] Upload de imágenes funciona
-- [ ] Upload de documentos funciona
+- [ ] Upload de documentos de applicants funciona
+- [ ] Perfiles de postulantes con documentos y garantes
+- [ ] Panel de administración para contratos (admin-only)
 
 ---
 

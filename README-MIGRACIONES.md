@@ -6,6 +6,7 @@
 
 ## 📋 **Índice**
 - [🗄️ Migraciones Principales](#️-migraciones-principales)
+- [🔄 Q4 2025 - Aplicantes y Documentos](#-q4-2025---aplicantes-y-documentos)
 - [🚨 Fixes de Errores Críticos](#-fixes-de-errores-críticos)
 - [🛠️ Scripts de Reparación](#️-scripts-de-reparación)
 - [🔍 Diagnóstico y Debugging](#-diagnóstico-y-debugging)
@@ -254,6 +255,551 @@ CREATE POLICY "offers_delete_policy" ON offers FOR DELETE USING (auth.uid() = of
 
 -- Políticas para otras tablas...
 -- (Ver README-SEGURIDAD.md para políticas completas)
+```
+
+---
+
+## 🔄 **Q4 2025 - Aplicantes y Documentos**
+
+### **Refactorización Arquitectural - Contracts Admin-Only**
+
+#### **20251101000000_q4_applicants_and_documents.sql**
+```sql
+-- ========================================
+-- Q4 2025: SISTEMA DE APLICANTES Y DOCUMENTOS
+-- Refactorización: Contracts ahora solo admin-visible
+-- ========================================
+
+-- Habilitar extensiones necesarias
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ===== NUEVAS TABLAS PARA SISTEMA DE APLICANTES =====
+
+-- Tabla de perfiles de aplicantes avanzados
+CREATE TABLE IF NOT EXISTS applicants (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+
+    -- Información de perfil profesional
+    broker_type text NOT NULL CHECK (broker_type IN ('corredor_independiente', 'empresa_corretaje')),
+    entity_type text NOT NULL CHECK (entity_type IN ('natural', 'juridica')),
+    intention_type text NOT NULL CHECK (intention_type IN ('buscar_arriendo', 'buscar_compra')),
+
+    -- Información adicional para empresa de corretaje
+    company_name text,
+    company_rut text,
+    company_representative_name text,
+    company_representative_rut text,
+
+    -- Información financiera
+    monthly_income_clp bigint,
+    savings_capacity_clp bigint,
+    has_guarantor boolean DEFAULT false,
+
+    -- Estado del perfil
+    profile_status text DEFAULT 'incompleto' CHECK (profile_status IN ('incompleto', 'completo', 'verificado')),
+    verified_at timestamp with time zone,
+    verified_by uuid REFERENCES auth.users(id),
+
+    -- Metadatos
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+
+    -- Constraints únicos
+    UNIQUE(user_id),
+
+    -- Validaciones condicionales
+    CONSTRAINT valid_company_fields CHECK (
+        (broker_type = 'empresa_corretaje' AND company_name IS NOT NULL AND company_rut IS NOT NULL) OR
+        (broker_type = 'corredor_independiente' AND company_name IS NULL AND company_rut IS NULL)
+    )
+);
+
+-- Tabla de documentos de aplicantes
+CREATE TABLE IF NOT EXISTS applicant_documents (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    applicant_id uuid NOT NULL REFERENCES applicants(id) ON DELETE CASCADE,
+
+    -- Información del documento
+    document_type text NOT NULL CHECK (document_type IN (
+        'cedula_identidad',
+        'certificado_ingresos',
+        'certificado_laboral',
+        'extracto_bancario',
+        'declaracion_impuestos',
+        'certificado_afp',
+        'contrato_arriendo_actual'
+    )),
+    file_name text NOT NULL,
+    file_path text NOT NULL,
+    file_size bigint NOT NULL CHECK (file_size > 0 AND file_size <= 52428800), -- Max 50MB
+    content_type text NOT NULL,
+
+    -- Estado y verificación
+    upload_status text DEFAULT 'pendiente' CHECK (upload_status IN ('pendiente', 'aprobado', 'rechazado')),
+    verified_at timestamp with time zone,
+    verified_by uuid REFERENCES auth.users(id),
+    rejection_reason text,
+
+    -- Metadatos
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+
+    -- Constraints únicos (un documento por tipo por aplicante)
+    UNIQUE(applicant_id, document_type)
+);
+
+-- Tabla de documentos de garantes
+CREATE TABLE IF NOT EXISTS guarantor_documents (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    applicant_id uuid NOT NULL REFERENCES applicants(id) ON DELETE CASCADE,
+
+    -- Información del garante
+    guarantor_full_name text NOT NULL,
+    guarantor_rut text NOT NULL,
+    guarantor_relationship text NOT NULL CHECK (guarantor_relationship IN (
+        'conyuge', 'padre', 'madre', 'hermano', 'otro'
+    )),
+
+    -- Información del documento
+    document_type text NOT NULL CHECK (document_type IN (
+        'cedula_identidad_garante',
+        'certificado_ingresos_garante',
+        'certificado_laboral_garante',
+        'extracto_bancario_garante',
+        'declaracion_impuestos_garante',
+        'certificado_afp_garante',
+        'boleta_agua_luz_gas'
+    )),
+    file_name text NOT NULL,
+    file_path text NOT NULL,
+    file_size bigint NOT NULL CHECK (file_size > 0 AND file_size <= 52428800), -- Max 50MB
+    content_type text NOT NULL,
+
+    -- Estado y verificación
+    upload_status text DEFAULT 'pendiente' CHECK (upload_status IN ('pendiente', 'aprobado', 'rechazado')),
+    verified_at timestamp with time zone,
+    verified_by uuid REFERENCES auth.users(id),
+    rejection_reason text,
+
+    -- Metadatos
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+
+    -- Constraints únicos (un documento por tipo por garante por aplicante)
+    UNIQUE(applicant_id, guarantor_rut, document_type)
+);
+
+-- ===== MODIFICACIONES A TABLA CONTRACTS =====
+
+-- Agregar columna para marcar contracts como admin-only
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS is_admin_only boolean DEFAULT true;
+
+-- Actualizar contratos existentes para ser admin-only
+UPDATE contracts SET is_admin_only = true WHERE is_admin_only IS NULL;
+
+-- ===== ÍNDICES PARA PERFORMANCE =====
+
+-- Índices para applicants
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_applicants_user_id
+ON applicants(user_id);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_applicants_profile_status
+ON applicants(profile_status, updated_at);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_applicants_broker_type
+ON applicants(broker_type, entity_type);
+
+-- Índices para applicant_documents
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_applicant_documents_applicant
+ON applicant_documents(applicant_id, document_type);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_applicant_documents_status
+ON applicant_documents(upload_status, created_at);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_applicant_documents_verification
+ON applicant_documents(verified_at, verified_by) WHERE verified_at IS NOT NULL;
+
+-- Índices para guarantor_documents
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_guarantor_documents_applicant
+ON guarantor_documents(applicant_id, guarantor_rut);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_guarantor_documents_status
+ON guarantor_documents(upload_status, created_at);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_guarantor_documents_verification
+ON guarantor_documents(verified_at, verified_by) WHERE verified_at IS NOT NULL;
+
+-- Índice para contracts admin-only
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_contracts_admin_only
+ON contracts(is_admin_only, created_at) WHERE is_admin_only = true;
+
+-- ===== TRIGGERS PARA UPDATED_AT =====
+
+-- Triggers para nuevas tablas
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_applicants_updated_at BEFORE UPDATE ON applicants FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_applicant_documents_updated_at BEFORE UPDATE ON applicant_documents FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_guarantor_documents_updated_at BEFORE UPDATE ON guarantor_documents FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ===== HABILITAR RLS EN NUEVAS TABLAS =====
+
+ALTER TABLE applicants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE applicant_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guarantor_documents ENABLE ROW LEVEL SECURITY;
+
+-- ===== POLÍTICAS RLS PARA NUEVAS TABLAS =====
+
+-- Políticas para applicants
+CREATE POLICY "applicants_select_policy" ON applicants
+FOR SELECT USING (
+    auth.uid() = user_id OR
+    EXISTS (
+        SELECT 1 FROM applications a
+        WHERE a.applicant_id = applicants.user_id
+        AND a.property_id IN (
+            SELECT p.id FROM properties p WHERE p.owner_id = auth.uid()
+        )
+    ) OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+);
+
+CREATE POLICY "applicants_insert_policy" ON applicants
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "applicants_update_policy" ON applicants
+FOR UPDATE USING (
+    auth.uid() = user_id OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+) WITH CHECK (
+    auth.uid() = user_id OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+);
+
+-- Políticas para applicant_documents
+CREATE POLICY "applicant_documents_select_policy" ON applicant_documents
+FOR SELECT USING (
+    auth.uid() = (SELECT user_id FROM applicants WHERE id = applicant_documents.applicant_id) OR
+    EXISTS (
+        SELECT 1 FROM applications a
+        WHERE a.applicant_id = (SELECT user_id FROM applicants WHERE id = applicant_documents.applicant_id)
+        AND a.property_id IN (
+            SELECT p.id FROM properties p WHERE p.owner_id = auth.uid()
+        )
+    ) OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+);
+
+CREATE POLICY "applicant_documents_insert_policy" ON applicant_documents
+FOR INSERT WITH CHECK (
+    auth.uid() = (SELECT user_id FROM applicants WHERE id = applicant_documents.applicant_id)
+);
+
+CREATE POLICY "applicant_documents_update_policy" ON applicant_documents
+FOR UPDATE USING (
+    auth.uid() = (SELECT user_id FROM applicants WHERE id = applicant_documents.applicant_id) OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+) WITH CHECK (
+    auth.uid() = (SELECT user_id FROM applicants WHERE id = applicant_documents.applicant_id) OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+);
+
+-- Políticas para guarantor_documents (mismas reglas que applicant_documents)
+CREATE POLICY "guarantor_documents_select_policy" ON guarantor_documents
+FOR SELECT USING (
+    auth.uid() = (SELECT user_id FROM applicants WHERE id = guarantor_documents.applicant_id) OR
+    EXISTS (
+        SELECT 1 FROM applications a
+        WHERE a.applicant_id = (SELECT user_id FROM applicants WHERE id = guarantor_documents.applicant_id)
+        AND a.property_id IN (
+            SELECT p.id FROM properties p WHERE p.owner_id = auth.uid()
+        )
+    ) OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+);
+
+CREATE POLICY "guarantor_documents_insert_policy" ON guarantor_documents
+FOR INSERT WITH CHECK (
+    auth.uid() = (SELECT user_id FROM applicants WHERE id = guarantor_documents.applicant_id)
+);
+
+CREATE POLICY "guarantor_documents_update_policy" ON guarantor_documents
+FOR UPDATE USING (
+    auth.uid() = (SELECT user_id FROM applicants WHERE id = guarantor_documents.applicant_id) OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+) WITH CHECK (
+    auth.uid() = (SELECT user_id FROM applicants WHERE id = guarantor_documents.applicant_id) OR
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+);
+
+-- Actualizar política de contracts para ser admin-only
+DROP POLICY IF EXISTS "contracts_select_policy" ON contracts;
+DROP POLICY IF EXISTS "contracts_insert_policy" ON contracts;
+DROP POLICY IF EXISTS "contracts_update_policy" ON contracts;
+
+CREATE POLICY "contracts_select_policy" ON contracts
+FOR SELECT USING (
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin') OR
+    EXISTS (
+        SELECT 1 FROM applications a
+        JOIN properties p ON a.property_id = p.id
+        WHERE a.id = contracts.application_id
+        AND (p.owner_id = auth.uid() OR a.applicant_id = auth.uid())
+    )
+);
+
+CREATE POLICY "contracts_insert_policy" ON contracts
+FOR INSERT WITH CHECK (
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+);
+
+CREATE POLICY "contracts_update_policy" ON contracts
+FOR UPDATE USING (
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+) WITH CHECK (
+    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+);
+
+-- ===== FUNCIONES DE MIGRACIÓN Y ROLLBACK =====
+
+-- Función para migrar datos existentes de profiles a applicants (opcional)
+CREATE OR REPLACE FUNCTION migrate_existing_profiles_to_applicants()
+RETURNS integer AS $$
+DECLARE
+    migrated_count integer := 0;
+    profile_record RECORD;
+BEGIN
+    -- Migrar perfiles existentes que no tienen applicant
+    FOR profile_record IN
+        SELECT p.id, p.email, p.profession, p.monthly_income_clp
+        FROM profiles p
+        LEFT JOIN applicants a ON p.id = a.user_id
+        WHERE a.id IS NULL
+        AND p.profession IS NOT NULL
+        AND p.monthly_income_clp IS NOT NULL
+    LOOP
+        INSERT INTO applicants (
+            user_id,
+            broker_type,
+            entity_type,
+            intention_type,
+            monthly_income_clp,
+            profile_status
+        ) VALUES (
+            profile_record.id,
+            'corredor_independiente', -- Default
+            'natural', -- Default
+            'buscar_arriendo', -- Default
+            profile_record.monthly_income_clp,
+            'incompleto'
+        );
+
+        migrated_count := migrated_count + 1;
+    END LOOP;
+
+    RAISE NOTICE 'Migrados % perfiles existentes a applicants', migrated_count;
+    RETURN migrated_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función de rollback para Q4 2025
+CREATE OR REPLACE FUNCTION rollback_q4_2025_applicants_and_documents()
+RETURNS void AS $$
+BEGIN
+    -- Eliminar políticas RLS nuevas
+    DROP POLICY IF EXISTS "applicants_select_policy" ON applicants;
+    DROP POLICY IF EXISTS "applicants_insert_policy" ON applicants;
+    DROP POLICY IF EXISTS "applicants_update_policy" ON applicants;
+    DROP POLICY IF EXISTS "applicant_documents_select_policy" ON applicant_documents;
+    DROP POLICY IF EXISTS "applicant_documents_insert_policy" ON applicant_documents;
+    DROP POLICY IF EXISTS "applicant_documents_update_policy" ON applicant_documents;
+    DROP POLICY IF EXISTS "guarantor_documents_select_policy" ON guarantor_documents;
+    DROP POLICY IF EXISTS "guarantor_documents_insert_policy" ON guarantor_documents;
+    DROP POLICY IF EXISTS "guarantor_documents_update_policy" ON guarantor_documents;
+
+    -- Restaurar políticas originales de contracts
+    DROP POLICY IF EXISTS "contracts_select_policy" ON contracts;
+    DROP POLICY IF EXISTS "contracts_insert_policy" ON contracts;
+    DROP POLICY IF EXISTS "contracts_update_policy" ON contracts;
+
+    CREATE POLICY "contracts_select_policy" ON contracts FOR SELECT USING (auth.uid() IS NOT NULL);
+    CREATE POLICY "contracts_insert_policy" ON contracts FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+    CREATE POLICY "contracts_update_policy" ON contracts FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+    -- Eliminar triggers
+    DROP TRIGGER IF EXISTS update_applicants_updated_at ON applicants;
+    DROP TRIGGER IF EXISTS update_applicant_documents_updated_at ON applicant_documents;
+    DROP TRIGGER IF EXISTS update_guarantor_documents_updated_at ON guarantor_documents;
+
+    -- Eliminar índices
+    DROP INDEX IF EXISTS idx_applicants_user_id;
+    DROP INDEX IF EXISTS idx_applicants_profile_status;
+    DROP INDEX IF EXISTS idx_applicants_broker_type;
+    DROP INDEX IF EXISTS idx_applicant_documents_applicant;
+    DROP INDEX IF EXISTS idx_applicant_documents_status;
+    DROP INDEX IF EXISTS idx_applicant_documents_verification;
+    DROP INDEX IF EXISTS idx_guarantor_documents_applicant;
+    DROP INDEX IF EXISTS idx_guarantor_documents_status;
+    DROP INDEX IF EXISTS idx_guarantor_documents_verification;
+    DROP INDEX IF EXISTS idx_contracts_admin_only;
+
+    -- Eliminar columna de contracts
+    ALTER TABLE contracts DROP COLUMN IF EXISTS is_admin_only;
+
+    -- Eliminar tablas nuevas
+    DROP TABLE IF EXISTS guarantor_documents;
+    DROP TABLE IF EXISTS applicant_documents;
+    DROP TABLE IF EXISTS applicants;
+
+    -- Eliminar funciones de migración
+    DROP FUNCTION IF EXISTS migrate_existing_profiles_to_applicants();
+
+    RAISE NOTICE 'Rollback Q4 2025 completado - sistema restaurado a estado anterior';
+END;
+$$ LANGUAGE plpgsql;
+
+-- ===== VERIFICACIÓN POST-MIGRACIÓN =====
+
+DO $$
+DECLARE
+    applicants_count integer;
+    applicant_docs_count integer;
+    guarantor_docs_count integer;
+    contracts_admin_only_count integer;
+BEGIN
+    SELECT COUNT(*) INTO applicants_count FROM applicants;
+    SELECT COUNT(*) INTO applicant_docs_count FROM applicant_documents;
+    SELECT COUNT(*) INTO guarantor_docs_count FROM guarantor_documents;
+    SELECT COUNT(*) INTO contracts_admin_only_count FROM contracts WHERE is_admin_only = true;
+
+    RAISE NOTICE 'VERIFICACIÓN POST-MIGRACIÓN Q4 2025:';
+    RAISE NOTICE '- Tabla applicants: % registros', applicants_count;
+    RAISE NOTICE '- Tabla applicant_documents: % registros', applicant_docs_count;
+    RAISE NOTICE '- Tabla guarantor_documents: % registros', guarantor_docs_count;
+    RAISE NOTICE '- Contratos marcados como admin-only: %', contracts_admin_only_count;
+    RAISE NOTICE '- ✅ Migración Q4 2025 completada exitosamente';
+END $$;
+```
+
+### **Documentos Requeridos por Tipo de Applicant**
+
+#### **Persona Natural - Corredor Independiente**
+- ✅ `cedula_identidad` - Cédula de identidad
+- ✅ `certificado_ingresos` - Certificado de ingresos
+- ✅ `certificado_laboral` - Certificado laboral
+- ✅ `extracto_bancario` - Extracto bancario (últimos 3 meses)
+- ✅ `certificado_afp` - Certificado AFP (últimos 12 meses)
+
+#### **Persona Jurídica - Empresa de Corretaje**
+- ✅ `cedula_identidad` - Cédula del representante legal
+- ✅ `declaracion_impuestos` - Declaración de impuestos sociedad
+- ✅ `extracto_bancario` - Extracto bancario empresa
+- ✅ `certificado_laboral` - Certificado laboral representante
+
+#### **Documentos de Garante (Opcional)**
+- ✅ `cedula_identidad_garante` - Cédula del garante
+- ✅ `certificado_ingresos_garante` - Certificado ingresos garante
+- ✅ `certificado_laboral_garante` - Certificado laboral garante
+- ✅ `boleta_agua_luz_gas` - Boleta servicios básicos
+
+### **Testing de la Migración Q4 2025**
+
+#### **test_q4_migration.sql**
+```sql
+-- Tests específicos para la migración Q4 2025
+DO $$
+DECLARE
+    test_user_id uuid;
+    test_applicant_id uuid;
+    test_doc_id uuid;
+BEGIN
+    RAISE NOTICE '🧪 INICIANDO TESTS MIGRACIÓN Q4 2025';
+
+    -- Crear usuario de prueba
+    INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), 'test-q4@example.com', crypt('password', gen_salt('bf')), now(), now(), now())
+    RETURNING id INTO test_user_id;
+
+    -- Test 1: Crear applicant
+    INSERT INTO applicants (user_id, broker_type, entity_type, intention_type, monthly_income_clp)
+    VALUES (test_user_id, 'corredor_independiente', 'natural', 'buscar_arriendo', 2000000)
+    RETURNING id INTO test_applicant_id;
+
+    ASSERT test_applicant_id IS NOT NULL, 'Applicant creado exitosamente';
+    RAISE NOTICE '✅ Test 1 PASSED: Applicant creado';
+
+    -- Test 2: Crear documento de applicant
+    INSERT INTO applicant_documents (applicant_id, document_type, file_name, file_path, file_size, content_type)
+    VALUES (test_applicant_id, 'cedula_identidad', 'cedula.pdf', 'test/path/cedula.pdf', 1024000, 'application/pdf')
+    RETURNING id INTO test_doc_id;
+
+    ASSERT test_doc_id IS NOT NULL, 'Documento de applicant creado exitosamente';
+    RAISE NOTICE '✅ Test 2 PASSED: Documento de applicant creado';
+
+    -- Test 3: Crear documento de garante
+    INSERT INTO guarantor_documents (applicant_id, guarantor_full_name, guarantor_rut, guarantor_relationship, document_type, file_name, file_path, file_size, content_type)
+    VALUES (test_applicant_id, 'Juan Pérez', '12.345.678-9', 'conyuge', 'cedula_identidad_garante', 'garante.pdf', 'test/path/garante.pdf', 512000, 'application/pdf');
+
+    RAISE NOTICE '✅ Test 3 PASSED: Documento de garante creado';
+
+    -- Test 4: Verificar constraints únicos
+    BEGIN
+        INSERT INTO applicant_documents (applicant_id, document_type, file_name, file_path, file_size, content_type)
+        VALUES (test_applicant_id, 'cedula_identidad', 'cedula2.pdf', 'test/path/cedula2.pdf', 1024000, 'application/pdf');
+        ASSERT false, 'Constraint único debería prevenir duplicados';
+    EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE '✅ Test 4 PASSED: Constraint único funciona correctamente';
+    END;
+
+    -- Test 5: Verificar RLS
+    SET LOCAL role authenticated;
+    SET LOCAL "request.jwt.claims" TO jsonb_build_object('sub', test_user_id::text);
+
+    ASSERT (SELECT COUNT(*) FROM applicants WHERE user_id = test_user_id) = 1, 'RLS permite acceso a propio applicant';
+    RAISE NOTICE '✅ Test 5 PASSED: RLS funciona correctamente';
+
+    -- Limpiar datos de prueba
+    DELETE FROM guarantor_documents WHERE applicant_id = test_applicant_id;
+    DELETE FROM applicant_documents WHERE applicant_id = test_applicant_id;
+    DELETE FROM applicants WHERE id = test_applicant_id;
+    DELETE FROM profiles WHERE id = test_user_id;
+    DELETE FROM auth.users WHERE id = test_user_id;
+
+    RAISE NOTICE '🎉 TODOS LOS TESTS DE MIGRACIÓN Q4 2025 PASARON EXITOSAMENTE';
+
+EXCEPTION WHEN OTHERS THEN
+    -- Limpiar en caso de error
+    DELETE FROM guarantor_documents WHERE applicant_id IN (SELECT id FROM applicants WHERE user_id = test_user_id);
+    DELETE FROM applicant_documents WHERE applicant_id IN (SELECT id FROM applicants WHERE user_id = test_user_id);
+    DELETE FROM applicants WHERE user_id = test_user_id;
+    DELETE FROM profiles WHERE id = test_user_id;
+    DELETE FROM auth.users WHERE id = test_user_id;
+
+    RAISE EXCEPTION 'TEST FAILED: %', SQLERRM;
+END $$;
+```
+
+### **Comandos para Ejecutar la Migración**
+
+```bash
+# 1. Ejecutar la migración principal
+psql -h your-host -d your-database -f supabase/migrations/20251101000000_q4_applicants_and_documents.sql
+
+# 2. Verificar que las tablas se crearon correctamente
+psql -h your-host -d your-database -c "\dt public.*" | grep -E "(applicants|applicant_documents|guarantor_documents)"
+
+# 3. Ejecutar tests de migración
+psql -h your-host -d your-database -f supabase/migrations/test_q4_migration.sql
+
+# 4. Si hay error, hacer rollback
+psql -h your-host -d your-database -c "SELECT rollback_q4_2025_applicants_and_documents();"
 ```
 
 ---
@@ -2095,6 +2641,7 @@ DROP SCHEMA IF EXISTS testing CASCADE;
 
 | Fecha | Versión | Descripción | Archivos |
 |-------|---------|-------------|----------|
+| **2025-11-01** | `v2.0.0` | **Q4 2025**: Sistema de aplicantes y documentos. Contracts admin-only | `20251101000000_q4_applicants_and_documents.sql` |
 | **2025-09-01** | `v1.0.0` | Schema inicial completo | `20250901000000_initial_schema.sql` |
 | **2025-09-01** | `v1.1.0` | Habilitación de RLS | `20250901120000_enable_rls.sql` |
 | **2025-09-02** | `v1.2.0` | Fix trigger auth | `20250902180000_fix_auth_trigger.sql` |
@@ -2104,44 +2651,62 @@ DROP SCHEMA IF EXISTS testing CASCADE;
 
 ### **Estados Conocidos de la Base de Datos**
 
-#### **Estado Actual (Post-Migraciones)**
+#### **Estado Actual (Post-Migración Q4 2025)**
 ```sql
--- Query para verificar estado actual del sistema
-SELECT 
+-- Query para verificar estado actual del sistema post-Q4 2025
+SELECT
   'Sistema' as component,
   'Estado' as status,
   'Detalles' as details
 UNION ALL
-SELECT 
+SELECT
   'Base de Datos',
-  CASE WHEN COUNT(*) = 8 THEN '✅ Completa' ELSE '❌ Incompleta' END,
-  'Tablas: ' || COUNT(*)::text
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
-AND table_name IN ('profiles', 'properties', 'applications', 'offers', 'guarantors', 'documents', 'property_images', 'user_favorites')
+  CASE WHEN COUNT(*) >= 12 THEN '✅ Completa (Q4 2025)' ELSE '❌ Incompleta' END,
+  'Tablas: ' || COUNT(*)::text || ' (incluye applicants, contracts)'
+FROM information_schema.tables
+WHERE table_schema = 'public'
+AND table_name IN ('profiles', 'properties', 'applications', 'offers', 'guarantors', 'contracts', 'documents', 'property_images', 'user_favorites', 'applicants', 'applicant_documents', 'guarantor_documents')
 UNION ALL
-SELECT 
+SELECT
+  'Sistema de Aplicantes',
+  CASE WHEN COUNT(*) = 3 THEN '✅ Completo' ELSE '❌ Incompleto' END,
+  'Tablas nuevas: ' || COUNT(*)::text
+FROM information_schema.tables
+WHERE table_schema = 'public'
+AND table_name IN ('applicants', 'applicant_documents', 'guarantor_documents')
+UNION ALL
+SELECT
   'RLS',
-  CASE WHEN COUNT(*) >= 4 THEN '✅ Activo' ELSE '❌ Incompleto' END,
+  CASE WHEN COUNT(*) >= 7 THEN '✅ Activo' ELSE '❌ Incompleto' END,
   'Tablas protegidas: ' || COUNT(*)::text
-FROM pg_tables 
-WHERE schemaname = 'public' 
+FROM pg_tables
+WHERE schemaname = 'public'
 AND rowsecurity = true
 UNION ALL
-SELECT 
-  'Triggers',
-  CASE WHEN COUNT(*) >= 1 THEN '✅ Activos' ELSE '❌ Faltantes' END,
-  'Triggers: ' || COUNT(*)::text
-FROM information_schema.triggers 
-WHERE trigger_name IN ('on_auth_user_created', 'update_properties_updated_at')
+SELECT
+  'Contracts Admin-Only',
+  CASE WHEN COUNT(*) > 0 AND bool_and(is_admin_only) THEN '✅ Configurado' ELSE '❌ Pendiente' END,
+  'Contratos marcados admin-only: ' || COUNT(*)::text
+FROM contracts
+WHERE is_admin_only = true
 UNION ALL
-SELECT 
-  'Índices',
-  CASE WHEN COUNT(*) >= 3 THEN '✅ Optimizados' ELSE '❌ Faltantes' END,
+SELECT
+  'Triggers',
+  CASE WHEN COUNT(*) >= 4 THEN '✅ Activos' ELSE '❌ Faltantes' END,
+  'Triggers: ' || COUNT(*)::text
+FROM information_schema.triggers
+WHERE trigger_name IN ('on_auth_user_created', 'update_properties_updated_at', 'update_applicants_updated_at', 'update_applicant_documents_updated_at')
+UNION ALL
+SELECT
+  'Índices Q4 2025',
+  CASE WHEN COUNT(*) >= 10 THEN '✅ Optimizados' ELSE '❌ Faltantes' END,
   'Índices críticos: ' || COUNT(*)::text
-FROM pg_indexes 
-WHERE schemaname = 'public' 
-AND indexname IN ('idx_properties_status_location', 'idx_applications_status_created', 'idx_offers_status_created');
+FROM pg_indexes
+WHERE schemaname = 'public'
+AND indexname LIKE 'idx_applicants_%'
+   OR indexname LIKE 'idx_applicant_documents_%'
+   OR indexname LIKE 'idx_guarantor_documents_%'
+   OR indexname = 'idx_contracts_admin_only';
 ```
 
 ---

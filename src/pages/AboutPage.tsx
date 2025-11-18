@@ -11,6 +11,7 @@ export const AboutPage: React.FC = () => {
     triggerOnce: true,
     threshold: 0.1,
   });
+  const [expandedService, setExpandedService] = React.useState<string | null>(null);
 
   const handleScrollToContact = () => {
     const contactSection = document.getElementById('contact-section');
@@ -322,39 +323,261 @@ export const AboutPage: React.FC = () => {
                   className="grid gap-4"
                 >
                   {[
-                    { icon: '📋', text: 'Gestión centralizada de postulaciones', desc: 'Administra todas tus postulaciones desde un solo lugar' },
-                    { icon: '✍️', text: 'Contratos con firma electrónica', desc: 'Genera y firma contratos de forma digital y segura' },
-                    { icon: '💰', text: 'Cobros automatizados', desc: 'Sistema inteligente de recordatorios y cobros de arriendos' },
-                      { icon: '📊', text: 'Informes comerciales', desc: 'Accede a reportes detallados de tus postulantes' },
-                    { icon: '🔒', text: 'Portal seguro de documentos', desc: 'Almacenamiento seguro para toda tu documentación legal' },
-                    { icon: '🤖', text: 'Chatbot inteligente', desc: 'Para derivar al postulante o arrendatario hacia la plataforma' },
-                    { icon: '📅', text: 'Agendar Visitas Flexible', desc: 'Sistema inteligente de agendamiento con horarios flexibles y recordatorios automáticos' },
-                    { icon: '📈', text: 'Información detallada del rendimiento', desc: 'Análisis completo con visualizaciones, postulaciones, ofertas y referencias de mercado' },
-                    { icon: '🏦', text: 'Traspaso ágil con bancos', desc: 'Genera transferencias rápidas y seguras de información financiera con entidades bancarias para compraventas' }
+                    {
+                      icon: '📋',
+                      text: 'Gestión centralizada de postulaciones',
+                      desc: 'Administra todas tus postulaciones desde un solo lugar',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo realizamos la gestión centralizada?',
+                        steps: [
+                          '📊 Dashboard intuitivo con métricas en tiempo real de todas tus propiedades',
+                          '🔍 Sistema de filtros avanzados por estado, fecha, precio y tipo de propiedad',
+                          '📱 Notificaciones automáticas push cuando llegan nuevas postulaciones',
+                          '📈 Reportes detallados de conversión y rendimiento por propiedad',
+                          '🔄 Sincronización automática con múltiples plataformas inmobiliarias',
+                          '👥 Perfiles completos de postulantes con historial y referencias',
+                          '⚡ Respuestas rápidas con plantillas personalizables',
+                          '📊 Análisis de mercado integrado para evaluar postulaciones'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '✍️',
+                      text: 'Contratos con firma electrónica',
+                      desc: 'Genera y firma contratos de forma digital y segura',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo funcionan nuestros contratos electrónicos?',
+                        steps: [
+                          '📝 Generación automática de contratos personalizados según tipo de propiedad',
+                          '🔐 Firma digital certificada con validez legal en todo Chile',
+                          '📧 Envío automático por email a todas las partes involucradas',
+                          '📋 Seguimiento en tiempo real del estado de firmas de cada firmante',
+                          '💾 Almacenamiento seguro en la nube con respaldos automáticos',
+                          '🔍 Verificación automática de identidad de los firmantes',
+                          '📄 Generación de anexos y modificaciones contractuales',
+                          '⚖️ Cumplimiento automático con normativas legales chilenas'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '💰',
+                      text: 'Cobros automatizados',
+                      desc: 'Sistema inteligente de recordatorios y cobros de arriendos',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo automatizamos los cobros?',
+                        steps: [
+                          '📅 Recordatorios automáticos por email y SMS antes del vencimiento',
+                          '💳 Integración con múltiples métodos de pago (transferencias, tarjetas, efectivo)',
+                          '📊 Reportes detallados de pagos puntuales y morosidades por propiedad',
+                          '🔄 Reintentos automáticos de cobros fallidos con diferentes métodos',
+                          '📱 Aplicación móvil para propietarios con alertas en tiempo real',
+                          '💰 Generación automática de recibos y comprobantes fiscales',
+                          '📈 Análisis predictivo de riesgo de morosidad por arrendatario',
+                          '🏦 Conexión directa con bancos para transferencias automáticas'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '📊',
+                      text: 'Informes comerciales',
+                      desc: 'Accede a reportes detallados de tus postulantes',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Qué incluyen nuestros informes comerciales?',
+                        steps: [
+                          '📈 Historial crediticio completo y capacidad de pago verificada',
+                          '🔍 Referencias laborales y personales con contacto directo',
+                          '📊 Análisis de riesgo personalizado con scoring automático',
+                          '📋 Reportes de antecedentes penales y judiciales actualizados',
+                          '💼 Información financiera consolidada (ingresos, deudas, activos)',
+                          '🏠 Historial de arrendamientos anteriores con referencias',
+                          '⚖️ Evaluación legal de capacidad contractual',
+                          '📊 Puntaje de confiabilidad predictivo basado en IA'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '🔒',
+                      text: 'Portal seguro de documentos',
+                      desc: 'Almacenamiento seguro para toda tu documentación legal',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo aseguramos tus documentos?',
+                        steps: [
+                          '🔐 Encriptación de extremo a extremo con estándares bancarios',
+                          '📁 Organización automática por tipo, fecha y propiedad asociada',
+                          '🔍 Búsqueda inteligente con OCR para texto dentro de documentos',
+                          '📤 Compartir documentos de forma segura con expiración automática',
+                          '💾 Respaldos automáticos en múltiples ubicaciones geográficas',
+                          '📊 Control de versiones para seguimiento de modificaciones',
+                          '🔗 Integración con contratos electrónicos para firma automática',
+                          '📱 Acceso móvil seguro con autenticación biométrica'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '🤖',
+                      text: 'Chatbot inteligente',
+                      desc: 'Para derivar al postulante o arrendatario hacia la plataforma',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo funciona nuestro chatbot inteligente?',
+                        steps: [
+                          '💬 Respuestas automáticas 24/7 en español e inglés',
+                          '🎯 Clasificación inteligente de consultas por intención y urgencia',
+                          '🔄 Derivación automática a agentes humanos para casos complejos',
+                          '📊 Análisis de satisfacción del usuario con feedback automático',
+                          '🧠 Aprendizaje continuo con IA para mejorar respuestas',
+                          '📱 Integración con WhatsApp, web y aplicación móvil',
+                          '🔍 Base de conocimiento actualizada automáticamente',
+                          '📈 Métricas detalladas de conversión y resolución de consultas'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '📅',
+                      text: 'Agendar Visitas Flexible',
+                      desc: 'Sistema inteligente de agendamiento con horarios flexibles y recordatorios automáticos',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo funciona el agendamiento flexible?',
+                        steps: [
+                          '📱 Calendario interactivo con disponibilidad en tiempo real',
+                          '🔄 Sincronización automática con Google Calendar y Outlook',
+                          '📧 Confirmaciones y recordatorios automáticos por múltiples canales',
+                          '⚡ Reprogramación instantánea sin conflictos de horarios',
+                          '📊 Reportes de visitas realizadas, canceladas y conversiones',
+                          '👥 Coordinación automática entre propietarios, corredores y postulantes',
+                          '🏠 Integración con tours virtuales para visitas previas',
+                          '📱 Aplicación móvil con notificaciones push y GPS'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '📈',
+                      text: 'Información detallada del rendimiento',
+                      desc: 'Análisis completo con visualizaciones, postulaciones, ofertas y referencias de mercado',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Qué métricas incluye el análisis de rendimiento?',
+                        steps: [
+                          '📊 Gráficos interactivos de conversión por período y propiedad',
+                          '🏠 Estadísticas detalladas por tipo de propiedad y ubicación',
+                          '⏱️ Tiempos promedio de arriendo desde publicación hasta contrato',
+                          '💰 Comparativas de precios vs mercado con datos actualizados',
+                          '📈 Tendencias y pronósticos futuros basados en IA',
+                          '👥 Análisis demográfico de postulantes por propiedad',
+                          '📊 ROI detallado por inversión en marketing inmobiliario',
+                          '🔍 Identificación de patrones de éxito y áreas de mejora'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '🏦',
+                      text: 'Traspaso ágil con bancos',
+                      desc: 'Genera transferencias rápidas y seguras de información financiera con entidades bancarias para compraventas',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo facilitamos las transferencias bancarias?',
+                        steps: [
+                          '🔗 Conexión directa API con principales bancos chilenos',
+                          '⚡ Transferencias instantáneas entre cuentas verificadas',
+                          '📋 Generación automática de comprobantes fiscales y bancarios',
+                          '🔒 Protocolos de seguridad bancaria estándar PCI DSS',
+                          '📊 Seguimiento en tiempo real de todas las transacciones',
+                          '💰 Integración con notarios para validación de pagos',
+                          '📱 Aplicación móvil para aprobación de transferencias',
+                          '📈 Reportes financieros detallados de operaciones completadas'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '🏠',
+                      text: 'Publicación inteligente de propiedades',
+                      desc: 'Publica tus propiedades en múltiples plataformas de manera automática y optimizada',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo funciona la publicación inteligente?',
+                        steps: [
+                          '📸 Optimización automática de fotos con IA para mejor calidad',
+                          '🏷️ Etiquetas inteligentes generadas automáticamente por algoritmos',
+                          '🌐 Distribución simultánea en más de 50 plataformas inmobiliarias',
+                          '📈 Posicionamiento SEO automático con palabras clave optimizadas',
+                          '📊 Análisis en tiempo real de engagement y visualizaciones',
+                          '🔄 Actualización automática de precios y disponibilidad',
+                          '🎯 Targeting específico por zona geográfica y tipo de comprador',
+                          '📈 Reportes detallados de conversiones por plataforma'
+                        ]
+                      }
+                    }
                   ].map((service) => (
-                    <motion.div
-                      key={service.text}
-                      variants={itemVariants}
-                      whileHover={{ scale: 1.02, x: 5 }}
-                      className="group bg-gradient-to-r from-blue-50 to-transparent p-4 rounded-xl border border-blue-100 hover:border-blue-300 transition-all duration-300 cursor-pointer"
-                    >
-                      <div className="flex items-start gap-3">
-                        <motion.span
-                          className="text-2xl flex-shrink-0"
-                          whileHover={{ scale: 1.3, rotate: 10 }}
-                        >
-                          {service.icon}
-                        </motion.span>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                            {service.text}
-                          </h4>
-                          <p className="text-sm text-gray-600 mt-1 group-hover:text-blue-600 transition-colors">
-                            {service.desc}
-                          </p>
+                    <div key={service.text}>
+                      <motion.div
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.02, x: 5 }}
+                        onClick={() => service.expandable && setExpandedService(expandedService === service.text ? null : service.text)}
+                        className={`group bg-gradient-to-r from-blue-50 to-transparent p-4 rounded-xl border border-blue-100 hover:border-blue-300 transition-all duration-300 ${service.expandable ? 'cursor-pointer' : ''}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <motion.span
+                            className="text-2xl flex-shrink-0"
+                            whileHover={{ scale: 1.3, rotate: 10 }}
+                          >
+                            {service.icon}
+                          </motion.span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                                {service.text}
+                              </h4>
+                              {service.expandable && (
+                                <motion.span
+                                  animate={{ rotate: expandedService === service.text ? 180 : 0 }}
+                                  transition={{ duration: 0.3 }}
+                                  className="text-gray-400 text-lg"
+                                >
+                                  ▼
+                                </motion.span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1 group-hover:text-blue-600 transition-colors">
+                              {service.desc}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
+                      </motion.div>
+
+                      {/* Contenido expandido */}
+                      {service.expandable && expandedService === service.text && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="mt-4 p-6 bg-gradient-to-r from-blue-100 to-blue-50 rounded-xl border border-blue-200"
+                        >
+                          <h5 className="font-bold text-blue-900 mb-4 text-lg">
+                            {service.expandedContent.title}
+                          </h5>
+                          <div className="space-y-3">
+                            {service.expandedContent.steps.map((step, index) => (
+                              <motion.div
+                                key={index}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className="flex items-center gap-3 text-gray-700"
+                              >
+                                <span className="text-sm">{step}</span>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
                   ))}
                 </motion.div>
               </motion.div>
@@ -381,9 +604,9 @@ export const AboutPage: React.FC = () => {
                   </motion.div>
                   <div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                      Para Compradores y Postulantes
+                      Para Compradores y Vendedores
                     </h3>
-                    <p className="text-gray-600">Herramientas intuitivas para tu búsqueda perfecta</p>
+                    <p className="text-gray-600">Herramientas completas para comprar, vender y gestionar propiedades</p>
                   </div>
                 </div>
 
@@ -395,39 +618,259 @@ export const AboutPage: React.FC = () => {
                   className="grid gap-4"
                 >
                   {[
-                    { icon: '🔍', text: 'Postulación fácil', desc: 'Proceso simplificado para postular a propiedades de tu interés' },
-                    { icon: '📝', text: 'Postulación simplificada', desc: 'Aplica a propiedades con un solo clic' },
-                    { icon: '❤️', text: 'Sistema de favoritos', desc: 'Guarda y organiza tus propiedades preferidas' },
-                    { icon: '📈', text: 'Seguimiento en tiempo real', desc: 'Monitorea el estado de todas tus postulaciones' },
-                    { icon: '💬', text: 'Comunicación directa', desc: 'Contacta con propietarios de forma segura' },
-                    { icon: '📁', text: 'Portafolio personal', desc: 'Crea tu perfil completo de postulante' },
-                    { icon: '📅', text: 'Agendador de Visitas Flexible e Intuitivo', desc: 'Programa visitas a propiedades con horarios personalizados y recordatorios automáticos' },
-                    { icon: '💰', text: 'Tasaciones comerciales automatizadas', desc: 'Genera tasaciones precisas tanto para arriendo como compraventa de manera automática' },
-                    { icon: '📋', text: 'Estudios de títulos automatizados', desc: 'Genera estudios completos de títulos de propiedad de forma automática y segura' }
+                    {
+                      icon: '🔍',
+                      text: 'Postulación fácil',
+                      desc: 'Proceso simplificado para postular a propiedades de tu interés',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo simplificamos las postulaciones?',
+                        steps: [
+                          '🔗 Enlaces directos de postulación en cada anuncio de propiedad',
+                          '📝 Formularios inteligentes pre-rellenados con tus datos personales',
+                          '⚡ Proceso de postulación completado en menos de 30 segundos',
+                          '📤 Envío automático de tu postulación a múltiples propietarios',
+                          '📊 Seguimiento inmediato del estado de tu aplicación',
+                          '💬 Comunicación automática con el propietario una vez postulado',
+                          '📱 Notificaciones push cuando hay actualizaciones en tu postulación',
+                          '📋 Historial completo de todas tus postulaciones activas'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '📝',
+                      text: 'Postulación simplificada',
+                      desc: 'Aplica a propiedades con un solo clic',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo funciona la postulación con un clic?',
+                        steps: [
+                          '👆 Un solo clic en el botón "Postular" de cualquier propiedad',
+                          '📄 Información personal cargada automáticamente desde tu perfil',
+                          '🔄 Postulación simultánea a propiedades similares recomendadas',
+                          '✅ Confirmación visual inmediata de postulación exitosa',
+                          '📧 Notificación automática enviada al propietario/corredor',
+                          '🎯 Sistema inteligente que califica tu perfil automáticamente',
+                          '📊 Puntaje de coincidencia con los requisitos del propietario',
+                          '🔍 Búsqueda automática de propiedades compatibles con tu perfil'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '❤️',
+                      text: 'Sistema de favoritos',
+                      desc: 'Guarda y organiza tus propiedades preferidas',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo organizamos tus favoritos?',
+                        steps: [
+                          '❤️ Guardado instantáneo con un solo clic en el corazón',
+                          '📂 Carpetas personalizadas organizadas por tipo de propiedad',
+                          '🔍 Búsqueda inteligente dentro de tu lista de favoritos',
+                          '📊 Comparación visual lado a lado de hasta 4 propiedades',
+                          '🔔 Alertas automáticas cuando cambian precios o disponibilidad',
+                          '📱 Sincronización perfecta entre web y aplicación móvil',
+                          '📈 Análisis de mercado de tus propiedades favoritas',
+                          '💾 Respaldos automáticos para nunca perder tus selecciones'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '📈',
+                      text: 'Seguimiento en tiempo real',
+                      desc: 'Monitorea el estado de todas tus postulaciones',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Qué incluye el seguimiento en tiempo real?',
+                        steps: [
+                          '👀 Estado actualizado automáticamente de cada postulación',
+                          '📊 Barra de progreso visual con porcentajes de avance',
+                          '🔔 Notificaciones push instantáneas de cualquier cambio',
+                          '📅 Historial cronológico completo de todas las interacciones',
+                          '📈 Estadísticas detalladas de éxito en tus postulaciones',
+                          '🎯 Recomendaciones personalizadas basadas en tu historial',
+                          '📱 Dashboard móvil con widgets personalizables',
+                          '🔄 Actualización automática cada 5 minutos sin refrescar'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '💬',
+                      text: 'Comunicación directa',
+                      desc: 'Contacta con propietarios de forma segura',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo aseguramos la comunicación directa?',
+                        steps: [
+                          '🔒 Mensajería encriptada de extremo a extremo con TLS 1.3',
+                          '⏰ Respuestas garantizadas en menos de 24 horas hábiles',
+                          '📝 Plantillas inteligentes de mensajes por tipo de consulta',
+                          '📎 Compartir documentos seguros con expiración automática',
+                          '📊 Registro completo y auditable de todas las conversaciones',
+                          '🎯 Clasificación automática de consultas por urgencia',
+                          '📱 Integración nativa con WhatsApp y SMS',
+                          '🗣️ Soporte multilingüe español/inglés/portugués'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '📁',
+                      text: 'Portafolio personal',
+                      desc: 'Crea tu perfil completo de postulante',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Qué incluye tu portafolio personal?',
+                        steps: [
+                          '📋 Información personal completa con validación automática',
+                          '💼 Historial laboral verificado con referencias directas',
+                          '💰 Información financiera certificada por entidades autorizadas',
+                          '🏠 Preferencias detalladas de vivienda (ubicación, presupuesto, amenities)',
+                          '📊 Puntaje de confiabilidad automático basado en múltiples factores',
+                          '📄 Documentos importantes organizados por categorías',
+                          '🔍 Perfil público optimizado para aparecer en búsquedas',
+                          '📈 Estadísticas de visibilidad y engagement de tu perfil'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '📅',
+                      text: 'Agendador de Visitas Flexible e Intuitivo',
+                      desc: 'Programa visitas a propiedades con horarios personalizados y recordatorios automáticos',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo funciona el agendador intuitivo?',
+                        steps: [
+                          '📅 Calendario visual interactivo con disponibilidad en tiempo real',
+                          '⚡ Reserva confirmada instantáneamente sin aprobación manual',
+                          '🔄 Cambio de horarios libre sin penalizaciones ni conflictos',
+                          '📱 Sincronización perfecta con Google Calendar y Outlook',
+                          '🔔 Recordatorios automáticos por email, SMS y push notifications',
+                          '📊 Reportes detallados de visitas realizadas y conversiones'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '💰',
+                      text: 'Tasaciones comerciales automatizadas',
+                      desc: 'Genera tasaciones precisas tanto para arriendo como compraventa de manera automática',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo generamos tasaciones automatizadas?',
+                        steps: [
+                          '📊 Análisis profundo de datos del mercado inmobiliario local',
+                          '🏠 Evaluación automática de características físicas de la propiedad',
+                          '📈 Tendencias históricas de precios con proyecciones futuras',
+                          '🔍 Comparables automatizados de propiedades similares vendidas',
+                          '📄 Reportes profesionales en PDF con gráficos detallados',
+                          '💰 Tasaciones diferenciadas para arriendo y compraventa',
+                          '📊 Actualización automática semanal de valores de mercado',
+                          '🔬 Algoritmos de IA que consideran factores económicos externos'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '📋',
+                      text: 'Estudios de títulos automatizados',
+                      desc: 'Genera estudios completos de títulos de propiedad de forma automática y segura',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Qué verificamos en los estudios de títulos?',
+                        steps: [
+                          '📜 Historial completo de propiedad desde su origen registral',
+                          '⚖️ Estado legal actual con verificación de gravámenes y embargos',
+                          '🔍 Análisis exhaustivo de documentos originales certificados',
+                          '📊 Evaluación detallada de riesgos jurídicos y legales',
+                          '✅ Certificación digital con firma electrónica avanzada',
+                          '🏛️ Verificación automática con registros del Conservador de Bienes Raíces',
+                          '📋 Reporte ejecutivo con resumen de hallazgos clave',
+                          '🔄 Actualización automática cuando hay cambios registrales'
+                        ]
+                      }
+                    },
+                    {
+                      icon: '👥',
+                      text: 'Gestión de visitas virtuales',
+                      desc: 'Organiza y realiza visitas virtuales con recorridos 360° y videollamadas',
+                      expandable: true,
+                      expandedContent: {
+                        title: '¿Cómo gestionamos las visitas virtuales?',
+                        steps: [
+                          '📹 Creación automática de recorridos virtuales 360° profesionales',
+                          '📅 Sistema de agendamiento integrado con calendarios personales',
+                          '💻 Videollamadas HD con soporte para múltiples participantes',
+                          '📱 Aplicación móvil dedicada para visitas in situ con GPS',
+                          '📊 Reportes detallados de interacciones y tiempo de visualización',
+                          '🎯 Preguntas frecuentes automatizadas durante la visita',
+                          '📝 Formularios de evaluación automática post-visita',
+                          '🔄 Grabación opcional para revisión posterior de la visita'
+                        ]
+                      }
+                    }
                   ].map((service) => (
-                    <motion.div
-                      key={service.text}
-                      variants={itemVariants}
-                      whileHover={{ scale: 1.02, x: 5 }}
-                      className="group bg-gradient-to-r from-teal-50 to-transparent p-4 rounded-xl border border-teal-100 hover:border-teal-300 transition-all duration-300 cursor-pointer"
-                    >
-                      <div className="flex items-start gap-3">
-                        <motion.span
-                          className="text-2xl flex-shrink-0"
-                          whileHover={{ scale: 1.3, rotate: -10 }}
-                        >
-                          {service.icon}
-                        </motion.span>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 group-hover:text-teal-700 transition-colors">
-                            {service.text}
-                          </h4>
-                          <p className="text-sm text-gray-600 mt-1 group-hover:text-teal-600 transition-colors">
-                            {service.desc}
-                          </p>
+                    <div key={service.text}>
+                      <motion.div
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.02, x: 5 }}
+                        onClick={() => service.expandable && setExpandedService(expandedService === service.text ? null : service.text)}
+                        className={`group bg-gradient-to-r from-teal-50 to-transparent p-4 rounded-xl border border-teal-100 hover:border-teal-300 transition-all duration-300 ${service.expandable ? 'cursor-pointer' : ''}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <motion.span
+                            className="text-2xl flex-shrink-0"
+                            whileHover={{ scale: 1.3, rotate: -10 }}
+                          >
+                            {service.icon}
+                          </motion.span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-gray-900 group-hover:text-teal-700 transition-colors">
+                                {service.text}
+                              </h4>
+                              {service.expandable && (
+                                <motion.span
+                                  animate={{ rotate: expandedService === service.text ? 180 : 0 }}
+                                  transition={{ duration: 0.3 }}
+                                  className="text-gray-400 text-lg"
+                                >
+                                  ▼
+                                </motion.span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1 group-hover:text-teal-600 transition-colors">
+                              {service.desc}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
+                      </motion.div>
+
+                      {/* Contenido expandido */}
+                      {service.expandable && expandedService === service.text && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="mt-4 p-6 bg-gradient-to-r from-teal-100 to-teal-50 rounded-xl border border-teal-200"
+                        >
+                          <h5 className="font-bold text-teal-900 mb-4 text-lg">
+                            {service.expandedContent.title}
+                          </h5>
+                          <div className="space-y-3">
+                            {service.expandedContent.steps.map((step, index) => (
+                              <motion.div
+                                key={index}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className="flex items-center gap-3 text-gray-700"
+                              >
+                                <span className="text-sm">{step}</span>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
                   ))}
                 </motion.div>
               </motion.div>

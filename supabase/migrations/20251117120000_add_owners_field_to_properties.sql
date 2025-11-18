@@ -50,3 +50,4 @@ BEGIN
     RAISE NOTICE '🔍 Índice GIN creado para consultas eficientes';
 END $$;
 
+

@@ -3,14 +3,27 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { useNavigate } from 'react-router-dom';
 import { ContactForm } from '../components/ContactForm';
 import { Briefcase, Users } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
+  const navigate = useNavigate();
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   });
+
+  const handleExplorePlatform = () => {
+    navigate('/dashboard');
+  };
+
+  const handleScrollToContact = () => {
+    const contactSection = document.getElementById('contact-section');
+    if (contactSection) {
+      contactSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -124,6 +137,7 @@ export const AboutPage: React.FC = () => {
               className="flex gap-4 justify-center flex-wrap"
             >
               <motion.button
+                onClick={handleExplorePlatform}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-shadow"
@@ -132,6 +146,7 @@ export const AboutPage: React.FC = () => {
               </motion.button>
 
               <motion.button
+                onClick={handleScrollToContact}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-800 transition-colors"
@@ -431,9 +446,9 @@ export const AboutPage: React.FC = () => {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECCIÓN 4: CONTÁCTANOS
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="py-20 md:py-28 bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      SECCIÓN 4: CONTÁCTANOS
+      ═══════════════════════════════════════════════════════════════ */}
+      <section id="contact-section" className="py-20 md:py-28 bg-gradient-to-br from-slate-50 via-white to-slate-50">
         <div className="max-w-4xl mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}

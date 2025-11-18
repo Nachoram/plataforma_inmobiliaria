@@ -27,3 +27,4 @@ describe('ApplicantLayout', () => {
   it.todo('toggles sidebar');
 });
 
+

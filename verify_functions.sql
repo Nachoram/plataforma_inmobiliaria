@@ -32,3 +32,4 @@ WHERE routine_name IN ('create_rental_contract_on_approval', 'revert_application
 
 
 
+

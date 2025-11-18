@@ -3,7 +3,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { ContactForm } from '../components/ContactForm';
 import { Briefcase, Users } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
@@ -60,10 +59,6 @@ export const AboutPage: React.FC = () => {
     },
   };
 
-  const handleContactSubmit = (data: any) => {
-    console.log('Formulario enviado:', data);
-    // Aquí se puede integrar con backend o servicio de email
-  };
 
   // ═══════════════════════════════════════════════════════════════
   // SECCIÓN 1: HERO
@@ -934,88 +929,72 @@ export const AboutPage: React.FC = () => {
             </motion.p>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
+          <div className="max-w-2xl mx-auto">
             {/* Información de contacto */}
             <motion.div
-              initial={{ opacity: 0, x: -60 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
               viewport={{ once: true }}
             >
               <motion.div
                 whileHover={{ y: -5 }}
                 transition={{ duration: 0.3 }}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl p-8 border border-gray-100 h-full"
+                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl p-6 border border-gray-100"
               >
-                <div className="flex items-center gap-4 mb-8">
+                <div className="flex items-center gap-3 mb-6">
                   <motion.div
                     whileHover={{ rotate: 10, scale: 1.1 }}
-                    className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg"
+                    className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg"
                   >
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </motion.div>
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">
                       Hablemos
                     </h3>
-                    <p className="text-gray-600">Estamos aquí para ayudarte</p>
+                    <p className="text-sm text-gray-600">Estamos aquí para ayudarte</p>
                   </div>
                 </div>
 
-                <div className="space-y-8">
+                <div className="space-y-4">
                   <motion.div
-                    whileHover={{ scale: 1.03, y: -2 }}
+                    whileHover={{ scale: 1.02, y: -1 }}
                     transition={{ duration: 0.2 }}
-                    className="flex items-center gap-6 p-6 bg-gradient-to-r from-teal-50 to-teal-100/50 rounded-2xl border border-teal-200 hover:border-teal-300 hover:shadow-lg transition-all duration-300"
+                    className="flex items-center gap-4 p-4 bg-gradient-to-r from-teal-50 to-teal-100/50 rounded-xl border border-teal-200 hover:border-teal-300 hover:shadow-lg transition-all duration-300"
                   >
-                    <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-teal-600 rounded-2xl flex items-center justify-center shadow-md">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center shadow-md">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <p className="text-lg font-bold text-gray-900 mb-1">Teléfono</p>
-                      <p className="text-gray-700 font-medium">+56 9 1234 5678</p>
-                      <p className="text-sm text-gray-500 mt-1">Lun - Vie: 9:00 - 18:00</p>
+                      <p className="text-base font-bold text-gray-900 mb-1">Teléfono</p>
+                      <p className="text-gray-700 font-medium text-sm">+56 9 1234 5678</p>
+                      <p className="text-xs text-gray-500 mt-1">Lun - Vie: 9:00 - 18:00</p>
                     </div>
                   </motion.div>
 
                   <motion.div
-                    whileHover={{ scale: 1.03, y: -2 }}
+                    whileHover={{ scale: 1.02, y: -1 }}
                     transition={{ duration: 0.2 }}
-                    className="flex items-center gap-6 p-6 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-2xl border border-blue-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
+                    className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-xl border border-blue-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
                   >
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-md">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <p className="text-lg font-bold text-gray-900 mb-1">Email</p>
-                      <p className="text-gray-700 font-medium">contacto@propai.cl</p>
-                      <p className="text-sm text-gray-500 mt-1">Respuesta en menos de 24 horas</p>
+                      <p className="text-base font-bold text-gray-900 mb-1">Email</p>
+                      <p className="text-gray-700 font-medium text-sm">contacto@propai.cl</p>
+                      <p className="text-xs text-gray-500 mt-1">Respuesta en menos de 24 horas</p>
                     </div>
                   </motion.div>
 
                 </div>
-              </motion.div>
-            </motion.div>
-
-            {/* Formulario de contacto */}
-            <motion.div
-              initial={{ opacity: 0, x: 60 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-            >
-              <motion.div
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.3 }}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl p-8 border border-gray-100 h-full flex flex-col"
-              >
-                <ContactForm onSubmit={handleContactSubmit} />
               </motion.div>
             </motion.div>
           </div>

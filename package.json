@@ -13,7 +13,8 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "deploy:vercel": "npm run build && vercel --prod",
-    "deploy:preview": "npm run build && vercel"
+    "deploy:preview": "npm run build && vercel",
+    "debug:vercel": "node debug-vercel.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.2",

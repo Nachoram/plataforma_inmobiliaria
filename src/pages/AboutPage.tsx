@@ -112,9 +112,9 @@ export const AboutPage: React.FC = () => {
               className="mb-4"
             >
               <img
-                src="/logo-superior.svg"
+                src="/logo-hero-3.svg"
                 alt="PROPAI"
-                className="h-64 md:h-80 mx-auto drop-shadow-lg"
+                className="h-[400px] md:h-[500px] mx-auto drop-shadow-lg"
               />
             </motion.div>
 

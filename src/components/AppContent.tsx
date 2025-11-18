@@ -32,14 +32,15 @@ import DatabaseQueryRunner from './DatabaseQueryRunner';
 // Pages
 import {
   AboutPage,
-  PortfolioPage,
-  MyApplicationsPage,
-  MyOffersPage,
-  ProfilePage,
   MarketplacePage,
   LoginPage,
   NotFoundPage
 } from '../pages';
+
+// Advanced Components
+import PortfolioPage from './portfolio/PortfolioPage';
+import MyApplicationsPage from './dashboard/MyApplicationsPage';
+import MyOffersPage from './dashboard/MyOffersPage';
 
 // Temporarily disable lazy loading to debug the issue
 import MySalesPage from './dashboard/MySalesPage';
@@ -206,7 +207,7 @@ export const AppContent: React.FC = () => {
       <Route path="/my-offers/:offerId/admin" element={
         <ProtectedRoute>
           <Layout>
-            <MyOffersPage />
+            <SaleOfferManagementPage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -214,7 +215,7 @@ export const AppContent: React.FC = () => {
       <Route path="/my-offers/:offerId/seller-admin" element={
         <ProtectedRoute>
           <Layout>
-            <MyOffersPage />
+            <SaleOfferManagementPage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -240,7 +241,7 @@ export const AppContent: React.FC = () => {
       <Route path="/perfil" element={
         <ProtectedRoute>
           <Layout>
-            <ProfilePage />
+            <UserProfilePage />
           </Layout>
         </ProtectedRoute>
       } />

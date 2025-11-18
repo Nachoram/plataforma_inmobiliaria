@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Download, Plus, Trash2, Edit2, Save, CheckCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { supabase } from '../../lib/supabase';
+import { safeHtml2Canvas, getCanvasErrorMessage } from '../../lib/canvasUtils';
 
 // ============================================================================
 // INTERFACES DE TYPESCRIPT
@@ -293,10 +293,12 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
 
     try {
       // --- Captura Única del Canvas ---
-      const originalCanvas = await html2canvas(documentContainer, { 
+      const originalCanvas = await safeHtml2Canvas(documentContainer, {
         scale: 2,
         useCORS: true,
-        logging: false
+        backgroundColor: '#ffffff',
+        maxAttempts: 3,
+        timeout: 30000
       });
 
       // --- Configuración del PDF y Dimensiones ---
@@ -359,6 +361,8 @@ const ContractCanvasEditor: React.FC<ContractCanvasEditorProps> = ({
 
     } catch (error) {
       console.error("Error al generar el PDF:", error);
+      const errorMessage = getCanvasErrorMessage(error);
+      alert(errorMessage);
     } finally {
       // --- Restauración de la UI ---
       documentContainer.classList.remove('print-borderless');

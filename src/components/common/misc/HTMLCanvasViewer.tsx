@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { safeHtml2Canvas, getCanvasErrorMessage, checkCanvasSupport } from '../../../lib/canvasUtils';
 
 /**
  * Props for the HTMLCanvasViewer component
@@ -150,29 +150,42 @@ export const HTMLCanvasViewer = forwardRef<HTMLCanvasViewerRef, HTMLCanvasViewer
     setError(null);
     const sourceElement = sourceRef.current;
     const targetElement = canvasContainerRef.current;
-    
+
     // Envolver el HTML con estilos profesionales
     const styledHTML = wrapWithProfessionalStyles(htmlString);
     sourceElement.innerHTML = styledHTML;
     targetElement.innerHTML = ''; // Limpiar canvas anterior
 
-    html2canvas(sourceElement, { 
-      useCORS: true, 
-      logging: false,
-      scale: 2, // Mayor calidad para PDF
-      backgroundColor: '#ffffff'
-    }).then(canvas => {
-      canvas.style.maxWidth = '100%';
-      canvas.style.height = 'auto';
-      canvasRef.current = canvas; // Guardar referencia para PDF
-      targetElement.appendChild(canvas);
-    }).catch(err => {
-      setError('No se pudo renderizar el informe en el canvas.');
-      console.error("Error en html2canvas:", err);
-    }).finally(() => {
+    // Check canvas support first
+    const canvasSupport = checkCanvasSupport();
+    if (!canvasSupport.supported) {
+      setError('Su navegador no es compatible con la renderización de canvas requerida para mostrar el documento.');
       setIsLoading(false);
-      sourceElement.innerHTML = ''; // Limpiar el DOM fuente
-    });
+      sourceElement.innerHTML = '';
+      return;
+    }
+
+    safeHtml2Canvas(sourceElement, {
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      scale: 2,
+      maxAttempts: 3,
+      timeout: 30000
+    })
+      .then(canvas => {
+        canvas.style.maxWidth = '100%';
+        canvas.style.height = 'auto';
+        canvasRef.current = canvas; // Guardar referencia para PDF
+        targetElement.appendChild(canvas);
+      })
+      .catch(err => {
+        console.error("Error en html2canvas:", err);
+        setError(getCanvasErrorMessage(err));
+      })
+      .finally(() => {
+        setIsLoading(false);
+        sourceElement.innerHTML = ''; // Limpiar el DOM fuente
+      });
 
   }, [htmlString]);
 

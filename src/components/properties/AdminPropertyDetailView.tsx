@@ -494,69 +494,6 @@ export const AdminPropertyDetailView: React.FC = () => {
           <SaleOfferAdminPanel propertyId={id} property={property} />
         )}
 
-        {/* Panel de Administración de Contratos - Solo para Administradores */}
-        {id && property && user && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <FileText className="h-5 w-5 mr-2 text-blue-600" />
-                  Gestión de Contratos
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Administra contratos asociados a esta propiedad
-                </p>
-              </div>
-              <Link
-                to={`/dashboard/admin/contracts?property=${id}`}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Ver Contratos
-              </Link>
-            </div>
-
-            {/* Resumen de contratos para esta propiedad */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <CheckCircle className="h-8 w-8 text-green-600 mr-3" />
-                  <div>
-                    <div className="text-2xl font-bold text-green-800">0</div>
-                    <div className="text-sm text-green-700">Contratos Activos</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <Clock className="h-8 w-8 text-blue-600 mr-3" />
-                  <div>
-                    <div className="text-2xl font-bold text-blue-800">0</div>
-                    <div className="text-sm text-blue-700">En Revisión</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <CheckCircle className="h-8 w-8 text-emerald-600 mr-3" />
-                  <div>
-                    <div className="text-2xl font-bold text-emerald-800">0</div>
-                    <div className="text-sm text-emerald-700">Completados</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 text-sm text-gray-600">
-              <p>
-                Los contratos asociados a esta propiedad se gestionan desde el panel administrativo.
-                Solo los administradores pueden crear, editar y gestionar contratos.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Modal de Disponibilidad */}

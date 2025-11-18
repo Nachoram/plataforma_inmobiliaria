@@ -129,6 +129,14 @@ export const AppContent: React.FC = () => {
       } />
 
       {/* Sale offer admin routes */}
+      <Route path="/sales/offer/:id" element={
+        <ProtectedRoute>
+          <Layout>
+            <SaleOfferManagementPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
       <Route path="/offer/:id/admin" element={
         <ProtectedRoute>
           <Layout>

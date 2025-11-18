@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
-import PostulationCard from './PostulationCard';
+import { PostulationCard } from './PostulationCard';
 import PostulationDetailDrawer from './PostulationDetailDrawer';
 
 // ========================================================================

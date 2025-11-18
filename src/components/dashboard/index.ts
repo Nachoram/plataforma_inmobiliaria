@@ -9,6 +9,8 @@ export { default as ContractSummaryCard } from './ContractSummaryCard';
 
 // Application Management Components
 export { default as ApplicationsAdmin } from './ApplicationsAdmin';
+export { default as PostulationAdminPanel } from './PostulationAdminPanel'; // Added this as it was missing and I saw it in the dir
+export { SalesOfferAdminPanel } from './SalesOfferAdminPanel';
 
 // Editor Components
 export { default as EditorButton, EditorButtonCompact, useContractEditor } from './EditorButton';

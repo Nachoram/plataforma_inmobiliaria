@@ -24,6 +24,7 @@ import { PostulantAdminPanel } from './applications/PostulantAdminPanel';
 
 // Sales components
 import SaleOfferManagementPage from './sales/SaleOfferManagementPage';
+import SalesOfferDetailView from './sales/SalesOfferDetailView';
 
 // Diagnostic components - keep loaded
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
@@ -132,7 +133,7 @@ export const AppContent: React.FC = () => {
       <Route path="/sales/offer/:id" element={
         <ProtectedRoute>
           <Layout>
-            <SaleOfferManagementPage />
+            <SalesOfferDetailView />
           </Layout>
         </ProtectedRoute>
       } />
@@ -140,8 +141,8 @@ export const AppContent: React.FC = () => {
       <Route path="/offer/:id/admin" element={
         <ProtectedRoute>
           <Layout>
-            {console.log('🧪 AppContent: Renderizando SaleOfferManagementPage')}
-            <SaleOfferManagementPage />
+            {console.log('🧪 AppContent: Renderizando SalesOfferDetailView')}
+            <SalesOfferDetailView />
           </Layout>
         </ProtectedRoute>
       } />

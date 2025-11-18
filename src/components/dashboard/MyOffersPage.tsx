@@ -457,7 +457,7 @@ const MyOffersPage: React.FC = () => {
 
                         {/* Actions */}
                         <div className="mt-4 flex flex-wrap gap-2">
-                          <Link to={`/my-offers/${offer.id}/admin`}>
+                          <Link to={`/sales/offer/${offer.id}`}>
                             <button className="flex items-center gap-1 px-3 py-2 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors">
                               <Settings className="h-3 w-3" />
                               Ver Detalles

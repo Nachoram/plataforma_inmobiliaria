@@ -275,3 +275,4 @@ const ApplicantSettings: React.FC<ApplicantSettingsProps> = ({
 };
 
 export default ApplicantSettings;
+

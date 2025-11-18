@@ -26,3 +26,4 @@ describe('ApplicantLayout', () => {
   it.todo('handles breadcrumbs');
   it.todo('toggles sidebar');
 });
+

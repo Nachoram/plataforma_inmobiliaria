@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, Menu, X, DollarSign } from 'lucide-react';
+import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, Menu, X, DollarSign, Info } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
@@ -63,12 +63,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Mobile navigation items
   const mobileNavItems = user ? [
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
+    { path: '/nosotros', icon: Info, label: 'Nosotros', shortLabel: 'Info' },
     { path: '/portfolio', icon: Home, label: 'Portafolio', shortLabel: 'Prop.' },
     { path: '/my-applications', icon: Mail, label: 'Postulaciones', shortLabel: 'Post.' },
     { path: '/my-offers', icon: DollarSign, label: 'Ofertas', shortLabel: 'Ofer.' },
     { path: '/perfil', icon: UserCircle, label: 'Mi Perfil', shortLabel: 'Perfil' },
   ] : [
     { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
+    { path: '/nosotros', icon: Info, label: 'Nosotros', shortLabel: 'Info' },
   ];
 
   return (
@@ -98,6 +100,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               >
                 <ShoppingBag className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden xl:inline">Panel</span>
+              </Link>
+              <Link
+                to="/nosotros"
+                className={`px-2 lg:px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center space-x-1.5 flex-shrink-0 ${
+                  isActive('/nosotros')
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+                    : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm'
+                }`}
+              >
+                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="hidden xl:inline">Nosotros</span>
               </Link>
               {user && (
                 <>

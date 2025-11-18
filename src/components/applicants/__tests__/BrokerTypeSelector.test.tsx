@@ -114,3 +114,4 @@ describe('BrokerTypeSelector', () => {
     expect(mockOnChange).toHaveBeenCalledWith('firm', 'New Company');
   });
 });
+

@@ -72,3 +72,4 @@ export interface GuarantorFormData {
 export interface ValidationErrors {
   [key: string]: string | undefined;
 }
+

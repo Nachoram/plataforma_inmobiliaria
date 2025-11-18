@@ -214,3 +214,4 @@ export const CompactProgressBar: React.FC<CompactProgressBarProps> = ({
 };
 
 export default FormProgressBar;
+

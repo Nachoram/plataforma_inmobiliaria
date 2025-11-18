@@ -139,3 +139,4 @@ describe('ApplicantForm', () => {
     expect(screen.getByText('Editar Perfil')).toBeInTheDocument();
   });
 });
+

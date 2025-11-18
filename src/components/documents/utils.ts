@@ -305,3 +305,4 @@ export function getDocumentStatistics(documents: any[]) {
     completionRate: required > 0 ? (requiredVerified / required) * 100 : 100
   };
 }
+

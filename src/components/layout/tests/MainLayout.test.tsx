@@ -36,3 +36,4 @@ describe('MainLayout', () => {
   it.todo('handles all configuration options');
   it.todo('integrates with all variants');
 });
+

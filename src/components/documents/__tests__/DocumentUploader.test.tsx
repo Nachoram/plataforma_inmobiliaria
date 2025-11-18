@@ -166,3 +166,4 @@ describe('DocumentUploader', () => {
     expect(uploadArea).toHaveClass('cursor-not-allowed');
   });
 });
+

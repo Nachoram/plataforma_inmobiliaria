@@ -258,3 +258,4 @@ export const DOCUMENT_CATEGORY_COLORS = {
     text: 'text-red-800'
   }
 } as const;
+

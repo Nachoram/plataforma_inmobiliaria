@@ -33,3 +33,4 @@ WHERE table_name = 'rental_contracts'
 AND column_name = 'has_auto_renewal_clause';
 
 
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, Menu, X, DollarSign, Search, Filter, Bell } from 'lucide-react';
+import { Home, User, LogOut, Mail, UserCircle, ShoppingBag, Menu, X, DollarSign, Search, Filter, Bell, Info } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 
@@ -97,12 +97,14 @@ export const Header: React.FC<HeaderProps> = ({
       case 'marketplace':
         return user ? [
           { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
+          { path: '/nosotros', icon: Info, label: 'Nosotros', shortLabel: 'Info' },
           { path: '/portfolio', icon: Home, label: 'Portafolio', shortLabel: 'Prop.' },
           { path: '/my-applications', icon: Mail, label: 'Postulaciones', shortLabel: 'Post.' },
           { path: '/my-offers', icon: DollarSign, label: 'Ofertas', shortLabel: 'Ofer.' },
           { path: '/perfil', icon: UserCircle, label: 'Mi Perfil', shortLabel: 'Perfil' },
         ] : [
           { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
+          { path: '/nosotros', icon: Info, label: 'Nosotros', shortLabel: 'Info' },
         ];
       case 'admin':
         return [
@@ -120,12 +122,14 @@ export const Header: React.FC<HeaderProps> = ({
       default:
         return user ? [
           { path: '/', icon: ShoppingBag, label: 'Panel', shortLabel: 'Panel' },
+          { path: '/nosotros', icon: Info, label: 'Nosotros', shortLabel: 'Info' },
           { path: '/portfolio', icon: Home, label: 'Mi Portafolio', shortLabel: 'Prop.' },
           { path: '/my-applications', icon: Mail, label: 'Postulaciones', shortLabel: 'Post.' },
           { path: '/my-offers', icon: DollarSign, label: 'Mis Ofertas', shortLabel: 'Ofer.' },
           { path: '/perfil', icon: UserCircle, label: 'Mi Perfil', shortLabel: 'Perfil' },
         ] : [
           { path: '/', icon: ShoppingBag, label: 'Inicio', shortLabel: 'Inicio' },
+          { path: '/nosotros', icon: Info, label: 'Nosotros', shortLabel: 'Info' },
         ];
     }
   };
@@ -194,6 +198,13 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* User menu */}
             <div className="flex items-center space-x-1.5 lg:space-x-2 flex-shrink-0">
+              <Link
+                to="/nosotros"
+                className="flex items-center space-x-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-2 lg:px-3 py-1.5 rounded-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 font-medium"
+              >
+                <Info className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="text-xs hidden lg:inline">Nosotros</span>
+              </Link>
               {user ? (
                 <div className="flex items-center space-x-1.5">
                   <div className="flex items-center space-x-1.5 px-2 py-1.5 rounded-lg bg-gray-50 border border-gray-200">

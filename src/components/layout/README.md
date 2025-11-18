@@ -130,3 +130,4 @@ src/components/layout/
     ├── ApplicantLayout.test.tsx
     └── MainLayout.test.tsx
 ```
+

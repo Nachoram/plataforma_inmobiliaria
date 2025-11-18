@@ -57,3 +57,4 @@ export {
   DOCUMENT_STATUS_COLORS,
   DOCUMENT_CATEGORY_COLORS
 } from './types';
+

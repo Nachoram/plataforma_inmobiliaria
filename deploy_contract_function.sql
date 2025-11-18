@@ -27,3 +27,4 @@ WHERE name = 'create-rental-contract';
 -- Si no aparece, necesitas desplegarla desde el dashboard o CLI
 
 
+

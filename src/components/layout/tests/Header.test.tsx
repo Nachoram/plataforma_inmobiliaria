@@ -92,3 +92,4 @@ describe('Header', () => {
     expect(screen.getByText('Iniciar Sesión')).toBeInTheDocument();
   });
 });
+

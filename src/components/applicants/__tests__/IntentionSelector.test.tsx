@@ -112,3 +112,4 @@ describe('IntentionSelector', () => {
     expect(screen.getByText('Generalmente requiere garante y comprobante de ingresos estables.')).toBeInTheDocument();
   });
 });
+

@@ -31,3 +31,4 @@ describe('AdminLayout', () => {
   it.todo('toggles sidebar collapse');
   it.todo('renders sidebar navigation');
 });
+

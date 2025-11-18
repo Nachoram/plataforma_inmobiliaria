@@ -26,3 +26,4 @@ describe('MarketplaceLayout', () => {
   it.todo('toggles filters sidebar');
   it.todo('renders filters content');
 });
+

@@ -38,3 +38,4 @@ describe('AuthLayout', () => {
     expect(screen.getByText('Política de Privacidad')).toBeInTheDocument();
   });
 });
+

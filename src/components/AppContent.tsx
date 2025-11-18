@@ -29,6 +29,9 @@ import SaleOfferManagementPage from './sales/SaleOfferManagementPage';
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
 import DatabaseQueryRunner from './DatabaseQueryRunner';
 
+// About page
+import { AboutPage } from '../pages/AboutPage';
+
 // Temporarily disable lazy loading to debug the issue
 import PortfolioPage from './portfolio/PortfolioPage';
 import MyApplicationsPage from './dashboard/MyApplicationsPage';
@@ -74,6 +77,12 @@ export const AppContent: React.FC = () => {
       <Route path="/panel" element={
         <Layout>
           <PanelPage />
+        </Layout>
+      } />
+
+      <Route path="/nosotros" element={
+        <Layout>
+          <AboutPage />
         </Layout>
       } />
 

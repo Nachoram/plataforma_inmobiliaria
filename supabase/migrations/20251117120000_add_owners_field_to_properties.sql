@@ -49,3 +49,4 @@ BEGIN
     RAISE NOTICE '📋 Campo: owners (jsonb) - Array de propietarios';
     RAISE NOTICE '🔍 Índice GIN creado para consultas eficientes';
 END $$;
+

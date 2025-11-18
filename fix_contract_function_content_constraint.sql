@@ -223,3 +223,4 @@ GRANT EXECUTE ON FUNCTION create_rental_contract_on_approval(UUID, UUID) TO auth
 
 
 
+

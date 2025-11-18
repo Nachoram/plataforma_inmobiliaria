@@ -3,20 +3,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { useNavigate } from 'react-router-dom';
 import { ContactForm } from '../components/ContactForm';
 import { Briefcase, Users } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
-  const navigate = useNavigate();
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   });
-
-  const handleExplorePlatform = () => {
-    navigate('/dashboard');
-  };
 
   const handleScrollToContact = () => {
     const contactSection = document.getElementById('contact-section');
@@ -136,15 +130,6 @@ export const AboutPage: React.FC = () => {
               variants={itemVariants}
               className="flex gap-4 justify-center flex-wrap"
             >
-              <motion.button
-                onClick={handleExplorePlatform}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-shadow"
-              >
-                Explorar Plataforma
-              </motion.button>
-
               <motion.button
                 onClick={handleScrollToContact}
                 whileHover={{ scale: 1.05 }}
@@ -340,9 +325,12 @@ export const AboutPage: React.FC = () => {
                     { icon: '📋', text: 'Gestión centralizada de postulaciones', desc: 'Administra todas tus postulaciones desde un solo lugar' },
                     { icon: '✍️', text: 'Contratos con firma electrónica', desc: 'Genera y firma contratos de forma digital y segura' },
                     { icon: '💰', text: 'Cobros automatizados', desc: 'Sistema inteligente de recordatorios y cobros de arriendos' },
-                    { icon: '📊', text: 'Informes comerciales', desc: 'Accede a reportes detallados de tus postulantes' },
+                      { icon: '📊', text: 'Informes comerciales', desc: 'Accede a reportes detallados de tus postulantes' },
                     { icon: '🔒', text: 'Portal seguro de documentos', desc: 'Almacenamiento seguro para toda tu documentación legal' },
-                    { icon: '🤖', text: 'Chatbot inteligente', desc: 'Para derivar al postulante o arrendatario hacia la plataforma' }
+                    { icon: '🤖', text: 'Chatbot inteligente', desc: 'Para derivar al postulante o arrendatario hacia la plataforma' },
+                    { icon: '📅', text: 'Agendar Visitas Flexible', desc: 'Sistema inteligente de agendamiento con horarios flexibles y recordatorios automáticos' },
+                    { icon: '📈', text: 'Información detallada del rendimiento', desc: 'Análisis completo con visualizaciones, postulaciones, ofertas y referencias de mercado' },
+                    { icon: '🏦', text: 'Traspaso ágil con bancos', desc: 'Genera transferencias rápidas y seguras de información financiera con entidades bancarias para compraventas' }
                   ].map((service) => (
                     <motion.div
                       key={service.text}
@@ -393,9 +381,9 @@ export const AboutPage: React.FC = () => {
                   </motion.div>
                   <div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                      Para Postulantes
+                      Para Compradores y Postulantes
                     </h3>
-                    <p className="text-gray-600">Encuentra tu hogar ideal de forma simple y segura</p>
+                    <p className="text-gray-600">Herramientas intuitivas para tu búsqueda perfecta</p>
                   </div>
                 </div>
 
@@ -407,12 +395,15 @@ export const AboutPage: React.FC = () => {
                   className="grid gap-4"
                 >
                   {[
-                    { icon: '🔍', text: 'Búsqueda avanzada', desc: 'acción a postulación por link' },
+                    { icon: '🔍', text: 'Postulación fácil', desc: 'Proceso simplificado para postular a propiedades de tu interés' },
                     { icon: '📝', text: 'Postulación simplificada', desc: 'Aplica a propiedades con un solo clic' },
                     { icon: '❤️', text: 'Sistema de favoritos', desc: 'Guarda y organiza tus propiedades preferidas' },
                     { icon: '📈', text: 'Seguimiento en tiempo real', desc: 'Monitorea el estado de todas tus postulaciones' },
                     { icon: '💬', text: 'Comunicación directa', desc: 'Contacta con propietarios de forma segura' },
-                    { icon: '📁', text: 'Portafolio personal', desc: 'Crea tu perfil completo de postulante' }
+                    { icon: '📁', text: 'Portafolio personal', desc: 'Crea tu perfil completo de postulante' },
+                    { icon: '📅', text: 'Agendador de Visitas Flexible e Intuitivo', desc: 'Programa visitas a propiedades con horarios personalizados y recordatorios automáticos' },
+                    { icon: '💰', text: 'Tasaciones comerciales automatizadas', desc: 'Genera tasaciones precisas tanto para arriendo como compraventa de manera automática' },
+                    { icon: '📋', text: 'Estudios de títulos automatizados', desc: 'Genera estudios completos de títulos de propiedad de forma automática y segura' }
                   ].map((service) => (
                     <motion.div
                       key={service.text}
@@ -442,6 +433,26 @@ export const AboutPage: React.FC = () => {
               </motion.div>
             </motion.div>
           </div>
+
+          {/* TEXTO FINAL */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            viewport={{ once: true }}
+            className="text-center mt-16"
+          >
+            <motion.p
+              className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent mb-4"
+            >
+              ESOS SERVICIOS Y MUCHOS MÁS
+            </motion.p>
+            <motion.p
+              className="text-lg md:text-xl text-gray-700 max-w-4xl mx-auto leading-relaxed"
+            >
+              LA INNOVACIÓN Y LA EXPERIENCIA DE USUARIO SON NUESTROS VALORES MÁS RELEVANTES
+            </motion.p>
+          </motion.div>
         </div>
       </section>
 

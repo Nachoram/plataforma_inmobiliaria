@@ -29,13 +29,19 @@ import SaleOfferManagementPage from './sales/SaleOfferManagementPage';
 import { SupabaseDiagnostic } from './SupabaseDiagnostic';
 import DatabaseQueryRunner from './DatabaseQueryRunner';
 
-// About page
-import { AboutPage } from '../pages/AboutPage';
+// Pages
+import {
+  AboutPage,
+  PortfolioPage,
+  MyApplicationsPage,
+  MyOffersPage,
+  ProfilePage,
+  MarketplacePage,
+  LoginPage,
+  NotFoundPage
+} from '../pages';
 
 // Temporarily disable lazy loading to debug the issue
-import PortfolioPage from './portfolio/PortfolioPage';
-import MyApplicationsPage from './dashboard/MyApplicationsPage';
-import MyOffersPage from './dashboard/MyOffersPage';
 import MySalesPage from './dashboard/MySalesPage';
 import { ContractCanvasEditorPage } from './dashboard';
 import PropertyFormPage from './properties/PropertyFormPage';
@@ -234,7 +240,7 @@ export const AppContent: React.FC = () => {
       <Route path="/perfil" element={
         <ProtectedRoute>
           <Layout>
-            <UserProfilePage />
+            <ProfilePage />
           </Layout>
         </ProtectedRoute>
       } />
@@ -260,8 +266,8 @@ export const AppContent: React.FC = () => {
         </Layout>
       } />
 
-      {/* Default redirect */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* 404 Not Found */}
+      <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthErrorHandler>
     </ErrorBoundary>

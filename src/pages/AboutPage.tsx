@@ -883,12 +883,12 @@ export const AboutPage: React.FC = () => {
             <motion.p
               className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent mb-4"
             >
-              ESOS SERVICIOS Y MUCHOS MÁS
+              Estos servicios y muchos más
             </motion.p>
             <motion.p
               className="text-lg md:text-xl text-gray-700 max-w-4xl mx-auto leading-relaxed"
             >
-              LA INNOVACIÓN Y LA EXPERIENCIA DE USUARIO SON NUESTROS VALORES MÁS RELEVANTES
+              La innovación y la experiencia de usuario son nuestros valores más relevantes
             </motion.p>
           </motion.div>
         </div>

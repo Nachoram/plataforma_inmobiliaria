@@ -159,6 +159,63 @@ const getStatusLabel = (status: string): string => {
   }
 };
 
+/**
+ * Componente para mostrar documentos de un postulante/garantor
+ */
+const DocumentsList: React.FC<{
+  personName: string;
+  documents: any[];
+  onDownload: (url: string, name: string) => void;
+  isLoading?: boolean;
+}> = ({ personName, documents, onDownload, isLoading }) => {
+  if (!documents || documents.length === 0) {
+    return (
+      <div className="text-center py-4">
+        <svg className="h-8 w-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p className="text-sm text-gray-500">Sin documentos</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {documents.map((doc, idx) => (
+        <div key={doc.id || idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors">
+          <div className="flex items-center space-x-3 flex-1">
+            <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">{doc.file_name || doc.document_type}</p>
+              <p className="text-xs text-gray-500">
+                {doc.document_type === 'cedula' && 'Cédula de Identidad'}
+                {doc.document_type === 'comprobante_ingresos' && 'Comprobante de Ingresos'}
+                {doc.document_type === 'certificado_dominio' && 'Certificado de Dominio'}
+                {doc.document_type === 'comprobante_laboral' && 'Comprobante Laboral'}
+                {!doc.document_type && 'Documento'}
+                {' • '}
+                {new Date(doc.uploaded_at).toLocaleDateString('es-CL')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onDownload(doc.file_url, doc.file_name || `${doc.document_type}.pdf`)}
+            disabled={isLoading}
+            className="ml-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center space-x-1"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Descargar</span>
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // ========================================================================
 // MAIN COMPONENT
 // ========================================================================
@@ -185,6 +242,11 @@ export const PostulationAdminPanel: React.FC = () => {
   const [savingContract, setSavingContract] = useState(false);
   const [contractModalKey, setContractModalKey] = useState(0);
   const [showRevertModal, setShowRevertModal] = useState(false);
+
+  // Estados para documentos
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [applicantsDocuments, setApplicantsDocuments] = useState<Record<string, any[]>>({});
+  const [guarantorsDocuments, setGuarantorsDocuments] = useState<Record<string, any[]>>({});
 
   // Loading states for contract actions
   const [isDownloadingContract, setIsDownloadingContract] = useState(false);
@@ -809,6 +871,158 @@ export const PostulationAdminPanel: React.FC = () => {
     }
   };
 
+  /**
+   * Carga los documentos asociados a cada postulante
+   */
+  const loadApplicantsDocuments = async () => {
+    if (!applicationId) return;
+
+    try {
+      setDocumentsLoading(true);
+      
+      // Obtener todos los documentos de postulantes para esta aplicación
+      const { data: docs, error } = await supabase
+        .from('applicant_documents')
+        .select(`
+          id,
+          application_id,
+          entity_type,
+          document_type,
+          file_name,
+          file_url,
+          storage_path,
+          uploaded_at,
+          first_name,
+          paternal_last_name,
+          maternal_last_name,
+          company_name
+        `)
+        .eq('application_id', applicationId);
+      
+      if (error) {
+        console.warn('⚠️ Error cargando documentos de postulantes:', error.message);
+        return;
+      }
+      
+      // Agrupar documentos por postulante (usar combination de nombres como key)
+      const docsByApplicant: Record<string, any[]> = {};
+      if (docs) {
+        docs.forEach(doc => {
+          const applicantKey = doc.entity_type === 'natural' 
+            ? `${doc.first_name} ${doc.paternal_last_name} ${doc.maternal_last_name}`.trim()
+            : doc.company_name;
+          
+          if (!docsByApplicant[applicantKey]) {
+            docsByApplicant[applicantKey] = [];
+          }
+          docsByApplicant[applicantKey].push(doc);
+        });
+      }
+      
+      setApplicantsDocuments(docsByApplicant);
+      console.log('✅ Documentos de postulantes cargados:', docsByApplicant);
+      
+    } catch (error) {
+      console.error('❌ Error cargando documentos:', error);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  /**
+   * Carga los documentos asociados a cada garantor
+   */
+  const loadGuarantorsDocuments = async () => {
+    if (!applicationId) return;
+
+    try {
+      setDocumentsLoading(true);
+      
+      // Obtener todos los documentos de garantores para esta aplicación
+      const { data: docs, error } = await supabase
+        .from('guarantor_documents')
+        .select(`
+          id,
+          application_id,
+          entity_type,
+          document_type,
+          file_name,
+          file_url,
+          storage_path,
+          uploaded_at,
+          first_name,
+          paternal_last_name,
+          maternal_last_name,
+          company_name
+        `)
+        .eq('application_id', applicationId);
+      
+      if (error) {
+        console.warn('⚠️ Error cargando documentos de garantores:', error.message);
+        return;
+      }
+      
+      // Agrupar documentos por garantor
+      const docsByGuarantor: Record<string, any[]> = {};
+      if (docs) {
+        docs.forEach(doc => {
+          const guarantorKey = doc.entity_type === 'natural' 
+            ? `${doc.first_name} ${doc.paternal_last_name} ${doc.maternal_last_name}`.trim()
+            : doc.company_name;
+          
+          if (!docsByGuarantor[guarantorKey]) {
+            docsByGuarantor[guarantorKey] = [];
+          }
+          docsByGuarantor[guarantorKey].push(doc);
+        });
+      }
+      
+      setGuarantorsDocuments(docsByGuarantor);
+      console.log('✅ Documentos de garantores cargados:', docsByGuarantor);
+      
+    } catch (error) {
+      console.error('❌ Error cargando documentos:', error);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  /**
+   * Descarga un documento individual
+   */
+  const downloadDocument = async (fileUrl: string, fileName: string) => {
+    try {
+      console.log('📥 Descargando documento:', fileName);
+      toast.loading('Descargando archivo...', { id: 'download-doc' });
+      
+      // Si es una URL pública de Supabase storage
+      if (fileUrl.includes('supabase')) {
+        // Descargar directamente desde la URL
+        const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error('Error al descargar');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName || 'documento';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast.success('Documento descargado', { id: 'download-doc' });
+      } else {
+        // Si es otra URL, abrirla en nueva pestaña
+        window.open(fileUrl, '_blank');
+        toast.success('Abriendo documento...', { id: 'download-doc' });
+      }
+    } catch (error: any) {
+      console.error('❌ Error descargando documento:', error);
+      toast.error('Error al descargar el documento', { id: 'download-doc' });
+    }
+  };
+
   // Función para cargar historial de auditoría
   const fetchAuditLog = async () => {
     if (!applicationId) return;
@@ -1026,6 +1240,8 @@ export const PostulationAdminPanel: React.FC = () => {
     if (applicationId) {
       setHasRealScore(false);
       fetchPostulationData();
+      loadApplicantsDocuments();
+      loadGuarantorsDocuments();
     }
   }, [applicationId]);
 
@@ -2007,6 +2223,89 @@ export const PostulationAdminPanel: React.FC = () => {
                   <p className="text-xs text-amber-600">
                     Nota: Tabla application_guarantors en configuración
                   </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Documentos por Postulante y Garantor */}
+          <div className="lg:col-span-3 mb-8">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                <svg className="h-5 w-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Documentos de Postulantes y Garantores
+              </h3>
+
+              {documentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin h-8 w-8 border-b-2 border-indigo-600"></div>
+                  <span className="ml-3 text-gray-600">Cargando documentos...</span>
+                </div>
+              ) : Object.keys(applicantsDocuments).length === 0 && Object.keys(guarantorsDocuments).length === 0 ? (
+                <div className="text-center py-12">
+                  <svg className="h-16 w-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-gray-500 mb-2">No hay documentos disponibles</p>
+                  <p className="text-xs text-gray-400">Los documentos cargados por postulantes aparecerán aquí</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Documentos de Postulantes */}
+                  {Object.keys(applicantsDocuments).length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide text-blue-600">
+                        📋 Documentos de Postulantes
+                      </h4>
+                      <div className="space-y-4">
+                        {Object.entries(applicantsDocuments).map(([applicantName, docs]) => (
+                          <div key={applicantName} className="border border-gray-200 rounded-lg p-4">
+                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <svg className="h-4 w-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {applicantName}
+                            </h5>
+                            <DocumentsList
+                              personName={applicantName}
+                              documents={docs}
+                              onDownload={downloadDocument}
+                              isLoading={documentsLoading}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Documentos de Garantores */}
+                  {Object.keys(guarantorsDocuments).length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide text-green-600">
+                        📋 Documentos de Avales
+                      </h4>
+                      <div className="space-y-4">
+                        {Object.entries(guarantorsDocuments).map(([guarantorName, docs]) => (
+                          <div key={guarantorName} className="border border-gray-200 rounded-lg p-4">
+                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <svg className="h-4 w-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {guarantorName}
+                            </h5>
+                            <DocumentsList
+                              personName={guarantorName}
+                              documents={docs}
+                              onDownload={downloadDocument}
+                              isLoading={documentsLoading}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

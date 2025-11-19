@@ -165,7 +165,7 @@ const getStatusLabel = (status: string): string => {
 const DocumentsList: React.FC<{
   personName: string;
   documents: any[];
-  onDownload: (url: string, name: string) => void;
+  onDownload: (document: any) => void;
   isLoading?: boolean;
 }> = ({ personName, documents, onDownload, isLoading }) => {
   if (!documents || documents.length === 0) {
@@ -201,7 +201,7 @@ const DocumentsList: React.FC<{
             </div>
           </div>
           <button
-            onClick={() => onDownload(doc.file_url, doc.file_name || `${doc.document_type}.pdf`)}
+            onClick={() => onDownload(doc)}
             disabled={isLoading}
             className="ml-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center space-x-1"
           >
@@ -879,25 +879,29 @@ export const PostulationAdminPanel: React.FC = () => {
 
     try {
       setDocumentsLoading(true);
-      
+
       // Obtener todos los documentos de postulantes para esta aplicación
       const { data: docs, error } = await supabase
         .from('applicant_documents')
         .select(`
           id,
-          application_id,
-          entity_type,
-          document_type,
+          applicant_id,
+          doc_type,
           file_name,
           file_url,
           storage_path,
           uploaded_at,
-          first_name,
-          paternal_last_name,
-          maternal_last_name,
-          company_name
+          notes,
+          application_applicants!inner(
+            application_id,
+            entity_type,
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            company_name
+          )
         `)
-        .eq('application_id', applicationId);
+        .eq('application_applicants.application_id', applicationId);
       
       if (error) {
         console.warn('⚠️ Error cargando documentos de postulantes:', error.message);
@@ -908,14 +912,32 @@ export const PostulationAdminPanel: React.FC = () => {
       const docsByApplicant: Record<string, any[]> = {};
       if (docs) {
         docs.forEach(doc => {
-          const applicantKey = doc.entity_type === 'natural' 
-            ? `${doc.first_name} ${doc.paternal_last_name} ${doc.maternal_last_name}`.trim()
-            : doc.company_name;
-          
+          const applicant = doc.application_applicants;
+          const applicantKey = applicant.entity_type === 'natural'
+            ? `${applicant.first_name} ${applicant.paternal_last_name} ${applicant.maternal_last_name}`.trim()
+            : applicant.company_name;
+
+          // Crear un objeto documento plano con la información necesaria
+          const documentItem = {
+            id: doc.id,
+            application_id: applicant.application_id,
+            entity_type: applicant.entity_type,
+            document_type: doc.doc_type,
+            file_name: doc.file_name,
+            file_url: doc.file_url,
+            storage_path: doc.storage_path,
+            uploaded_at: doc.uploaded_at,
+            first_name: applicant.first_name,
+            paternal_last_name: applicant.paternal_last_name,
+            maternal_last_name: applicant.maternal_last_name,
+            company_name: applicant.company_name,
+            notes: doc.notes
+          };
+
           if (!docsByApplicant[applicantKey]) {
             docsByApplicant[applicantKey] = [];
           }
-          docsByApplicant[applicantKey].push(doc);
+          docsByApplicant[applicantKey].push(documentItem);
         });
       }
       
@@ -937,25 +959,29 @@ export const PostulationAdminPanel: React.FC = () => {
 
     try {
       setDocumentsLoading(true);
-      
+
       // Obtener todos los documentos de garantores para esta aplicación
       const { data: docs, error } = await supabase
         .from('guarantor_documents')
         .select(`
           id,
-          application_id,
-          entity_type,
-          document_type,
+          guarantor_id,
+          doc_type,
           file_name,
           file_url,
           storage_path,
           uploaded_at,
-          first_name,
-          paternal_last_name,
-          maternal_last_name,
-          company_name
+          notes,
+          application_guarantors!inner(
+            application_id,
+            entity_type,
+            first_name,
+            paternal_last_name,
+            maternal_last_name,
+            company_name
+          )
         `)
-        .eq('application_id', applicationId);
+        .eq('application_guarantors.application_id', applicationId);
       
       if (error) {
         console.warn('⚠️ Error cargando documentos de garantores:', error.message);
@@ -966,14 +992,32 @@ export const PostulationAdminPanel: React.FC = () => {
       const docsByGuarantor: Record<string, any[]> = {};
       if (docs) {
         docs.forEach(doc => {
-          const guarantorKey = doc.entity_type === 'natural' 
-            ? `${doc.first_name} ${doc.paternal_last_name} ${doc.maternal_last_name}`.trim()
-            : doc.company_name;
-          
+          const guarantor = doc.application_guarantors;
+          const guarantorKey = guarantor.entity_type === 'natural'
+            ? `${guarantor.first_name} ${guarantor.paternal_last_name} ${guarantor.maternal_last_name}`.trim()
+            : guarantor.company_name;
+
+          // Crear un objeto documento plano con la información necesaria
+          const documentItem = {
+            id: doc.id,
+            application_id: guarantor.application_id,
+            entity_type: guarantor.entity_type,
+            document_type: doc.doc_type,
+            file_name: doc.file_name,
+            file_url: doc.file_url,
+            storage_path: doc.storage_path,
+            uploaded_at: doc.uploaded_at,
+            first_name: guarantor.first_name,
+            paternal_last_name: guarantor.paternal_last_name,
+            maternal_last_name: guarantor.maternal_last_name,
+            company_name: guarantor.company_name,
+            notes: doc.notes
+          };
+
           if (!docsByGuarantor[guarantorKey]) {
             docsByGuarantor[guarantorKey] = [];
           }
-          docsByGuarantor[guarantorKey].push(doc);
+          docsByGuarantor[guarantorKey].push(documentItem);
         });
       }
       
@@ -990,32 +1034,90 @@ export const PostulationAdminPanel: React.FC = () => {
   /**
    * Descarga un documento individual
    */
-  const downloadDocument = async (fileUrl: string, fileName: string) => {
+  const downloadDocument = async (doc: any) => {
     try {
+      const fileName = doc.file_name || `${doc.document_type}.pdf`;
       console.log('📥 Descargando documento:', fileName);
       toast.loading('Descargando archivo...', { id: 'download-doc' });
-      
-      // Si es una URL pública de Supabase storage
-      if (fileUrl.includes('supabase')) {
-        // Descargar directamente desde la URL
-        const response = await fetch(fileUrl);
-        if (!response.ok) throw new Error('Error al descargar');
-        
-        const blob = await response.blob();
+
+      // Si es un archivo de Supabase Storage (tiene storage_path)
+      if (doc.storage_path && doc.file_url?.includes('supabase')) {
+        // Extraer el path relativo del bucket desde la URL completa
+        let relativePath = doc.storage_path;
+
+        console.log('📂 Storage path original:', doc.storage_path);
+
+        // Si storage_path es una URL completa, extraer solo el path relativo
+        if (doc.storage_path.includes('/user-documents/')) {
+          const urlParts = doc.storage_path.split('/user-documents/');
+          if (urlParts.length > 1) {
+            relativePath = urlParts[1];
+          }
+        } else if (doc.storage_path.startsWith('http')) {
+          // Si es una URL completa pero no contiene /user-documents/, intentar extraer de la URL
+          try {
+            const url = new URL(doc.storage_path);
+            // Extraer el path después de /user-documents/
+            const pathMatch = url.pathname.match(/\/user-documents\/(.+)/);
+            if (pathMatch) {
+              relativePath = pathMatch[1];
+            }
+          } catch (e) {
+            console.warn('⚠️ No se pudo parsear la URL:', doc.storage_path);
+          }
+        }
+
+        console.log('📂 Path relativo extraído:', relativePath);
+
+        // Usar la API de Supabase Storage para descargar desde bucket privado
+        const { data, error } = await supabase.storage
+          .from('user-documents')
+          .download(relativePath);
+
+        if (error) {
+          console.error('Error descargando desde storage:', error);
+          throw new Error('Error al descargar desde storage');
+        }
+
+        // Crear blob URL y descargar
+        const blob = new Blob([data]);
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = fileName || 'documento';
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
-        
+
         toast.success('Documento descargado', { id: 'download-doc' });
+      } else if (doc.file_url) {
+        // Si es otra URL, intentar descarga directa o abrir en nueva pestaña
+        try {
+          const response = await fetch(doc.file_url);
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast.success('Documento descargado', { id: 'download-doc' });
+          } else {
+            // Si no se puede descargar, abrir en nueva pestaña
+            window.open(doc.file_url, '_blank');
+            toast.success('Abriendo documento...', { id: 'download-doc' });
+          }
+        } catch (error) {
+          // Fallback: abrir en nueva pestaña
+          window.open(doc.file_url, '_blank');
+          toast.success('Abriendo documento...', { id: 'download-doc' });
+        }
       } else {
-        // Si es otra URL, abrirla en nueva pestaña
-        window.open(fileUrl, '_blank');
-        toast.success('Abriendo documento...', { id: 'download-doc' });
+        throw new Error('No se encontró URL del documento');
       }
     } catch (error: any) {
       console.error('❌ Error descargando documento:', error);

@@ -38,3 +38,4 @@ CREATE INDEX IF NOT EXISTS idx_application_guarantors_unit_type ON application_g
 
 
 
+

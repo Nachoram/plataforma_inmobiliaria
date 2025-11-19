@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, User, AlertCircle, ExternalLink, Building, FileText, MessageSquarePlus, CheckCircle, Home, Plus, Minus, Building2, Users, UserCheck, Upload, Paperclip, Trash2 } from 'lucide-react';
 import { supabase, Property, Profile, formatPriceCLP, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, getCurrentProfile, getPropertyTypeInfo } from '../../lib/supabase';
 import { webhookClient } from '../../lib/webhook';
+import toast from 'react-hot-toast';
 
 interface RentalApplicationFormProps {
   property: Property;
@@ -351,6 +352,16 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     };
   }>({});
 
+  // Estados para documentos
+  const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, { file: File; name: string }>>({});
+  const [documentUploading, setDocumentUploading] = useState(false);
+  const [documentErrors, setDocumentErrors] = useState<Record<string, string>>({});
+
+  // Estados para documentos de avales
+  const [uploadedGuarantorDocuments, setUploadedGuarantorDocuments] = useState<Record<string, Record<string, { file: File; name: string }>>>({});
+  const [guarantorDocumentUploading, setGuarantorDocumentUploading] = useState(false);
+  const [guarantorDocumentErrors, setGuarantorDocumentErrors] = useState<Record<string, Record<string, string>>>({});
+
   // Usar constantes compartidas
   const regions = CHILE_REGIONS;
 
@@ -564,29 +575,29 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
     if (entityType === 'juridica') {
       return [
-        { type: 'informe_comercial', label: 'Informe Comercial (Dicom)', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
         { type: 'escritura_constitucion', label: 'Escritura de Constitución de Sociedad', required: true },
         { type: 'certificado_vigencia', label: 'Certificado de Vigencia', required: true },
         { type: 'rut_empresa', label: 'RUT Empresa', required: true },
-        { type: 'carpeta_tributaria', label: 'Carpeta Tributaria SII', required: true },
-        { type: 'poder_notarial', label: 'Poder Notarial Representante (si aplica)', required: false },
+        { type: 'carpeta_tributaria_sii', label: 'Carpeta Tributaria SII (últimas declaraciones)', required: true },
+        { type: 'poder_notarial', label: 'Poder Notarial del Representante (si aplica)', required: false },
         { type: 'cedula_representante', label: 'Cédula Representante Legal', required: true },
       ];
     } else if (entityType === 'natural' && workerType === 'independiente') {
       return [
-        { type: 'informe_comercial', label: 'Informe Comercial (Dicom)', required: true },
-        { type: 'carpeta_tributaria', label: 'Carpeta Tributaria SII', required: true },
-        { type: 'declaracion_renta', label: 'Declaración Anual de Renta', required: true },
-        { type: 'boletas_honorarios', label: '6 Últimas Boletas de Honorarios', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
+        { type: 'boletas_honorarios_6_meses', label: '6 Últimas Boletas de Honorarios', required: true },
+        { type: 'declaracion_renta_f22', label: 'Declaración Anual de Renta (F22)', required: true },
         { type: 'certificado_cotizaciones_independiente', label: 'Certificado de Cotizaciones Independientes', required: true },
+        { type: 'pagos_provisionales_f29', label: 'Documento de Pagos Provisionales Mensuales (F29)', required: true },
         { type: 'cedula_identidad', label: 'Cédula de Identidad', required: true },
       ];
     } else {
       // Persona Natural Dependiente (default)
       return [
-        { type: 'informe_comercial', label: 'Informe Comercial (Dicom)', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
         { type: 'liquidaciones_sueldo', label: 'Últimas 3 Liquidaciones de Sueldo', required: true },
-        { type: 'contrato_trabajo', label: 'Contrato de Trabajo', required: true },
+        { type: 'contrato_trabajo', label: 'Contrato de Trabajo Vigente', required: true },
         { type: 'certificado_antiguedad', label: 'Certificado de Antigüedad Laboral', required: true },
         { type: 'certificado_afp', label: 'Certificado de Cotizaciones Previsionales AFP', required: true },
         { type: 'cedula_identidad', label: 'Cédula de Identidad', required: true },
@@ -600,29 +611,29 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
     if (entityType === 'juridica') {
       return [
-        { type: 'informe_comercial', label: 'Informe Comercial (Dicom)', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
         { type: 'escritura_constitucion', label: 'Escritura de Constitución de Sociedad', required: true },
         { type: 'certificado_vigencia', label: 'Certificado de Vigencia', required: true },
         { type: 'rut_empresa', label: 'RUT Empresa', required: true },
-        { type: 'carpeta_tributaria', label: 'Carpeta Tributaria SII', required: true },
-        { type: 'poder_notarial', label: 'Poder Notarial Representante (si aplica)', required: false },
+        { type: 'carpeta_tributaria_sii', label: 'Carpeta Tributaria SII (últimas declaraciones)', required: true },
+        { type: 'poder_notarial', label: 'Poder Notarial del Representante (si aplica)', required: false },
         { type: 'cedula_representante', label: 'Cédula Representante Legal', required: true },
       ];
     } else if (entityType === 'natural' && workerType === 'independiente') {
       return [
-        { type: 'informe_comercial', label: 'Informe Comercial (Dicom)', required: true },
-        { type: 'carpeta_tributaria', label: 'Carpeta Tributaria SII', required: true },
-        { type: 'declaracion_renta', label: 'Declaración Anual de Renta', required: true },
-        { type: 'boletas_honorarios', label: '6 Últimas Boletas de Honorarios', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
+        { type: 'boletas_honorarios_6_meses', label: '6 Últimas Boletas de Honorarios', required: true },
+        { type: 'declaracion_renta_f22', label: 'Declaración Anual de Renta (F22)', required: true },
         { type: 'certificado_cotizaciones_independiente', label: 'Certificado de Cotizaciones Independientes', required: true },
+        { type: 'pagos_provisionales_f29', label: 'Documento de Pagos Provisionales Mensuales (F29)', required: true },
         { type: 'cedula_identidad', label: 'Cédula de Identidad', required: true },
       ];
     } else {
       // Persona Natural Dependiente (default)
       return [
-        { type: 'informe_comercial', label: 'Informe Comercial (Dicom)', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
         { type: 'liquidaciones_sueldo', label: 'Últimas 3 Liquidaciones de Sueldo', required: true },
-        { type: 'contrato_trabajo', label: 'Contrato de Trabajo', required: true },
+        { type: 'contrato_trabajo', label: 'Contrato de Trabajo Vigente', required: true },
         { type: 'certificado_antiguedad', label: 'Certificado de Antigüedad Laboral', required: true },
         { type: 'certificado_afp', label: 'Certificado de Cotizaciones Previsionales AFP', required: true },
         { type: 'cedula_identidad', label: 'Cédula de Identidad', required: true },
@@ -630,17 +641,361 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     }
   };
 
-  const handleDocumentUpload = (applicantIndex: number, documentType: string, file: File) => {
-    setApplicants(prev => prev.map((applicant, i) => {
-      if (i === applicantIndex) {
-        const documents = applicant.documents || getRequiredDocuments(applicant);
-        const updatedDocuments = documents.map(doc =>
-          doc.type === documentType ? { ...doc, file } : doc
-        );
-        return { ...applicant, documents: updatedDocuments };
+  /**
+   * Maneja la carga de un documento específico
+   */
+  const handleDocumentUpload = async (documentType: string, file: File) => {
+    try {
+      // Validar tamaño (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setDocumentErrors(prev => ({
+          ...prev,
+          [documentType]: 'Archivo demasiado grande. Máximo 10MB.'
+        }));
+        toast.error(`El archivo ${file.name} es muy grande (máximo 10MB)`);
+        return;
       }
-      return applicant;
-    }));
+
+      // Validar tipo de archivo
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        setDocumentErrors(prev => ({
+          ...prev,
+          [documentType]: 'Tipo de archivo no soportado. Solo PDF, JPG, PNG.'
+        }));
+        toast.error('Solo se aceptan PDF, JPG y PNG');
+        return;
+      }
+
+      // Guardar documento en estado
+      setUploadedDocuments(prev => ({
+        ...prev,
+        [documentType]: { file, name: file.name }
+      }));
+
+      // Limpiar errores
+      setDocumentErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[documentType];
+        return newErrors;
+      });
+
+      toast.success(`Documento ${documentType} cargado correctamente`);
+    } catch (error) {
+      console.error('Error al procesar documento:', error);
+      toast.error('Error al procesar el documento');
+    }
+  };
+
+  /**
+   * Elimina un documento cargado
+   */
+  const removeDocument = (documentType: string) => {
+    setUploadedDocuments(prev => {
+      const newDocs = { ...prev };
+      delete newDocs[documentType];
+      return newDocs;
+    });
+    toast.success('Documento eliminado');
+  };
+
+  /**
+   * Maneja la carga de un documento específico de un aval
+   */
+  const handleGuarantorDocumentUpload = async (guarantorId: string, documentType: string, file: File) => {
+    try {
+      // Validar tamaño (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setGuarantorDocumentErrors(prev => ({
+          ...prev,
+          [guarantorId]: {
+            ...prev[guarantorId],
+            [documentType]: 'Archivo demasiado grande. Máximo 10MB.'
+          }
+        }));
+        toast.error(`El archivo ${file.name} es muy grande (máximo 10MB)`);
+        return;
+      }
+
+      // Validar tipo de archivo
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        setGuarantorDocumentErrors(prev => ({
+          ...prev,
+          [guarantorId]: {
+            ...prev[guarantorId],
+            [documentType]: 'Tipo de archivo no soportado. Solo PDF, JPG, PNG.'
+          }
+        }));
+        toast.error('Solo se aceptan PDF, JPG y PNG');
+        return;
+      }
+
+      // Guardar documento en estado
+      setUploadedGuarantorDocuments(prev => ({
+        ...prev,
+        [guarantorId]: {
+          ...prev[guarantorId],
+          [documentType]: { file, name: file.name }
+        }
+      }));
+
+      // Limpiar errores
+      setGuarantorDocumentErrors(prev => {
+        const newErrors = { ...prev };
+        if (newErrors[guarantorId]) {
+          delete newErrors[guarantorId][documentType];
+          if (Object.keys(newErrors[guarantorId]).length === 0) {
+            delete newErrors[guarantorId];
+          }
+        }
+        return newErrors;
+      });
+
+      toast.success(`Documento ${documentType} del aval cargado correctamente`);
+    } catch (error) {
+      console.error('Error al procesar documento del aval:', error);
+      toast.error('Error al procesar el documento del aval');
+    }
+  };
+
+  /**
+   * Elimina un documento cargado de un aval
+   */
+  const removeGuarantorDocument = (guarantorId: string, documentType: string) => {
+    setUploadedGuarantorDocuments(prev => {
+      const newGuarantorDocs = { ...prev };
+      if (newGuarantorDocs[guarantorId]) {
+        delete newGuarantorDocs[guarantorId][documentType];
+        if (Object.keys(newGuarantorDocs[guarantorId]).length === 0) {
+          delete newGuarantorDocs[guarantorId];
+        }
+      }
+      return newGuarantorDocs;
+    });
+    toast.success('Documento del aval eliminado');
+  };
+
+  /**
+   * Sube los documentos a Supabase Storage
+   */
+  const uploadDocumentsToStorage = async (applicationId: string) => {
+    const uploadedUrls: Record<string, string> = {};
+
+    try {
+      setDocumentUploading(true);
+
+      for (const [docType, { file, name }] of Object.entries(uploadedDocuments)) {
+        try {
+          console.log(`📤 Subiendo documento: ${docType}`);
+
+          // Crear ruta única en storage (debe empezar con user ID por RLS)
+          const fileExt = file.name.split('.').pop();
+          const userId = (await supabase.auth.getUser()).data.user?.id;
+          const fileName = `${userId}/applications/${applicationId}/${docType}-${Date.now()}.${fileExt}`;
+
+          // Subir a bucket 'user-documents'
+          const { data, error } = await supabase.storage
+            .from('user-documents')
+            .upload(fileName, file);
+
+          if (error) {
+            console.error(`❌ Error subiendo ${docType}:`, error);
+            throw error;
+          }
+
+          // Obtener URL pública
+          const { data: publicUrlData } = supabase.storage
+            .from('user-documents')
+            .getPublicUrl(data.path);
+
+          uploadedUrls[docType] = publicUrlData.publicUrl;
+          console.log(`✅ ${docType} subido exitosamente`);
+
+        } catch (error: any) {
+          console.error(`Error uploading ${docType}:`, error);
+          throw new Error(`Error subiendo ${docType}: ${error.message}`);
+        }
+      }
+
+      return uploadedUrls;
+    } finally {
+      setDocumentUploading(false);
+    }
+  };
+
+  /**
+   * Guarda los documentos en la base de datos
+   */
+  const saveApplicationDocuments = async (
+    applicationId: string,
+    documentUrls: Record<string, string>
+  ): Promise<void> => {
+    try {
+      // Obtener el primer postulante de la aplicación
+      const { data: applicants, error: applicantsError } = await supabase
+        .from('application_applicants')
+        .select('id')
+        .eq('application_id', applicationId)
+        .order('created_at')
+        .limit(1);
+
+      if (applicantsError || !applicants || applicants.length === 0) {
+        throw new Error('No se pudo encontrar el postulante principal de la aplicación');
+      }
+
+      const mainApplicantId = applicants[0].id;
+
+      // Obtener usuario autenticado
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      const documentsToInsert = Object.entries(documentUrls).map(([docType, url]) => ({
+        applicant_id: mainApplicantId,
+        doc_type: docType,
+        file_name: uploadedDocuments[docType]?.name || docType,
+        file_url: url,
+        storage_path: url, // La URL pública es el path para este caso
+        file_size_bytes: uploadedDocuments[docType]?.file.size || 0,
+        mime_type: uploadedDocuments[docType]?.file.type || 'application/octet-stream',
+        uploaded_by: user.id,
+      }));
+
+      const { error } = await supabase
+        .from('applicant_documents')
+        .insert(documentsToInsert);
+
+      if (error) {
+        console.error('Error guardando documentos:', error);
+        throw error;
+      }
+
+      console.log('✅ Documentos guardados en base de datos');
+    } catch (error: any) {
+      console.error('Error al guardar documentos:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Sube los documentos de avales a Supabase Storage
+   */
+  const uploadGuarantorDocumentsToStorage = async (applicationId: string) => {
+    const uploadedUrls: Record<string, Record<string, string>> = {};
+
+    try {
+      setGuarantorDocumentUploading(true);
+
+      for (const [guarantorId, guarantorDocs] of Object.entries(uploadedGuarantorDocuments)) {
+        uploadedUrls[guarantorId] = {};
+
+        for (const [docType, { file, name }] of Object.entries(guarantorDocs)) {
+          try {
+            console.log(`📤 Subiendo documento: ${docType} del aval ${guarantorId}`);
+
+            // Crear ruta única en storage (debe empezar con user ID por RLS)
+            const fileExt = file.name.split('.').pop();
+            const userId = (await supabase.auth.getUser()).data.user?.id;
+            const fileName = `${userId}/applications/${applicationId}/guarantors/${guarantorId}/${docType}-${Date.now()}.${fileExt}`;
+
+            // Subir a bucket 'user-documents'
+            const { data, error } = await supabase.storage
+              .from('user-documents')
+              .upload(fileName, file);
+
+            if (error) {
+              console.error(`❌ Error subiendo ${docType} del aval ${guarantorId}:`, error);
+              throw error;
+            }
+
+            // Obtener URL pública
+            const { data: publicUrlData } = supabase.storage
+              .from('user-documents')
+              .getPublicUrl(data.path);
+
+            uploadedUrls[guarantorId][docType] = publicUrlData.publicUrl;
+            console.log(`✅ ${docType} del aval ${guarantorId} subido exitosamente`);
+
+          } catch (error: any) {
+            console.error(`Error uploading ${docType} for guarantor ${guarantorId}:`, error);
+            throw new Error(`Error subiendo ${docType} del aval ${guarantorId}: ${error.message}`);
+          }
+        }
+      }
+
+      return uploadedUrls;
+    } finally {
+      setGuarantorDocumentUploading(false);
+    }
+  };
+
+  /**
+   * Guarda los documentos de avales en la base de datos
+   */
+  const saveGuarantorApplicationDocuments = async (
+    applicationId: string,
+    documentUrls: Record<string, Record<string, string>>
+  ): Promise<void> => {
+    try {
+      // Obtener los avales de la aplicación
+      const { data: guarantors, error: guarantorsError } = await supabase
+        .from('application_guarantors')
+        .select('id')
+        .eq('application_id', applicationId)
+        .order('created_at');
+
+      if (guarantorsError || !guarantors) {
+        throw new Error('No se pudieron encontrar los avales de la aplicación');
+      }
+
+      // Obtener usuario autenticado
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      const documentsToInsert: any[] = [];
+
+      // Crear registros para cada aval y sus documentos
+      for (const [guarantorIndex, guarantor] of guarantors.entries()) {
+        const guarantorKey = Object.keys(documentUrls)[guarantorIndex];
+        if (!guarantorKey || !documentUrls[guarantorKey]) continue;
+
+        const guarantorDocs = documentUrls[guarantorKey];
+        const stateGuarantorDocs = uploadedGuarantorDocuments[guarantorKey];
+
+        for (const [docType, url] of Object.entries(guarantorDocs)) {
+          documentsToInsert.push({
+            guarantor_id: guarantor.id,
+            doc_type: docType,
+            file_name: stateGuarantorDocs?.[docType]?.name || docType,
+            file_url: url,
+            storage_path: url, // La URL pública es el path para este caso
+            file_size_bytes: stateGuarantorDocs?.[docType]?.file.size || 0,
+            mime_type: stateGuarantorDocs?.[docType]?.file.type || 'application/octet-stream',
+            uploaded_by: user.id,
+          });
+        }
+      }
+
+      if (documentsToInsert.length > 0) {
+        const { error } = await supabase
+          .from('guarantor_documents')
+          .insert(documentsToInsert);
+
+        if (error) {
+          console.error('Error guardando documentos de avales:', error);
+          throw error;
+        }
+
+        console.log('✅ Documentos de avales guardados en base de datos');
+      }
+    } catch (error: any) {
+      console.error('Error al guardar documentos de avales:', error);
+      throw error;
+    }
   };
 
   const handleDocumentRemove = (applicantIndex: number, documentType: string) => {
@@ -656,31 +1011,6 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     }));
   };
 
-  const handleGuarantorDocumentUpload = (guarantorIndex: number, documentType: string, file: File) => {
-    setGuarantors(prev => prev.map((guarantor, i) => {
-      if (i === guarantorIndex) {
-        const documents = guarantor.documents || getRequiredDocumentsForGuarantor(guarantor);
-        const updatedDocuments = documents.map(doc =>
-          doc.type === documentType ? { ...doc, file } : doc
-        );
-        return { ...guarantor, documents: updatedDocuments };
-      }
-      return guarantor;
-    }));
-  };
-
-  const handleGuarantorDocumentRemove = (guarantorIndex: number, documentType: string) => {
-    setGuarantors(prev => prev.map((guarantor, i) => {
-      if (i === guarantorIndex) {
-        const documents = guarantor.documents || getRequiredDocumentsForGuarantor(guarantor);
-        const updatedDocuments = documents.map(doc =>
-          doc.type === documentType ? { ...doc, file: undefined, url: undefined } : doc
-        );
-        return { ...guarantor, documents: updatedDocuments };
-      }
-      return guarantor;
-    }));
-  };
 
   // Funciones para subir documentos
   const uploadApplicantDocuments = async (
@@ -743,65 +1073,6 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     }
   };
 
-  const uploadGuarantorDocuments = async (
-    guarantorId: string,
-    documents: GuarantorDocument[],
-    userId: string,
-    guarantorIndex: number
-  ): Promise<void> => {
-    if (!documents || documents.length === 0) return;
-
-    for (const doc of documents) {
-      if (!doc.file) continue;
-
-      try {
-        // Generar nombre único para el archivo
-        const fileExt = doc.file.name.split('.').pop();
-        const fileName = `${userId}/guarantors/${guarantorId}/${doc.type}_${Date.now()}.${fileExt}`;
-
-        // Subir archivo a Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('user-documents')
-          .upload(fileName, doc.file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error(`Error uploading guarantor document ${doc.type}:`, uploadError);
-          continue;
-        }
-
-        // Obtener URL pública del archivo
-        const { data: urlData } = supabase.storage
-          .from('user-documents')
-          .getPublicUrl(fileName);
-
-        // Guardar registro del documento en la tabla guarantor_documents
-        const { error: docError } = await supabase
-          .from('guarantor_documents')
-          .insert({
-            guarantor_id: guarantorId,
-            doc_type: doc.type,
-            file_name: doc.file.name,
-            file_url: urlData.publicUrl,
-            storage_path: fileName,
-            file_size_bytes: doc.file.size,
-            mime_type: doc.file.type,
-            uploaded_by: userId,
-            uploaded_at: new Date().toISOString()
-          });
-
-        if (docError) {
-          console.error(`Error saving guarantor document record ${doc.type}:`, docError);
-        }
-
-        console.log(`✅ Guarantor document ${doc.type} uploaded successfully`);
-      } catch (error) {
-        console.error(`Error processing guarantor document ${doc.type}:`, error);
-      }
-    }
-  };
 
   // Funciones de validación
   const validateApplicant = (applicant: ApplicantData): string[] => {
@@ -834,14 +1105,12 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       }
     }
 
-    // Validación de documentos requeridos
+    // Validación de documentos requeridos (usando el sistema global de documentos)
     const requiredDocs = getRequiredDocuments(applicant);
-    const applicantDocs = applicant.documents || [];
 
     requiredDocs.forEach(reqDoc => {
       if (reqDoc.required) {
-        const uploadedDoc = applicantDocs.find(d => d.type === reqDoc.type);
-        if (!uploadedDoc || (!uploadedDoc.file && !uploadedDoc.url)) {
+        if (!uploadedDocuments[reqDoc.type]) {
           errors.push(`Documento requerido faltante: ${reqDoc.label}`);
         }
       }
@@ -850,7 +1119,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     return errors;
   };
 
-  const validateGuarantor = (guarantor: GuarantorData): string[] => {
+  const validateGuarantor = (guarantor: GuarantorData, index?: number): string[] => {
     const errors: string[] = [];
 
     // Validaciones comunes
@@ -882,14 +1151,13 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       }
     }
 
-    // Validación de documentos requeridos para avales
+    // Validación de documentos requeridos para avales (usando el sistema global de documentos)
     const requiredDocs = getRequiredDocumentsForGuarantor(guarantor);
-    const guarantorDocs = guarantor.documents || [];
+    const guarantorId = guarantor.id || `guarantor-${index + 1}`;
 
     requiredDocs.forEach(reqDoc => {
       if (reqDoc.required) {
-        const uploadedDoc = guarantorDocs.find(d => d.type === reqDoc.type);
-        if (!uploadedDoc || (!uploadedDoc.file && !uploadedDoc.url)) {
+        if (!uploadedGuarantorDocuments[guarantorId]?.[reqDoc.type]) {
           errors.push(`Documento requerido faltante: ${reqDoc.label}`);
         }
       }
@@ -917,7 +1185,7 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
     // Validar avales
     guarantors.forEach((guarantor, index) => {
       const guarantorId = guarantor.id || `guarantor-${index + 1}`;
-      const errors = validateGuarantor(guarantor);
+      const errors = validateGuarantor(guarantor, index);
       if (errors.length > 0) {
         newValidationErrors.guarantors[guarantorId] = errors;
       }
@@ -1536,67 +1804,67 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         )}
 
         {/* Documentos requeridos del postulante */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText className="h-5 w-5 text-purple-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Documentos Requeridos</h3>
-          </div>
+        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="font-semibold text-yellow-900 mb-4 flex items-center">
+            <FileText className="h-5 w-5 mr-2" />
+            Documentos Requeridos
+          </h4>
 
-          <div className="grid gap-4">
-            {getRequiredDocuments(applicant).map((doc) => {
-              const uploadedDoc = applicant.documents?.find(d => d.type === doc.type);
-              const isUploaded = uploadedDoc && (uploadedDoc.file || uploadedDoc.url);
-
-              return (
-                <div key={doc.type} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">{doc.label}</span>
-                      {doc.required && (
-                        <span className="text-xs text-red-600 font-medium">*</span>
-                      )}
-                    </div>
-                    {isUploaded && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <Paperclip className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-700">
-                          {uploadedDoc.file?.name || 'Documento subido'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {isUploaded ? (
-                      <button
-                        type="button"
-                        onClick={() => handleDocumentRemove(index, doc.type)}
-                        className="flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Remover
-                      </button>
-                    ) : (
-                      <label className="flex items-center gap-1 px-3 py-1 text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors cursor-pointer">
-                        <Upload className="h-4 w-4" />
-                        Subir
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              handleDocumentUpload(index, doc.type, file);
-                            }
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                    )}
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {getRequiredDocuments(applicant).map((doc) => (
+              <div key={doc.type} className="p-3 bg-white rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-medium text-sm text-gray-800">
+                    {doc.label}
+                  </label>
+                  {uploadedDocuments[doc.type] ? (
+                    <span className="text-green-600 flex items-center text-xs">
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Cargado
+                    </span>
+                  ) : doc.required ? (
+                    <span className="text-red-500 text-xs">Requerido</span>
+                  ) : (
+                    <span className="text-gray-400 text-xs">Opcional</span>
+                  )}
                 </div>
-              );
-            })}
+
+                {uploadedDocuments[doc.type] ? (
+                  <div className="flex items-center justify-between bg-green-50 p-2 rounded mb-2">
+                    <span className="text-xs text-gray-700 truncate">
+                      {uploadedDocuments[doc.type].name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeDocument(doc.type)}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : null}
+
+                <label className="block">
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleDocumentUpload(doc.type, file);
+                    }}
+                    className="hidden"
+                    disabled={documentUploading}
+                  />
+                  <div className="cursor-pointer px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-center transition-colors">
+                    {uploadedDocuments[doc.type] ? 'Cambiar Archivo' : 'Seleccionar Archivo'}
+                  </div>
+                </label>
+
+                {documentErrors[doc.type] && (
+                  <p className="text-red-500 text-xs mt-1">{documentErrors[doc.type]}</p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -2180,64 +2448,69 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         </div>
 
         {/* Documentos requeridos del aval */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText className="h-5 w-5 text-emerald-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Documentos Requeridos del Aval</h3>
-          </div>
+        <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 className="font-semibold text-green-900 mb-4 flex items-center">
+            <FileText className="h-5 w-5 mr-2" />
+            Documentos Requeridos del Aval
+          </h4>
 
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {getRequiredDocumentsForGuarantor(guarantor).map((doc) => {
-              const uploadedDoc = guarantor.documents?.find(d => d.type === doc.type);
-              const isUploaded = uploadedDoc && (uploadedDoc.file || uploadedDoc.url);
+              const guarantorId = guarantor.id || `guarantor-${index + 1}`;
+              const isUploaded = uploadedGuarantorDocuments[guarantorId]?.[doc.type];
 
               return (
-                <div key={doc.type} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">{doc.label}</span>
-                      {doc.required && (
-                        <span className="text-xs text-red-600 font-medium">*</span>
-                      )}
-                    </div>
-                    {isUploaded && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <Paperclip className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-700">
-                          {uploadedDoc.file?.name || 'Documento subido'}
-                        </span>
-                      </div>
+                <div key={doc.type} className="p-3 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="font-medium text-sm text-gray-800">
+                      {doc.label}
+                    </label>
+                    {isUploaded ? (
+                      <span className="text-green-600 flex items-center text-xs">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Cargado
+                      </span>
+                    ) : doc.required ? (
+                      <span className="text-red-500 text-xs">Requerido</span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">Opcional</span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {isUploaded ? (
+                  {isUploaded ? (
+                    <div className="flex items-center justify-between bg-green-50 p-2 rounded mb-2">
+                      <span className="text-xs text-gray-700 truncate">
+                        {uploadedGuarantorDocuments[guarantorId][doc.type].name}
+                      </span>
                       <button
                         type="button"
-                        onClick={() => handleGuarantorDocumentRemove(index, doc.type)}
-                        className="flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                        onClick={() => removeGuarantorDocument(guarantorId, doc.type)}
+                        className="text-red-500 hover:text-red-700 text-sm"
                       >
-                        <Trash2 className="h-4 w-4" />
-                        Remover
+                        ✕
                       </button>
-                    ) : (
-                      <label className="flex items-center gap-1 px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer">
-                        <Upload className="h-4 w-4" />
-                        Subir
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              handleGuarantorDocumentUpload(index, doc.type, file);
-                            }
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
+
+                  <label className="block">
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleGuarantorDocumentUpload(guarantorId, doc.type, file);
+                      }}
+                      className="hidden"
+                      disabled={guarantorDocumentUploading}
+                    />
+                    <div className="cursor-pointer px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-center transition-colors">
+                      {isUploaded ? 'Cambiar Archivo' : 'Seleccionar Archivo'}
+                    </div>
+                  </label>
+
+                  {guarantorDocumentErrors[guarantorId]?.[doc.type] && (
+                    <p className="text-red-500 text-xs mt-1">{guarantorDocumentErrors[guarantorId][doc.type]}</p>
+                  )}
                 </div>
               );
             })}
@@ -2593,35 +2866,31 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         }
       }
 
-      // PASO 6: Subir documentos de avales
-      console.log('📄 Subiendo documentos de avales...');
-
-      if (guarantors.length > 0) {
-        // Obtener los IDs de los avales creados
-        const { data: createdGuarantors, error: fetchGuarantorsError } = await supabase
-          .from('application_guarantors')
-          .select('id, application_id')
-          .eq('application_id', application.id)
-          .order('created_at');
-
-        if (fetchGuarantorsError) {
-          console.error('❌ Error obteniendo IDs de avales:', fetchGuarantorsError);
-          throw new Error(`Error obteniendo avales: ${fetchGuarantorsError.message}`);
+      // PASO 5: Subir documentos de postulantes si hay alguno cargado
+      if (Object.keys(uploadedDocuments).length > 0) {
+        try {
+          console.log('📄 Subiendo documentos de postulantes...');
+          const documentUrls = await uploadDocumentsToStorage(application.id);
+          await saveApplicationDocuments(application.id, documentUrls);
+          console.log('✅ Documentos de postulantes cargados exitosamente');
+        } catch (error: any) {
+          console.error('Error subiendo documentos de postulantes:', error);
+          toast.error('Postulación guardada pero hubo error al subir documentos. Intenta más tarde.');
+          // No lanzamos error aquí para no detener el proceso de postulación
         }
+      }
 
-        // Subir documentos de cada aval
-        for (let i = 0; i < guarantors.length; i++) {
-          const guarantor = guarantors[i];
-          const createdGuarantor = createdGuarantors[i];
-
-          if (guarantor.documents && guarantor.documents.length > 0) {
-            await uploadGuarantorDocuments(
-              createdGuarantor.id,
-              guarantor.documents,
-              user.id,
-              i
-            );
-          }
+      // PASO 6: Subir documentos de avales
+      if (Object.keys(uploadedGuarantorDocuments).length > 0) {
+        try {
+          console.log('📄 Subiendo documentos de avales...');
+          const guarantorDocumentUrls = await uploadGuarantorDocumentsToStorage(application.id);
+          await saveGuarantorApplicationDocuments(application.id, guarantorDocumentUrls);
+          console.log('✅ Documentos de avales cargados exitosamente');
+        } catch (error: any) {
+          console.error('Error subiendo documentos de avales:', error);
+          toast.error('Postulación guardada pero hubo error al subir documentos de avales. Intenta más tarde.');
+          // No lanzamos error aquí para no detener el proceso de postulación
         }
       }
 

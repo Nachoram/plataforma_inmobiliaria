@@ -1,7 +1,7 @@
 -- =====================================================
 -- MIGRACION: Storage Bucket para Documentos de Usuario
--- Descripción: Crea bucket y políticas para documentos
---             de perfil de usuario y avales
+-- Descripción: Crea bucket para documentos de usuario
+-- NOTA: Las políticas deben configurarse desde el Dashboard de Supabase
 -- =====================================================
 
 -- 1. Crear bucket para documentos de usuario
@@ -17,40 +17,25 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 2. Políticas de acceso para el bucket
+-- 2. Verificación y mensaje
 -- =====================================================
 
--- Los usuarios pueden ver sus propios documentos
-CREATE POLICY "Users can view their own documents"
-ON storage.objects FOR SELECT
-USING (
-  bucket_id = 'user-documents' AND
-  auth.uid()::text = split_part(name, '/', 1)
-);
-
--- Los usuarios pueden subir sus propios documentos
-CREATE POLICY "Users can upload their own documents"
-ON storage.objects FOR INSERT
-WITH CHECK (
-  bucket_id = 'user-documents' AND
-  auth.uid()::text = split_part(name, '/', 1)
-);
-
--- Los usuarios pueden actualizar sus propios documentos
-CREATE POLICY "Users can update their own documents"
-ON storage.objects FOR UPDATE
-USING (
-  bucket_id = 'user-documents' AND
-  auth.uid()::text = split_part(name, '/', 1)
-);
-
--- Los usuarios pueden eliminar sus propios documentos
-CREATE POLICY "Users can delete their own documents"
-ON storage.objects FOR DELETE
-USING (
-  bucket_id = 'user-documents' AND
-  auth.uid()::text = split_part(name, '/', 1)
-);
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Bucket user-documents creado exitosamente';
+  RAISE NOTICE '';
+  RAISE NOTICE '⚠️  IMPORTANTE: Configura las políticas manualmente desde el Dashboard de Supabase:';
+  RAISE NOTICE '';
+  RAISE NOTICE '1. Ve a Storage → user-documents → Policies';
+  RAISE NOTICE '2. Crea estas 4 políticas:';
+  RAISE NOTICE '';
+  RAISE NOTICE '   📖 SELECT: bucket_id = user-documents AND auth.uid()::text = split_part(name, ''/'', 1)';
+  RAISE NOTICE '   📤 INSERT: bucket_id = user-documents AND auth.uid()::text = split_part(name, ''/'', 1)';
+  RAISE NOTICE '   ✏️  UPDATE: bucket_id = user-documents AND auth.uid()::text = split_part(name, ''/'', 1)';
+  RAISE NOTICE '   🗑️  DELETE: bucket_id = user-documents AND auth.uid()::text = split_part(name, ''/'', 1)';
+  RAISE NOTICE '';
+  RAISE NOTICE '3. Una vez configuradas las políticas, los documentos se subirán correctamente.';
+END $$;
 
 -- 3. Comentarios
 -- =====================================================

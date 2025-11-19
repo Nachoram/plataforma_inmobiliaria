@@ -313,8 +313,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         availableDays: [],
         availableTimeSlots: [],
 
-        // Documentos - inicializar con documentos existentes o objeto vacío
-      documents: initialData.documents || {},
+        // Documentos - inicializar con documentos existentes o array vacío
+      documents: Array.isArray(initialData.documents) ? initialData.documents : [],
       };
 
       console.log('✅ GET INITIAL FORM DATA: Final initialized formData:', {
@@ -697,24 +697,36 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   // Handle document upload
   const handleDocumentUpload = (documentType: string, file: File) => {
     // Actualizar el estado del formulario con el archivo subido
-    setFormData(prev => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        [documentType]: file
-      }
-    }));
+    setFormData(prev => {
+      // Ensure documents is an array (handle migration from object format)
+      const currentDocuments = Array.isArray(prev.documents) ? prev.documents : [];
+
+      return {
+        ...prev,
+        documents: [
+          ...currentDocuments.filter(doc => doc.document_type !== documentType), // Remove existing document of same type
+          {
+            id: `${documentType}-${Date.now()}`, // Generate temporary ID
+            document_type: documentType,
+            file_name: file.name,
+            created_at: new Date().toISOString(),
+            file: file // Store the file for upload
+          }
+        ]
+      };
+    });
     console.log('Document upload:', documentType, file.name);
   };
 
   // Remove document
   const removeDocument = (documentType: string) => {
     setFormData(prev => {
-      const newDocuments = { ...prev.documents };
-      delete newDocuments[documentType];
+      // Ensure documents is an array (handle migration from object format)
+      const currentDocuments = Array.isArray(prev.documents) ? prev.documents : [];
+
       return {
         ...prev,
-        documents: newDocuments
+        documents: currentDocuments.filter(doc => doc.document_type !== documentType)
       };
     });
     console.log('Remove document:', documentType);
@@ -3210,7 +3222,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
             <div className="space-y-4">
               {/* Documentos Existentes */}
-              {formData.documents && Object.keys(formData.documents).length > 0 && (
+              {formData.documents && formData.documents.length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Documentos Existentes</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

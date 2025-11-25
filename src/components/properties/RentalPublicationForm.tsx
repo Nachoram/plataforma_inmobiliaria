@@ -1553,14 +1553,14 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
   }
 
   return (
-    <div className="max-w-6xl mx-auto publication-form">
+    <div className="max-w-7xl mx-auto publication-form">
       <div className="bg-white rounded-xl shadow-sm border">
         {/* Header */}
-        <div className="p-6 border-b bg-gradient-to-r from-emerald-50 to-green-50">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="p-8 border-b bg-blue-600">
+          <h1 className="text-3xl font-bold text-white mb-2">
             {isEditing ? 'Modificar Propiedad en Arriendo' : 'Publicar Propiedad en Arriendo'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-blue-100">
             {isEditing
               ? 'Actualiza la información de tu propiedad en arriendo'
               : 'Completa todos los campos para publicar tu propiedad en arriendo'
@@ -1568,7 +1568,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6">
           {/* Sección 1: Información de la Propiedad */}
           <div className="space-y-4">
             <div className="border-b pb-2">
@@ -3344,18 +3344,18 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           )}
 
           {/* Botones de acción */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-8 border-t">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 pt-8">
             <button
               type="button"
               onClick={() => navigate('/portfolio')}
-              className="w-full sm:w-auto px-8 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="w-full sm:w-auto px-10 py-3 text-sm border-2 border-gray-300 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading || uploading}
-              className="w-full sm:w-auto px-8 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center space-x-2"
+              className="w-full sm:w-auto px-10 py-3 text-sm bg-green-600 text-white rounded-full hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center space-x-2"
             >
               {loading ? (
                 <>

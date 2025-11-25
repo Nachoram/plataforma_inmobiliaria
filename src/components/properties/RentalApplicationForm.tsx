@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, User, AlertCircle, ExternalLink, Building, FileText, MessageSquarePlus, CheckCircle, Home, Plus, Minus, Building2, Users, UserCheck, Upload, Paperclip, Trash2 } from 'lucide-react';
-import { supabase, Property, Profile, formatPriceCLP, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, getCurrentProfile, getPropertyTypeInfo } from '../../lib/supabase';
+import { supabase, Property, Profile, formatPriceCLP, CHILE_REGIONS, MARITAL_STATUS_OPTIONS, FILE_SIZE_LIMITS, getCurrentProfile, getPropertyTypeInfo, uploadFile } from '../../lib/supabase';
 import { webhookClient } from '../../lib/webhook';
 import toast from 'react-hot-toast';
+import { ProgressiveDocumentUpload, DocumentType } from '../documents/ProgressiveDocumentUpload';
 
 interface RentalApplicationFormProps {
   property: Property;
@@ -115,6 +116,18 @@ interface GuarantorData {
   documents?: GuarantorDocument[];
 }
 
+const APPLICATION_DOCUMENTS: DocumentType[] = [
+  { id: 'cedula', label: 'Cédula de Identidad', type: 'cedula_identidad', optional: true },
+  { id: 'dicom', label: 'Informe Comercial (Dicom 360)', type: 'dicom_360', optional: true },
+  { id: 'liquidaciones', label: 'Últimas 3 Liquidaciones de Sueldo', type: 'liquidaciones_sueldo', optional: true },
+  { id: 'contrato', label: 'Contrato de Trabajo Vigente', type: 'contrato_trabajo', optional: true },
+  { id: 'antiguedad', label: 'Certificado de Antigüedad Laboral', type: 'certificado_antiguedad', optional: true },
+  { id: 'afp', label: 'Certificado de Cotizaciones AFP', type: 'certificado_afp', optional: true },
+  { id: 'boletas', label: '6 Últimas Boletas de Honorarios', type: 'boletas_honorarios_6_meses', optional: true },
+  { id: 'renta', label: 'Declaración Anual de Renta (F22)', type: 'declaracion_renta_f22', optional: true },
+  { id: 'carpeta', label: 'Carpeta Tributaria SII', type: 'carpeta_tributaria_sii', optional: true },
+];
+
 const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   property,
   onSuccess,
@@ -123,6 +136,8 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
   existingApplicationId
 }) => {
   const [loading, setLoading] = useState(false);
+  const [showDocUpload, setShowDocUpload] = useState(false);
+  const [createdApplicationId, setCreatedApplicationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
@@ -575,32 +590,32 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
     if (entityType === 'juridica') {
       return [
-        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
-        { type: 'escritura_constitucion', label: 'Escritura de Constitución de Sociedad', required: true },
-        { type: 'certificado_vigencia', label: 'Certificado de Vigencia', required: true },
-        { type: 'rut_empresa', label: 'RUT Empresa', required: true },
-        { type: 'carpeta_tributaria_sii', label: 'Carpeta Tributaria SII (últimas declaraciones)', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: false },
+        { type: 'escritura_constitucion', label: 'Escritura de Constitución de Sociedad', required: false },
+        { type: 'certificado_vigencia', label: 'Certificado de Vigencia', required: false },
+        { type: 'rut_empresa', label: 'RUT Empresa', required: false },
+        { type: 'carpeta_tributaria_sii', label: 'Carpeta Tributaria SII (últimas declaraciones)', required: false },
         { type: 'poder_notarial', label: 'Poder Notarial del Representante (si aplica)', required: false },
-        { type: 'cedula_representante', label: 'Cédula Representante Legal', required: true },
+        { type: 'cedula_representante', label: 'Cédula Representante Legal', required: false },
       ];
     } else if (entityType === 'natural' && workerType === 'independiente') {
       return [
-        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
-        { type: 'boletas_honorarios_6_meses', label: '6 Últimas Boletas de Honorarios', required: true },
-        { type: 'declaracion_renta_f22', label: 'Declaración Anual de Renta (F22)', required: true },
-        { type: 'certificado_cotizaciones_independiente', label: 'Certificado de Cotizaciones Independientes', required: true },
-        { type: 'pagos_provisionales_f29', label: 'Documento de Pagos Provisionales Mensuales (F29)', required: true },
-        { type: 'cedula_identidad', label: 'Cédula de Identidad', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: false },
+        { type: 'boletas_honorarios_6_meses', label: '6 Últimas Boletas de Honorarios', required: false },
+        { type: 'declaracion_renta_f22', label: 'Declaración Anual de Renta (F22)', required: false },
+        { type: 'certificado_cotizaciones_independiente', label: 'Certificado de Cotizaciones Independientes', required: false },
+        { type: 'pagos_provisionales_f29', label: 'Documento de Pagos Provisionales Mensuales (F29)', required: false },
+        { type: 'cedula_identidad', label: 'Cédula de Identidad', required: false },
       ];
     } else {
       // Persona Natural Dependiente (default)
       return [
-        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
-        { type: 'liquidaciones_sueldo', label: 'Últimas 3 Liquidaciones de Sueldo', required: true },
-        { type: 'contrato_trabajo', label: 'Contrato de Trabajo Vigente', required: true },
-        { type: 'certificado_antiguedad', label: 'Certificado de Antigüedad Laboral', required: true },
-        { type: 'certificado_afp', label: 'Certificado de Cotizaciones Previsionales AFP', required: true },
-        { type: 'cedula_identidad', label: 'Cédula de Identidad', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: false },
+        { type: 'liquidaciones_sueldo', label: 'Últimas 3 Liquidaciones de Sueldo', required: false },
+        { type: 'contrato_trabajo', label: 'Contrato de Trabajo Vigente', required: false },
+        { type: 'certificado_antiguedad', label: 'Certificado de Antigüedad Laboral', required: false },
+        { type: 'certificado_afp', label: 'Certificado de Cotizaciones Previsionales AFP', required: false },
+        { type: 'cedula_identidad', label: 'Cédula de Identidad', required: false },
       ];
     }
   };
@@ -611,32 +626,32 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
     if (entityType === 'juridica') {
       return [
-        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
-        { type: 'escritura_constitucion', label: 'Escritura de Constitución de Sociedad', required: true },
-        { type: 'certificado_vigencia', label: 'Certificado de Vigencia', required: true },
-        { type: 'rut_empresa', label: 'RUT Empresa', required: true },
-        { type: 'carpeta_tributaria_sii', label: 'Carpeta Tributaria SII (últimas declaraciones)', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: false },
+        { type: 'escritura_constitucion', label: 'Escritura de Constitución de Sociedad', required: false },
+        { type: 'certificado_vigencia', label: 'Certificado de Vigencia', required: false },
+        { type: 'rut_empresa', label: 'RUT Empresa', required: false },
+        { type: 'carpeta_tributaria_sii', label: 'Carpeta Tributaria SII (últimas declaraciones)', required: false },
         { type: 'poder_notarial', label: 'Poder Notarial del Representante (si aplica)', required: false },
-        { type: 'cedula_representante', label: 'Cédula Representante Legal', required: true },
+        { type: 'cedula_representante', label: 'Cédula Representante Legal', required: false },
       ];
     } else if (entityType === 'natural' && workerType === 'independiente') {
       return [
-        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
-        { type: 'boletas_honorarios_6_meses', label: '6 Últimas Boletas de Honorarios', required: true },
-        { type: 'declaracion_renta_f22', label: 'Declaración Anual de Renta (F22)', required: true },
-        { type: 'certificado_cotizaciones_independiente', label: 'Certificado de Cotizaciones Independientes', required: true },
-        { type: 'pagos_provisionales_f29', label: 'Documento de Pagos Provisionales Mensuales (F29)', required: true },
-        { type: 'cedula_identidad', label: 'Cédula de Identidad', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: false },
+        { type: 'boletas_honorarios_6_meses', label: '6 Últimas Boletas de Honorarios', required: false },
+        { type: 'declaracion_renta_f22', label: 'Declaración Anual de Renta (F22)', required: false },
+        { type: 'certificado_cotizaciones_independiente', label: 'Certificado de Cotizaciones Independientes', required: false },
+        { type: 'pagos_provisionales_f29', label: 'Documento de Pagos Provisionales Mensuales (F29)', required: false },
+        { type: 'cedula_identidad', label: 'Cédula de Identidad', required: false },
       ];
     } else {
       // Persona Natural Dependiente (default)
       return [
-        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: true },
-        { type: 'liquidaciones_sueldo', label: 'Últimas 3 Liquidaciones de Sueldo', required: true },
-        { type: 'contrato_trabajo', label: 'Contrato de Trabajo Vigente', required: true },
-        { type: 'certificado_antiguedad', label: 'Certificado de Antigüedad Laboral', required: true },
-        { type: 'certificado_afp', label: 'Certificado de Cotizaciones Previsionales AFP', required: true },
-        { type: 'cedula_identidad', label: 'Cédula de Identidad', required: true },
+        { type: 'dicom_360', label: 'Informe Comercial (Dicom 360)', required: false },
+        { type: 'liquidaciones_sueldo', label: 'Últimas 3 Liquidaciones de Sueldo', required: false },
+        { type: 'contrato_trabajo', label: 'Contrato de Trabajo Vigente', required: false },
+        { type: 'certificado_antiguedad', label: 'Certificado de Antigüedad Laboral', required: false },
+        { type: 'certificado_afp', label: 'Certificado de Cotizaciones Previsionales AFP', required: false },
+        { type: 'cedula_identidad', label: 'Cédula de Identidad', required: false },
       ];
     }
   };
@@ -789,28 +804,26 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
         try {
           console.log(`📤 Subiendo documento: ${docType}`);
 
-          // Crear ruta única en storage (debe empezar con user ID por RLS)
-          const fileExt = file.name.split('.').pop();
+          // Subir a bucket 'user-documents' con renombrado automático
           const userId = (await supabase.auth.getUser()).data.user?.id;
-          const fileName = `${userId}/applications/${applicationId}/${docType}-${Date.now()}.${fileExt}`;
+          
+          const { publicUrl } = await uploadFile(
+            file,
+            'user-documents',
+            userId || 'anonymous',
+            {
+              user: userProfile || undefined,
+              property: {
+                street: property.address_street,
+                number: property.address_number,
+                address: property.address_street
+              },
+              fieldLabel: docType
+            }
+          );
 
-          // Subir a bucket 'user-documents'
-          const { data, error } = await supabase.storage
-            .from('user-documents')
-            .upload(fileName, file);
-
-          if (error) {
-            console.error(`❌ Error subiendo ${docType}:`, error);
-            throw error;
-          }
-
-          // Obtener URL pública
-          const { data: publicUrlData } = supabase.storage
-            .from('user-documents')
-            .getPublicUrl(data.path);
-
-          uploadedUrls[docType] = publicUrlData.publicUrl;
-          console.log(`✅ ${docType} subido exitosamente`);
+          uploadedUrls[docType] = publicUrl;
+          console.log(`✅ ${docType} subido exitosamente: ${publicUrl}`);
 
         } catch (error: any) {
           console.error(`Error uploading ${docType}:`, error);
@@ -896,27 +909,26 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
             console.log(`📤 Subiendo documento: ${docType} del aval ${guarantorId}`);
 
             // Crear ruta única en storage (debe empezar con user ID por RLS)
-            const fileExt = file.name.split('.').pop();
-            const userId = (await supabase.auth.getUser()).data.user?.id;
-            const fileName = `${userId}/applications/${applicationId}/guarantors/${guarantorId}/${docType}-${Date.now()}.${fileExt}`;
-
-            // Subir a bucket 'user-documents'
-            const { data, error } = await supabase.storage
-              .from('user-documents')
-              .upload(fileName, file);
-
-            if (error) {
-              console.error(`❌ Error subiendo ${docType} del aval ${guarantorId}:`, error);
-              throw error;
+          // Subir a bucket 'user-documents' con renombrado automático
+          const userId = (await supabase.auth.getUser()).data.user?.id;
+          
+          const { publicUrl } = await uploadFile(
+            file,
+            'user-documents',
+            userId || 'anonymous',
+            {
+              user: userProfile || undefined,
+              property: {
+                street: property.address_street,
+                number: property.address_number,
+                address: property.address_street
+              },
+              fieldLabel: `${docType}_Aval_${guarantorId}`
             }
+          );
 
-            // Obtener URL pública
-            const { data: publicUrlData } = supabase.storage
-              .from('user-documents')
-              .getPublicUrl(data.path);
-
-            uploadedUrls[guarantorId][docType] = publicUrlData.publicUrl;
-            console.log(`✅ ${docType} del aval ${guarantorId} subido exitosamente`);
+          uploadedUrls[guarantorId][docType] = publicUrl;
+          console.log(`✅ ${docType} del aval ${guarantorId} subido exitosamente`);
 
           } catch (error: any) {
             console.error(`Error uploading ${docType} for guarantor ${guarantorId}:`, error);
@@ -1025,27 +1037,21 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       if (!doc.file) continue;
 
       try {
-        // Generar nombre único para el archivo
-        const fileExt = doc.file.name.split('.').pop();
-        const fileName = `${userId}/applicants/${applicantId}/${doc.type}_${Date.now()}.${fileExt}`;
-
-        // Subir archivo a Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('user-documents')
-          .upload(fileName, doc.file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error(`Error uploading document ${doc.type}:`, uploadError);
-          continue;
-        }
-
-        // Obtener URL pública del archivo
-        const { data: urlData } = supabase.storage
-          .from('user-documents')
-          .getPublicUrl(fileName);
+        // Subir a Supabase Storage con renombrado
+        const { publicUrl, fileName: newFileName, path: storagePath } = await uploadFile(
+          doc.file,
+          'user-documents',
+          `${userId}/applicants/${applicantId}`,
+          {
+            user: userProfile || undefined,
+            property: {
+              street: property.address_street,
+              number: property.address_number,
+              address: property.address_street
+            },
+            fieldLabel: `${doc.type}_Postulante_${applicantIndex + 1}`
+          }
+        );
 
         // Guardar registro del documento en la tabla applicant_documents
         const { error: docError } = await supabase
@@ -1053,9 +1059,9 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           .insert({
             applicant_id: applicantId,
             doc_type: doc.type,
-            file_name: doc.file.name,
-            file_url: urlData.publicUrl,
-            storage_path: fileName,
+            file_name: newFileName,
+            file_url: publicUrl,
+            storage_path: storagePath,
             file_size_bytes: doc.file.size,
             mime_type: doc.file.type,
             uploaded_by: userId,
@@ -1105,16 +1111,15 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       }
     }
 
-    // Validación de documentos requeridos (usando el sistema global de documentos)
-    const requiredDocs = getRequiredDocuments(applicant);
-
-    requiredDocs.forEach(reqDoc => {
-      if (reqDoc.required) {
-        if (!uploadedDocuments[reqDoc.type]) {
-          errors.push(`Documento requerido faltante: ${reqDoc.label}`);
-        }
-      }
-    });
+    // Validación de documentos requeridos (DESHABILITADO - Carga Progresiva)
+    // const requiredDocs = getRequiredDocuments(applicant);
+    // requiredDocs.forEach(reqDoc => {
+    //   if (reqDoc.required) {
+    //     if (!uploadedDocuments[reqDoc.type]) {
+    //       errors.push(`Documento requerido faltante: ${reqDoc.label}`);
+    //     }
+    //   }
+    // });
 
     return errors;
   };
@@ -1151,17 +1156,17 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       }
     }
 
-    // Validación de documentos requeridos para avales (usando el sistema global de documentos)
-    const requiredDocs = getRequiredDocumentsForGuarantor(guarantor);
-    const guarantorId = guarantor.id || `guarantor-${index + 1}`;
+    // Validación de documentos requeridos para avales (DESHABILITADO - Carga Progresiva)
+    // const requiredDocs = getRequiredDocumentsForGuarantor(guarantor);
+    // const guarantorId = guarantor.id || `guarantor-${index + 1}`;
 
-    requiredDocs.forEach(reqDoc => {
-      if (reqDoc.required) {
-        if (!uploadedGuarantorDocuments[guarantorId]?.[reqDoc.type]) {
-          errors.push(`Documento requerido faltante: ${reqDoc.label}`);
-        }
-      }
-    });
+    // requiredDocs.forEach(reqDoc => {
+    //   if (reqDoc.required) {
+    //     if (!uploadedGuarantorDocuments[guarantorId]?.[reqDoc.type]) {
+    //       errors.push(`Documento requerido faltante: ${reqDoc.label}`);
+    //     }
+    //   }
+    // });
 
     return errors;
   };
@@ -1803,12 +1808,15 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           </div>
         )}
 
-        {/* Documentos requeridos del postulante */}
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 className="font-semibold text-yellow-900 mb-4 flex items-center">
+        {/* Documentos del postulante (Opcional) */}
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
             <FileText className="h-5 w-5 mr-2" />
-            Documentos Requeridos
+            Documentos (Opcional)
           </h4>
+          <p className="text-xs text-blue-700 mb-4">
+            Puedes cargar estos documentos ahora o hacerlo después de enviar tu postulación.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {getRequiredDocuments(applicant).map((doc) => (
@@ -2447,12 +2455,15 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
           </div>
         </div>
 
-        {/* Documentos requeridos del aval */}
-        <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="font-semibold text-green-900 mb-4 flex items-center">
+        {/* Documentos del aval (Opcional) */}
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
             <FileText className="h-5 w-5 mr-2" />
-            Documentos Requeridos del Aval
+            Documentos del Aval (Opcional)
           </h4>
+          <p className="text-xs text-blue-700 mb-4">
+            Puedes cargar estos documentos ahora o hacerlo después de enviar tu postulación.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {getRequiredDocumentsForGuarantor(guarantor).map((doc) => {
@@ -2896,9 +2907,10 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
 
       // Éxito - llamar callback y navegar
       console.log('🎉 ¡Postulación enviada exitosamente!');
-      if (onSuccess) {
-        onSuccess();
-      }
+      
+      setCreatedApplicationId(application.id);
+      setShowDocUpload(true);
+      window.scrollTo(0, 0);
 
     } catch (error: any) {
       console.error('💥 Error enviando postulación:', error);
@@ -2914,6 +2926,35 @@ const RentalApplicationForm: React.FC<RentalApplicationFormProps> = ({
       <div className="flex justify-center items-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
         <span className="ml-3 text-gray-600">Cargando perfil...</span>
+      </div>
+    );
+  }
+
+  if (showDocUpload && createdApplicationId) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 sm:p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-8">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+              <CheckCircle className="h-10 w-10 text-green-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900">¡Postulación Recibida!</h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Tu postulación ha sido enviada exitosamente. Ahora puedes subir los documentos de respaldo.
+              No te preocupes, puedes hacer esto más tarde.
+            </p>
+          </div>
+
+          <ProgressiveDocumentUpload
+            entityType="application"
+            entityId={createdApplicationId}
+            requiredDocuments={APPLICATION_DOCUMENTS}
+            onComplete={() => {
+              if (onSuccess) onSuccess();
+              // Redirect logic should be handled by parent via onSuccess usually, or navigation here
+            }}
+          />
+        </div>
       </div>
     );
   }

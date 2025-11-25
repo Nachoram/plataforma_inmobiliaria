@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Upload, X, Image, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { supabase } from '../../lib/supabase';
+import { supabase, uploadFile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
 // Datos de regiones y comunas de Chile
@@ -589,23 +589,32 @@ export const PropertyForm: React.FC = () => {
       // Upload documents to documentos-clientes bucket
       for (const [key, file] of Object.entries(formData.documents)) {
         if (file) {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${user?.id}/${key}-${Date.now()}.${fileExt}`;
+          // Find label for the document
+          const label = requiredDocuments.find(d => d.key === key)?.label || 
+                        optionalDocuments.find(d => d.key === key)?.label || 
+                        key;
 
-                  const { data, error } = await supabase.storage
-          .from('files')
-          .upload(fileName, file);
+          try {
+            const { publicUrl } = await uploadFile(
+              file,
+              'files',
+              user?.id || 'anonymous',
+              {
+                user: user?.user_metadata as any,
+                property: {
+                  street: formData.street,
+                  number: formData.number,
+                  address: formData.address
+                },
+                fieldLabel: label
+              }
+            );
 
-          if (error) {
+            uploadedDocumentUrls.push(publicUrl);
+          } catch (error: any) {
             console.error('Error subiendo documento:', error);
             throw new Error(`Error subiendo documento ${key}: ${error.message}`);
           }
-
-                  const { data: { publicUrl } } = supabase.storage
-          .from('files')
-          .getPublicUrl(data.path);
-
-          uploadedDocumentUrls.push(publicUrl);
         }
       }
     } finally {

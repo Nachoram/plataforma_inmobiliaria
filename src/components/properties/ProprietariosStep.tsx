@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Plus, AlertTriangle, Upload, FileText, Trash2 } from 'lucide-react';
+import { X, Plus, AlertTriangle, Upload, FileText, Trash2, User, Building2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DocumentUploader } from '../common/forms/DocumentUploader';
 
@@ -37,6 +37,9 @@ interface NaturalPersonData {
   email: string;
   phone: string;
   ownership_percentage: number;
+  documents: {
+    cedula_identidad_url: string | null;
+  };
 }
 
 // Interface para persona jurídica
@@ -54,6 +57,7 @@ interface JuridicalPersonData {
   documents: {
     statute_url: string | null;
     power_of_attorney_url: string | null;
+    cedula_representante_url: string | null;
   };
   ownership_percentage: number;
 }
@@ -127,7 +131,10 @@ const ProprietariosStep: React.FC<ProprietariosStepProps> = ({
         rut: '',
         email: '',
         phone: '',
-        ownership_percentage: 0
+        ownership_percentage: 0,
+        documents: {
+          cedula_identidad_url: null
+        }
       }
     };
 
@@ -162,7 +169,10 @@ const ProprietariosStep: React.FC<ProprietariosStepProps> = ({
         rut: '',
         email: '',
         phone: '',
-        ownership_percentage: owner.natural?.ownership_percentage || owner.juridica?.ownership_percentage || 0
+        ownership_percentage: owner.natural?.ownership_percentage || owner.juridica?.ownership_percentage || 0,
+        documents: {
+          cedula_identidad_url: null
+        }
       } : undefined,
       juridica: newType === 'juridica' ? {
         company_name: '',
@@ -177,7 +187,8 @@ const ProprietariosStep: React.FC<ProprietariosStepProps> = ({
         },
         documents: {
           statute_url: null,
-          power_of_attorney_url: null
+          power_of_attorney_url: null,
+          cedula_representante_url: null
         },
         ownership_percentage: owner.natural?.ownership_percentage || owner.juridica?.ownership_percentage || 0
       } : undefined
@@ -187,47 +198,119 @@ const ProprietariosStep: React.FC<ProprietariosStepProps> = ({
   };
 
   // Manejar subida de documentos
-  const handleDocumentUpload = async (ownerId: string, documentType: 'statute' | 'power_of_attorney', file: File) => {
+  const handleDocumentUpload = async (ownerId: string, documentType: 'statute' | 'power_of_attorney' | 'cedula_identidad' | 'cedula_representante', file: File) => {
     // Aquí iría la lógica para subir a Supabase Storage
     // Por ahora solo simulamos la URL
     const mockUrl = `https://supabase-storage-url/${file.name}`;
 
     const owner = owners.find(o => o.id === ownerId);
-    if (!owner?.juridica) return;
+    if (!owner) return;
 
-    const updatedOwner = {
-      ...owner,
-      juridica: {
-        ...owner.juridica,
-        documents: {
-          ...owner.juridica.documents,
-          [documentType === 'statute' ? 'statute_url' : 'power_of_attorney_url']: mockUrl
-        }
+    let updatedOwner = { ...owner };
+
+    if (owner.type === 'juridica' && owner.juridica) {
+      let documentField = '';
+      let successMessage = '';
+
+      switch (documentType) {
+        case 'statute':
+          documentField = 'statute_url';
+          successMessage = 'Escritura de Constitución subida correctamente';
+          break;
+        case 'power_of_attorney':
+          documentField = 'power_of_attorney_url';
+          successMessage = 'Poder Notarial subido correctamente';
+          break;
+        case 'cedula_representante':
+          documentField = 'cedula_representante_url';
+          successMessage = 'Cédula del Representante subida correctamente';
+          break;
+        default:
+          return;
       }
-    };
+
+      updatedOwner = {
+        ...owner,
+        juridica: {
+          ...owner.juridica,
+          documents: {
+            ...owner.juridica.documents,
+            [documentField]: mockUrl
+          }
+        }
+      };
+      toast.success(successMessage);
+    } else if (owner.type === 'natural' && owner.natural) {
+      updatedOwner = {
+        ...owner,
+        natural: {
+          ...owner.natural,
+          documents: {
+            ...owner.natural.documents,
+            cedula_identidad_url: mockUrl
+          }
+        }
+      };
+      toast.success('Cédula de Identidad subida correctamente');
+    }
 
     handleUpdateOwner(ownerId, updatedOwner);
-    toast.success(`${documentType === 'statute' ? 'Estatuto Social' : 'Poder Notarial'} subido correctamente`);
   };
 
   // Manejar eliminación de documentos
-  const handleDocumentRemove = (ownerId: string, documentType: 'statute' | 'power_of_attorney') => {
+  const handleDocumentRemove = (ownerId: string, documentType: 'statute' | 'power_of_attorney' | 'cedula_identidad' | 'cedula_representante') => {
     const owner = owners.find(o => o.id === ownerId);
-    if (!owner?.juridica) return;
+    if (!owner) return;
 
-    const updatedOwner = {
-      ...owner,
-      juridica: {
-        ...owner.juridica,
-        documents: {
-          ...owner.juridica.documents,
-          [documentType === 'statute' ? 'statute_url' : 'power_of_attorney_url']: null
-        }
+    let updatedOwner = { ...owner };
+
+    if (owner.type === 'juridica' && owner.juridica) {
+      let documentField = '';
+      let successMessage = '';
+
+      switch (documentType) {
+        case 'statute':
+          documentField = 'statute_url';
+          successMessage = 'Escritura de Constitución eliminada';
+          break;
+        case 'power_of_attorney':
+          documentField = 'power_of_attorney_url';
+          successMessage = 'Poder Notarial eliminado';
+          break;
+        case 'cedula_representante':
+          documentField = 'cedula_representante_url';
+          successMessage = 'Cédula del Representante eliminada';
+          break;
+        default:
+          return;
       }
-    };
+
+      updatedOwner = {
+        ...owner,
+        juridica: {
+          ...owner.juridica,
+          documents: {
+            ...owner.juridica.documents,
+            [documentField]: null
+          }
+        }
+      };
+      toast.success(successMessage);
+    } else if (owner.type === 'natural' && owner.natural) {
+      updatedOwner = {
+        ...owner,
+        natural: {
+          ...owner.natural,
+          documents: {
+            ...owner.natural.documents,
+            cedula_identidad_url: null
+          }
+        }
+      };
+      toast.success('Cédula de Identidad eliminada');
+    }
 
     handleUpdateOwner(ownerId, updatedOwner);
-    toast.success(`${documentType === 'statute' ? 'Estatuto Social' : 'Poder Notarial'} eliminado`);
   };
 
   return (
@@ -332,8 +415,8 @@ interface OwnerCardProps {
   onUpdate: (updates: Partial<OwnerData>) => void;
   onTypeChange: (type: 'natural' | 'juridica') => void;
   onRemove: () => void;
-  onDocumentUpload: (documentType: 'statute' | 'power_of_attorney', file: File) => void;
-  onDocumentRemove: (documentType: 'statute' | 'power_of_attorney') => void;
+  onDocumentUpload: (documentType: 'statute' | 'power_of_attorney' | 'cedula_identidad' | 'cedula_representante', file: File) => void;
+  onDocumentRemove: (documentType: 'statute' | 'power_of_attorney' | 'cedula_identidad' | 'cedula_representante') => void;
   errors: Record<string, string>;
 }
 
@@ -377,28 +460,53 @@ const OwnerCard: React.FC<OwnerCardProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Tipo de Propietario *
           </label>
-          <div className="flex space-x-6">
-            <label className="flex items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="relative">
               <input
                 type="radio"
                 name={`owner_type_${owner.id}`}
                 value="natural"
                 checked={owner.type === 'natural'}
                 onChange={() => onTypeChange('natural')}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                className="sr-only"
               />
-              <span className="ml-2 text-sm text-gray-700">Persona Natural</span>
+              <div className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                owner.type === 'natural'
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-200 hover:border-purple-300'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <div className="font-medium text-gray-900">Persona Natural</div>
+                    <div className="text-sm text-gray-600">Individuo</div>
+                  </div>
+                </div>
+              </div>
             </label>
-            <label className="flex items-center">
+
+            <label className="relative">
               <input
                 type="radio"
                 name={`owner_type_${owner.id}`}
                 value="juridica"
                 checked={owner.type === 'juridica'}
                 onChange={() => onTypeChange('juridica')}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                className="sr-only"
               />
-              <span className="ml-2 text-sm text-gray-700">Persona Jurídica</span>
+              <div className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                owner.type === 'juridica'
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-200 hover:border-purple-300'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <div className="font-medium text-gray-900">Persona Jurídica</div>
+                    <div className="text-sm text-gray-600">Empresa</div>
+                  </div>
+                </div>
+              </div>
             </label>
           </div>
         </div>
@@ -408,6 +516,8 @@ const OwnerCard: React.FC<OwnerCardProps> = ({
           <NaturalPersonForm
             data={owner.natural}
             onChange={(updates) => onUpdate({ natural: { ...owner.natural!, ...updates } })}
+            onDocumentUpload={(docType, file) => onDocumentUpload(docType, file)}
+            onDocumentRemove={(docType) => onDocumentRemove(docType)}
             errors={errors}
             prefix={`owner_${index}_natural`}
           />
@@ -470,6 +580,8 @@ const OwnerCard: React.FC<OwnerCardProps> = ({
 interface NaturalPersonFormProps {
   data: NaturalPersonData;
   onChange: (updates: Partial<NaturalPersonData>) => void;
+  onDocumentUpload: (documentType: 'cedula_identidad', file: File) => void;
+  onDocumentRemove: (documentType: 'cedula_identidad') => void;
   errors: Record<string, string>;
   prefix: string;
 }
@@ -477,6 +589,8 @@ interface NaturalPersonFormProps {
 const NaturalPersonForm: React.FC<NaturalPersonFormProps> = ({
   data,
   onChange,
+  onDocumentUpload,
+  onDocumentRemove,
   errors,
   prefix
 }) => {
@@ -552,6 +666,21 @@ const NaturalPersonForm: React.FC<NaturalPersonFormProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Documentos requeridos */}
+      <div>
+        <h5 className="text-md font-medium text-gray-900 mb-4">DOCUMENTOS (OPCIONAL)</h5>
+        <div className="space-y-4">
+          <DocumentUploader
+            label="🆔 Cédula de Identidad del Propietario"
+            name={`cedula_${data.name || 'propietario'}`}
+            uploaded={!!data.documents.cedula_identidad_url}
+            fileName={data.documents.cedula_identidad_url ? "Cédula de Identidad.pdf" : undefined}
+            onUpload={(file) => onDocumentUpload('cedula_identidad', file)}
+            onRemove={() => onDocumentRemove('cedula_identidad')}
+          />
+        </div>
+      </div>
     </div>
   );
 };
@@ -560,8 +689,8 @@ const NaturalPersonForm: React.FC<NaturalPersonFormProps> = ({
 interface JuridicalPersonFormProps {
   data: JuridicalPersonData;
   onChange: (updates: Partial<JuridicalPersonData>) => void;
-  onDocumentUpload: (documentType: 'statute' | 'power_of_attorney', file: File) => void;
-  onDocumentRemove: (documentType: 'statute' | 'power_of_attorney') => void;
+  onDocumentUpload: (documentType: 'statute' | 'power_of_attorney' | 'cedula_representante', file: File) => void;
+  onDocumentRemove: (documentType: 'statute' | 'power_of_attorney' | 'cedula_representante') => void;
   errors: Record<string, string>;
   prefix: string;
 }
@@ -710,23 +839,31 @@ const JuridicalPersonForm: React.FC<JuridicalPersonFormProps> = ({
       </div>
 
       <div>
-        <h5 className="text-md font-medium text-gray-900 mb-4">DOCUMENTOS (Opcionales)</h5>
+        <h5 className="text-md font-medium text-gray-900 mb-4">DOCUMENTOS REQUERIDOS</h5>
         <div className="space-y-4">
           <DocumentUploader
-            label="📄 Estatuto Social"
-            name={`estatuto_${data.company_name || 'empresa'}`}
+            label="📄 Escritura de Constitución de la Sociedad"
+            name={`constitucion_${data.company_name || 'empresa'}`}
             uploaded={!!data.documents.statute_url}
-            fileName={data.documents.statute_url ? "Estatuto Social.pdf" : undefined}
+            fileName={data.documents.statute_url ? "Escritura de Constitución.pdf" : undefined}
             onUpload={(file) => onDocumentUpload('statute', file)}
             onRemove={() => onDocumentRemove('statute')}
           />
           <DocumentUploader
-            label="📄 Poder Notarial"
+            label="📄 Poder del Representante Legal"
             name={`poder_${data.company_name || 'empresa'}`}
             uploaded={!!data.documents.power_of_attorney_url}
             fileName={data.documents.power_of_attorney_url ? "Poder Notarial.pdf" : undefined}
             onUpload={(file) => onDocumentUpload('power_of_attorney', file)}
             onRemove={() => onDocumentRemove('power_of_attorney')}
+          />
+          <DocumentUploader
+            label="🆔 Cédula de Identidad del Representante Legal"
+            name={`cedula_representante_${data.company_name || 'empresa'}`}
+            uploaded={!!data.documents.cedula_representante_url}
+            fileName={data.documents.cedula_representante_url ? "Cédula Representante.pdf" : undefined}
+            onUpload={(file) => onDocumentUpload('cedula_representante', file)}
+            onRemove={() => onDocumentRemove('cedula_representante')}
           />
         </div>
       </div>

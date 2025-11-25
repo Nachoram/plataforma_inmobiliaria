@@ -40,3 +40,4 @@ CREATE INDEX IF NOT EXISTS idx_rental_owners_unit_type ON rental_owners(unit_typ
 
 
 
+

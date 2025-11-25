@@ -28,6 +28,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { CustomButton } from '../common';
+import ApplicationDocumentsPanel, { DocumentData } from './ApplicationDocumentsPanel';
 import toast from 'react-hot-toast';
 
 // Lazy load del formulario de edición
@@ -63,6 +64,8 @@ interface ApplicationData {
   };
   applicants?: any[];
   guarantors?: any[];
+  application_applicants?: any[];
+  application_guarantors?: any[];
 }
 
 interface MessageData {
@@ -105,7 +108,7 @@ interface RequestData {
   internal_notes?: string;
 }
 
-type TabType = 'details' | 'messages' | 'contract' | 'requests';
+type TabType = 'details' | 'messages' | 'contract' | 'requests' | 'documents';
 
 // ========================================================================
 // MAIN COMPONENT
@@ -121,6 +124,7 @@ export const PostulantAdminPanel: React.FC = () => {
   const [application, setApplication] = useState<ApplicationData | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [requests, setRequests] = useState<RequestData[]>([]);
+  const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -161,7 +165,9 @@ export const PostulantAdminPanel: React.FC = () => {
             price_clp,
             listing_type,
             owner_id
-          )
+          ),
+          application_applicants(id, first_name, paternal_last_name, maternal_last_name, email),
+          application_guarantors(id, first_name, paternal_last_name, maternal_last_name, contact_email)
         `)
         .eq('id', applicationId)
         .eq('applicant_id', user.id)
@@ -173,7 +179,33 @@ export const PostulantAdminPanel: React.FC = () => {
         return;
       }
 
-      setApplication(appData);
+      // Map applicants and guarantors to include a combined last_name for the UI
+      const formattedData = {
+        ...appData,
+        application_applicants: appData.application_applicants?.map((app: any) => ({
+          ...app,
+          last_name: `${app.paternal_last_name || ''} ${app.maternal_last_name || ''}`.trim()
+        })),
+        application_guarantors: appData.application_guarantors?.map((guar: any) => ({
+          ...guar,
+          email: guar.contact_email, // Map contact_email to email for consistency
+          last_name: `${guar.paternal_last_name || ''} ${guar.maternal_last_name || ''}`.trim()
+        }))
+      };
+
+      setApplication(formattedData);
+
+      // Fetch documents
+      const { data: docsData, error: docsError } = await supabase
+        .from('application_documents')
+        .select('*')
+        .eq('application_id', applicationId);
+      
+      if (docsError) {
+        console.error('Error fetching documents:', docsError);
+      } else {
+        setDocuments(docsData || []);
+      }
 
       // Fetch messages
       const { data: messagesData, error: messagesError } = await supabase
@@ -520,6 +552,17 @@ export const PostulantAdminPanel: React.FC = () => {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('documents')}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'documents'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <FileText className="h-4 w-4 inline mr-2" />
+              Documentos
+            </button>
           </nav>
         </div>
 
@@ -529,6 +572,15 @@ export const PostulantAdminPanel: React.FC = () => {
           {activeTab === 'messages' && <MessagesTab messages={messages} application={application} onRefresh={fetchApplicationData} />}
           {activeTab === 'contract' && <ContractTab application={application} />}
           {activeTab === 'requests' && <RequestsTab requests={requests} application={application} onRefresh={fetchApplicationData} />}
+          {activeTab === 'documents' && (
+            <ApplicationDocumentsPanel
+              applicationId={application.id}
+              postulants={application.application_applicants || []}
+              guarantors={application.application_guarantors || []}
+              documents={documents}
+              onDocumentUploaded={() => fetchApplicationData()}
+            />
+          )}
         </div>
       </div>
     </div>

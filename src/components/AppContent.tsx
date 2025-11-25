@@ -42,6 +42,7 @@ import {
 import PortfolioPage from './portfolio/PortfolioPage';
 import MyApplicationsPage from './dashboard/MyApplicationsPage';
 import MyOffersPage from './dashboard/MyOffersPage';
+import { OfferDetailsPage } from './offers';
 
 // Temporarily disable lazy loading to debug the issue
 import MySalesPage from './dashboard/MySalesPage';
@@ -209,6 +210,14 @@ export const AppContent: React.FC = () => {
         <ProtectedRoute>
           <Layout>
             <MyOffersPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-offers/:offerId/details" element={
+        <ProtectedRoute>
+          <Layout>
+            <OfferDetailsPage />
           </Layout>
         </ProtectedRoute>
       } />

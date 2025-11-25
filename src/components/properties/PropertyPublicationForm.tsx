@@ -1750,7 +1750,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         {/* Documentos Legales */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Documentos Legales
+            Documentos Legales (Opcional)
           </label>
           <input
             type="file"
@@ -1768,7 +1768,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
         {formData.owner_type === 'juridica' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Certificado de Personería
+              Certificado de Personería (Opcional)
             </label>
             <input
               type="file"
@@ -1781,7 +1781,7 @@ const PropertyPublicationForm: React.FC<PropertyPublicationFormProps> = ({
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <p className="text-sm text-gray-600 mt-1">
-              Documento requerido para personas jurídicas. Formato: PDF
+              Documento recomendado para personas jurídicas. Formato: PDF
             </p>
           </div>
         )}

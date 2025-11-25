@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createDocumentFileName } from './documentNaming';
 
 // 1. Obtener las variables de entorno con valores por defecto para desarrollo
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://phnkervuiijqmapgswkc.supabase.co';
@@ -1134,6 +1135,69 @@ export const approveApplicationWithWebhook = async (
     throw error;
   }
 };
+
+// =====================================================
+// GENERAL FILE UPLOAD FUNCTION
+// =====================================================
+
+export async function uploadFile(
+  file: File,
+  bucket: string,
+  path: string,
+  options?: {
+    user?: { name?: string; last_name?: string; first_name?: string; paternal_last_name?: string };
+    property?: { 
+      street?: string; 
+      number?: string; 
+      address?: string; 
+      address_street?: string;
+      address_number?: string;
+      id?: string;
+    };
+    fieldLabel?: string;
+    upsert?: boolean;
+    contentType?: string;
+  }
+) {
+  let fileName = file.name; // nombre por defecto
+  
+  // Si se proporcionan todos los datos, renombrar
+  if (options?.user && options?.property && options?.fieldLabel) {
+    fileName = createDocumentFileName(
+      options.user,
+      options.property,
+      options.fieldLabel,
+      file.name
+    );
+  }
+  
+  // Clean path to avoid double slashes
+  const cleanPath = path.endsWith('/') ? path : `${path}/`;
+  const fullPath = `${cleanPath}${fileName}`;
+
+  console.log(`📤 Subiendo archivo: ${fullPath} a bucket: ${bucket}`);
+  
+  // Subir a Supabase Storage
+  const { data, error } = await supabase
+    .storage
+    .from(bucket)
+    .upload(fullPath, file, {
+      upsert: options?.upsert ?? false,
+      contentType: options?.contentType || file.type
+    });
+  
+  if (error) {
+    console.error('❌ Error subiendo archivo:', error);
+    throw error;
+  }
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(fullPath);
+
+  return { ...data, fileName, publicUrl };
+}
 
 // =====================================================
 // SALE OFFERS MANAGEMENT FUNCTIONS

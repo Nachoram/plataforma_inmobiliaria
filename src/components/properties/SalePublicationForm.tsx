@@ -4,13 +4,14 @@ import {
   Upload, X, FileText, Image, Check, AlertCircle, Loader2,
   Building, MapPin, Car, DollarSign, User, Calendar, Home, CheckCircle
 } from 'lucide-react';
-import { supabase, Property } from '../../lib/supabase';
+import { supabase, Property, uploadFile } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import ParkingSpaceForm, { ParkingSpace } from './ParkingSpaceForm';
 import StorageSpaceForm, { StorageSpace } from './StorageSpaceForm';
 import ProprietariosStep from './ProprietariosStep';
 import { CustomButton } from '../common';
 import toast from 'react-hot-toast';
+import { ProgressiveDocumentUpload, DocumentType } from '../documents/ProgressiveDocumentUpload';
 
 // Datos de regiones y comunas de Chile
 const CHILE_REGIONS_COMMUNES = {
@@ -73,6 +74,19 @@ const NACIONALITIES = [
   'Otra'
 ];
 
+const SALE_DOCUMENTS: DocumentType[] = [
+  { id: 'dom_vigente', label: 'Certificado de Dominio Vigente', type: 'certificado_dominio', optional: true },
+  { id: 'hipotecas', label: 'Certificado de Hipotecas y Gravámenes', type: 'certificado_hipotecas', optional: true },
+  { id: 'inscripciones', label: 'Inscripciones de Dominio (10 años)', type: 'inscripciones_dominio', optional: true },
+  { id: 'avaluo', label: 'Certificado de Avalúo Fiscal', type: 'avaluo_fiscal', optional: true },
+  { id: 'contribuciones', label: 'Certificado de Contribuciones', type: 'contribuciones', optional: true },
+  { id: 'recepcion', label: 'Certificado de Recepción Final', type: 'recepcion_final', optional: true },
+  { id: 'no_expropiacion_muni', label: 'Certificado No Expropiación (Municipal)', type: 'no_expropiacion_municipal', optional: true },
+  { id: 'numero_municipal', label: 'Certificado de Número Municipal', type: 'numero_municipal', optional: true },
+  { id: 'no_expropiacion_serviu', label: 'Certificado No Expropiación (SERVIU)', type: 'no_expropiacion_serviu', optional: true },
+  { id: 'reglamento', label: 'Reglamento de Copropiedad', type: 'reglamento_copropiedad', optional: true },
+];
+
 // Form data interface
 interface SaleFormData {
   // Basic Info
@@ -105,13 +119,6 @@ interface SaleFormData {
   sistemaAguaCaliente: string;
   tipoCocina: string;
 
-  // Owner Address
-  owner_address_street: string;
-  owner_address_number: string;
-  owner_region: string;
-  owner_commune: string;
-  owner_unit_type: string;
-  owner_apartment_number: string;
 
   // Images
   property_images: File[];
@@ -153,6 +160,8 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
+  const [showDocUpload, setShowDocUpload] = useState(false);
+  const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(null);
 
   // Form data state
   const getInitialFormData = useMemo(() => ({
@@ -204,7 +213,10 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
           rut: '',
           email: '',
           phone: '',
-          ownership_percentage: 100
+          ownership_percentage: 100,
+          documents: {
+            cedula_identidad_url: null
+          }
         }
       }
     ] as OwnerData[],
@@ -376,11 +388,9 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
 
       toast.success(isEditing ? 'Propiedad actualizada exitosamente' : 'Propiedad publicada exitosamente');
 
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        navigate('/dashboard');
-      }
+      setCreatedPropertyId(propertyId);
+      setShowDocUpload(true);
+      window.scrollTo(0, 0);
 
     } catch (error: any) {
       console.error('Error saving property:', error);
@@ -392,30 +402,37 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
 
   const uploadPropertyImages = async (propertyId: string, images: File[]) => {
     const uploadPromises = images.map(async (image, index) => {
-      const fileName = `property_${propertyId}_${Date.now()}_${index}.${image.name.split('.').pop()}`;
-      const filePath = `properties/${fileName}`;
+      try {
+        const { publicUrl, fileName } = await uploadFile(
+          image,
+          'properties',
+          'properties',
+          {
+            user: user?.user_metadata as any,
+            property: {
+              street: formData.address_street,
+              number: formData.address_number,
+              id: propertyId
+            },
+            fieldLabel: `Imagen_${index + 1}`
+          }
+        );
 
-      const { error: uploadError } = await supabase.storage
-        .from('properties')
-        .upload(filePath, image);
+        // Save image reference in database
+        const { error: dbError } = await supabase
+          .from('property_images')
+          .insert({
+            property_id: propertyId,
+            image_url: publicUrl,
+            storage_path: `properties/${fileName}`,
+            display_order: index
+          });
 
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('properties')
-        .getPublicUrl(filePath);
-
-      // Save image reference in database
-      const { error: dbError } = await supabase
-        .from('property_images')
-        .insert({
-          property_id: propertyId,
-          image_url: publicUrl,
-          storage_path: filePath,
-          display_order: index
-        });
-
-      if (dbError) throw dbError;
+        if (dbError) throw dbError;
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        throw error;
+      }
     });
 
     await Promise.all(uploadPromises);
@@ -448,94 +465,84 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
   };
 
 
-  return (
-    <>
-    <div className="space-y-6">
-        {/* Street and Number */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Calle *
-            </label>
-            <input
-              type="text"
-              value={formData.address_street}
-              onChange={(e) => updateFormData({ address_street: e.target.value })}
-              placeholder="Ej: Avenida Providencia"
-              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+  if (showDocUpload && createdPropertyId) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 sm:p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-8">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+              <CheckCircle className="h-10 w-10 text-green-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900">¡Propiedad Publicada!</h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Tu propiedad ha sido creada exitosamente. Ahora puedes subir los documentos legales.
+              No te preocupes, puedes hacer esto más tarde si no los tienes a mano.
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Número *
-            </label>
-            <input
-              type="text"
-              value={formData.address_number}
-              onChange={(e) => updateFormData({ address_number: e.target.value })}
-              placeholder="123"
-              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-
-        {/* Department */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Departamento (Opcional)
-          </label>
-          <input
-            type="text"
-            value={formData.address_department}
-            onChange={(e) => updateFormData({ address_department: e.target.value })}
-            placeholder="Ej: 401"
-            className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          <ProgressiveDocumentUpload
+            entityType="property"
+            entityId={createdPropertyId}
+            requiredDocuments={SALE_DOCUMENTS}
+            onComplete={() => {
+              if (onSuccess) onSuccess();
+              else navigate('/dashboard');
+            }}
           />
         </div>
+      </div>
+    );
+  }
 
-        {/* Region and Commune */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Región *
-            </label>
-            <select
-              value={formData.region}
-              onChange={(e) => updateFormData({ region: e.target.value, commune: '' })}
-              className="w-full px-3 py-2 text-sm min-h-[100px] border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Seleccionar región</option>
-              {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
-                <option key={key} value={key}>
-                  {region.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Comuna *
-            </label>
-            <select
-              value={formData.commune}
-              onChange={(e) => updateFormData({ commune: e.target.value })}
-              disabled={!formData.region}
-              className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-            >
-              <option value="">Seleccionar comuna</option>
-              {formData.region && getAvailableCommunes(formData.region).map(commune => (
-                <option key={commune} value={commune}>
-                  {commune}
-                </option>
-              ))}
-            </select>
-          </div>
+  return (
+    <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/20 rounded-2xl shadow-2xl border border-gray-200">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Building className="h-6 w-6 text-white" />
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                    Publicar Propiedad en Venta
+                </h2>
+            </div>
+            {adminMode && (
+              <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium flex items-center">
+                <AlertCircle className="h-4 w-4 mr-1" />
+                Modo Administrador
+              </div>
+            )}
+        </div>
+        <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+            <p className="text-gray-600">
+                Completa todos los campos para publicar tu propiedad en venta
+            </p>
         </div>
       </div>
 
-      <div className="px-6 space-y-6">
+      {/* Admin Mode Warning */}
+        {adminMode && (
+        <div className="mb-6 px-6">
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-yellow-400 mr-3" />
+              <div>
+                <h4 className="text-sm font-medium text-yellow-800">
+                  Modo Administrador Activado
+                </h4>
+                <p className="text-sm text-yellow-700">
+                  Puedes navegar por todos los pasos sin completar campos obligatorios.
+                  Las validaciones están desactivadas para facilitar el desarrollo y testing.
+                </p>
+              </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {/* Form Content */}
+      <div className="space-y-6">
         {/* Sección 1: Información de la Propiedad */}
         <div className="bg-white border-2 border-green-200 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-6">
@@ -543,7 +550,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
               <Building className="h-5 w-5 text-white" />
             </div>
             <h2 className="text-xl font-bold text-gray-900">Información de la Propiedad</h2>
-          </div>
+      </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Tipo de Propiedad */}
@@ -627,8 +634,8 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
                 onChange={(e) => updateFormData({ address_street: e.target.value })}
                 placeholder="Ej: Avenida Providencia"
                 className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
+          />
+        </div>
 
             {/* Número */}
             <div>
@@ -641,8 +648,8 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
                 onChange={(e) => updateFormData({ address_number: e.target.value })}
                 placeholder="123"
                 className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
+          />
+        </div>
 
             {/* Departamento/Oficina */}
             <div>
@@ -656,7 +663,7 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
                 placeholder="Ej: 401"
                 className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
               />
-            </div>
+      </div>
 
             {/* Región */}
             <div>
@@ -783,748 +790,6 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
         />
 
 
-        {/* Sección 4: Fotos de la Propiedad */}
-        <div className="bg-white border-2 border-orange-200 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <Image className="h-5 w-5 text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">Fotos de la Propiedad (Opcional)</h2>
-          </div>
-
-          <div className="space-y-4">
-            {/* Image Upload Area */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
-              <div className="text-center">
-                <Image className="mx-auto h-12 w-12 text-gray-400" />
-                <div className="mt-4">
-                  <label htmlFor="image-upload" className="cursor-pointer">
-                    <span className="mt-2 block text-sm font-medium text-gray-900">
-                      Subir imágenes
-                    </span>
-                    <span className="mt-1 block text-sm text-gray-500">
-                      PNG, JPG hasta 10MB cada una
-                    </span>
-                  </label>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      updateFormData({ property_images: [...formData.property_images, ...files] });
-                    }}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Uploaded Images Preview */}
-            {formData.property_images.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-3">
-                  Imágenes seleccionadas ({formData.property_images.length})
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {formData.property_images.map((file, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
-                      <button
-                        onClick={() => {
-                          const newImages = formData.property_images.filter((_, i) => i !== index);
-                          updateFormData({ property_images: newImages });
-                        }}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex">
-                <AlertCircle className="h-5 w-5 text-blue-400 mt-0.5 mr-3" />
-                <div>
-                  <h4 className="text-sm font-medium text-blue-800">
-                    Consejos para mejores fotos
-                  </h4>
-                  <ul className="mt-2 text-sm text-blue-700 space-y-1">
-                    <li>• Usa buena iluminación natural</li>
-                    <li>• Toma fotos desde diferentes ángulos</li>
-                    <li>• Incluye fotos del exterior e interior</li>
-                    <li>• La primera imagen es la más importante</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sección 4: Documentos para Estudio de Título */}
-        <div className="bg-white border-2 border-yellow-200 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <FileText className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Documentos para Estudio de Título</h2>
-              <p className="text-sm text-gray-600">Documentos requeridos por ley para formalizar la compraventa</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* GRUPO 1: Documentos del Propietario */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800">Documentos del Propietario</h3>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Cédula de Identidad (fotocopia)</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Matrimonio/Soltería</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* GRUPO 2: Documentos del Conservador de Bienes Raíces */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800">Conservador de Bienes Raíces</h3>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Dominio Vigente</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Hipotecas y Gravámenes</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Inscripciones de Dominio (últimos 10 años)</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* GRUPO 3: Documentos del SII */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800">Servicio de Impuestos Internos (SII)</h3>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Avalúo Fiscal</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Contribuciones Pagadas</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* GRUPO 4: Documentos Municipales */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800">Documentos Municipales</h3>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Recepción Final</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de No Expropiación (Municipal)</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Número Municipal</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* GRUPO 5: Otros Documentos (Condicional) */}
-            <div className="md:col-span-2 space-y-3">
-              <h3 className="font-semibold text-gray-800">Otros Documentos (Condicional)</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900">Reglamento de Copropiedad</h4>
-                      <p className="text-xs text-gray-600">Si es departamento/condominio</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        OPCIONAL
-                      </span>
-                      <CustomButton size="sm" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Subir
-                      </CustomButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900">Certificado de No Expropiación (SERVIU)</h4>
-                      <p className="text-xs text-gray-600">Recomendado</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        RECOMENDADO
-                      </span>
-                      <CustomButton size="sm" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Subir
-                      </CustomButton>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Botones Finales */}
-      <div className="flex justify-center gap-4 mt-8 px-6">
-        <CustomButton
-          onClick={onCancel}
-          variant="outline"
-          className="px-8 py-3 border-2 border-gray-300 text-gray-700 bg-white rounded-full font-medium hover:bg-gray-50"
-        >
-          Cancelar
-        </CustomButton>
-        <CustomButton
-          onClick={handleSubmit}
-          loading={loading}
-          className="px-8 py-3 bg-green-600 text-white rounded-full font-medium hover:bg-green-700"
-        >
-          {isEditing ? 'Actualizar Propiedad' : 'Publicar Propiedad'}
-        </CustomButton>
-      </div>
-
-  return (
-    <div className="max-w-4xl mx-auto publication-form">
-      {/* Header */}
-      <div className="bg-blue-600 text-white py-6 mb-8">
-        <div className="px-6">
-        <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">
-                Publicar Propiedad en Venta
-            </h1>
-              <p className="text-blue-100 mt-1">
-                Completa todos los campos para publicar tu propiedad en venta
-              </p>
-            </div>
-            {adminMode && (
-              <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium flex items-center">
-                <AlertCircle className="h-4 w-4 mr-1" />
-                Modo Administrador
-              </div>
-            )}
-          </div>
-          </div>
-        </div>
-
-      {/* Admin Mode Warning */}
-        {adminMode && (
-        <div className="mb-6 px-6">
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-yellow-400 mr-3" />
-              <div>
-                <h4 className="text-sm font-medium text-yellow-800">
-                  Modo Administrador Activado
-                </h4>
-                <p className="text-sm text-yellow-700">
-                  Puedes navegar por todos los pasos sin completar campos obligatorios.
-                  Las validaciones están desactivadas para facilitar el desarrollo y testing.
-                </p>
-              </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-      {/* Form Content */}
-      <div className="px-6 space-y-6">
-        {/* Sección 1: Información de la Propiedad */}
-        <div className="bg-white border-2 border-green-200 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <Building className="h-5 w-5 text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">Información de la Propiedad</h2>
-      </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Tipo de Propiedad */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tipo de Propiedad *
-              </label>
-              <select
-                value={formData.tipoPropiedad}
-                onChange={(e) => {
-                  const newType = e.target.value;
-                  updateFormData({ tipoPropiedad: newType });
-
-                  // Reset fields based on property type
-                  if (newType === 'Estacionamiento') {
-                    updateFormData({
-                      bedrooms: '0',
-                      bathrooms: '0',
-                      estacionamientos: '1',
-                      ubicacionEstacionamiento: '',
-                      metrosUtiles: '',
-                      tieneTerraza: 'No',
-                      tieneSalaEstar: 'No',
-                      parcela_number: ''
-                    });
-                  } else if (newType === 'Bodega') {
-                    updateFormData({
-                      bedrooms: '0',
-                      bathrooms: '0',
-                      estacionamientos: '0',
-                      metrosUtiles: '',
-                      tieneTerraza: 'No',
-                      tieneSalaEstar: 'No',
-                      parcela_number: ''
-                    });
-                  } else if (newType === 'Parcela') {
-                    updateFormData({
-                      bedrooms: '0',
-                      bathrooms: '0',
-                      estacionamientos: '0',
-                      metrosUtiles: '',
-                      metrosTotales: '',
-                      tieneTerraza: 'No',
-                      tieneSalaEstar: 'No',
-                      parcela_number: ''
-                    });
-                  } else {
-                    // Reset to defaults for habitable properties
-                    updateFormData({
-                      bedrooms: '0',
-                      bathrooms: '0',
-                      estacionamientos: '0',
-                      ubicacionEstacionamiento: '',
-                      metrosUtiles: '',
-                      tieneTerraza: 'No',
-                      tieneSalaEstar: 'No',
-                      parcela_number: ''
-                    });
-                  }
-                }}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              >
-                <option value="Casa">Casa</option>
-                <option value="Departamento">Departamento</option>
-                <option value="Oficina">Oficina</option>
-                <option value="Local Comercial">Local Comercial</option>
-                <option value="Estacionamiento">Estacionamiento</option>
-                <option value="Bodega">Bodega</option>
-                <option value="Parcela">Parcela</option>
-              </select>
-            </div>
-
-            {/* Calle */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Calle *
-              </label>
-              <input
-                type="text"
-                value={formData.address_street}
-                onChange={(e) => updateFormData({ address_street: e.target.value })}
-                placeholder="Ej: Avenida Providencia"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-        </div>
-
-            {/* Número */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Número *
-              </label>
-              <input
-                type="text"
-                value={formData.address_number}
-                onChange={(e) => updateFormData({ address_number: e.target.value })}
-                placeholder="123"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-        </div>
-
-            {/* Departamento/Oficina */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Departamento/Oficina (Opcional)
-              </label>
-              <input
-                type="text"
-                value={formData.address_department}
-                onChange={(e) => updateFormData({ address_department: e.target.value })}
-                placeholder="Ej: 401"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-      </div>
-
-            {/* Región */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Región *
-              </label>
-              <select
-                value={formData.region}
-                onChange={(e) => updateFormData({ region: e.target.value, commune: '' })}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              >
-                <option value="">Seleccionar región</option>
-                {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
-                  <option key={key} value={key}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Comuna */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Comuna *
-              </label>
-              <select
-                value={formData.commune}
-                onChange={(e) => updateFormData({ commune: e.target.value })}
-                disabled={!formData.region}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-              >
-                <option value="">Seleccionar comuna</option>
-                {formData.region && getAvailableCommunes(formData.region).map(commune => (
-                  <option key={commune} value={commune}>
-                    {commune}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Precio de Venta */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Precio de Venta (CLP) *
-              </label>
-              <input
-                type="number"
-                value={formData.price}
-                onChange={(e) => updateFormData({ price: e.target.value })}
-                placeholder="150000000"
-                min="0"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-
-            {/* M² Útiles */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                M² Útiles
-              </label>
-              <input
-                type="number"
-                value={formData.metrosUtiles}
-                onChange={(e) => updateFormData({ metrosUtiles: e.target.value })}
-                placeholder="100"
-                min="0"
-                step="0.01"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-
-            {/* M² Totales */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                M² Totales *
-              </label>
-              <input
-                type="number"
-                value={formData.metrosTotales}
-                onChange={(e) => updateFormData({ metrosTotales: e.target.value })}
-                placeholder="120"
-                min="0"
-                step="0.01"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-
-            {/* Año de Construcción */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Año de Construcción
-              </label>
-              <input
-                type="number"
-                value={formData.anoConstruccion}
-                onChange={(e) => updateFormData({ anoConstruccion: e.target.value })}
-                placeholder="2020"
-                min="1900"
-                max={new Date().getFullYear()}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-
-            {/* Descripción */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Descripción *
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => updateFormData({ description: e.target.value })}
-                rows={4}
-                placeholder="Describe detalladamente la propiedad, sus características principales, ubicación, etc."
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Sección 3: Dirección del Propietario */}
-        <div className="bg-white border-2 border-purple-200 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <MapPin className="h-5 w-5 text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">Dirección del Propietario</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Calle del Propietario *
-              </label>
-              <input
-                type="text"
-                value={formData.owner_address_street || ''}
-                onChange={(e) => updateFormData({ owner_address_street: e.target.value })}
-                placeholder="Ej: Avenida Providencia"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Número del Propietario *
-              </label>
-              <input
-                type="text"
-                value={formData.owner_address_number || ''}
-                onChange={(e) => updateFormData({ owner_address_number: e.target.value })}
-                placeholder="123"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tipo de Unidad *
-              </label>
-              <select
-                value={formData.owner_unit_type || 'Casa'}
-                onChange={(e) => updateFormData({ owner_unit_type: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              >
-                <option value="Casa">Casa</option>
-                <option value="Departamento">Departamento</option>
-                <option value="Oficina">Oficina</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                N° Depto/Casa/Oficina
-              </label>
-              <input
-                type="text"
-                value={formData.owner_apartment_number || ''}
-                onChange={(e) => updateFormData({ owner_apartment_number: e.target.value })}
-                placeholder="Ej: 401"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Región del Propietario *
-              </label>
-              <select
-                value={formData.owner_region || ''}
-                onChange={(e) => updateFormData({ owner_region: e.target.value, owner_commune: '' })}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              >
-                <option value="">Seleccionar región</option>
-                {Object.entries(CHILE_REGIONS_COMMUNES).map(([key, region]) => (
-                  <option key={key} value={key}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Comuna del Propietario *
-              </label>
-              <select
-                value={formData.owner_commune || ''}
-                onChange={(e) => updateFormData({ owner_commune: e.target.value })}
-                disabled={!formData.owner_region}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
-              >
-                <option value="">Seleccionar comuna</option>
-                {formData.owner_region && getAvailableCommunes(formData.owner_region).map(commune => (
-                  <option key={commune} value={commune}>
-                    {commune}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
         {/* Sección 3: Fotos de la Propiedad */}
         <div className="bg-white border-2 border-orange-200 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-6">
@@ -1612,274 +877,100 @@ export const SalePublicationForm: React.FC<SalePublicationFormProps> = ({
         </div>
 
         {/* Sección 4: Documentos para Estudio de Título */}
-        <div className="bg-white border-2 border-yellow-200 rounded-lg p-6">
+        <div className="bg-white border-2 border-blue-200 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Documentos para Estudio de Título</h2>
-              <p className="text-sm text-gray-600">Documentos requeridos por ley para formalizar la compraventa</p>
+              <h2 className="text-xl font-bold text-gray-900">Documentos Legales</h2>
+              <p className="text-sm text-gray-600">
+                Estos documentos son necesarios para el estudio de título, pero puedes cargarlos después de publicar la propiedad.
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* GRUPO 1: Documentos del Propietario */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800">Documentos del Propietario</h3>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Cédula de Identidad (fotocopia)</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
+          {isEditing && initialData?.id ? (
+            <div className="mb-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-green-800">
+                    <strong>Modo Edición:</strong> Puedes gestionar los documentos directamente aquí.
+                  </p>
                 </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Matrimonio/Soltería</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
+                <ProgressiveDocumentUpload
+                  entityType="property"
+                  entityId={initialData.id}
+                  requiredDocuments={SALE_DOCUMENTS}
+                />
             </div>
-
-            {/* GRUPO 2: Documentos del Conservador de Bienes Raíces */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800">Conservador de Bienes Raíces</h3>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Dominio Vigente</h4>
+          ) : (
+            <>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <AlertCircle className="h-5 w-5 text-blue-400" aria-hidden="true" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Hipotecas y Gravámenes</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Inscripciones de Dominio (últimos 10 años)</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* GRUPO 3: Documentos del SII */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800">Servicio de Impuestos Internos (SII)</h3>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Avalúo Fiscal</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Contribuciones Pagadas</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* GRUPO 4: Documentos Municipales */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800">Documentos Municipales</h3>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Recepción Final</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de No Expropiación (Municipal)</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Certificado de Número Municipal</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      REQUERIDO
-                    </span>
-                    <CustomButton size="sm" variant="outline">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir
-                    </CustomButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* GRUPO 5: Otros Documentos (Condicional) */}
-            <div className="md:col-span-2 space-y-3">
-              <h3 className="font-semibold text-gray-800">Otros Documentos (Condicional)</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900">Reglamento de Copropiedad</h4>
-                      <p className="text-xs text-gray-600">Si es departamento/condominio</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        OPCIONAL
-                      </span>
-                      <CustomButton size="sm" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Subir
-                      </CustomButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900">Certificado de No Expropiación (SERVIU)</h4>
-                      <p className="text-xs text-gray-600">Recomendado</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        RECOMENDADO
-                      </span>
-                      <CustomButton size="sm" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Subir
-                      </CustomButton>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">Carga Progresiva de Documentos</h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>
+                        No es necesario que tengas todos los documentos ahora. Podrás subirlos en cualquier momento desde tu panel de control
+                        o después de crear la publicación.
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-75">
+                 {/* List of documents just for display */}
+                 {SALE_DOCUMENTS.map(doc => (
+                   <div key={doc.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                     <div className="flex items-center justify-between">
+                       <span className="text-sm font-medium text-gray-700">{doc.label}</span>
+                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                         OPCIONAL
+                       </span>
+                     </div>
+                   </div>
+                 ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* Botones Finales */}
-      <div className="flex justify-center gap-4 mt-8 px-6">
-        <CustomButton
-          onClick={onCancel}
-          variant="outline"
-          className="px-8 py-3 border-2 border-gray-300 text-gray-700 bg-white rounded-full font-medium hover:bg-gray-50"
-        >
-          Cancelar
-        </CustomButton>
-        <CustomButton
-          onClick={handleSubmit}
-          loading={loading}
-          className="px-8 py-3 bg-green-600 text-white rounded-full font-medium hover:bg-green-700"
-        >
-          {isEditing ? 'Actualizar Propiedad' : 'Publicar Propiedad'}
-        </CustomButton>
+      <div className="flex flex-col sm:flex-row gap-4 justify-end pt-8">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold shadow-md hover:shadow-lg touch-manipulation"
+            >
+              <X className="h-5 w-5" />
+              <span>Cancelar</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Publicando...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-5 w-5" />
+                  <span>{isEditing ? 'Actualizar Propiedad' : 'Publicar Propiedad'}</span>
+                </>
+              )}
+            </button>
       </div>
 
     </div>
-    </>
   );
 };
 

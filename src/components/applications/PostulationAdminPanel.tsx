@@ -236,8 +236,12 @@ const DocumentsList: React.FC<{
 // ========================================================================
 
 export const PostulationAdminPanel: React.FC = () => {
+  console.log('🎯 COMPONENTE CARGADO: PostulationAdminPanel desde applications/PostulationAdminPanel.tsx');
+
   const { id: applicationId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  console.log('🆔 APPLICATION ID:', applicationId);
 
   const [postulation, setPostulation] = useState<PostulationData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -454,9 +458,11 @@ export const PostulationAdminPanel: React.FC = () => {
   };
 
   const fetchPostulationData = async () => {
+    console.log('🚀 DEBUG: Iniciando fetchPostulationData');
     try {
       setLoading(true);
       setError(null);
+      console.log('🔄 DEBUG: Estados inicializados - loading: true, error: null');
 
       // 1. Obtener datos básicos de la aplicación con propiedad
       const { data: applicationData, error: applicationError } = await supabase
@@ -818,12 +824,15 @@ export const PostulationAdminPanel: React.FC = () => {
         score: postulationData.score
       });
 
+      console.log('🔄 DEBUG: Llamando setPostulation con:', postulationData);
       setPostulation(postulationData);
 
     } catch (error: any) {
       console.error('❌ Error en fetchPostulationData:', error);
+      console.log('❌ DEBUG: Seteando error y loading: false');
       setError('Error al cargar los datos de la postulación');
     } finally {
+      console.log('🏁 DEBUG: Finally - Seteando loading: false');
       setLoading(false);
     }
   };
@@ -1376,12 +1385,26 @@ export const PostulationAdminPanel: React.FC = () => {
 
   useEffect(() => {
     if (applicationId) {
+      console.log('🔄 [PostulationAdminPanel] Iniciando carga de datos para aplicación:', applicationId);
+      console.log('🔍 DEBUG: applicationId existe:', !!applicationId);
       setHasRealScore(false);
       fetchPostulationData();
       loadApplicantsDocuments();
       loadGuarantorsDocuments();
+    } else {
+      console.log('❌ DEBUG: applicationId es null/undefined:', applicationId);
     }
   }, [applicationId]);
+
+  // Debug: Monitorear cambios en postulation
+  useEffect(() => {
+    console.log('📊 DEBUG: Estado postulation cambió:', postulation);
+  }, [postulation]);
+
+  // Debug: Monitorear cambios en loading
+  useEffect(() => {
+    console.log('📊 DEBUG: Estado loading cambió:', loading);
+  }, [loading]);
 
   // Loading state
   if (loading) {
@@ -1415,7 +1438,49 @@ export const PostulationAdminPanel: React.FC = () => {
   }
 
   // No postulation found
+  console.log('🔍 DEBUG: Estado actual - postulation:', postulation);
+  console.log('🔍 DEBUG: Estado actual - loading:', loading);
+  console.log('🔍 DEBUG: Estado actual - error:', error);
+  console.log('🔍 DEBUG: Estado actual - applicationId:', applicationId);
+
+  // Si aún está cargando, mostrar loading
+  if (loading) {
+    console.log('⏳ DEBUG: Aún cargando, mostrando pantalla de carga');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando postulación...</p>
+          <p className="text-sm text-gray-500 mt-2">ID: {applicationId}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si hay error, mostrar error
+  if (error) {
+    console.log('❌ DEBUG: Hay error, mostrando pantalla de error');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-600">{error}</p>
+          <p className="text-sm text-gray-500 mt-2">ID: {applicationId}</p>
+          <button
+            onClick={() => navigate('/portfolio')}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Volver al Portfolio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay postulación después de cargar, mostrar no encontrada
   if (!postulation) {
+    console.log('❌ DEBUG: No hay postulación después de cargar, mostrando no encontrada');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -1703,10 +1768,17 @@ export const PostulationAdminPanel: React.FC = () => {
   // Variable derivada: indica si ya existen condiciones de contrato
   const has_contract_conditions = contractData !== null;
 
-  console.log('🎨 PostulationAdminPanel: Renderizando interfaz con pestañas');
+  console.log('🎨 PostulationAdminPanel: Renderizando interfaz con pestañas - VERSION CON PESTAÑAS');
+
+  console.log('🚀 EJECUTANDO RENDER PRINCIPAL - RETORNANDO JSX');
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* DEBUG BANNER - TEMPORAL PARA CONFIRMAR VERSION */}
+      <div className="bg-red-600 text-white text-center py-2 font-bold">
+        🚨 DEBUG: VERSION CON PESTAÑAS CARGADA - PostulationAdminPanel.tsx 🚨
+      </div>
+
       {/* Admin Panel Indicator */}
       <div className="h-1 bg-gradient-to-r from-blue-600 to-blue-700"></div>
 

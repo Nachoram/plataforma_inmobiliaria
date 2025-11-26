@@ -69,6 +69,8 @@ export const AppContent: React.FC = () => {
   // Preload rutas críticas para mejor performance
   useRoutePreloader();
 
+  console.log('🏠 AppContent renderizado - plataforma completa');
+
   return (
     <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
       <AuthErrorHandler>
@@ -124,7 +126,6 @@ export const AppContent: React.FC = () => {
       <Route path="/postulation/:id/admin" element={
         <ProtectedRoute>
           <Layout>
-            {console.log('🧪 AppContent: Renderizando PostulationAdminPanel')}
             <PostulationAdminPanel />
           </Layout>
         </ProtectedRoute>
@@ -142,7 +143,6 @@ export const AppContent: React.FC = () => {
       <Route path="/offer/:id/admin" element={
         <ProtectedRoute>
           <Layout>
-            {console.log('🧪 AppContent: Renderizando SalesOfferDetailView')}
             <SalesOfferDetailView />
           </Layout>
         </ProtectedRoute>

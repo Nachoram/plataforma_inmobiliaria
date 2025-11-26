@@ -3,181 +3,6 @@
 -- Description: Backend functions for enhanced postulant panel functionality
 
 -- ========================================================================
--- FUNCTION: replace_application_document
--- Description: Replace an existing application document with a new one
--- ========================================================================
-
-CREATE OR REPLACE FUNCTION replace_application_document(
-  p_document_id UUID,
-  p_new_file_name TEXT,
-  p_new_file_path TEXT,
-  p_new_file_size BIGINT
-) RETURNS JSON AS $$
-DECLARE
-  v_old_document RECORD;
-  v_application_id UUID;
-  v_result JSON;
-BEGIN
-  -- Get the old document details
-  SELECT * INTO v_old_document
-  FROM application_documents
-  WHERE id = p_document_id;
-
-  IF NOT FOUND THEN
-    RETURN json_build_object('success', false, 'error', 'Document not found');
-  END IF;
-
-  -- Verify the user owns this document
-  IF v_old_document.uploaded_by != auth.uid() THEN
-    RETURN json_build_object('success', false, 'error', 'Unauthorized');
-  END IF;
-
-  -- Store application_id for later use
-  v_application_id := v_old_document.application_id;
-
-  -- Delete the old file from storage (optional, can be handled by cleanup job)
-  -- Note: Supabase storage doesn't have direct delete via SQL functions
-
-  -- Update the document record
-  UPDATE application_documents
-  SET
-    file_name = p_new_file_name,
-    file_path = p_new_file_path,
-    file_size = p_new_file_size,
-    uploaded_at = NOW(),
-    verified = false -- Reset verification status
-  WHERE id = p_document_id;
-
-  -- Create audit log entry
-  INSERT INTO application_audit_log (
-    application_id,
-    user_id,
-    action,
-    details,
-    ip_address,
-    user_agent
-  ) VALUES (
-    v_application_id,
-    auth.uid(),
-    'document_replaced',
-    json_build_object(
-      'document_id', p_document_id,
-      'old_file_name', v_old_document.file_name,
-      'new_file_name', p_new_file_name,
-      'document_type', v_old_document.document_type
-    ),
-    NULL,
-    NULL
-  );
-
-  v_result := json_build_object(
-    'success', true,
-    'document_id', p_document_id,
-    'message', 'Document replaced successfully'
-  );
-
-  RETURN v_result;
-
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN json_build_object('success', false, 'error', SQLERRM);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ========================================================================
--- FUNCTION: request_specific_documents
--- Description: Create a request for specific document types from landlord
--- ========================================================================
-
-CREATE OR REPLACE FUNCTION request_specific_documents(
-  p_application_id UUID,
-  p_requested_document_types TEXT[],
-  p_reason TEXT
-) RETURNS UUID AS $$
-DECLARE
-  v_application RECORD;
-  v_request_id UUID;
-  v_request_details JSON;
-BEGIN
-  -- Verify the application exists and user has access
-  SELECT * INTO v_application
-  FROM applications
-  WHERE id = p_application_id AND applicant_id = auth.uid();
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Application not found or access denied';
-  END IF;
-
-  -- Verify application is in valid state for document requests
-  IF v_application.status NOT IN ('pendiente', 'en_revision', 'aprobada') THEN
-    RAISE EXCEPTION 'Cannot request documents for application in status: %', v_application.status;
-  END IF;
-
-  -- Create request details
-  v_request_details := json_build_object(
-    'requested_types', p_requested_document_types,
-    'reason', p_reason,
-    'request_type', 'specific_documents'
-  );
-
-  -- Create the request
-  INSERT INTO application_requests (
-    application_id,
-    applicant_id,
-    landlord_id,
-    request_type,
-    subject,
-    description,
-    requested_changes,
-    status,
-    priority,
-    ip_address,
-    user_agent
-  ) VALUES (
-    p_application_id,
-    auth.uid(),
-    v_application.owner_id,
-    'document_request',
-    'Solicitud de Documentos Específicos',
-    format('Solicitud de documentos específicos: %s. Razón: %s',
-           array_to_string(p_requested_document_types, ', '), p_reason),
-    v_request_details,
-    'pending',
-    'normal',
-    NULL,
-    NULL
-  ) RETURNING id INTO v_request_id;
-
-  -- Create audit log entry
-  INSERT INTO application_audit_log (
-    application_id,
-    user_id,
-    action,
-    details,
-    ip_address,
-    user_agent
-  ) VALUES (
-    p_application_id,
-    auth.uid(),
-    'document_request_created',
-    json_build_object(
-      'request_id', v_request_id,
-      'requested_types', p_requested_document_types,
-      'reason', p_reason
-    ),
-    NULL,
-    NULL
-  );
-
-  RETURN v_request_id;
-
-EXCEPTION
-  WHEN OTHERS THEN
-    RAISE EXCEPTION 'Error creating document request: %', SQLERRM;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ========================================================================
 -- FUNCTION: cancel_application_by_applicant
 -- Description: Allow applicant to cancel their application with reason
 -- ========================================================================
@@ -211,70 +36,8 @@ BEGIN
   UPDATE applications
   SET
     status = 'rechazada',
-    updated_at = NOW(),
-    cancellation_reason = p_reason,
-    cancelled_by = auth.uid(),
-    cancelled_at = NOW()
-  WHERE id = p_application_id;
-
-  -- Cancel any pending contracts
-  UPDATE rental_contracts
-  SET
-    status = 'cancelled',
     updated_at = NOW()
-  WHERE application_id = p_application_id AND status IN ('draft', 'pending');
-
-  -- Create audit log entry
-  INSERT INTO application_audit_log (
-    application_id,
-    user_id,
-    action,
-    details,
-    ip_address,
-    user_agent
-  ) VALUES (
-    p_application_id,
-    auth.uid(),
-    'application_cancelled_by_applicant',
-    json_build_object(
-      'old_status', v_old_status,
-      'new_status', 'rechazada',
-      'reason', p_reason
-    ),
-    NULL,
-    NULL
-  );
-
-  -- Send notification to landlord (this could be enhanced with actual notifications)
-  INSERT INTO application_messages (
-    application_id,
-    sender_id,
-    sender_type,
-    sender_name,
-    recipient_id,
-    recipient_type,
-    recipient_name,
-    subject,
-    message,
-    message_type,
-    conversation_id,
-    ip_address,
-    user_agent
-  ) VALUES (
-    p_application_id,
-    auth.uid(),
-    'applicant',
-    COALESCE((SELECT raw_user_meta_data->>'full_name' FROM auth.users WHERE id = auth.uid()), 'Postulante'),
-    v_application.owner_id,
-    'landlord',
-    'Arrendador',
-    'Postulación Cancelada',
-    format('La postulación ha sido cancelada por el postulante. Razón: %s', p_reason),
-    'status_update',
-    gen_random_uuid(),
-    NULL,
-    NULL
-  );
+  WHERE id = p_application_id;
 
   RETURN true;
 
@@ -315,7 +78,7 @@ BEGIN
     pd.document_type,
     pd.file_name,
     pd.uploaded_at,
-    pd.verified
+    (pd.status = 'verified') as verified
   FROM property_documents pd
   WHERE pd.property_id = p_property_id
   ORDER BY pd.uploaded_at DESC;
@@ -351,13 +114,13 @@ BEGIN
   RETURN QUERY
   SELECT
     ud.id,
-    ud.document_type,
+    ud.doc_type as document_type,
     ud.file_name,
     ud.uploaded_at,
-    ud.verified
+    true as verified -- user_documents doesn't have verified column, assume true
   FROM user_documents ud
   WHERE ud.user_id = p_owner_id
-  AND ud.document_type IN ('cedula', 'certificado_dominio', 'comprobante_ingresos')
+  AND ud.doc_type IN ('cedula', 'certificado_dominio', 'comprobante_ingresos')
   ORDER BY ud.uploaded_at DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

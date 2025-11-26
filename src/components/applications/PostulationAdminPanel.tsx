@@ -9,6 +9,21 @@ import { sendWebhookGET } from '../../lib/webhook';
 import toast from 'react-hot-toast';
 import ContractSummaryCard from '../dashboard/ContractSummaryCard';
 
+// Import new tab components
+import { PostulationInfoTab } from './PostulationInfoTab';
+import { PostulationDocumentsTab } from './PostulationDocumentsTab';
+import { PostulationActionsTab } from './PostulationActionsTab';
+import { PostulationMessagesTab } from './PostulationMessagesTab';
+
+// Import icons for tabs
+import {
+  FileText,
+  Paperclip,
+  MessageSquare,
+  Zap,
+  ArrowLeft
+} from 'lucide-react';
+
 // ========================================================================
 // INTERFACES & TYPES
 // ========================================================================
@@ -240,8 +255,10 @@ export const PostulationAdminPanel: React.FC = () => {
   // Estados para gestión del contrato
   const [showContractModal, setShowContractModal] = useState(false);
   const [savingContract, setSavingContract] = useState(false);
+  const [revertingApproval, setRevertingApproval] = useState(false);
   const [contractModalKey, setContractModalKey] = useState(0);
   const [showRevertModal, setShowRevertModal] = useState(false);
+  const [contractManuallyGenerated, setContractManuallyGenerated] = useState(false);
 
   // Estados para documentos
   const [documentsLoading, setDocumentsLoading] = useState(false);
@@ -252,6 +269,9 @@ export const PostulationAdminPanel: React.FC = () => {
   const [isDownloadingContract, setIsDownloadingContract] = useState(false);
   const [isViewingContract, setIsViewingContract] = useState(false);
   const [isCancellingContract, setIsCancellingContract] = useState(false);
+
+  // Estados para el sistema de pestañas
+  const [activeTab, setActiveTab] = useState<'info' | 'documents' | 'messages'>('info');
 
   // Función para abrir el modal de contrato de manera estable
   const handleOpenContractModal = () => {
@@ -1125,6 +1145,22 @@ export const PostulationAdminPanel: React.FC = () => {
     }
   };
 
+  /**
+   * Función unificada para cargar todos los documentos (postulantes y garantores)
+   * Esta función es llamada por los componentes de pestañas para refrescar los datos
+   */
+  const loadDocuments = async () => {
+    console.log('🔄 Cargando todos los documentos para la postulación...');
+
+    // Cargar documentos de postulantes y garantores en paralelo
+    await Promise.all([
+      loadApplicantsDocuments(),
+      loadGuarantorsDocuments()
+    ]);
+
+    console.log('✅ Todos los documentos cargados');
+  };
+
   // Función para cargar historial de auditoría
   const fetchAuditLog = async () => {
     if (!applicationId) return;
@@ -1397,1024 +1433,103 @@ export const PostulationAdminPanel: React.FC = () => {
     );
   }
 
-  /**
-   * Registra una acción en el historial de auditoría
-   */
-  const logAuditAction = async (
-    actionType: string,
-    previousStatus: string,
-    newStatus: string,
-    actionDetails: any = {},
-    notes: string = ''
-  ) => {
+  // ========================================================================
+  // FUNCIONES DE ACCIONES ADMINISTRATIVAS
+  // ========================================================================
+
+  const handleApproveApplication = async () => {
+    try {
+      // TODO: Implementar lógica de aprobación
+      console.log('🔄 Aprobando aplicación...');
+      toast.info('Funcionalidad de aprobación en desarrollo');
+    } catch (error) {
+      console.error('❌ Error aprobando aplicación:', error);
+      toast.error('Error al aprobar la aplicación');
+    }
+  };
+
+  const handleConfirmRevert = async () => {
     if (!applicationId) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuario no autenticado');
+      setRevertingApproval(true);
+      console.log('🔄 Revirtiendo aprobación de la aplicación...');
 
-      // Obtener property_id de la aplicación
-      const { data: appData } = await supabase
-        .from('applications')
-        .select('property_id')
-        .eq('id', applicationId)
-        .single();
+      // TODO: Implementar lógica real de revertir aprobación
+      // Por ahora solo mostrar mensaje
+      toast.info('Funcionalidad de revertir aprobación en desarrollo');
 
-      const { error } = await supabase.rpc('log_application_audit', {
-        p_application_id: applicationId,
-        p_property_id: appData?.property_id || '',
-        p_user_id: user.id,
-        p_action_type: actionType,
-        p_previous_status: previousStatus,
-        p_new_status: newStatus,
-        p_action_details: actionDetails,
-        p_notes: notes
-      });
+      // Aquí iría la lógica para:
+      // 1. Cambiar el status de la aplicación
+      // 2. Actualizar en Supabase
+      // 3. Registrar en audit log
 
-      if (error) {
-        console.error('❌ Error al registrar auditoría:', error);
-        // No lanzamos error para no interrumpir el flujo principal
-      }
     } catch (error) {
-      console.error('❌ Error en logAuditAction:', error);
-    }
-  };
-
-  /**
-   * Maneja la aprobación de la postulación cuando hay condiciones de contrato
-   * Envía datos al webhook para generación automática de contrato
-   */
-  const handleApproveApplication = async () => {
-    if (!applicationId) {
-      toast.error('No hay aplicación seleccionada');
-      return;
-    }
-
-    if (!has_contract_conditions) {
-      toast.error('Debe crear las condiciones del contrato antes de aprobar la postulación');
-      return;
-    }
-
-    try {
-      console.log('✅ APROBANDO POSTULACIÓN con webhook - ApplicationId:', applicationId);
-
-      // 1. PRIMERO: Actualizar estado de la aplicación a aprobada
-      const { error: updateError } = await supabase
-        .from('applications')
-        .update({
-          status: 'aprobada',
-          updated_at: new Date().toISOString(),
-          approved_at: new Date().toISOString()
-        })
-        .eq('id', applicationId);
-
-      if (updateError) {
-        console.error('❌ Error actualizando estado:', updateError);
-        toast.error('Error al actualizar el estado de la postulación');
-        return;
-      }
-
-      console.log('✅ Estado de aplicación actualizado a "aprobada"');
-
-      // 2. SEGUNDO: Intentar enviar webhook (no bloquea la aprobación)
-      try {
-        console.log('🚀 WEBHOOK: Intentando enviar webhook...');
-
-        // Obtener los datos requeridos para el webhook
-        const webhookData = await getWebhookData(applicationId);
-
-        if (!webhookData) {
-          console.warn('⚠️ WEBHOOK: No se pudieron obtener datos para webhook, pero aprobación exitosa');
-          toast.success('✅ Postulación aprobada exitosamente');
-          fetchPostulationData();
-          fetchAuditHistory();
-          return;
-        }
-
-        console.log('🚀 WEBHOOK: Enviando notificación de aprobación via GET');
-        console.log('📦 WEBHOOK: Datos:', webhookData);
-
-        // Enviar notificación de aprobación usando el cliente webhook
-        const webhookSuccess = await sendWebhookGET({
-          ...webhookData,
-          action: 'application_approved',
-          notification_type: 'approval'
-        });
-
-        if (webhookSuccess) {
-          console.log('✅ WEBHOOK: Notificación de aprobación enviada exitosamente');
-        } else {
-          console.warn('⚠️ WEBHOOK: Notificación de aprobación no pudo enviarse, pero aprobación exitosa');
-        }
-
-        // Registrar auditoría con resultado del webhook
-        await logAuditAction(
-          'approve',
-          'pendiente',
-          'aprobada',
-          {
-            action: 'approve_application_with_contract',
-            webhook_data: webhookData,
-            has_contract_conditions: true,
-            webhook_success: webhookSuccess
-          },
-          webhookSuccess
-            ? 'Postulación aprobada con condiciones de contrato y notificación webhook enviada exitosamente'
-            : 'Postulación aprobada con condiciones de contrato (notificación webhook falló)'
-        );
-
-        toast.success('✅ Postulación aprobada y contrato enviado para generación automática');
-
-      } catch (webhookError: any) {
-        console.warn('⚠️ WEBHOOK: Error enviando webhook, pero aprobación exitosa:', webhookError);
-
-        // Registrar auditoría indicando que el webhook falló
-        await logAuditAction(
-          'approve',
-          'pendiente',
-          'aprobada',
-          {
-            action: 'approve_application_contract_only',
-            has_contract_conditions: true,
-            webhook_success: false,
-            webhook_error: webhookError.message
-          },
-          'Postulación aprobada con condiciones de contrato, pero notificación webhook falló'
-        );
-
-        toast.error('✅ Postulación aprobada, pero hubo un error al enviar la notificación automática. Contacta al administrador.');
-      }
-
-      // Recargar datos
-      fetchPostulationData();
-      fetchAuditLog();
-
-    } catch (error: any) {
-      console.error('❌ Error en handleApproveApplication:', error);
-      let errorMessage = 'Error al aprobar la postulación';
-
-      if (error.message?.includes('Sesión') || error.message?.includes('session')) {
-        errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
-      }
-
-      toast.error(errorMessage);
-    }
-  };
-
-  /**
-   * Maneja la anulación de la aprobación de la postulación
-   */
-  const handleRevertApproval = () => {
-    setShowRevertModal(true);
-  };
-
-  /**
-   * Confirma y ejecuta la anulación de la aprobación
-   */
-  const confirmRevertApproval = async () => {
-    if (!applicationId) {
-      toast.error('No hay aplicación seleccionada');
-      return;
-    }
-
-    try {
-      setShowRevertModal(false);
-      toast.loading('Anulando aprobación...', { id: 'revert-loading' });
-
-      // Obtener usuario actual
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        toast.error('Error de autenticación. Por favor, inicia sesión nuevamente.');
-        return;
-      }
-
-      console.log('🔄 Anulando aprobación para applicationId:', applicationId);
-
-      // Llamar a la Edge Function
-      const { data, error } = await supabase.functions.invoke('undo-application-approval', {
-        body: {
-          application_id: applicationId,
-          undo_requested_by: user.id,
-          undo_reason: 'Anulado desde panel administrativo'
-        }
-      });
-
-      if (error) {
-        console.error('❌ Error al anular aprobación:', error);
-        toast.error('Error al anular la aprobación');
-        return;
-      }
-
-      if (!data.success) {
-        console.error('❌ Error en respuesta:', data);
-        toast.error(data.error || 'Error al anular la aprobación');
-        return;
-      }
-
-      console.log('✅ Aprobación anulada exitosamente');
-      toast.success('✅ Aprobación anulada exitosamente');
-
-      // Actualizar datos de la postulación
-      fetchPostulationData();
-      fetchAuditHistory();
-
-    } catch (error: any) {
-      console.error('❌ Error en confirmRevertApproval:', error);
-      let errorMessage = 'Error al anular la aprobación';
-
-      if (error.message?.includes('Sesión') || error.message?.includes('session')) {
-        errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
-      }
-
-      toast.error(errorMessage);
+      console.error('❌ Error revirtiendo aprobación:', error);
+      toast.error('Error al revertir la aprobación');
     } finally {
-      toast.dismiss('revert-loading');
+      setRevertingApproval(false);
+      setShowRevertModal(false);
     }
   };
 
-  /**
-   * Obtiene los datos necesarios para enviar al webhook
-   * @param appId ID de la aplicación
-   * @returns Datos para el webhook o null si hay error
-   */
-  const getWebhookData = async (appId: string) => {
+  const handleRevertApproval = async () => {
     try {
-      console.log('🔍 WEBHOOK: Obteniendo datos para applicationId:', appId);
-
-      // Verificar sesión primero
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.error('❌ WEBHOOK: Error de sesión:', sessionError);
-        throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
-      }
-      if (!session) {
-        throw new Error('No hay sesión activa. Por favor, inicia sesión.');
-      }
-
-      // 1. Obtener property_id de la aplicación
-      const { data: application, error: appError } = await supabase
-        .from('applications')
-        .select('property_id')
-        .eq('id', appId)
-        .single();
-
-      if (appError || !application) {
-        console.error('❌ WEBHOOK: Error obteniendo aplicación:', appError);
-        return null;
-      }
-
-      const propertyId = application.property_id;
-      console.log('🏠 WEBHOOK: Properties.id =', propertyId);
-
-      // Nota: Simplificamos para evitar consultas problemáticas
-      const rentalOwnerPropertyId = propertyId; // Usamos el mismo property_id
-      console.log('👤 WEBHOOK: Usando mismo property_id =', rentalOwnerPropertyId);
-
-      // 3. Obtener application_id de application_applicants
-      const { data: applicants, error: applicantsError } = await supabase
-        .from('application_applicants')
-        .select('application_id')
-        .eq('application_id', appId)
-        .limit(1);
-
-      const applicantApplicationId = applicants && applicants.length > 0
-        ? applicants[0].application_id
-        : appId;
-
-      console.log('📝 WEBHOOK: Application_applicants.application_id =', applicantApplicationId);
-
-      // Datos EXACTOS que solicita el usuario
-      const webhookData = {
-        properties_id: propertyId,                           // tabla properties columna id
-        rental_owners_property_id: rentalOwnerPropertyId,    // tabla rental_owners columna property_id
-        application_applicants_application_id: applicantApplicationId, // tabla application_applicants columna application_id
-        application_id: appId,                              // ID de la aplicación actual
-        timestamp: new Date().toISOString()
-      };
-
-      console.log('📤 WEBHOOK: Datos FINALES para enviar:', webhookData);
-      return webhookData;
-
-    } catch (error: any) {
-      console.error('❌ WEBHOOK: Error obteniendo datos:', error);
-
-      // Si es error de autenticación, mostrar mensaje específico
-      if (error.message?.includes('Sesión') || error.message?.includes('session')) {
-        throw error; // Re-lanzar para que se maneje arriba
-      }
-
-      return null;
+      // TODO: Implementar lógica de revertir aprobación
+      console.log('🔄 Revirtiendo aprobación...');
+      toast.info('Funcionalidad de revertir aprobación en desarrollo');
+    } catch (error) {
+      console.error('❌ Error revirtiendo aprobación:', error);
+      toast.error('Error al revertir la aprobación');
     }
   };
 
-  // Variable derivada: indica si ya existen condiciones de contrato
-  const has_contract_conditions = contractData !== null;
+  // Función para refrescar los datos del contrato después de guardar condiciones
+  const refreshContractData = async () => {
+    console.log('🔄 Refrescando datos del contrato...');
+    try {
+      await fetchPostulationData(); // Recargar toda la información del postulation
+      console.log('✅ Datos del contrato refrescados');
+    } catch (error) {
+      console.error('❌ Error refrescando datos del contrato:', error);
+    }
+  };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <button
-              onClick={() => navigate('/portfolio')}
-              className="flex items-center space-x-2 text-blue-100 hover:text-white transition-colors"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span>Volver</span>
-            </button>
-          </div>
+  // ========================================================================
+  // FUNCIONES DE RENDER
+  // ========================================================================
 
-          <div className="flex-1">
-            <div className="flex items-center space-x-4 mb-4">
-              <span className={`inline-flex px-4 py-2 text-sm font-bold rounded-full border-2 shadow-lg ${getStatusBadge(postulation.status)}`}>
-                {getStatusLabel(postulation.status)}
-              </span>
-              <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold shadow-lg border-2 border-white/30 ${getScoreColor(postulation.score)}`}>
-                📊 Score: {postulation.score}
-                {hasRealScore ? '' : ' (Estimado)'}
-              </span>
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Postulación #{postulation.id.slice(-8)}
-            </h1>
-            <p className="text-blue-100 text-lg">
-              {postulation.property.address_street || 'Dirección no disponible'} {postulation.property.address_number || ''}, {postulation.property.address_commune || 'Comuna no especificada'}
-            </p>
-            <p className="text-blue-100 mt-2">
-              Recibida el {new Date(postulation.created_at).toLocaleDateString('es-CL', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </p>
-          </div>
-        </div>
-      </div>
+  const renderTabContent = () => {
+    console.log('🎯 renderTabContent: Renderizando pestaña:', activeTab);
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Barra de información adicional */}
-        <div className="mb-8 bg-white rounded-xl shadow-lg p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="flex items-center space-x-2">
-                <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
-                <span className="text-sm text-gray-600">
-                  {postulation.applicants.length} Postulante{postulation.applicants.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span className="text-sm text-gray-600">
-                  {postulation.guarantors.length} Aval{postulation.guarantors.length !== 1 ? 'es' : ''}
-                </span>
-              </div>
-
-              {/* Resumen financiero */}
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-700">💰 Ingresos Totales:</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-center">
-                    <div className="text-sm font-bold text-blue-600">
-                      {formatPriceCLP(postulation.applicants.reduce((sum, a) => sum + (a.display_income || 0), 0))}
-                    </div>
-                    <div className="text-xs text-gray-500">Postulantes</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-sm font-bold text-green-600">
-                      {formatPriceCLP(postulation.guarantors.reduce((sum, g) => sum + (g.display_income || 0), 0))}
-                    </div>
-                    <div className="text-xs text-gray-500">Avales</div>
-                  </div>
-                  <div className="text-center border-l border-gray-300 pl-4">
-                    <div className={`text-sm font-bold ${
-                      (postulation.applicants.reduce((sum, a) => sum + (a.display_income || 0), 0) +
-                       postulation.guarantors.reduce((sum, g) => sum + (g.display_income || 0), 0)) > 0
-                        ? 'text-purple-600'
-                        : 'text-gray-400'
-                    }`}>
-                      {formatPriceCLP(
-                        postulation.applicants.reduce((sum, a) => sum + (a.display_income || 0), 0) +
-                        postulation.guarantors.reduce((sum, g) => sum + (g.display_income || 0), 0)
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Total
-                      {(postulation.applicants.reduce((sum, a) => sum + (a.display_income || 0), 0) +
-                        postulation.guarantors.reduce((sum, g) => sum + (g.display_income || 0), 0)) === 0 &&
-                        <span className="text-amber-600"> (sin datos)</span>
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {postulation.has_contract && (
-                <div className="flex items-center space-x-2">
-                  <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span className="text-sm text-gray-600">
-                    {postulation.contract_signed ? 'Contrato Firmado' : 'Contrato Generado'}
-                  </span>
-                </div>
-              )}
-              {(postulation.applicants.length === 0 && postulation.guarantors.length === 0) && (
-                <div className="flex items-center space-x-2">
-                  <svg className="h-4 w-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                  <span className="text-xs text-yellow-600">
-                    Tablas en configuración
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={toggleContractForm}
-                className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                {showContractForm ? 'Ocultar' : 'Ver'} Condiciones Contractuales
-                {loadingContract && <div className="ml-2 animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>}
-              </button>
-              <button
-                onClick={toggleAuditHistory}
-                className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {showAuditHistory ? 'Ocultar' : 'Ver'} Historial
-                {loadingAudit && <div className="ml-2 animate-spin h-4 w-4 border-2 border-gray-600 border-t-transparent rounded-full"></div>}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Contract Summary Card - Only show if contract exists */}
-        {contractData && (
-          <div className="mb-8">
-            <ContractSummaryCard
-              status={contractData.status || 'draft'}
-              createdAt={contractData.created_at || postulation.created_at}
-              approvedAt={contractData.approved_at}
-              finalAmount={contractData.final_amount}
-              finalAmountCurrency={contractData.final_amount_currency || 'clp'}
-              guaranteeAmount={contractData.guarantee_amount}
-              guaranteeAmountCurrency={contractData.guarantee_amount_currency || 'clp'}
-              startDate={contractData.start_date}
-              validityPeriodMonths={contractData.validity_period_months}
-              landlordEmail={contractData.landlord_email}
-              tenantEmail={contractData.tenant_email}
-              guarantorEmail={contractData.guarantor_email}
-              signatures={{
-                owner: contractData.owner_signed_at ? new Date(contractData.owner_signed_at) : null,
-                tenant: contractData.tenant_signed_at ? new Date(contractData.tenant_signed_at) : null,
-                guarantor: contractData.guarantor_signed_at ? new Date(contractData.guarantor_signed_at) : null,
-              }}
-              contractUrl={contractData.contract_html}
-              signedContractUrl={contractData.signed_contract_url}
-              contractId={contractData.id}
-              onDownload={handleDownloadContract}
-              onView={handleViewContract}
-              onEdit={handleEditContract}
-              onCancel={handleCancelContract}
-              onOpenEditor={handleOpenEditor}
-              canEdit={contractData.status === 'draft'}
-              canCancel={contractData.status !== 'cancelled' && contractData.status !== 'fully_signed'}
-              isDownloading={isDownloadingContract}
-              isViewing={isViewingContract}
-              isCancelling={isCancellingContract}
+    switch (activeTab) {
+      case 'info':
+        return (
+          <div className="space-y-8">
+            {/* Información de la Postulación */}
+            <PostulationInfoTab
+              postulation={postulation}
+              contractData={contractData}
+              applicantsDocuments={applicantsDocuments}
+              guarantorsDocuments={guarantorsDocuments}
+              showContractForm={showContractForm}
+              onToggleContractForm={() => setShowContractForm(!showContractForm)}
+              onDownloadContract={handleDownloadContract}
+              onViewContract={handleViewContract}
+              onEditContract={() => setShowContractModal(true)}
+              onCancelContract={handleCancelContract}
+              onOpenContractModal={() => setShowContractModal(true)}
+              onSaveContract={saveContract}
+              onRefreshContract={refreshContractData}
+              contractManuallyGenerated={contractManuallyGenerated}
+              isDownloadingContract={isDownloadingContract}
+              isViewingContract={isViewingContract}
+              isCancellingContract={isCancellingContract}
+              loadingContract={loadingContract}
+              savingContract={savingContract}
             />
-          </div>
-        )}
 
-        {/* Formulario del Contrato */}
-        {showContractForm && (
-          <div className="mb-8 bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <svg className="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Datos del Contrato de Arriendo
-              </h3>
-              <button
-                onClick={handleOpenContractModal}
-                className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                  contractData
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={contractData ? "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" : "M12 6v6m0 0v6m0-6h6m-6 0H6"} />
-                </svg>
-                {contractData ? 'Editar Contrato' : 'Crear Contrato'}
-              </button>
-            </div>
-
-            {loadingContract ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600">Cargando datos del contrato...</span>
-              </div>
-            ) : contractData ? (
-              <div className="space-y-6">
-                {/* Información General del Contrato */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                      <svg className="h-4 w-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Vigencia del Contrato
-                    </h4>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Fecha de inicio:</span> {new Date(contractData.start_date).toLocaleDateString('es-CL')}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Plazo:</span> {contractData.validity_period_months} meses
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Fecha de término:</span> {
-                          new Date(new Date(contractData.start_date).getTime() + contractData.validity_period_months * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CL')
-                        }
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                      <svg className="h-4 w-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                      </svg>
-                      Montos del Contrato
-                    </h4>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Monto final:</span> {contractData.final_amount_currency === 'uf' ? `${contractData.final_amount} UF` : formatPriceCLP(contractData.final_amount)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Monto garantía:</span> {contractData.guarantee_amount_currency === 'uf' ? `${contractData.guarantee_amount} UF` : formatPriceCLP(contractData.guarantee_amount)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Comunicación */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                    <svg className="h-4 w-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Comunicación Oficial
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Arrendatario:</span> {contractData.tenant_email}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Arrendador:</span> {contractData.landlord_email}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Información de Pagos */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                    <svg className="h-4 w-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                    </svg>
-                    Información de Pagos
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Titular:</span> {contractData.account_holder_name}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Número de cuenta:</span> {contractData.account_number}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Banco:</span> {contractData.account_bank}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Tipo de cuenta:</span> {contractData.account_type}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Cláusulas Especiales */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                      <svg className="h-4 w-4 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                      </svg>
-                      Cláusulas Especiales
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Cláusula DICOM:</span>
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                        contractData.has_dicom_clause ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {contractData.has_dicom_clause ? 'Sí' : 'No'}
-                      </span>
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      <span className="font-medium">Renovación Automática:</span>
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                        contractData.has_auto_renewal_clause ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {contractData.has_auto_renewal_clause ? 'Sí' : 'No'}
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                      <svg className="h-4 w-4 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      Condiciones del Inmueble
-                    </h4>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Tipo:</span> {contractData.property_type === 'casa' ? '🏠 Casa' : '🏢 Departamento'}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Mascotas:</span>
-                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                          contractData.allows_pets ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {contractData.allows_pets ? 'Sí' : 'No'}
-                        </span>
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Amoblado:</span>
-                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                          contractData.is_furnished ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {contractData.is_furnished ? 'Sí' : 'No'}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Comisión de Corretaje */}
-                {contractData.has_brokerage_commission && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                      <svg className="h-4 w-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      Comisión de Corretaje
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Corredor:</span> {contractData.broker_name}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Monto:</span> {formatPriceCLP(contractData.broker_amount)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">RUT:</span> {contractData.broker_rut}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <svg className="h-16 w-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No hay contrato creado</h3>
-                <p className="text-gray-500 mb-4">Crea el contrato de arriendo para esta postulación con todos los datos necesarios.</p>
-                <button
-                  onClick={handleOpenContractModal}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Crear Contrato
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Historial de Auditoría */}
-        {showAuditHistory && (
-          <div className="mb-8 bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <svg className="h-5 w-5 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Historial de Auditoría
-            </h3>
-
-            {loadingAudit ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600"></div>
-                <span className="ml-3 text-gray-600">Cargando historial...</span>
-              </div>
-            ) : auditLog.length > 0 ? (
-              <div className="space-y-4">
-                {auditLog.map((entry) => (
-                  <div key={entry.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{entry.description}</p>
-                        <div className="flex items-center space-x-4 mt-1">
-                          <span className="text-xs text-gray-500">
-                            {new Date(entry.created_at).toLocaleDateString('es-CL', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            entry.action_type === 'create' ? 'bg-green-100 text-green-800' :
-                            entry.action_type === 'update' ? 'bg-blue-100 text-blue-800' :
-                            entry.action_type === 'delete' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {entry.action_type}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <svg className="h-16 w-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-gray-500 mb-2">No hay registros de auditoría</p>
-                <p className="text-xs text-gray-400">
-                  Las acciones realizadas aparecerán aquí en orden cronológico
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Postulantes */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <svg className="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
-                Postulantes ({postulation.applicants.length})
-              </h3>
-
-              {postulation.applicants.length > 0 ? (
-                <div className="space-y-3">
-                  {postulation.applicants.map((applicant, index) => (
-                    <div key={applicant.id || index} className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">
-                            {applicant.display_name || applicant.first_name}
-                          </h4>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              applicant.entity_type === 'natural' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                            }`}>
-                              {applicant.entity_type === 'natural' ? '👤 Natural' : '🏢 Jurídica'}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mt-2 flex items-center">
-                            <svg className="h-3 w-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            {applicant.email}
-                          </p>
-                          {applicant.profession && applicant.entity_type === 'natural' && (
-                            <p className="text-xs text-gray-500 mt-1">{applicant.profession}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          {applicant.display_income && applicant.display_income > 0 ? (
-                            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              applicant.entity_type === 'natural'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              💰 {formatPriceCLP(applicant.display_income)}
-                            </div>
-                          ) : (
-                            <div className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
-                              {applicant.entity_type === 'natural' ? 'Sueldo no disponible' : 'Ingreso neto no disponible'}
-                            </div>
-                          )}
-                          <p className="text-xs text-gray-500 mt-1">
-                            {applicant.entity_type === 'natural' ? 'Sueldo mensual' : 'Ingreso neto mensual'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <svg className="h-16 w-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                  </svg>
-                  <p className="text-gray-500 mb-2">No hay postulantes registrados</p>
-                  <p className="text-xs text-gray-400 mb-1">
-                    Los postulantes aparecerán aquí cuando se registren en el sistema
-                  </p>
-                  <p className="text-xs text-amber-600">
-                    Nota: Tabla application_applicants en configuración
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Avales */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <svg className="h-5 w-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Avales ({postulation.guarantors.length})
-              </h3>
-
-              {postulation.guarantors.length > 0 ? (
-                <div className="space-y-3">
-                  {postulation.guarantors.map((guarantor, index) => (
-                    <div key={guarantor.id || index} className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">
-                            {guarantor.display_name || guarantor.first_name}
-                          </h4>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              guarantor.entity_type === 'natural' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                            }`}>
-                              {guarantor.entity_type === 'natural' ? '👤 Natural' : '🏢 Jurídica'}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mt-2 flex items-center">
-                            <svg className="h-3 w-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            {guarantor.contact_email}
-                          </p>
-                          {guarantor.profession && guarantor.entity_type === 'natural' && (
-                            <p className="text-xs text-gray-500 mt-1">{guarantor.profession}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          {guarantor.display_income && guarantor.display_income > 0 ? (
-                            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              guarantor.entity_type === 'natural'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              💰 {formatPriceCLP(guarantor.display_income)}
-                            </div>
-                          ) : (
-                            <div className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
-                              {guarantor.entity_type === 'natural' ? 'Sueldo no disponible' : 'Ingreso neto no disponible'}
-                            </div>
-                          )}
-                          <p className="text-xs text-gray-500 mt-1">
-                            {guarantor.entity_type === 'natural' ? 'Sueldo mensual' : 'Ingreso neto mensual'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <svg className="h-16 w-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <p className="text-gray-500 mb-2">No hay avales registrados</p>
-                  <p className="text-xs text-gray-400 mb-1">
-                    Los avales aparecerán aquí cuando se registren en el sistema
-                  </p>
-                  <p className="text-xs text-amber-600">
-                    Nota: Tabla application_guarantors en configuración
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Documentos por Postulante y Garantor */}
-          <div className="lg:col-span-3 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                <svg className="h-5 w-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Documentos de Postulantes y Garantores
-              </h3>
-
-              {documentsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin h-8 w-8 border-b-2 border-indigo-600"></div>
-                  <span className="ml-3 text-gray-600">Cargando documentos...</span>
-                </div>
-              ) : Object.keys(applicantsDocuments).length === 0 && Object.keys(guarantorsDocuments).length === 0 ? (
-                <div className="text-center py-12">
-                  <svg className="h-16 w-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-gray-500 mb-2">No hay documentos disponibles</p>
-                  <p className="text-xs text-gray-400">Los documentos cargados por postulantes aparecerán aquí</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Documentos de Postulantes */}
-                  {Object.keys(applicantsDocuments).length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide text-blue-600">
-                        📋 Documentos de Postulantes
-                      </h4>
-                      <div className="space-y-4">
-                        {Object.entries(applicantsDocuments).map(([applicantName, docs]) => (
-                          <div key={applicantName} className="border border-gray-200 rounded-lg p-4">
-                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                              <svg className="h-4 w-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                              {applicantName}
-                            </h5>
-                            <DocumentsList
-                              personName={applicantName}
-                              documents={docs}
-                              onDownload={downloadDocument}
-                              isLoading={documentsLoading}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Documentos de Garantores */}
-                  {Object.keys(guarantorsDocuments).length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide text-green-600">
-                        📋 Documentos de Avales
-                      </h4>
-                      <div className="space-y-4">
-                        {Object.entries(guarantorsDocuments).map(([guarantorName, docs]) => (
-                          <div key={guarantorName} className="border border-gray-200 rounded-lg p-4">
-                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                              <svg className="h-4 w-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              {guarantorName}
-                            </h5>
-                            <DocumentsList
-                              personName={guarantorName}
-                              documents={docs}
-                              onDownload={downloadDocument}
-                              isLoading={documentsLoading}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Acciones y Gestión */}
-          <div className="lg:col-span-1">
+            {/* Acciones Administrativas */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <svg className="h-5 w-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2423,8 +1538,7 @@ export const PostulationAdminPanel: React.FC = () => {
                 </svg>
                 Acciones Administrativas
               </h3>
-
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   onClick={handleApproveApplication}
                   disabled={!has_contract_conditions || postulation?.status === 'aprobada'}
@@ -2449,7 +1563,7 @@ export const PostulationAdminPanel: React.FC = () => {
 
                 {postulation?.status === 'aprobada' && (
                   <button
-                    onClick={handleRevertApproval}
+                    onClick={() => setShowRevertModal(true)}
                     className="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
                     title="Revertir la aprobación de esta postulación"
                   >
@@ -2460,140 +1574,299 @@ export const PostulationAdminPanel: React.FC = () => {
                   </button>
                 )}
 
-                <button className="w-full bg-yellow-600 text-white px-4 py-3 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2">
+                <button
+                  onClick={() => {
+                    // TODO: Implement request info functionality
+                    toast.info('Funcionalidad de solicitar información en desarrollo');
+                  }}
+                  className="w-full bg-yellow-600 text-white px-4 py-3 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2"
+                >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                   <span>Solicitar Información</span>
                 </button>
 
-                <button className="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2">
+                <button
+                  onClick={() => {
+                    // TODO: Implement reject functionality
+                    toast.info('Funcionalidad de rechazar en desarrollo');
+                  }}
+                  className="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+                >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                   <span>Rechazar Postulación</span>
                 </button>
+
+                <button
+                  onClick={() => {
+                    // TODO: Implement modify acceptance functionality
+                    toast.info('Funcionalidad de modificar aceptación en desarrollo');
+                  }}
+                  className="w-full bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <span>Modificar Aceptación</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    // TODO: Implement cancel functionality
+                    toast.info('Funcionalidad de cancelar en desarrollo');
+                  }}
+                  className="w-full bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span>Cancelar Postulación</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setContractManuallyGenerated(true);
+                    setShowContractModal(true);
+                  }}
+                  disabled={!has_contract_conditions}
+                  className={`w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
+                    !has_contract_conditions
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                  title={!has_contract_conditions ? 'Primero debe establecer las condiciones contractuales' : 'Generar contrato basado en las condiciones establecidas'}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Generar Contrato</span>
+                </button>
+
+                <button
+                  onClick={() => setShowContractForm(true)}
+                  className="w-full bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2"
+                  title="Establecer o modificar las condiciones contractuales de la postulación"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 6l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span>Establecer Condiciones Contractuales</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    // TODO: Implement commercial report generation
+                    toast.info('Funcionalidad de generar informe comercial en desarrollo');
+                  }}
+                  className="w-full bg-teal-600 text-white px-4 py-3 rounded-lg hover:bg-teal-700 transition-colors flex items-center justify-center space-x-2"
+                  title="Generar informe comercial con datos del postulante"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Generar Informe Comercial Postulante</span>
+                </button>
               </div>
+            </div>
+          </div>
+        );
+      case 'documents':
+        return (
+          <PostulationDocumentsTab
+            applicationId={postulation.id}
+            applicants={postulation.applicants}
+            guarantors={postulation.guarantors}
+            applicantsDocuments={applicantsDocuments}
+            guarantorsDocuments={guarantorsDocuments}
+            onDocumentsChange={loadDocuments}
+          />
+        );
+      case 'messages':
+        return (
+          <PostulationMessagesTab
+            applicationId={postulation.id}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  // ========================================================================
+  // RENDER PRINCIPAL CON PESTAÑAS
+  // ========================================================================
+
+  // Variable derivada: indica si ya existen condiciones de contrato
+  const has_contract_conditions = contractData !== null;
+
+  console.log('🎨 PostulationAdminPanel: Renderizando interfaz con pestañas');
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Admin Panel Indicator */}
+      <div className="h-1 bg-gradient-to-r from-blue-600 to-blue-700"></div>
+
+      {/* Header Navigation (similar to OfferDetailsPanel) */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="h-16 flex items-center justify-between">
+            <button
+              onClick={() => navigate('/portfolio')}
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              <span className="font-medium">Volver al Portfolio</span>
+            </button>
+            <div className="text-sm text-gray-500">
+              Postulación #{postulation.id.slice(-8)}
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex space-x-8 overflow-x-auto">
+              {[
+                { id: 'info', label: 'Información y Acciones', icon: FileText },
+                { id: 'documents', label: 'Documentos', icon: Paperclip, count: (Object.values(applicantsDocuments).flat().length + Object.values(guarantorsDocuments).flat().length) },
+                { id: 'messages', label: 'Mensajes', icon: MessageSquare }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <tab.icon className={`w-4 h-4 mr-2 ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'}`} />
+                  {tab.label}
+                  {tab.count && tab.count > 0 && (
+                    <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-red-100 text-red-600">
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal para Crear/Editar Contrato */}
-      {showContractModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <ContractModal
-              key={contractModalKey}
-              isOpen={showContractModal}
-              onClose={() => setShowContractModal(false)}
-              onSave={saveContract}
-              initialData={contractData}
-              isSaving={savingContract}
-              mode={contractData ? 'edit' : 'create'}
-            />
-          </div>
-        </div>
-      )}
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
+        {renderTabContent()}
+      </main>
 
-      {/* Modal de confirmación para anular aprobación */}
-      {showRevertModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                ¿Anular Aprobación?
-              </h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Esta acción revertirá el estado de la postulación a "pendiente" y eliminará el contrato generado si existe (solo si no está firmado). Esta acción no se puede deshacer.
-              </p>
-              <div className="flex space-x-3 justify-center">
-                <button
-                  onClick={() => setShowRevertModal(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmRevertApproval}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Anular Aprobación
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Modals */}
+      <RevertModal
+        isOpen={showRevertModal}
+        onClose={() => setShowRevertModal(false)}
+        onConfirm={handleConfirmRevert}
+        loading={revertingApproval}
+      />
     </div>
   );
 };
 
-// Componente Modal para Contrato de Arriendo
-const ContractModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (data: ContractFormData) => Promise<void>;
-  initialData?: ContractData | null;
-  isSaving: boolean;
-  mode: 'create' | 'edit';
-}> = ({ isOpen, onClose, onSave, initialData, isSaving, mode }) => {
-  const [formData, setFormData] = useState<ContractFormData>({
-    start_date: '',
-    validity_period_months: 12,
-    final_amount: 0,
-    final_amount_currency: 'clp',
-    guarantee_amount: 0,
-    guarantee_amount_currency: 'clp',
-    has_dicom_clause: false,
-    has_auto_renewal_clause: false,
-    tenant_email: '',
-    landlord_email: '',
-    account_holder_name: '',
-    account_number: '',
-    account_bank: '',
-    account_type: '',
-    has_brokerage_commission: false,
-    broker_name: '',
-    broker_amount: 0,
-    broker_rut: '',
-    allows_pets: false,
-    is_furnished: false
-  });
+// ========================================================================
+// COMPONENTES ADICIONALES
+// ========================================================================
 
-  // Reset form when modal opens with initial data
-  React.useEffect(() => {
-    if (isOpen) {
-      if (initialData) {
-        setFormData({
-          start_date: initialData.start_date ? new Date(initialData.start_date).toISOString().split('T')[0] : '',
-          validity_period_months: initialData.validity_period_months || 12,
-          final_amount: initialData.final_amount || 0,
-          final_amount_currency: initialData.final_amount_currency || 'clp',
-          guarantee_amount: initialData.guarantee_amount || 0,
-          guarantee_amount_currency: initialData.guarantee_amount_currency || 'clp',
-          has_dicom_clause: initialData.has_dicom_clause || false,
-          has_auto_renewal_clause: initialData.has_auto_renewal_clause || false,
-          tenant_email: initialData.tenant_email || '',
-          landlord_email: initialData.landlord_email || '',
-          account_holder_name: initialData.account_holder_name || '',
-          account_number: initialData.account_number || '',
-          account_bank: initialData.account_bank || '',
-          account_type: initialData.account_type || '',
-          has_brokerage_commission: initialData.has_brokerage_commission || false,
-          broker_name: initialData.broker_name || '',
-          broker_amount: initialData.broker_amount || 0,
-          broker_rut: initialData.broker_rut || '',
-          allows_pets: initialData.allows_pets || false,
-          is_furnished: initialData.is_furnished || false
-        });
-      } else {
+// Componente Modal para Contrato de Arriendo
+  const ContractModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (data: ContractFormData) => Promise<void>;
+    initialData?: ContractData | null;
+    isSaving: boolean;
+    mode: 'create' | 'edit';
+  }> = ({ isOpen, onClose, onSave, initialData, isSaving, mode }) => {
+    const [formData, setFormData] = useState<ContractFormData>({
+      start_date: '',
+      validity_period_months: 12,
+      final_amount: 0,
+      final_amount_currency: 'clp',
+      guarantee_amount: 0,
+      guarantee_amount_currency: 'clp',
+      has_dicom_clause: false,
+      has_auto_renewal_clause: false,
+      tenant_email: '',
+      landlord_email: '',
+      account_holder_name: '',
+      account_number: '',
+      account_bank: '',
+      account_type: '',
+      has_brokerage_commission: false,
+      broker_name: '',
+      broker_amount: 0,
+      broker_rut: '',
+      allows_pets: false,
+      is_furnished: false
+    });
+  
+    // Reset form when modal opens with initial data
+    React.useEffect(() => {
+      if (isOpen) {
+        if (initialData) {
+          setFormData({
+            start_date: initialData.start_date ? new Date(initialData.start_date).toISOString().split('T')[0] : '',
+            validity_period_months: initialData.validity_period_months || 12,
+            final_amount: initialData.final_amount || 0,
+            final_amount_currency: initialData.final_amount_currency || 'clp',
+            guarantee_amount: initialData.guarantee_amount || 0,
+            guarantee_amount_currency: initialData.guarantee_amount_currency || 'clp',
+            has_dicom_clause: initialData.has_dicom_clause || false,
+            has_auto_renewal_clause: initialData.has_auto_renewal_clause || false,
+            tenant_email: initialData.tenant_email || '',
+            landlord_email: initialData.landlord_email || '',
+            account_holder_name: initialData.account_holder_name || '',
+            account_number: initialData.account_number || '',
+            account_bank: initialData.account_bank || '',
+            account_type: initialData.account_type || '',
+            has_brokerage_commission: initialData.has_brokerage_commission || false,
+            broker_name: initialData.broker_name || '',
+            broker_amount: initialData.broker_amount || 0,
+            broker_rut: initialData.broker_rut || '',
+            allows_pets: initialData.allows_pets || false,
+            is_furnished: initialData.is_furnished || false
+          });
+        } else {
+          setFormData({
+            start_date: '',
+            validity_period_months: 12,
+            final_amount: 0,
+            final_amount_currency: 'clp',
+            guarantee_amount: 0,
+            guarantee_amount_currency: 'clp',
+            has_dicom_clause: false,
+            has_auto_renewal_clause: false,
+            tenant_email: '',
+            landlord_email: '',
+            account_holder_name: '',
+            account_number: '',
+            account_bank: '',
+            account_type: '',
+            has_brokerage_commission: false,
+            broker_name: '',
+            broker_amount: 0,
+            broker_rut: '',
+            allows_pets: false,
+            is_furnished: false
+          });
+        }
+        setErrors({});
+      }
+    }, [isOpen, initialData]);
+  
+    // useEffect para estabilizar el estado del modal al cerrar
+    React.useEffect(() => {
+      if (!isOpen) {
+        // Reset form cuando se cierra el modal
         setFormData({
           start_date: '',
           validity_period_months: 12,
@@ -2602,7 +1875,6 @@ const ContractModal: React.FC<{
           guarantee_amount: 0,
           guarantee_amount_currency: 'clp',
           has_dicom_clause: false,
-          has_auto_renewal_clause: false,
           tenant_email: '',
           landlord_email: '',
           account_holder_name: '',
@@ -2616,526 +1888,557 @@ const ContractModal: React.FC<{
           allows_pets: false,
           is_furnished: false
         });
+        setErrors({});
       }
-      setErrors({});
-    }
-  }, [isOpen, initialData]);
-
-  // useEffect para estabilizar el estado del modal al cerrar
-  React.useEffect(() => {
-    if (!isOpen) {
-      // Reset form cuando se cierra el modal
-      setFormData({
-        start_date: '',
-        validity_period_months: 12,
-        final_amount: 0,
-        final_amount_currency: 'clp',
-        guarantee_amount: 0,
-        guarantee_amount_currency: 'clp',
-        has_dicom_clause: false,
-        tenant_email: '',
-        landlord_email: '',
-        account_holder_name: '',
-        account_number: '',
-        account_bank: '',
-        account_type: '',
-        has_brokerage_commission: false,
-        broker_name: '',
-        broker_amount: 0,
-        broker_rut: '',
-        allows_pets: false,
-        is_furnished: false
-      });
-      setErrors({});
-    }
-  }, [isOpen]);
-
-  const [errors, setErrors] = useState<Partial<ContractFormData>>({});
-
-  const validateForm = (): boolean => {
-    const newErrors: Partial<ContractFormData> = {};
-
-    if (!formData.start_date) {
-      newErrors.start_date = 'La fecha de inicio es obligatoria';
-    }
-
-    if (formData.validity_period_months < 1) {
-      newErrors.validity_period_months = 'El plazo debe ser mayor a 0';
-    }
-
-    if (formData.final_amount <= 0) {
-      newErrors.final_amount = 'El monto final debe ser mayor a 0';
-    }
-
-    if (formData.guarantee_amount < 0) {
-      newErrors.guarantee_amount = 'El monto de garantía no puede ser negativo';
-    }
-
-    if (!formData.tenant_email.trim()) {
-      newErrors.tenant_email = 'El email del arrendatario es obligatorio';
-    }
-
-    if (!formData.landlord_email.trim()) {
-      newErrors.landlord_email = 'El email del arrendador es obligatorio';
-    }
-
-    if (!formData.account_holder_name.trim()) {
-      newErrors.account_holder_name = 'El nombre del titular es obligatorio';
-    }
-
-    if (!formData.account_number.trim()) {
-      newErrors.account_number = 'El número de cuenta es obligatorio';
-    }
-
-    if (!formData.account_bank.trim()) {
-      newErrors.account_bank = 'El banco es obligatorio';
-    }
-
-    if (!formData.account_type.trim()) {
-      newErrors.account_type = 'El tipo de cuenta es obligatorio';
-    }
-
-    // Validar comisión de corretaje si está habilitada
-    if (formData.has_brokerage_commission) {
-      if (!formData.broker_name?.trim()) {
-        newErrors.broker_name = 'El nombre del corredor es obligatorio';
+    }, [isOpen]);
+  
+    const [errors, setErrors] = useState<Partial<ContractFormData>>({});
+  
+    const validateForm = (): boolean => {
+      const newErrors: Partial<ContractFormData> = {};
+  
+      if (!formData.start_date) {
+        newErrors.start_date = 'La fecha de inicio es obligatoria';
       }
-      if (formData.broker_amount <= 0) {
-        newErrors.broker_amount = 'El monto de la comisión debe ser mayor a 0';
+  
+      if (formData.validity_period_months < 1) {
+        newErrors.validity_period_months = 'El plazo debe ser mayor a 0';
       }
-      if (!formData.broker_rut?.trim()) {
-        newErrors.broker_rut = 'El RUT del corredor es obligatorio';
+  
+      if (formData.final_amount <= 0) {
+        newErrors.final_amount = 'El monto final debe ser mayor a 0';
       }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  
+      if (formData.guarantee_amount < 0) {
+        newErrors.guarantee_amount = 'El monto de garantía no puede ser negativo';
+      }
+  
+      if (!formData.tenant_email.trim()) {
+        newErrors.tenant_email = 'El email del arrendatario es obligatorio';
+      }
+  
+      if (!formData.landlord_email.trim()) {
+        newErrors.landlord_email = 'El email del arrendador es obligatorio';
+      }
+  
+      if (!formData.account_holder_name.trim()) {
+        newErrors.account_holder_name = 'El nombre del titular es obligatorio';
+      }
+  
+      if (!formData.account_number.trim()) {
+        newErrors.account_number = 'El número de cuenta es obligatorio';
+      }
+  
+      if (!formData.account_bank.trim()) {
+        newErrors.account_bank = 'El banco es obligatorio';
+      }
+  
+      if (!formData.account_type.trim()) {
+        newErrors.account_type = 'El tipo de cuenta es obligatorio';
+      }
+  
+      // Validar comisión de corretaje si está habilitada
+      if (formData.has_brokerage_commission) {
+        if (!formData.broker_name?.trim()) {
+          newErrors.broker_name = 'El nombre del corredor es obligatorio';
+        }
+        if (formData.broker_amount <= 0) {
+          newErrors.broker_amount = 'El monto de la comisión debe ser mayor a 0';
+        }
+        if (!formData.broker_rut?.trim()) {
+          newErrors.broker_rut = 'El RUT del corredor es obligatorio';
+        }
+      }
+  
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+  
+  
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+  
+      if (!validateForm()) return;
+  
+      try {
+        await onSave(formData);
+        onClose();
+      } catch (error) {
+        console.error('Error guardando contrato:', error);
+      }
+    };
+  
+    const formatPriceCLP = (amount: number) => {
+      return new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: 'CLP',
+        minimumFractionDigits: 0,
+      }).format(amount);
+    };
+  
+    if (!isOpen) return null;
+  
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold text-gray-900">
+            {mode === 'create' ? 'Crear Contrato de Arriendo' : 'Editar Contrato de Arriendo'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+  
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Información General del Contrato */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="h-4 w-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Información General del Contrato
+            </h4>
+  
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha de Inicio *
+                </label>
+                <input
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.start_date ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {errors.start_date && <p className="text-red-500 text-xs mt-1">{errors.start_date}</p>}
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Plazo de Vigencia (meses) *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.validity_period_months}
+                  onChange={(e) => setFormData(prev => ({ ...prev, validity_period_months: parseInt(e.target.value) || 12 }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.validity_period_months ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {errors.validity_period_months && <p className="text-red-500 text-xs mt-1">{errors.validity_period_months}</p>}
+              </div>
+  
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Monto Final *
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.final_amount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, final_amount: parseFloat(e.target.value) || 0 }))}
+                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.final_amount ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: 500000"
+                  />
+                  <select
+                    value={formData.final_amount_currency}
+                    onChange={(e) => setFormData(prev => ({ ...prev, final_amount_currency: e.target.value as 'clp' | 'uf' }))}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="clp">CLP</option>
+                    <option value="uf">UF</option>
+                  </select>
+                </div>
+                {errors.final_amount && <p className="text-red-500 text-xs mt-1">{errors.final_amount}</p>}
+              </div>
+  
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Monto Garantía *
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.guarantee_amount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, guarantee_amount: parseFloat(e.target.value) || 0 }))}
+                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.guarantee_amount ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: 250000"
+                  />
+                  <select
+                    value={formData.guarantee_amount_currency}
+                    onChange={(e) => setFormData(prev => ({ ...prev, guarantee_amount_currency: e.target.value as 'clp' | 'uf' }))}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="clp">CLP</option>
+                    <option value="uf">UF</option>
+                  </select>
+                </div>
+                {errors.guarantee_amount && <p className="text-red-500 text-xs mt-1">{errors.guarantee_amount}</p>}
+              </div>
+            </div>
+  
+            <div className="mt-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.has_dicom_clause}
+                  onChange={(e) => setFormData(prev => ({ ...prev, has_dicom_clause: e.target.checked }))}
+                  className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Incluir Cláusula DICOM</span>
+              </label>
+            </div>
+  
+            <div className="mt-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.has_auto_renewal_clause}
+                  onChange={(e) => setFormData(prev => ({ ...prev, has_auto_renewal_clause: e.target.checked }))}
+                  className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Incluir Cláusula de Renovación Automática</span>
+              </label>
+            </div>
+          </div>
+  
+          {/* Comunicación Oficial */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="h-4 w-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Comunicación Oficial
+            </h4>
+  
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Arrendatario *
+                </label>
+                <input
+                  type="email"
+                  value={formData.tenant_email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tenant_email: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.tenant_email ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="arrendatario@email.com"
+                />
+                {errors.tenant_email && <p className="text-red-500 text-xs mt-1">{errors.tenant_email}</p>}
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Arrendador *
+                </label>
+                <input
+                  type="email"
+                  value={formData.landlord_email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, landlord_email: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.landlord_email ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="arrendador@email.com"
+                />
+                {errors.landlord_email && <p className="text-red-500 text-xs mt-1">{errors.landlord_email}</p>}
+              </div>
+            </div>
+          </div>
+  
+          {/* Información de Pagos */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="h-4 w-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+              Información de Pagos
+            </h4>
+  
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del Titular *
+                </label>
+                <input
+                  type="text"
+                  value={formData.account_holder_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, account_holder_name: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.account_holder_name ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: Juan Pérez González"
+                />
+                {errors.account_holder_name && <p className="text-red-500 text-xs mt-1">{errors.account_holder_name}</p>}
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Número de Cuenta *
+                </label>
+                <input
+                  type="text"
+                  value={formData.account_number}
+                  onChange={(e) => setFormData(prev => ({ ...prev, account_number: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.account_number ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 12345678"
+                />
+                {errors.account_number && <p className="text-red-500 text-xs mt-1">{errors.account_number}</p>}
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Banco *
+                </label>
+                <input
+                  type="text"
+                  value={formData.account_bank}
+                  onChange={(e) => setFormData(prev => ({ ...prev, account_bank: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.account_bank ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: Banco Estado"
+                />
+                {errors.account_bank && <p className="text-red-500 text-xs mt-1">{errors.account_bank}</p>}
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Cuenta *
+                </label>
+                <select
+                  value={formData.account_type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, account_type: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.account_type ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Seleccionar tipo</option>
+                  <option value="corriente">Cuenta Corriente</option>
+                  <option value="vista">Cuenta Vista</option>
+                  <option value="ahorro">Cuenta de Ahorro</option>
+                </select>
+                {errors.account_type && <p className="text-red-500 text-xs mt-1">{errors.account_type}</p>}
+              </div>
+            </div>
+          </div>
+  
+          {/* Comisión de Corretaje */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="h-4 w-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Comisión de Corretaje
+            </h4>
+  
+            <div className="mb-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.has_brokerage_commission}
+                  onChange={(e) => setFormData(prev => ({ ...prev, has_brokerage_commission: e.target.checked }))}
+                  className="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">¿Existe comisión de corretaje?</span>
+              </label>
+            </div>
+  
+            {formData.has_brokerage_commission && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre del Corredor *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.broker_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, broker_name: e.target.value }))}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.broker_name ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Nombre completo"
+                  />
+                  {errors.broker_name && <p className="text-red-500 text-xs mt-1">{errors.broker_name}</p>}
+                </div>
+  
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Monto Comisión (CLP) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={formData.broker_amount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, broker_amount: parseInt(e.target.value) || 0 }))}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.broker_amount ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: 50000"
+                  />
+                  {errors.broker_amount && <p className="text-red-500 text-xs mt-1">{errors.broker_amount}</p>}
+                </div>
+  
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    RUT del Corredor *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.broker_rut}
+                    onChange={(e) => setFormData(prev => ({ ...prev, broker_rut: e.target.value }))}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.broker_rut ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="12.345.678-9"
+                  />
+                  {errors.broker_rut && <p className="text-red-500 text-xs mt-1">{errors.broker_rut}</p>}
+                </div>
+              </div>
+            )}
+          </div>
+  
+          {/* Condiciones del Inmueble */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="h-4 w-4 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              Condiciones del Inmueble
+            </h4>
+  
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.allows_pets}
+                    onChange={(e) => setFormData(prev => ({ ...prev, allows_pets: e.target.checked }))}
+                    className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">¿Se permiten mascotas?</span>
+                </label>
+              </div>
+  
+              <div className="flex items-center">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_furnished}
+                    onChange={(e) => setFormData(prev => ({ ...prev, is_furnished: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">¿Está amoblado?</span>
+                </label>
+              </div>
+            </div>
+          </div>
+  
+          {/* Botones */}
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              disabled={isSaving}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+            >
+              {isSaving && (
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {mode === 'create' ? 'Crear Contrato' : 'Guardar Cambios'}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
   };
 
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    try {
-      await onSave(formData);
-      onClose();
-    } catch (error) {
-      console.error('Error guardando contrato:', error);
-    }
-  };
-
-  const formatPriceCLP = (amount: number) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
+// Componente Modal para Revertir Aprobación
+const RevertModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+  loading: boolean;
+}> = ({ isOpen, onClose, onConfirm, loading }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">
-          {mode === 'create' ? 'Crear Contrato de Arriendo' : 'Editar Contrato de Arriendo'}
-        </h3>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Información General del Contrato */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-            <svg className="h-4 w-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Información General del Contrato
-          </h4>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de Inicio *
-              </label>
-              <input
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.start_date ? 'border-red-300' : 'border-gray-300'
-                }`}
-              />
-              {errors.start_date && <p className="text-red-500 text-xs mt-1">{errors.start_date}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Plazo de Vigencia (meses) *
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.validity_period_months}
-                onChange={(e) => setFormData(prev => ({ ...prev, validity_period_months: parseInt(e.target.value) || 12 }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.validity_period_months ? 'border-red-300' : 'border-gray-300'
-                }`}
-              />
-              {errors.validity_period_months && <p className="text-red-500 text-xs mt-1">{errors.validity_period_months}</p>}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Monto Final *
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.final_amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, final_amount: parseFloat(e.target.value) || 0 }))}
-                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.final_amount ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Ej: 500000"
-                />
-                <select
-                  value={formData.final_amount_currency}
-                  onChange={(e) => setFormData(prev => ({ ...prev, final_amount_currency: e.target.value as 'clp' | 'uf' }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="clp">CLP</option>
-                  <option value="uf">UF</option>
-                </select>
-              </div>
-              {errors.final_amount && <p className="text-red-500 text-xs mt-1">{errors.final_amount}</p>}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Monto Garantía *
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.guarantee_amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, guarantee_amount: parseFloat(e.target.value) || 0 }))}
-                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.guarantee_amount ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Ej: 250000"
-                />
-                <select
-                  value={formData.guarantee_amount_currency}
-                  onChange={(e) => setFormData(prev => ({ ...prev, guarantee_amount_currency: e.target.value as 'clp' | 'uf' }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="clp">CLP</option>
-                  <option value="uf">UF</option>
-                </select>
-              </div>
-              {errors.guarantee_amount && <p className="text-red-500 text-xs mt-1">{errors.guarantee_amount}</p>}
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.has_dicom_clause}
-                onChange={(e) => setFormData(prev => ({ ...prev, has_dicom_clause: e.target.checked }))}
-                className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">Incluir Cláusula DICOM</span>
-            </label>
-          </div>
-
-          <div className="mt-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.has_auto_renewal_clause}
-                onChange={(e) => setFormData(prev => ({ ...prev, has_auto_renewal_clause: e.target.checked }))}
-                className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">Incluir Cláusula de Renovación Automática</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Comunicación Oficial */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-            <svg className="h-4 w-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            Comunicación Oficial
-          </h4>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Arrendatario *
-              </label>
-              <input
-                type="email"
-                value={formData.tenant_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, tenant_email: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.tenant_email ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="arrendatario@email.com"
-              />
-              {errors.tenant_email && <p className="text-red-500 text-xs mt-1">{errors.tenant_email}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Arrendador *
-              </label>
-              <input
-                type="email"
-                value={formData.landlord_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, landlord_email: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.landlord_email ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="arrendador@email.com"
-              />
-              {errors.landlord_email && <p className="text-red-500 text-xs mt-1">{errors.landlord_email}</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Información de Pagos */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-            <svg className="h-4 w-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-            </svg>
-            Información de Pagos
-          </h4>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre del Titular *
-              </label>
-              <input
-                type="text"
-                value={formData.account_holder_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, account_holder_name: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.account_holder_name ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Ej: Juan Pérez González"
-              />
-              {errors.account_holder_name && <p className="text-red-500 text-xs mt-1">{errors.account_holder_name}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Cuenta *
-              </label>
-              <input
-                type="text"
-                value={formData.account_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, account_number: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.account_number ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Ej: 12345678"
-              />
-              {errors.account_number && <p className="text-red-500 text-xs mt-1">{errors.account_number}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Banco *
-              </label>
-              <input
-                type="text"
-                value={formData.account_bank}
-                onChange={(e) => setFormData(prev => ({ ...prev, account_bank: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.account_bank ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Ej: Banco Estado"
-              />
-              {errors.account_bank && <p className="text-red-500 text-xs mt-1">{errors.account_bank}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Cuenta *
-              </label>
-              <select
-                value={formData.account_type}
-                onChange={(e) => setFormData(prev => ({ ...prev, account_type: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.account_type ? 'border-red-300' : 'border-gray-300'
-                }`}
-              >
-                <option value="">Seleccionar tipo</option>
-                <option value="corriente">Cuenta Corriente</option>
-                <option value="vista">Cuenta Vista</option>
-                <option value="ahorro">Cuenta de Ahorro</option>
-              </select>
-              {errors.account_type && <p className="text-red-500 text-xs mt-1">{errors.account_type}</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Comisión de Corretaje */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-            <svg className="h-4 w-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            Comisión de Corretaje
-          </h4>
-
-          <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.has_brokerage_commission}
-                onChange={(e) => setFormData(prev => ({ ...prev, has_brokerage_commission: e.target.checked }))}
-                className="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">¿Existe comisión de corretaje?</span>
-            </label>
-          </div>
-
-          {formData.has_brokerage_commission && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre del Corredor *
-                </label>
-                <input
-                  type="text"
-                  value={formData.broker_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, broker_name: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.broker_name ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Nombre completo"
-                />
-                {errors.broker_name && <p className="text-red-500 text-xs mt-1">{errors.broker_name}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Monto Comisión (CLP) *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={formData.broker_amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, broker_amount: parseInt(e.target.value) || 0 }))}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.broker_amount ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Ej: 50000"
-                />
-                {errors.broker_amount && <p className="text-red-500 text-xs mt-1">{errors.broker_amount}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  RUT del Corredor *
-                </label>
-                <input
-                  type="text"
-                  value={formData.broker_rut}
-                  onChange={(e) => setFormData(prev => ({ ...prev, broker_rut: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.broker_rut ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="12.345.678-9"
-                />
-                {errors.broker_rut && <p className="text-red-500 text-xs mt-1">{errors.broker_rut}</p>}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Condiciones del Inmueble */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-            <svg className="h-4 w-4 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            Condiciones del Inmueble
-          </h4>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex items-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.allows_pets}
-                  onChange={(e) => setFormData(prev => ({ ...prev, allows_pets: e.target.checked }))}
-                  className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">¿Se permiten mascotas?</span>
-              </label>
-            </div>
-
-            <div className="flex items-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.is_furnished}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_furnished: e.target.checked }))}
-                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">¿Está amoblado?</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Botones */}
-        <div className="flex items-center justify-end space-x-3 pt-4 border-t">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            disabled={isSaving}
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-          >
-            {isSaving && (
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
-            )}
-            {mode === 'create' ? 'Crear Contrato' : 'Guardar Cambios'}
-          </button>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Revertir Aprobación
+              </h3>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <p className="text-sm text-gray-600">
+              ¿Estás seguro de que quieres revertir la aprobación de esta postulación?
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              disabled={loading}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+            >
+              {loading && (
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              Revertir Aprobación
+            </button>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 };

@@ -170,3 +170,4 @@ CREATE POLICY "Applicants can delete their own documents"
     )
   );
 
+

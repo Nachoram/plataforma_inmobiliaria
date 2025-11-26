@@ -67,7 +67,6 @@ interface ContractConditionsFormData {
   property_type_characteristics_id: string;
 
   // Special conditions
-  special_conditions_house: string;
 
   // DICOM clause
   dicom_clause: boolean;
@@ -77,6 +76,7 @@ interface ContractConditionsFormData {
 
   // Email notification
   notification_email: string;
+  tenant_email: string;
 
   // Payment conditions
   payment_conditions: string;
@@ -289,10 +289,10 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
     warranty_amount: '',
     payment_day: 5,
     property_type_characteristics_id: (property as any)?.property_type_characteristics_id || '',
-    special_conditions_house: '',
     dicom_clause: false,
     autoRenewalClause: false,
     notification_email: '',
+    tenant_email: '',
     payment_conditions: '',
     bank_name: '',
     account_type: '',
@@ -753,6 +753,15 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
       }
     }
 
+    if (!formData.tenant_email || formData.tenant_email.trim() === '') {
+      errors.push('correo electrónico del arrendatario (campo obligatorio)');
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.tenant_email.trim())) {
+        errors.push('correo electrónico del arrendatario (formato inválido)');
+      }
+    }
+
     // Validación de RUT si está presente
     if (formData.broker_rut && formData.broker_rut.trim() !== '') {
       const rutRegex = /^\d{7,8}-[\dkK]$/;
@@ -866,37 +875,41 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
         dicom_clause: formData.dicom_clause || false,
         auto_renewal_clause: formData.autoRenewalClause || false,
         notification_email: formData.notification_email?.trim(),
+        tenant_email: formData.tenant_email?.trim(),
         bank_name: formData.bank_name?.trim(),
         account_type: formData.account_type,
         account_number: formData.account_number?.trim(),
         account_holder_name: formData.account_holder_name?.trim(),
         account_holder_rut: formData.account_holder_rut?.trim(),
-        additional_conditions: formData.special_conditions_house?.trim(),
         payment_method: formData.payment_method || 'transferencia_bancaria',
-        landlord_email: formData.notification_email?.trim(), // Usar el email de notificación como landlord
+        landlord_email: formData.notification_email?.trim(), // Email del arrendador
         is_furnished: false, // Default
         created_by: user?.id
       };
 
       console.log('📊 Datos preparados para condiciones:', conditionsData);
 
-      // 2. Insertar condiciones contractuales (el trigger creará el contrato automáticamente)
-      console.log('💾 Insertando condiciones contractuales...');
+      // 2. Insertar o actualizar condiciones contractuales
+      console.log('💾 Guardando condiciones contractuales...');
 
+      // Usar upsert para manejar inserción o actualización automática
       const { data: conditionsResult, error: conditionsError } = await supabase
         .from('rental_contract_conditions')
-        .insert(conditionsData)
+        .upsert(conditionsData, {
+          onConflict: 'application_id', // Conflicto basado en application_id
+          ignoreDuplicates: false // Permitir actualización si hay conflicto
+        })
         .select('id, rental_contract_conditions_characteristic_id')
         .single();
 
       if (conditionsError) {
-        console.error('❌ Error insertando condiciones:', conditionsError);
+        console.error('❌ Error guardando condiciones:', conditionsError);
 
         let errorMessage = 'Error al guardar las condiciones del contrato';
-        if (conditionsError.message.includes('duplicate key') || conditionsError.message.includes('unique_application_conditions')) {
-          errorMessage = 'Ya existen condiciones contractuales para esta postulación';
-        } else if (conditionsError.message.includes('violates check constraint')) {
+        if (conditionsError.message.includes('violates check constraint')) {
           errorMessage = 'Los datos ingresados no cumplen con las validaciones requeridas';
+        } else {
+          errorMessage = `Error al guardar: ${conditionsError.message}`;
         }
 
         toast.error(errorMessage);
@@ -906,28 +919,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
 
       console.log('✅ Condiciones guardadas exitosamente:', conditionsResult.id);
 
-      // 3. Verificar que el contrato se creó automáticamente
-      console.log('🔍 Verificando creación automática del contrato...');
-
-      // Pequeña pausa para asegurar que el trigger se ejecutó
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const { data: createdContract, error: verifyError } = await supabase
-        .from('rental_contracts')
-        .select('id, contract_characteristic_id, contract_number, status')
-        .eq('application_id', selectedProfile.applicationId)
-        .single();
-
-      if (verifyError || !createdContract) {
-        console.error('❌ Error: El contrato no se creó automáticamente:', verifyError);
-        toast.error('Las condiciones se guardaron pero el contrato no se creó automáticamente. Contacte al administrador.');
-        setIsGenerating(false);
-        return;
-      }
-
-      console.log('✅ Contrato creado automáticamente:', createdContract);
-
-      toast.success('Contrato creado exitosamente');
+      toast.success('Condiciones contractuales guardadas exitosamente');
 
       // Llamar callback de éxito
       if (onSuccess) {
@@ -1339,27 +1331,6 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
               </div>
             )}
 
-            {/* Condiciones Especiales para Casa */}
-            {(property.tipo_propiedad === 'Casa' || property.tipo_propiedad === 'Departamento' || !property.tipo_propiedad) && (
-              <div className="mt-8 p-6 bg-purple-50 rounded-xl border-2 border-purple-200">
-                <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                  <Building2 className="w-5 h-5 text-purple-600 mr-2" />
-                  Condiciones Especiales para Casa
-                </h4>
-                <div className="bg-white rounded-lg p-4">
-                  <textarea
-                    value={formData.special_conditions_house}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      special_conditions_house: e.target.value
-                    }))}
-                    placeholder="Ej: Jardín compartido, uso de estacionamiento, etc."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                    rows={3}
-                  />
-                </div>
-              </div>
-            )}
 
             {/* Cláusula DICOM */}
             <div className="mt-8 p-6 bg-amber-50 rounded-xl border-2 border-amber-200">
@@ -1433,24 +1404,6 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
                 Condiciones de Pago
               </h4>
               
-              {/* Comisión de Corretaje */}
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Comisión de Corretaje (Opcional)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={formData.broker_commission || 0}
-                  onChange={(e) => handleContractFormChange('broker_commission', parseFloat(e.target.value) || 0)}
-                  placeholder="Ingrese el monto de la comisión"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                />
-                <p className="text-xs text-gray-600 mt-1">
-                  Dejar en blanco si no aplica
-                </p>
-              </div>
 
               {/* Modo de Pago */}
               <div className="mb-6">
@@ -1593,10 +1546,10 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
                 Email de Notificación
               </h4>
               <div className="bg-white rounded-lg p-4">
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <label className="block">
                     <span className="text-sm font-medium text-gray-700 mb-1 block">
-                      Correo Electrónico para Notificación *
+                      MAIL DE ARRENDADOR *
                     </span>
                     <input
                       type="email"
@@ -1610,8 +1563,26 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
                       required
                     />
                   </label>
+
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700 mb-1 block">
+                      MAIL ARRENDATATARIO *
+                    </span>
+                    <input
+                      type="email"
+                      value={formData.tenant_email}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        tenant_email: e.target.value.trim()
+                      }))}
+                      placeholder="ejemplo@correo.com"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </label>
+
                   <p className="text-xs text-gray-600">
-                    El contrato generado será enviado a esta dirección de correo electrónico.
+                    El contrato generado será enviado a ambas direcciones de correo electrónico.
                   </p>
                 </div>
               </div>
@@ -1641,7 +1612,7 @@ const RentalContractConditionsForm: React.FC<RentalContractConditionsFormProps> 
               ) : (
                 <>
                   <FileText className="w-5 h-5 mr-2" />
-                  Crear Contrato
+                  Guardar Condiciones
                 </>
               )}
             </button>

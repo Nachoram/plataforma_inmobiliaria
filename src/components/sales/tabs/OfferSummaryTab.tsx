@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   DollarSign,
   Calendar,
@@ -11,10 +11,15 @@ import {
   AlertTriangle,
   MessageSquare,
   Paperclip,
-  Settings
+  Settings,
+  Search,
+  PenTool,
+  Send,
+  X
 } from 'lucide-react';
 import { SaleOffer, OfferTask, OfferDocument, OfferTimeline, OfferFormalRequest, UserRole } from '../types';
 import { formatPriceCLP } from '../../../lib/supabase';
+import toast from 'react-hot-toast';
 
 interface OfferSummaryTabProps {
   offer: SaleOffer;
@@ -25,6 +30,7 @@ interface OfferSummaryTabProps {
   formalRequests: OfferFormalRequest[];
   onUpdateOffer: (status: SaleOffer['status'], extraData?: any) => Promise<void>;
   onAddTimelineEvent: (eventData: any) => Promise<void>;
+  onCreateFormalRequest?: (requestData: any) => Promise<void>;
   onRefreshData: () => Promise<void>;
 }
 
@@ -37,8 +43,13 @@ const OfferSummaryTab: React.FC<OfferSummaryTabProps> = ({
   formalRequests,
   onUpdateOffer,
   onAddTimelineEvent,
+  onCreateFormalRequest,
   onRefreshData
 }) => {
+  const [showCounterOfferModal, setShowCounterOfferModal] = useState(false);
+  const [counterOfferAmount, setCounterOfferAmount] = useState('');
+  const [counterOfferTerms, setCounterOfferTerms] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   // ========================================================================
   // HELPERS
@@ -85,48 +96,104 @@ const OfferSummaryTab: React.FC<OfferSummaryTabProps> = ({
   // ========================================================================
 
   const handleQuickAction = async (action: string) => {
-    switch (action) {
-      case 'accept':
-        if (userRole === 'seller') {
-          await onUpdateOffer('aceptada');
-          await onAddTimelineEvent({
-            event_type: 'oferta_aceptada',
-            event_title: 'Oferta Aceptada',
-            event_description: 'La oferta ha sido aceptada por el vendedor'
-          });
-        }
-        break;
-      case 'reject':
-        if (userRole === 'seller') {
-          await onUpdateOffer('rechazada');
-          await onAddTimelineEvent({
-            event_type: 'oferta_rechazada',
-            event_title: 'Oferta Rechazada',
-            event_description: 'La oferta ha sido rechazada por el vendedor'
-          });
-        }
-        break;
-      case 'counteroffer':
-        // Esta acción se manejará en un modal separado
-        break;
-      case 'accept_counteroffer':
-        if (userRole === 'buyer' && offer.counter_offer_amount) {
-          await onUpdateOffer('aceptada', {
-            offer_amount: offer.counter_offer_amount,
-            seller_response: 'Contraoferta aceptada por el comprador'
-          });
-          await onAddTimelineEvent({
-            event_type: 'contraoferta_aceptada',
-            event_title: 'Contraoferta Aceptada',
-            event_description: `El comprador aceptó la contraoferta de $${offer.counter_offer_amount.toLocaleString('es-CL')}`
-          });
-        }
-        break;
-      case 'new_offer':
-        // Esta acción se manejará en un modal separado para compradores
-        break;
-      default:
-        break;
+    setActionLoading(true);
+    try {
+      switch (action) {
+        case 'pre_accept':
+          if (userRole === 'seller') {
+            await onUpdateOffer('en_revision');
+            await onAddTimelineEvent({
+              event_type: 'oferta_pre_aceptada',
+              event_title: 'Oferta Pre-aceptada',
+              event_description: 'La oferta ha sido pre-aceptada y pasa a revisión de antecedentes.'
+            });
+            toast.success('Oferta pre-aceptada. Ahora puedes revisar los documentos.');
+          }
+          break;
+        case 'reject':
+          if (userRole === 'seller') {
+            if (!confirm('¿Estás seguro de que deseas rechazar esta oferta? Esta acción no se puede deshacer.')) {
+              setActionLoading(false);
+              return;
+            }
+            await onUpdateOffer('rechazada');
+            await onAddTimelineEvent({
+              event_type: 'oferta_rechazada',
+              event_title: 'Oferta Rechazada',
+              event_description: 'La oferta ha sido rechazada por el vendedor'
+            });
+          }
+          break;
+        case 'counteroffer':
+          setShowCounterOfferModal(true);
+          break;
+        case 'promise':
+          if (userRole === 'seller' && onCreateFormalRequest) {
+            await onCreateFormalRequest({
+              request_type: 'promesa_compraventa',
+              request_title: 'Firma de Promesa de Compraventa',
+              request_description: 'Se solicita iniciar el proceso de firma de promesa de compraventa.',
+              due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 días
+            });
+          }
+          break;
+        case 'accept_counteroffer':
+          if (userRole === 'buyer' && offer.counter_offer_amount) {
+            await onUpdateOffer('aceptada', {
+              offer_amount: offer.counter_offer_amount,
+              seller_response: 'Contraoferta aceptada por el comprador'
+            });
+            await onAddTimelineEvent({
+              event_type: 'contraoferta_aceptada',
+              event_title: 'Contraoferta Aceptada',
+              event_description: `El comprador aceptó la contraoferta de $${offer.counter_offer_amount.toLocaleString('es-CL')}`
+            });
+          }
+          break;
+        case 'new_offer':
+          // Esta acción se manejará en un modal separado para compradores
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error('Error executing action:', error);
+      toast.error('Ocurrió un error al procesar la acción');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSubmitCounterOffer = async () => {
+    if (!counterOfferAmount || parseInt(counterOfferAmount) <= 0) {
+      toast.error('Por favor ingresa un monto válido');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await onUpdateOffer('contraoferta', {
+        counter_offer_amount: parseInt(counterOfferAmount),
+        counter_offer_terms: counterOfferTerms,
+        seller_response: 'Se ha enviado una contraoferta.'
+      });
+      
+      await onAddTimelineEvent({
+        event_type: 'contraoferta_enviada',
+        event_title: 'Contraoferta Enviada',
+        event_description: `El vendedor envió una contraoferta de $${parseInt(counterOfferAmount).toLocaleString('es-CL')}`,
+        related_data: { amount: parseInt(counterOfferAmount), terms: counterOfferTerms }
+      });
+      
+      setShowCounterOfferModal(false);
+      setCounterOfferAmount('');
+      setCounterOfferTerms('');
+      toast.success('Contraoferta enviada exitosamente');
+    } catch (error) {
+      console.error('Error sending counteroffer:', error);
+      toast.error('Error al enviar la contraoferta');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -173,28 +240,52 @@ const OfferSummaryTab: React.FC<OfferSummaryTabProps> = ({
 
             {/* Acciones rápidas para vendedores */}
             {userRole === 'seller' && (offer.status === 'pendiente' || offer.status === 'en_revision' || offer.status === 'contraoferta') && (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => handleQuickAction('accept')}
-                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-lg flex items-center justify-center transition-all transform hover:-translate-y-0.5"
-                >
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Aceptar Oferta
-                </button>
-                <button
-                  onClick={() => handleQuickAction('counteroffer')}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-lg flex items-center justify-center transition-all transform hover:-translate-y-0.5"
-                >
-                  <TrendingUp className="w-5 h-5 mr-2" />
-                  Contraoferta
-                </button>
-                <button
-                  onClick={() => handleQuickAction('reject')}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow-lg flex items-center justify-center transition-all transform hover:-translate-y-0.5"
-                >
-                  <XCircle className="w-5 h-5 mr-2" />
-                  Rechazar
-                </button>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {offer.status === 'pendiente' && (
+                    <button
+                      onClick={() => handleQuickAction('pre_accept')}
+                      disabled={actionLoading}
+                      className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-lg flex items-center justify-center transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Search className="w-5 h-5 mr-2" />
+                      Pre-aceptar Oferta
+                    </button>
+                  )}
+                  
+                  {(offer.status === 'pendiente' || offer.status === 'contraoferta') && (
+                    <button
+                      onClick={() => handleQuickAction('counteroffer')}
+                      disabled={actionLoading}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-lg flex items-center justify-center transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <TrendingUp className="w-5 h-5 mr-2" />
+                      Contraoferta
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleQuickAction('reject')}
+                    disabled={actionLoading}
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow-lg flex items-center justify-center transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <XCircle className="w-5 h-5 mr-2" />
+                    Rechazar
+                  </button>
+                </div>
+
+                {offer.status === 'en_revision' && (
+                  <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                    <button
+                      onClick={() => handleQuickAction('promise')}
+                      disabled={actionLoading || formalRequests.some(r => r.request_type === 'promesa_compraventa' && r.status !== 'rechazada')}
+                      className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-lg flex items-center justify-center transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <PenTool className="w-5 h-5 mr-2" />
+                      Ofrecer Promesa de Compraventa
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -303,8 +394,8 @@ const OfferSummaryTab: React.FC<OfferSummaryTabProps> = ({
               <Settings className="w-6 h-6 text-purple-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Estado del Proceso</h3>
-              <p className="text-sm text-gray-500">Progreso y métricas</p>
+              <h3 className="font-semibold text-gray-900">Estado Documental</h3>
+              <p className="text-sm text-gray-500">Documentos y métricas</p>
             </div>
           </div>
 
@@ -322,23 +413,43 @@ const OfferSummaryTab: React.FC<OfferSummaryTabProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="border-t border-gray-100 pt-3">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Resumen de Documentos</h4>
+              <div className="space-y-2">
+                {documents.slice(0, 3).map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 truncate max-w-[150px]" title={doc.document_name}>
+                      {doc.document_name}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      doc.status === 'validado' ? 'bg-green-100 text-green-800' :
+                      doc.status === 'rechazado' ? 'bg-red-100 text-red-800' :
+                      doc.status === 'recibido' ? 'bg-blue-100 text-blue-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {doc.status}
+                    </span>
+                  </div>
+                ))}
+                {documents.length === 0 && (
+                  <p className="text-xs text-gray-400 italic">No hay documentos cargados</p>
+                )}
+                {documents.length > 3 && (
+                  <p className="text-xs text-blue-600 text-center">+ {documents.length - 3} documentos más</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-2">
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">{pendingTasks}</div>
                 <div className="text-xs text-gray-500">Tareas pendientes</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{pendingDocuments}</div>
-                <div className="text-xs text-gray-500">Documentos pendientes</div>
+                <div className="text-xs text-gray-500">Docs pendientes</div>
               </div>
             </div>
-
-            {activeRequests > 0 && (
-              <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                <span className="text-sm text-yellow-800">{activeRequests} solicitud(es) activa(s)</span>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -436,8 +547,80 @@ const OfferSummaryTab: React.FC<OfferSummaryTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* Counter Offer Modal */}
+      {showCounterOfferModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Realizar Contraoferta</h3>
+              <button 
+                onClick={() => setShowCounterOfferModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Monto Contraoferta (CLP)
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <input
+                    type="number"
+                    value={counterOfferAmount}
+                    onChange={(e) => setCounterOfferAmount(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ej: 155000000"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Términos / Mensaje
+                </label>
+                <textarea
+                  value={counterOfferTerms}
+                  onChange={(e) => setCounterOfferTerms(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Describe los términos de tu contraoferta..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowCounterOfferModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSubmitCounterOffer}
+                  disabled={actionLoading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+                >
+                  {actionLoading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Enviar Contraoferta
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default OfferSummaryTab;
+

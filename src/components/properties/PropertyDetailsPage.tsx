@@ -3,6 +3,86 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, Calendar, User, Building, ArrowLeft, MessageSquare, TrendingUp, X, Home, ChefHat, Droplets, Sofa, Check, Car } from 'lucide-react';
 import { supabase, Property, Profile, getPropertyTypeInfo } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { RequestVisitButton } from './RequestVisitButton';
+
+// Componente para mostrar visitas agendadas (visible solo para propietarios)
+const ScheduledVisitsDisplay: React.FC<{ propertyId: string; isOwner: boolean }> = ({ propertyId, isOwner }) => {
+  const [scheduledVisits, setScheduledVisits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOwner && propertyId) {
+      loadScheduledVisits();
+    }
+  }, [isOwner, propertyId]);
+
+  const loadScheduledVisits = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('scheduled_visits')
+        .select('*')
+        .eq('property_id', propertyId)
+        .order('scheduled_date', { ascending: true });
+
+      if (error) throw error;
+      setScheduledVisits(data || []);
+    } catch (error) {
+      console.error('Error loading scheduled visits:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOwner || scheduledVisits.length === 0) return null;
+
+  return (
+    <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+      <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+        <Calendar className="h-5 w-5 mr-2" />
+        Visitas Agendadas ({scheduledVisits.length})
+      </h3>
+
+      <div className="space-y-2 max-h-40 overflow-y-auto">
+        {scheduledVisits.map((visit) => (
+          <div key={visit.id} className="bg-white rounded-lg p-3 border border-blue-100">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="font-medium text-gray-900">
+                  {new Date(visit.scheduled_date).toLocaleDateString('es-CL', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'short'
+                  })}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {visit.scheduled_time_slot === 'flexible' ? 'Horario flexible' : visit.scheduled_time_slot.replace('-', ':00 - ') + ':00'}
+                </div>
+                <div className="text-sm text-gray-800 mt-1">
+                  👤 {visit.visitor_name}
+                </div>
+                <div className="text-sm text-gray-600">
+                  📞 {visit.visitor_phone}
+                </div>
+              </div>
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                visit.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                visit.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                visit.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {visit.status === 'scheduled' ? 'Agendada' :
+                 visit.status === 'confirmed' ? 'Confirmada' :
+                 visit.status === 'completed' ? 'Completada' : visit.status}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 
 interface PropertyWithImages extends Property {
   property_images?: Array<{
@@ -508,12 +588,14 @@ export const PropertyDetailsPage: React.FC = () => {
                   </button>
                 )}
                 
-                <button
-                  onClick={() => alert('Funcionalidad de visitas disponible próximamente')}
-                  className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
-                >
-                  📅 Solicitar Visita
-                </button>
+                <RequestVisitButton
+                  propertyId={property.id}
+                  propertyAddress={`${property.address_street} ${property.address_number}, ${property.address_commune}`}
+                />
+
+                {/* Visitas Agendadas - Solo visible para propietarios */}
+                <ScheduledVisitsDisplay propertyId={property.id} isOwner={user?.id === property.owner_id} />
+
               </div>
             </div>
           )}

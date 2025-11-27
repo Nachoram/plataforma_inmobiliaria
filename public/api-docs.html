@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Inmobiliaria - API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui.css" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            margin:0;
+            background: #fafafa;
+        }
+
+        .swagger-ui .topbar {
+            background-color: #2563eb;
+        }
+
+        .swagger-ui .topbar .download-url-wrapper {
+            display: none;
+        }
+
+        .swagger-ui .info .title {
+            color: #2563eb;
+        }
+
+        .swagger-ui .scheme-container {
+            background: #fafafa;
+        }
+
+        .swagger-ui .opblock.opblock-get {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .swagger-ui .opblock.opblock-post {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .swagger-ui .opblock.opblock-put {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .swagger-ui .opblock.opblock-delete {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-standalone-preset.js"></script>
+
+    <script>
+        window.onload = function() {
+            // Build a system
+            const ui = SwaggerUIBundle({
+                url: '/api-docs.json',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                validatorUrl: null,
+                tryItOutEnabled: true,
+                requestInterceptor: function(request) {
+                    // Agregar API key de ejemplo para testing
+                    const apiKey = localStorage.getItem('api_test_key') || 'your-api-key-here';
+                    request.headers['X-API-Key'] = apiKey;
+                    return request;
+                },
+                responseInterceptor: function(response) {
+                    // Log responses para debugging
+                    console.log('API Response:', response);
+                    return response;
+                },
+                onComplete: function() {
+                    // Agregar información adicional
+                    const info = document.querySelector('.info');
+                    if (info) {
+                        const apiKeySection = document.createElement('div');
+                        apiKeySection.innerHTML = `
+                            <h4>Autenticación</h4>
+                            <p>Para probar los endpoints, incluye tu API Key en el header <code>X-API-Key</code>:</p>
+                            <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace;">
+                                X-API-Key: your-api-key-here
+                            </div>
+                            <p><small>Obtén tu API Key desde el panel de integraciones de la plataforma.</small></p>
+                        `;
+                        info.appendChild(apiKeySection);
+                    }
+                }
+            });
+        };
+    </script>
+</body>
+</html>

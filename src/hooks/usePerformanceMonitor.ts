@@ -1,266 +1,237 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react';
+import { getPerformanceMonitor, measureFunction, measureAsyncFunction } from '../lib/performanceMonitor';
 
-interface PerformanceMetric {
-  name: string
-  value: number
-  timestamp: number
-  type: 'navigation' | 'resource' | 'custom' | 'interaction'
+interface UsePerformanceMonitorOptions {
+  trackRenders?: boolean;
+  trackInteractions?: boolean;
+  componentName?: string;
 }
 
-interface PerformanceConfig {
-  enableLogging?: boolean
-  reportToService?: boolean
-  sampleRate?: number // 0-1, percentage of users to track
-}
+/**
+ * Hook personalizado para integrar performance monitoring en componentes
+ */
+export const usePerformanceMonitor = (options: UsePerformanceMonitorOptions = {}) => {
+  const {
+    trackRenders = true,
+    trackInteractions = true,
+    componentName = 'UnknownComponent'
+  } = options;
 
-class PerformanceMonitor {
-  private metrics: PerformanceMetric[] = []
-  private observers: PerformanceObserver[] = []
-  private config: PerformanceConfig
+  const renderCountRef = useRef(0);
+  const lastRenderTimeRef = useRef<number>(0);
+  const componentMountTimeRef = useRef<number>(performance.now());
 
-  constructor(config: PerformanceConfig = {}) {
-    this.config = {
-      enableLogging: process.env.NODE_ENV === 'development',
-      reportToService: false,
-      sampleRate: 1.0, // Track all users in development
-      ...config
-    }
-
-    this.initializeObservers()
-  }
-
-  private initializeObservers() {
-    // Navigation timing
-    if ('performance' in window && 'getEntriesByType' in window.performance) {
-      const navigation = window.performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-
-      if (navigation) {
-        this.recordMetric('navigation_dom_content_loaded', navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart, 'navigation')
-        this.recordMetric('navigation_load_complete', navigation.loadEventEnd - navigation.loadEventStart, 'navigation')
-        this.recordMetric('navigation_first_paint', navigation.responseStart - navigation.fetchStart, 'navigation')
-      }
-    }
-
-    // Largest Contentful Paint (LCP)
-    try {
-      const lcpObserver = new PerformanceObserver((list) => {
-        const entries = list.getEntries()
-        const lastEntry = entries[entries.length - 1]
-        this.recordMetric('lcp', lastEntry.startTime, 'custom')
-      })
-      lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] })
-      this.observers.push(lcpObserver)
-    } catch (e) {
-      console.warn('LCP observation not supported')
-    }
-
-    // First Input Delay (FID)
-    try {
-      const fidObserver = new PerformanceObserver((list) => {
-        const entries = list.getEntries()
-        entries.forEach((entry) => {
-          this.recordMetric('fid', (entry as any).processingStart - entry.startTime, 'interaction')
-        })
-      })
-      fidObserver.observe({ entryTypes: ['first-input'] })
-      this.observers.push(fidObserver)
-    } catch (e) {
-      console.warn('FID observation not supported')
-    }
-
-    // Cumulative Layout Shift (CLS)
-    let clsValue = 0
-    try {
-      const clsObserver = new PerformanceObserver((list) => {
-        const entries = list.getEntries()
-        entries.forEach((entry) => {
-          if (!(entry as any).hadRecentInput) {
-            clsValue += (entry as any).value
-          }
-        })
-        this.recordMetric('cls', clsValue, 'custom')
-      })
-      clsObserver.observe({ entryTypes: ['layout-shift'] })
-      this.observers.push(clsObserver)
-    } catch (e) {
-      console.warn('CLS observation not supported')
-    }
-  }
-
-  recordMetric(name: string, value: number, type: PerformanceMetric['type'] = 'custom') {
-    const metric: PerformanceMetric = {
-      name,
-      value,
-      timestamp: Date.now(),
-      type
-    }
-
-    this.metrics.push(metric)
-
-    if (this.config.enableLogging) {
-      console.log(`📊 Performance: ${name} = ${value.toFixed(2)}ms`)
-    }
-
-    if (this.config.reportToService && Math.random() < this.config.sampleRate!) {
-      this.reportToService(metric)
-    }
-  }
-
-  private reportToService(metric: PerformanceMetric) {
-    // In a real application, this would send to analytics/performance monitoring service
-    // Examples: Google Analytics, DataDog, New Relic, Sentry Performance, etc.
-
-    try {
-      // Example: Send to hypothetical performance service
-      // performanceService.track(metric)
-
-      // For now, just store in localStorage for debugging
-      const stored = localStorage.getItem('performance_metrics') || '[]'
-      const metrics = JSON.parse(stored)
-      metrics.push(metric)
-
-      // Keep only last 100 metrics
-      if (metrics.length > 100) {
-        metrics.splice(0, metrics.length - 100)
-      }
-
-      localStorage.setItem('performance_metrics', JSON.stringify(metrics))
-    } catch (error) {
-      console.warn('Failed to report performance metric:', error)
-    }
-  }
-
-  startTiming(name: string): () => void {
-    const startTime = performance.now()
-
-    return () => {
-      const duration = performance.now() - startTime
-      this.recordMetric(`timing_${name}`, duration, 'custom')
-    }
-  }
-
-  markRouteChange(route: string) {
-    this.recordMetric(`route_change_${route}`, performance.now(), 'navigation')
-  }
-
-  getMetrics(): PerformanceMetric[] {
-    return [...this.metrics]
-  }
-
-  getMetricsByType(type: PerformanceMetric['type']): PerformanceMetric[] {
-    return this.metrics.filter(metric => metric.type === type)
-  }
-
-  clearMetrics() {
-    this.metrics = []
-  }
-
-  destroy() {
-    this.observers.forEach(observer => observer.disconnect())
-    this.observers = []
-  }
-}
-
-// Singleton instance
-let performanceMonitor: PerformanceMonitor | null = null
-
-export const getPerformanceMonitor = (config?: PerformanceConfig): PerformanceMonitor => {
-  if (!performanceMonitor) {
-    performanceMonitor = new PerformanceMonitor(config)
-  }
-  return performanceMonitor
-}
-
-// React hook for performance monitoring
-export const usePerformanceMonitor = () => {
-  const monitorRef = useRef<PerformanceMonitor | null>(null)
-
+  // Track component mount
   useEffect(() => {
-    monitorRef.current = getPerformanceMonitor()
+    const mountTime = performance.now();
+    componentMountTimeRef.current = mountTime;
 
-    return () => {
-      // Don't destroy the singleton instance
+    if (trackRenders) {
+      console.log(`🎯 Component ${componentName} mounted`);
     }
-  }, [])
 
-  const startTiming = useCallback((name: string) => {
-    return monitorRef.current?.startTiming(name) || (() => {})
-  }, [])
+    // Track component unmount
+    return () => {
+      const unmountTime = performance.now();
+      const lifetime = unmountTime - componentMountTimeRef.current;
 
-  const recordMetric = useCallback((name: string, value: number, type?: PerformanceMetric['type']) => {
-    monitorRef.current?.recordMetric(name, value, type)
-  }, [])
+      if (trackRenders) {
+        console.log(`💀 Component ${componentName} unmounted after ${lifetime.toFixed(2)}ms`);
+      }
+    };
+  }, [componentName, trackRenders]);
 
-  const markRouteChange = useCallback((route: string) => {
-    monitorRef.current?.markRouteChange(route)
-  }, [])
-
-  const getMetrics = useCallback(() => {
-    return monitorRef.current?.getMetrics() || []
-  }, [])
-
-  return {
-    startTiming,
-    recordMetric,
-    markRouteChange,
-    getMetrics
-  }
-}
-
-// Hook for measuring component render time
-export const useRenderTiming = (componentName: string) => {
-  const renderCountRef = useRef(0)
-  const lastRenderTimeRef = useRef<number>(0)
-
+  // Track renders
   useEffect(() => {
-    renderCountRef.current += 1
-    const now = performance.now()
+    if (!trackRenders) return;
 
+    renderCountRef.current += 1;
+    const currentTime = performance.now();
+    const timeSinceLastRender = currentTime - lastRenderTimeRef.current;
+
+    // Skip first render
     if (lastRenderTimeRef.current > 0) {
-      const timeSinceLastRender = now - lastRenderTimeRef.current
-      getPerformanceMonitor().recordMetric(
-        `render_${componentName}_interval`,
-        timeSinceLastRender,
-        'custom'
-      )
+      // Alert on rapid re-renders (less than 16ms apart at 60fps)
+      if (timeSinceLastRender < 16.67) {
+        console.warn(`⚡ Rapid re-render in ${componentName}: ${timeSinceLastRender.toFixed(2)}ms since last render`);
+      }
     }
 
-    lastRenderTimeRef.current = now
+    lastRenderTimeRef.current = currentTime;
+
+    if (renderCountRef.current % 10 === 0) { // Log every 10 renders
+      console.log(`🔄 Component ${componentName} rendered ${renderCountRef.current} times`);
+    }
+  });
+
+  // Función para medir operaciones síncronas
+  const measureSync = useCallback(<T>(
+    operationName: string,
+    operation: () => T,
+    context?: Record<string, any>
+  ): T => {
+    return measureFunction(`${componentName}_${operationName}`, operation, {
+      ...context,
+      renderCount: renderCountRef.current
+    });
+  }, [componentName]);
+
+  // Función para medir operaciones asíncronas
+  const measureAsync = useCallback(async <T>(
+    operationName: string,
+    operation: () => Promise<T>,
+    context?: Record<string, any>
+  ): Promise<T> => {
+    return measureAsyncFunction(`${componentName}_${operationName}`, operation, {
+      ...context,
+      renderCount: renderCountRef.current
+    });
+  }, [componentName]);
+
+  // Track tiempo de navegación entre rutas
+  const trackRouteChange = useCallback((from: string, to: string) => {
+    const routeChangeTime = performance.now();
+
+    console.log(`🛣️ Route changed: ${from} → ${to} (${routeChangeTime.toFixed(2)}ms)`);
+
+    // Medir el tiempo que tomó cambiar de ruta
+    getPerformanceMonitor().recordMetric(
+      'route_change_time',
+      routeChangeTime,
+      'custom',
+      {
+        from,
+        to,
+        component: componentName
+      }
+    );
+  }, [componentName]);
+
+  // Track interacciones del usuario
+  const trackInteraction = useCallback((
+    interactionType: string,
+    target: string,
+    details?: Record<string, any>
+  ) => {
+    if (!trackInteractions) return;
+
+    const interactionTime = performance.now();
 
     getPerformanceMonitor().recordMetric(
-      `render_${componentName}_count`,
-      renderCountRef.current,
-      'custom'
-    )
-  })
+      `interaction_${interactionType}`,
+      interactionTime,
+      'custom',
+      {
+        target,
+        component: componentName,
+        ...details
+      }
+    );
 
-  return renderCountRef.current
-}
+    console.log(`👆 Interaction: ${interactionType} on ${target} in ${componentName}`);
+  }, [componentName, trackInteractions]);
 
-// Hook for measuring user interactions
-export const useInteractionTiming = () => {
-  const startTiming = useCallback((interactionName: string) => {
-    const endTiming = getPerformanceMonitor().startTiming(`interaction_${interactionName}`)
-    return endTiming
-  }, [])
+  // Track estado de loading
+  const trackLoadingState = useCallback((
+    state: 'start' | 'end',
+    operation: string,
+    context?: Record<string, any>
+  ) => {
+    const timestamp = performance.now();
 
-  return { startTiming }
-}
+    getPerformanceMonitor().recordMetric(
+      `loading_${state}`,
+      timestamp,
+      'custom',
+      {
+        operation,
+        component: componentName,
+        ...context
+      }
+    );
 
-// Utility function to measure async operations
-export const measureAsync = async <T>(
-  name: string,
-  operation: () => Promise<T>
-): Promise<T> => {
-  const endTiming = getPerformanceMonitor().startTiming(`async_${name}`)
-  try {
-    const result = await operation()
-    endTiming()
-    return result
-  } catch (error) {
-    endTiming()
-    throw error
-  }
-}
+    if (state === 'end') {
+      console.log(`✅ Loading completed: ${operation} in ${componentName}`);
+    } else {
+      console.log(`⏳ Loading started: ${operation} in ${componentName}`);
+    }
+  }, [componentName]);
 
-export default usePerformanceMonitor
+  // Obtener estadísticas de performance del componente
+  const getComponentStats = useCallback(() => {
+    return getPerformanceMonitor().getComponentPerformance(componentName);
+  }, [componentName]);
+
+  // Obtener métricas recientes
+  const getRecentMetrics = useCallback((limit = 20) => {
+    return getPerformanceMonitor().getMetrics(undefined, limit);
+  }, []);
+
+  // Obtener alertas recientes
+  const getRecentAlerts = useCallback((limit = 10) => {
+    return getPerformanceMonitor().getAlerts(limit);
+  }, []);
+
+  // Forzar garbage collection (solo en desarrollo)
+  const forceGC = useCallback(() => {
+    if (process.env.NODE_ENV === 'development' && 'gc' in window) {
+      (window as any).gc();
+      console.log('🗑️ Forced garbage collection');
+    }
+  }, []);
+
+  // Medir memory usage
+  const measureMemoryUsage = useCallback(() => {
+    if ('memory' in performance) {
+      const memory = (performance as any).memory;
+      const usage = {
+        used: memory.usedJSHeapSize,
+        total: memory.totalJSHeapSize,
+        limit: memory.jsHeapSizeLimit,
+        percentage: (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100
+      };
+
+      getPerformanceMonitor().recordMetric(
+        'memory_snapshot',
+        usage.used,
+        'memory',
+        {
+          ...usage,
+          component: componentName
+        }
+      );
+
+      console.log(`💾 Memory usage in ${componentName}: ${(usage.percentage).toFixed(1)}%`);
+
+      return usage;
+    }
+
+    return null;
+  }, [componentName]);
+
+  return {
+    // Funciones de medición
+    measureSync,
+    measureAsync,
+
+    // Tracking
+    trackRouteChange,
+    trackInteraction,
+    trackLoadingState,
+
+    // Estadísticas
+    getComponentStats,
+    getRecentMetrics,
+    getRecentAlerts,
+
+    // Utilidades
+    forceGC,
+    measureMemoryUsage,
+
+    // Información del componente
+    renderCount: renderCountRef.current,
+    componentName,
+    isTrackingRenders: trackRenders,
+    isTrackingInteractions: trackInteractions
+  };
+};

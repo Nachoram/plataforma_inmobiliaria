@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, MessageSquare, Clock } from 'lucide-react';
+import { Send, User, MessageSquare, Clock, CheckCircle } from 'lucide-react';
 import { SaleOffer, OfferCommunication, UserRole } from './types';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,7 +8,10 @@ import toast from 'react-hot-toast';
 interface OfferMessagesTabProps {
   offer: SaleOffer;
   communications: OfferCommunication[];
-  onCommunicationsChange: () => Promise<void>;
+  onCommunicationsChange?: () => Promise<void>;
+  userRole?: 'buyer' | 'seller' | 'admin';
+  onRefreshData?: () => Promise<void>;
+  onSendMessage?: (message: string) => Promise<void>;
 }
 
 export const OfferMessagesTab: React.FC<OfferMessagesTabProps> = ({
@@ -173,6 +176,5 @@ export const OfferMessagesTab: React.FC<OfferMessagesTabProps> = ({
   );
 };
 
-// Import missing CheckCircle
-import { CheckCircle } from 'lucide-react';
+export default OfferMessagesTab;
 

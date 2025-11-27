@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Bed, Bath, Square, Calendar as CalendarIcon, ArrowLeft, Building, Car, Copy, CheckCircle, FileText, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
 import './AdminPropertyDetailView.css';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -49,8 +47,6 @@ export const AdminPropertyDetailView: React.FC = () => {
   const [property, setProperty] = useState<PropertyWithImages | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [applicationLink] = useState(
     'https://propiedadesapp.com/postular/a5b1c8f8-a0d4-425c-865e'
   );
@@ -114,18 +110,6 @@ export const AdminPropertyDetailView: React.FC = () => {
     }).format(price);
   };
 
-  const handleDateClick = (date: Date) => {
-    // Comprueba si la fecha ya existe en el array
-    const dateExists = availableDates.find(d => d.getTime() === date.getTime());
-
-    if (dateExists) {
-      // Si existe, la elimina (deselección)
-      setAvailableDates(availableDates.filter(d => d.getTime() !== date.getTime()));
-    } else {
-      // Si no existe, la añade (selección)
-      setAvailableDates([...availableDates, date]);
-    }
-  };
 
   // Función para copiar el link al portapapeles
   const handleCopyLink = async () => {
@@ -270,13 +254,20 @@ export const AdminPropertyDetailView: React.FC = () => {
                     <span className="mr-2">✏️</span>
                     Modificar Publicación
                   </Link>
-                  <button
-                    onClick={() => setIsModalOpen(true)}
+                  <Link
+                    to={`/portfolio/property/${property.id}/availability`}
                     className="inline-flex items-center justify-center px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-md hover:shadow-lg"
                   >
                     <span className="mr-2">📅</span>
                     Gestionar Disponibilidad
-                  </button>
+                  </Link>
+                  <Link
+                    to={`/portfolio/property/${property.id}/visits`}
+                    className="inline-flex items-center justify-center px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
+                    <CalendarIcon className="h-5 w-5 mr-2 text-blue-600" />
+                    Gestionar Visitas
+                  </Link>
                 </div>
               )}
             </div>
@@ -496,41 +487,6 @@ export const AdminPropertyDetailView: React.FC = () => {
 
       </div>
 
-      {/* Modal de Disponibilidad */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-              Seleccionar Disponibilidad de Visitas
-            </h2>
-            <div className="flex justify-center">
-              <Calendar
-                onClickDay={handleDateClick}
-                tileClassName={({ date, view }) => {
-                  // Solo aplica la clase si la fecha está en nuestro estado de fechas disponibles
-                  if (view === 'month' && availableDates.find(d => d.getTime() === date.getTime())) {
-                    return 'selected-date';
-                  }
-                  return null; // Devuelve null para todas las demás fechas, incluido el día de hoy
-                }}
-                minDate={new Date()} // No permite seleccionar fechas pasadas
-                className="rounded-lg border-0 shadow-none"
-              />
-            </div>
-            <div className="flex justify-between items-center mt-6">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-6 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors duration-200"
-              >
-                Cerrar
-              </button>
-              <div className="text-sm text-gray-600">
-                {availableDates.length} fecha{availableDates.length !== 1 ? 's' : ''} seleccionada{availableDates.length !== 1 ? 's' : ''}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

@@ -28,6 +28,8 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propP
   const navigate = useNavigate();
   const [postulations, setPostulations] = useState<Postulation[]>(propPostulations || []);
   const [loading, setLoading] = useState(!propPostulations && !!propertyId);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPostulation, setSelectedPostulation] = useState<Postulation | null>(null);
 
   // Si no se pasaron postulaciones pero sí un propertyId, cargarlas
   React.useEffect(() => {
@@ -108,6 +110,11 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propP
 
   const handleViewDetails = (postulation: Postulation) => {
     navigate(`/postulation/${postulation.id}/admin`);
+  };
+
+  const handleViewModal = (postulation: Postulation) => {
+    setSelectedPostulation(postulation);
+    setIsModalOpen(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -214,14 +221,24 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propP
                   </span>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleViewDetails(postulation)}
-                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
-                    title="Administrar Postulación"
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Administrar
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleViewModal(postulation)}
+                      className="inline-flex items-center px-3 py-2 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:bg-gray-700 transition-all duration-200"
+                      title="Ver Detalles"
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Ver
+                    </button>
+                    <button
+                      onClick={() => handleViewDetails(postulation)}
+                      className="inline-flex items-center px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
+                      title="Administrar Postulación"
+                    >
+                      <Settings className="h-4 w-4 mr-1" />
+                      Administrar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -1,262 +1,404 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Paperclip, MessageSquare, Zap, Clock, DollarSign, MapPin, Calendar, CheckCircle, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy, memo } from 'react';
+import { FileText, Paperclip, MessageSquare, Zap, ArrowLeft, AlertCircle, Loader } from 'lucide-react';
 import { SaleOffer, OfferDocument, OfferCommunication } from './types';
-import { OfferDocumentsTab } from './OfferDocumentsTab';
-import { OfferMessagesTab } from './OfferMessagesTab';
-import { OfferActionsTab } from './OfferActionsTab';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../hooks/useAuth';
-import { formatPriceCLP } from '../../lib/supabase';
+import { useOfferDataCache, useOfferDocumentsCache, useOfferCommunicationsCache } from '../../hooks/useOfferCache';
+import { useOfferAuth } from '../../hooks/useOfferAuth';
+import { useOfferNotifications } from '../../hooks/useOfferNotifications';
+import { useOfferPerformance, usePerformanceTimer } from '../../hooks/useOfferPerformance';
+import { TabErrorBoundary, useErrorHandler } from './errorBoundaries/OfferErrorBoundary';
+import { useDocumentAuthorization } from '../../hooks/useDocumentAuthorization';
+import BuyerOfferHeader from './BuyerOfferHeader';
 
-interface OfferDetailsPanelProps {
-  offer: SaleOffer;
-  initialDocuments: OfferDocument[];
-  initialCommunications: OfferCommunication[];
-  onBack: () => void;
-  onRefresh: () => Promise<void>;
+// Lazy loaded components (SalesOfferDetailView pattern)
+const BuyerOfferSummaryTab = lazy(() => import('./tabs/BuyerOfferSummaryTab'));
+const OfferDocumentsTab = lazy(() => import('./OfferDocumentsTab'));
+const OfferMessagesTab = lazy(() => import('./OfferMessagesTab'));
+const OfferActionsTab = lazy(() => import('./OfferActionsTab'));
+
+// ========================================================================
+// TIPOS Y INTERFACES
+// ========================================================================
+
+export type BuyerTabType = 'info' | 'documents' | 'messages' | 'actions';
+
+export interface BuyerOfferDetailsState {
+  offerId: string;
+  offer: SaleOffer | null;
+  documents: OfferDocument[];
+  communications: OfferCommunication[];
+  activeTab: BuyerTabType;
+  loading: boolean;
+  error: string | null;
+  currentUserRole: 'buyer' | 'seller' | 'admin';
 }
 
-type TabType = 'info' | 'documents' | 'messages' | 'actions';
+export interface OfferDetailsPanelProps {
+  offerId: string;
+  onBack: () => void;
+}
 
-export const OfferDetailsPanel: React.FC<OfferDetailsPanelProps> = ({
-  offer: initialOffer,
-  initialDocuments,
-  initialCommunications,
-  onBack,
-  onRefresh
+// ========================================================================
+// COMPONENTE HEADER SIMPLIFICADO PARA BUYERS
+// ========================================================================
+
+interface BuyerOfferHeaderProps {
+  offer: SaleOffer | null;
+  activeTab: BuyerTabType;
+  buyerTabs: any[];
+  onBack: () => void;
+  onTabChange: (tab: BuyerTabType) => void;
+}
+
+// ========================================================================
+// COMPONENTES DE CARGA Y ERROR
+// ========================================================================
+
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+    <span className="ml-3 text-gray-600">Cargando...</span>
+  </div>
+);
+
+const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
+  <div className="flex flex-col items-center justify-center py-12">
+    <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+    <h3 className="text-lg font-semibold text-gray-900 mb-2">Error al cargar los datos</h3>
+    <p className="text-gray-600 text-center mb-4 max-w-md">{error}</p>
+    <button
+      onClick={onRetry}
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+    >
+      Reintentar
+    </button>
+  </div>
+);
+
+
+// ========================================================================
+// COMPONENTE PRINCIPAL: BUYER OFFER DETAILS PANEL (MEMOIZADO)
+// ========================================================================
+
+const OfferDetailsPanelComponent: React.FC<OfferDetailsPanelProps> = ({
+  offerId,
+  onBack
 }) => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('info');
-  const [offer, setOffer] = useState<SaleOffer>(initialOffer);
-  const [documents, setDocuments] = useState<OfferDocument[]>(initialDocuments);
-  const [communications, setCommunications] = useState<OfferCommunication[]>(initialCommunications);
+  // ========================================================================
+  // ESTADO PRINCIPAL SIMPLIFICADO
+  // ========================================================================
 
-  // Sync props to state if they change (e.g. parent refresh)
+  const [state, setState] = useState<BuyerOfferDetailsState>({
+    offerId,
+    offer: null,
+    documents: [],
+    communications: [],
+    activeTab: 'info',
+    loading: false,
+    error: null,
+    currentUserRole: 'buyer'
+  });
+
+  // ========================================================================
+  // AUTORIZACIÓN DE DOCUMENTOS
+  // ========================================================================
+
+  const {
+    canViewDocuments: sellerCanViewDocuments,
+    canAuthorize: buyerCanAuthorize,
+    authorizeUser,
+    revokeAuthorization,
+    isLoading: authLoading,
+    error: authError
+  } = useDocumentAuthorization(offerId);
+
+  // ========================================================================
+  // CARGA DE DATOS SIMPLIFICADA
+  // ========================================================================
+
+  // Función simplificada para cargar datos de ejemplo
+  const loadSampleData = useCallback(async () => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+
+    try {
+      // Simular carga de datos de oferta
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const sampleOffer: SaleOffer = {
+        id: offerId,
+        property_id: 'sample-property-id',
+        buyer_id: 'sample-buyer-id',
+        status: 'active',
+        offer_amount: 150000000,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        property: {
+          id: 'sample-property-id',
+          address_street: 'Calle Ejemplo 123',
+          address_number: '123',
+          address_commune: 'Providencia',
+          address_region: 'Metropolitana',
+          price: 180000000,
+          property_type: 'departamento',
+          description: 'Hermoso departamento con vista a la ciudad'
+        }
+      };
+
+      const sampleDocuments: OfferDocument[] = [
+        {
+          id: 'doc-1',
+          offer_id: offerId,
+          name: 'Contrato de compraventa',
+          type: 'contract',
+          status: 'pendiente',
+          url: '#',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+
+      const sampleCommunications: OfferCommunication[] = [
+        {
+          id: 'comm-1',
+          offer_id: offerId,
+          message: 'Bienvenido a su proceso de oferta inmobiliaria',
+          type: 'system_message',
+          created_at: new Date().toISOString()
+        }
+      ];
+
+      setState(prev => ({
+        ...prev,
+        offer: sampleOffer,
+        documents: sampleDocuments,
+        communications: sampleCommunications,
+        loading: false
+      }));
+
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: 'Error cargando datos de muestra',
+        loading: false
+      }));
+    }
+  }, [offerId]);
+
+  // Cargar datos al montar el componente
   useEffect(() => {
-    setOffer(initialOffer);
-  }, [initialOffer]);
-  
-  useEffect(() => {
-    setDocuments(initialDocuments);
-  }, [initialDocuments]);
+    loadSampleData();
+  }, [loadSampleData]);
 
-  useEffect(() => {
-    setCommunications(initialCommunications);
-  }, [initialCommunications]);
+  // ========================================================================
+  // FUNCIONES DE ACCIÓN SIMPLIFICADAS PARA COMPRADORES
+  // ========================================================================
 
-  // Loaders for refreshing specific sections
-  const loadDocuments = async () => {
-    if (!offer.id) return;
-    const { data } = await supabase
-      .from('offer_documents')
-      .select('*')
-      .eq('offer_id', offer.id);
-    if (data) setDocuments(data);
-  };
+  // Función para actualizar el estado de la oferta (simplificada para buyers)
+  const updateOfferStatus = useCallback(async (status: SaleOffer['status']) => {
+    if (!state.offer) return;
 
-  const loadCommunications = async () => {
-    if (!offer.id) return;
-    const { data } = await supabase
-      .from('offer_communications')
-      .select('*')
-      .eq('offer_id', offer.id);
-    if (data) setCommunications(data);
-  };
+    try {
+      setState(prev => ({ ...prev, loading: true }));
 
-  const updateOfferStatus = async (status: SaleOffer['status'], extraData?: any) => {
-      if (!offer.id) return;
       const { error } = await supabase
-          .from('property_sale_offers')
-          .update({ status, ...extraData })
-          .eq('id', offer.id);
-      
-      if (!error) {
-          // Optimistic update or refresh
-          onRefresh(); // Refresh parent to get full update
-      }
-  };
+        .from('property_sale_offers')
+        .update({
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', offerId);
 
-  const renderTabContent = () => {
-    switch (activeTab) {
+      if (error) throw error;
+
+      // Actualizar estado local
+      setState(prev => ({
+        ...prev,
+        offer: prev.offer ? { ...prev.offer, status } : null,
+        loading: false
+      }));
+
+      // Mostrar notificación de éxito
+      console.log('✅ Estado de oferta actualizado:', status);
+
+    } catch (error) {
+      console.error('❌ Error actualizando estado:', error);
+      setState(prev => ({
+        ...prev,
+        error: 'Error al actualizar el estado de la oferta',
+        loading: false
+      }));
+    }
+  }, [offerId, state.offer]);
+
+  // Función para enviar mensaje (integración con OfferMessagesTab)
+  const sendMessage = useCallback(async (message: string) => {
+    if (!state.offer || !message.trim()) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('offer_communications')
+        .insert({
+          offer_id: offerId,
+          message: message.trim(),
+          type: 'buyer_message',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Actualizar estado local
+      setState(prev => ({
+        ...prev,
+        communications: [...prev.communications, data]
+      }));
+
+      console.log('✅ Mensaje enviado');
+
+    } catch (error) {
+      console.error('❌ Error enviando mensaje:', error);
+      setState(prev => ({
+        ...prev,
+        error: 'Error al enviar el mensaje',
+        loading: false
+      }));
+    }
+  }, [offerId, state.offer]);
+
+  // Función de refresh simplificada
+  const handleRefresh = useCallback(() => {
+    console.log('🔄 Refrescando datos...');
+    loadSampleData();
+  }, [loadSampleData]);
+
+  // ========================================================================
+  // SISTEMA DE RENDERIZADO CON SUSPENSE
+  // ========================================================================
+
+  const buyerTabs = useMemo(() => [
+    { id: 'info' as BuyerTabType, label: 'Información', icon: FileText },
+    { id: 'documents' as BuyerTabType, label: 'Documentos', icon: Paperclip, badge: state.documents.filter(d => d.status === 'pendiente').length },
+    { id: 'messages' as BuyerTabType, label: 'Mensajes', icon: MessageSquare, badge: state.communications.length },
+    { id: 'actions' as BuyerTabType, label: 'Acciones', icon: Zap }
+  ], [state.documents, state.communications]);
+
+  const commonProps = useMemo(() => ({
+    offer: state.offer,
+    userRole: state.currentUserRole,
+    onRefreshData: handleRefresh
+  }), [state.offer, state.currentUserRole, handleRefresh]);
+
+  const renderTabContent = useCallback(() => {
+    const tabProps = {
+      ...commonProps,
+      documents: state.documents,
+      communications: state.communications,
+      onDocumentsChange: handleRefresh,
+      onSendMessage: sendMessage,
+      onUpdateOfferStatus: updateOfferStatus
+    };
+
+    // Props específicos para documentos con autorización
+    const documentTabProps = {
+      ...tabProps,
+      viewMode: state.currentUserRole === 'seller' && sellerCanViewDocuments ? 'seller' : 'buyer',
+      userRole: state.currentUserRole,
+      // Información de autorización para compradores
+      canAuthorize: buyerCanAuthorize && state.currentUserRole === 'buyer',
+      sellerCanViewDocuments,
+      onAuthorizeSeller: authorizeUser,
+      onRevokeAuthorization: revokeAuthorization
+    };
+
+    switch (state.activeTab) {
       case 'info':
         return (
-          <div className="space-y-6">
-             {/* Property Card */}
-             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="h-48 bg-gray-200 relative">
-                    <img 
-                        src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
-                        alt="Property" 
-                        className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-semibold text-gray-900">
-                        {offer.property?.listing_type === 'venta' ? 'En Venta' : 'En Arriendo'}
-                    </div>
-                </div>
-                <div className="p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                        {offer.property?.address_street} {offer.property?.address_number}
-                    </h2>
-                    <div className="flex items-center text-gray-600 mb-4">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {offer.property?.address_commune}, {offer.property?.address_region}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 border-t border-gray-100 pt-4">
-                        <div className="flex items-center">
-                            <span className="font-semibold text-gray-900 text-lg mr-1">
-                                {offer.property?.price ? formatPriceCLP(offer.property.price) : 'Precio no disponible'}
-                            </span>
-                            <span className="text-xs">Precio Publicado</span>
-                        </div>
-                    </div>
-                </div>
-             </div>
-
-             {/* Offer Info */}
-             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    Detalles de tu Oferta
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                        <p className="text-sm text-blue-800 mb-1">Monto Ofertado</p>
-                        <p className="text-2xl font-bold text-blue-900">
-                            {formatPriceCLP(offer.offer_amount)}
-                        </p>
-                        <p className="text-xs text-blue-600 mt-1">{offer.offer_amount_currency}</p>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex justify-between border-b border-gray-100 pb-2">
-                            <span className="text-gray-600">Estado</span>
-                            <span className={`font-medium px-2 py-0.5 rounded-full text-sm ${
-                                offer.status === 'aceptada' ? 'bg-green-100 text-green-800' :
-                                offer.status === 'rechazada' ? 'bg-red-100 text-red-800' :
-                                'bg-yellow-100 text-yellow-800'
-                            }`}>
-                                {offer.status.toUpperCase().replace('_', ' ')}
-                            </span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-100 pb-2">
-                            <span className="text-gray-600">Financiamiento</span>
-                            <span className="font-medium text-gray-900">{offer.financing_type || 'No especificado'}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-100 pb-2">
-                            <span className="text-gray-600">Fecha Oferta</span>
-                            <span className="font-medium text-gray-900">{new Date(offer.created_at).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Additional Requests */}
-                {(offer.requests_title_study || offer.requests_property_inspection) && (
-                    <div className="mt-6 pt-6 border-t border-gray-100">
-                        <p className="text-sm font-medium text-gray-900 mb-3">Solicitudes Adicionales:</p>
-                        <div className="flex flex-wrap gap-2">
-                            {offer.requests_title_study && (
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                    <CheckCircle className="w-3 h-3 mr-1" /> Estudio de Títulos
-                                </span>
-                            )}
-                            {offer.requests_property_inspection && (
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                    <CheckCircle className="w-3 h-3 mr-1" /> Inspección Técnica
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                )}
-             </div>
-          </div>
+          <Suspense fallback={<LoadingSpinner />}>
+            <BuyerOfferSummaryTab {...tabProps} />
+          </Suspense>
         );
       case 'documents':
         return (
-          <OfferDocumentsTab 
-            offer={offer} 
-            documents={documents} 
-            onDocumentsChange={loadDocuments} 
-          />
+          <Suspense fallback={<LoadingSpinner />}>
+            <OfferDocumentsTab {...documentTabProps} />
+          </Suspense>
         );
       case 'messages':
         return (
-          <OfferMessagesTab 
-            offer={offer} 
-            communications={communications} 
-            onCommunicationsChange={loadCommunications} 
-          />
+          <Suspense fallback={<LoadingSpinner />}>
+            <OfferMessagesTab {...tabProps} />
+          </Suspense>
         );
       case 'actions':
         return (
-            <OfferActionsTab 
-                offer={offer}
-                onUpdateOffer={updateOfferStatus}
-                onTabChange={setActiveTab as any}
-            />
+          <Suspense fallback={<LoadingSpinner />}>
+            <OfferActionsTab {...tabProps} />
+          </Suspense>
         );
       default:
-        return null;
+        return (
+          <div className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-yellow-500 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Pestaña no encontrada</h3>
+            <p className="text-gray-600">
+              La pestaña "{state.activeTab}" no existe.
+            </p>
+          </div>
+        );
     }
-  };
+  }, [
+    state.activeTab,
+    commonProps,
+    state.documents,
+    state.communications,
+    state.currentUserRole,
+    sellerCanViewDocuments,
+    buyerCanAuthorize,
+    handleRefresh,
+    sendMessage,
+    updateOfferStatus,
+    authorizeUser,
+    revokeAuthorization
+  ]);
+
+  const handleTabChange = useCallback((tab: BuyerTabType) => {
+    setState(prev => ({ ...prev, activeTab: tab }));
+  }, []);
+
+  // ========================================================================
+  // RENDER PRINCIPAL
+  // ========================================================================
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-        {/* Header Navigation */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-            <div className="max-w-5xl mx-auto px-4">
-                <div className="h-16 flex items-center justify-between">
-                    <button 
-                        onClick={onBack}
-                        className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5 mr-2" />
-                        <span className="font-medium">Volver a Mis Ofertas</span>
-                    </button>
-                    <div className="text-sm text-gray-500">
-                        Oferta #{offer.id.slice(0, 8)}
-                    </div>
-                </div>
-            </div>
-            
-            {/* Tabs */}
-            <div className="max-w-5xl mx-auto px-4">
-                <div className="flex space-x-8 overflow-x-auto">
-                    {[
-                        { id: 'info', label: 'Información', icon: FileText },
-                        { id: 'documents', label: 'Documentos', icon: Paperclip, count: documents.filter(d => d.status === 'pendiente').length },
-                        { id: 'messages', label: 'Mensajes', icon: MessageSquare, count: communications.length > 0 ? communications.length : undefined }, // Or count unread
-                        { id: 'actions', label: 'Acciones', icon: Zap }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as TabType)}
-                            className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                                activeTab === tab.id
-                                    ? 'border-blue-600 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            }`}
-                        >
-                            <tab.icon className={`w-4 h-4 mr-2 ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'}`} />
-                            {tab.label}
-                            {tab.count !== undefined && tab.count > 0 && (
-                                <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
-                                    activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                    {tab.count}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header profesional */}
+      <BuyerOfferHeader
+        offer={state.offer}
+        activeTab={state.activeTab}
+        buyerTabs={buyerTabs}
+        onBack={onBack}
+        onTabChange={handleTabChange}
+      />
 
-        {/* Main Content */}
-        <main className="flex-1 max-w-5xl mx-auto px-4 py-8 w-full">
+      {/* Content */}
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {state.loading ? (
+          <LoadingSpinner />
+        ) : state.error ? (
+          <ErrorDisplay error={state.error} onRetry={handleRefresh} />
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm">
             {renderTabContent()}
-        </main>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
+// ========================================================================
+// EXPORT MEMOIZADO PARA OPTIMIZACIÓN DE RENDERS
+// ========================================================================
+
+export const OfferDetailsPanel = memo(OfferDetailsPanelComponent);

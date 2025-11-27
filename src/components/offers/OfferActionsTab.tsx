@@ -5,14 +5,18 @@ import { useNavigate } from 'react-router-dom';
 
 interface OfferActionsTabProps {
   offer: SaleOffer;
-  onUpdateOffer: (status: SaleOffer['status'], extraData?: any) => Promise<void>;
-  onTabChange: (tab: 'messages') => void;
+  onUpdateOffer?: (status: SaleOffer['status'], extraData?: any) => Promise<void>;
+  onTabChange?: (tab: 'messages') => void;
+  userRole?: 'buyer' | 'seller' | 'admin';
+  onRefreshData?: () => Promise<void>;
+  onUpdateOfferStatus?: (status: SaleOffer['status']) => Promise<void>;
 }
 
 export const OfferActionsTab: React.FC<OfferActionsTabProps> = ({
   offer,
   onUpdateOffer,
-  onTabChange
+  onTabChange,
+  onUpdateOfferStatus
 }) => {
   const navigate = useNavigate();
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -29,7 +33,7 @@ export const OfferActionsTab: React.FC<OfferActionsTabProps> = ({
         // For now let's use 'finalizada' with a note? Or simply delete?
         // Usually canceling implies withdrawing. 
         // Let's assume 'rechazada' (by buyer) or 'finalizada'.
-        await onUpdateOffer('finalizada', { message: 'Oferta cancelada por el comprador' });
+        await (onUpdateOfferStatus || onUpdateOffer)?.('finalizada');
     } finally {
         setLoading(false);
         setConfirmingCancel(false);
@@ -40,7 +44,7 @@ export const OfferActionsTab: React.FC<OfferActionsTabProps> = ({
       setLoading(true);
       try {
           // Move to next stage, e.g. 'estudio_titulo'
-          await onUpdateOffer('estudio_titulo');
+          await (onUpdateOfferStatus || onUpdateOffer)?.('estudio_titulo');
       } finally {
           setLoading(false);
       }
@@ -187,4 +191,6 @@ export const OfferActionsTab: React.FC<OfferActionsTabProps> = ({
     </div>
   );
 };
+
+export default OfferActionsTab;
 

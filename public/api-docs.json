@@ -1,0 +1,1128 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Plataforma Inmobiliaria - API Externa",
+    "description": "API RESTful para integraciones de terceros con la Plataforma Inmobiliaria. Permite acceso programático a propiedades, ofertas, usuarios y más.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Soporte API",
+      "email": "api@plataformainmobiliaria.com",
+      "url": "https://plataformainmobiliaria.com/support"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.plataformainmobiliaria.com/v1",
+      "description": "Servidor de producción"
+    },
+    {
+      "url": "https://staging-api.plataformainmobiliaria.com/v1",
+      "description": "Servidor de staging"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API Key obtenida desde el panel de integraciones"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "INVALID_API_KEY"
+              },
+              "message": {
+                "type": "string",
+                "example": "API key inválida o inactiva"
+              },
+              "details": {
+                "type": "object",
+                "description": "Detalles adicionales del error (opcional)"
+              }
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "Meta": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "req_1234567890"
+          },
+          "rateLimitRemaining": {
+            "type": "integer",
+            "example": 950
+          },
+          "rateLimitReset": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Property": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "prop_1234567890"
+          },
+          "owner_id": {
+            "type": "string",
+            "example": "user_1234567890"
+          },
+          "address_street": {
+            "type": "string",
+            "example": "Calle Principal"
+          },
+          "address_number": {
+            "type": "string",
+            "example": "123"
+          },
+          "address_city": {
+            "type": "string",
+            "example": "Santiago"
+          },
+          "address_region": {
+            "type": "string",
+            "example": "Metropolitana"
+          },
+          "property_type": {
+            "type": "string",
+            "enum": ["casa", "departamento", "oficina", "local", "bodega", "terreno"],
+            "example": "casa"
+          },
+          "price": {
+            "type": "number",
+            "format": "decimal",
+            "example": 150000000
+          },
+          "currency": {
+            "type": "string",
+            "default": "CLP",
+            "example": "CLP"
+          },
+          "bedrooms": {
+            "type": "integer",
+            "example": 3
+          },
+          "bathrooms": {
+            "type": "number",
+            "format": "decimal",
+            "example": 2.5
+          },
+          "area_sqm": {
+            "type": "number",
+            "format": "decimal",
+            "example": 120.5
+          },
+          "description": {
+            "type": "string",
+            "example": "Hermosa casa familiar con jardín"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["jardín", "estacionamiento", "seguridad"]
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": ["https://cdn.example.com/image1.jpg"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["available", "sold", "rented"],
+            "default": "available",
+            "example": "available"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Offer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "offer_1234567890"
+          },
+          "property_id": {
+            "type": "string",
+            "example": "prop_1234567890"
+          },
+          "buyer_id": {
+            "type": "string",
+            "example": "user_1234567890"
+          },
+          "offered_price": {
+            "type": "number",
+            "format": "decimal",
+            "example": 140000000
+          },
+          "currency": {
+            "type": "string",
+            "default": "CLP",
+            "example": "CLP"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pendiente", "aceptada", "rechazada", "completada"],
+            "default": "pendiente",
+            "example": "pendiente"
+          },
+          "conditions": {
+            "type": "string",
+            "example": "Contado, escritura inmediata"
+          },
+          "property": {
+            "$ref": "#/components/schemas/Property"
+          },
+          "buyer": {
+            "$ref": "#/components/schemas/User"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "user_1234567890"
+          },
+          "full_name": {
+            "type": "string",
+            "example": "Juan Pérez"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "juan@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+56912345678"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "task_1234567890"
+          },
+          "offer_id": {
+            "type": "string",
+            "example": "offer_1234567890"
+          },
+          "title": {
+            "type": "string",
+            "example": "Revisar documentos de propiedad"
+          },
+          "description": {
+            "type": "string",
+            "example": "Verificar que todos los documentos estén en orden"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "cancelled"],
+            "default": "pending",
+            "example": "pending"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "urgent"],
+            "default": "medium",
+            "example": "high"
+          },
+          "assigned_to": {
+            "type": "string",
+            "example": "user_1234567890"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Analytics": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "user_1234567890"
+          },
+          "metrics": {
+            "type": "object",
+            "properties": {
+              "totalProperties": {
+                "type": "integer",
+                "example": 5
+              },
+              "totalOffers": {
+                "type": "integer",
+                "example": 12
+              },
+              "activeOffers": {
+                "type": "integer",
+                "example": 3
+              },
+              "completedOffers": {
+                "type": "integer",
+                "example": 8
+              },
+              "conversionRate": {
+                "type": "number",
+                "format": "float",
+                "example": 66.67
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WebhookPayload": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "example": "offer.created",
+            "enum": [
+              "property.created",
+              "property.updated",
+              "property.deleted",
+              "offer.created",
+              "offer.updated",
+              "offer.status_changed",
+              "user.created",
+              "user.updated",
+              "task.created",
+              "task.updated",
+              "task.completed",
+              "communication.sent",
+              "document.uploaded"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "Datos del evento (varía según el tipo de evento)"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "webhookId": {
+            "type": "string",
+            "example": "wh_1234567890"
+          },
+          "attempt": {
+            "type": "integer",
+            "example": 1
+          },
+          "signature": {
+            "type": "string",
+            "example": "sha256=abc123..."
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/properties": {
+      "get": {
+        "summary": "Listar propiedades",
+        "description": "Obtiene una lista de todas las propiedades del usuario autenticado",
+        "tags": ["Properties"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Número máximo de resultados"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Número de resultados a saltar"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["available", "sold", "rented"]
+            },
+            "description": "Filtrar por estado de la propiedad"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de propiedades obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Property"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear propiedad",
+        "description": "Crea una nueva propiedad para el usuario autenticado",
+        "tags": ["Properties"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "address_street",
+                  "address_number",
+                  "address_city",
+                  "address_region",
+                  "property_type",
+                  "price"
+                ],
+                "properties": {
+                  "address_street": {
+                    "type": "string",
+                    "example": "Calle Principal"
+                  },
+                  "address_number": {
+                    "type": "string",
+                    "example": "123"
+                  },
+                  "address_city": {
+                    "type": "string",
+                    "example": "Santiago"
+                  },
+                  "address_region": {
+                    "type": "string",
+                    "example": "Metropolitana"
+                  },
+                  "property_type": {
+                    "type": "string",
+                    "enum": ["casa", "departamento", "oficina", "local", "bodega", "terreno"]
+                  },
+                  "price": {
+                    "type": "number",
+                    "format": "decimal"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "default": "CLP"
+                  },
+                  "bedrooms": {
+                    "type": "integer"
+                  },
+                  "bathrooms": {
+                    "type": "number",
+                    "format": "decimal"
+                  },
+                  "area_sqm": {
+                    "type": "number",
+                    "format": "decimal"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "features": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Propiedad creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Property"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/properties/{id}": {
+      "get": {
+        "summary": "Obtener propiedad",
+        "description": "Obtiene los detalles de una propiedad específica",
+        "tags": ["Properties"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID de la propiedad"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Propiedad obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Property"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualizar propiedad",
+        "description": "Actualiza los datos de una propiedad existente",
+        "tags": ["Properties"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID de la propiedad"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "price": {
+                    "type": "number",
+                    "format": "decimal"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["available", "sold", "rented"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Propiedad actualizada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Property"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/offers": {
+      "get": {
+        "summary": "Listar ofertas",
+        "description": "Obtiene una lista de ofertas del usuario autenticado",
+        "tags": ["Offers"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pendiente", "aceptada", "rechazada", "completada"]
+            },
+            "description": "Filtrar por estado de la oferta"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de ofertas obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Offer"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear oferta",
+        "description": "Crea una nueva oferta para una propiedad",
+        "tags": ["Offers"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["property_id", "offered_price"],
+                "properties": {
+                  "property_id": {
+                    "type": "string",
+                    "example": "prop_1234567890"
+                  },
+                  "offered_price": {
+                    "type": "number",
+                    "format": "decimal"
+                  },
+                  "conditions": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Oferta creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Offer"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/offers/{id}": {
+      "get": {
+        "summary": "Obtener oferta",
+        "description": "Obtiene los detalles de una oferta específica",
+        "tags": ["Offers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID de la oferta"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Oferta obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Offer"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualizar oferta",
+        "description": "Actualiza el estado o datos de una oferta",
+        "tags": ["Offers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID de la oferta"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["pendiente", "aceptada", "rechazada", "completada"]
+                  },
+                  "offered_price": {
+                    "type": "number",
+                    "format": "decimal"
+                  },
+                  "conditions": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Oferta actualizada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Offer"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks": {
+      "get": {
+        "summary": "Listar tareas",
+        "description": "Obtiene una lista de tareas asignadas al usuario",
+        "tags": ["Tasks"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "in_progress", "completed", "cancelled"]
+            },
+            "description": "Filtrar por estado de la tarea"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de tareas obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Task"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{id}": {
+      "put": {
+        "summary": "Actualizar tarea",
+        "description": "Actualiza el estado o datos de una tarea",
+        "tags": ["Tasks"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID de la tarea"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["pending", "in_progress", "completed", "cancelled"]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "urgent"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tarea actualizada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Task"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics": {
+      "get": {
+        "summary": "Obtener analytics",
+        "description": "Obtiene métricas y estadísticas del usuario",
+        "tags": ["Analytics"],
+        "responses": {
+          "200": {
+            "description": "Analytics obtenidos exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Analytics"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "Unauthorized": {
+        "description": "API key inválida o faltante",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "INVALID_API_KEY",
+                "message": "API key inválida o inactiva"
+              }
+            }
+          }
+        }
+      },
+      "RateLimitExceeded": {
+        "description": "Límite de rate alcanzado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "RATE_LIMIT_EXCEEDED",
+                "message": "Límite de rate alcanzado"
+              },
+              "meta": {
+                "rateLimitRemaining": 0,
+                "rateLimitReset": "2024-01-15T10:30:00Z"
+              }
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Datos de entrada inválidos",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Los datos proporcionados son inválidos",
+                "details": {
+                  "field": "price",
+                  "message": "El precio debe ser mayor a 0"
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "schema": {
+                "$ref": "#/components/schemas/Error"
+              },
+              "example": {
+                "success": false,
+                "error": {
+                  "code": "NOT_FOUND",
+                  "message": "El recurso solicitado no existe"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Properties",
+      "description": "Operaciones relacionadas con propiedades inmobiliarias"
+    },
+    {
+      "name": "Offers",
+      "description": "Operaciones relacionadas con ofertas de compra"
+    },
+    {
+      "name": "Tasks",
+      "description": "Operaciones relacionadas con tareas del proceso"
+    },
+    {
+      "name": "Analytics",
+      "description": "Métricas y estadísticas de uso"
+    }
+  ],
+  "externalDocs": {
+    "description": "Documentación completa y ejemplos",
+    "url": "https://docs.plataformainmobiliaria.com/api"
+  }
+}

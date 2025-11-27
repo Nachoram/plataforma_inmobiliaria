@@ -16,6 +16,8 @@ import { PanelPage } from './panel/PanelPage';
 // Property components - keep property details loaded
 import { PropertyDetailsPage } from './properties/PropertyDetailsPage';
 import { AdminPropertyDetailView } from './properties/AdminPropertyDetailView';
+import { PropertyAvailabilityManager } from './properties/PropertyAvailabilityManager';
+import { PropertyVisitsManager } from './properties/PropertyVisitsManager';
 import { RentalApplicationPage } from './properties/RentalApplicationPage';
 
 // Application components
@@ -51,6 +53,9 @@ import PropertyFormPage from './properties/PropertyFormPage';
 import UserProfilePage from './profile/UserProfilePage';
 import SalePropertyAdminPanel from './sales/SalePropertyAdminPanel';
 import SaleOfferPage from './sales/SaleOfferPage';
+
+// Admin components
+import FeatureFlagsAdmin from './admin/FeatureFlagsAdmin';
 
 // Loading component for lazy loaded routes
 const LoadingSpinner = () => (
@@ -124,11 +129,7 @@ export const AppContent: React.FC = () => {
 
       {/* Postulation admin routes */}
       <Route path="/postulation/:id/admin" element={
-        <ProtectedRoute>
-          <Layout>
-            <PostulationAdminPanel />
-          </Layout>
-        </ProtectedRoute>
+        <PostulationAdminPanel />
       } />
 
       {/* Sale offer admin routes */}
@@ -186,6 +187,22 @@ export const AppContent: React.FC = () => {
         <ProtectedRoute>
           <Layout>
             <AdminPropertyDetailView />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/portfolio/property/:id/availability" element={
+        <ProtectedRoute>
+          <Layout>
+            <PropertyAvailabilityManager />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/portfolio/property/:id/visits" element={
+        <ProtectedRoute>
+          <Layout>
+            <PropertyVisitsManager />
           </Layout>
         </ProtectedRoute>
       } />
@@ -271,6 +288,15 @@ export const AppContent: React.FC = () => {
       } />
 
 
+
+      {/* Admin routes */}
+      <Route path="/admin/feature-flags" element={
+        <ProtectedRoute>
+          <Layout>
+            <FeatureFlagsAdmin />
+          </Layout>
+        </ProtectedRoute>
+      } />
 
       {/* Diagnostic routes */}
       <Route path="/diagnostic" element={

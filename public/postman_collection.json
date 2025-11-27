@@ -1,0 +1,819 @@
+{
+  "info": {
+    "name": "Plataforma Inmobiliaria - API Externa",
+    "description": "Colección completa de requests para probar la API externa de la Plataforma Inmobiliaria. Incluye ejemplos para todos los endpoints principales.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "plataforma-inmobiliaria"
+  },
+  "item": [
+    {
+      "name": "Autenticación",
+      "item": [
+        {
+          "name": "Configurar API Key",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Configura tu API Key aquí",
+                  "pm.globals.set(\"api_key\", \"your-api-key-here\");",
+                  "",
+                  "// Configura la URL base",
+                  "pm.globals.set(\"base_url\", \"https://api.plataformainmobiliaria.com/v1\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/properties?limit=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "properties"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Request de ejemplo para configurar la API Key y probar la autenticación. Reemplaza 'your-api-key-here' con tu API Key real."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Propiedades",
+      "item": [
+        {
+          "name": "Listar Propiedades",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/properties?limit=10&status=available",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "properties"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "available"
+                }
+              ]
+            },
+            "description": "Obtiene una lista de propiedades. Parámetros opcionales: limit, offset, status"
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Propiedad Específica",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/properties/{{property_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "properties",
+                "{{property_id}}"
+              ]
+            },
+            "description": "Obtiene los detalles de una propiedad específica. Reemplaza {{property_id}} con un ID real de propiedad."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Nueva Propiedad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address_street\": \"Calle Nueva\",\n  \"address_number\": \"456\",\n  \"address_city\": \"Santiago\",\n  \"address_region\": \"Metropolitana\",\n  \"property_type\": \"departamento\",\n  \"price\": 200000000,\n  \"currency\": \"CLP\",\n  \"bedrooms\": 2,\n  \"bathrooms\": 1.5,\n  \"area_sqm\": 75.5,\n  \"description\": \"Hermoso departamento en el centro\",\n  \"features\": [\"ascensor\", \"estacionamiento\", \"seguridad\"],\n  \"images\": [\"https://example.com/image1.jpg\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/properties",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "properties"
+              ]
+            },
+            "description": "Crea una nueva propiedad con todos los datos requeridos"
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar Propiedad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 220000000,\n  \"description\": \"Hermoso departamento en el centro - PRECIO REDUCIDO\",\n  \"status\": \"available\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/properties/{{property_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "properties",
+                "{{property_id}}"
+              ]
+            },
+            "description": "Actualiza los datos de una propiedad existente"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ofertas",
+      "item": [
+        {
+          "name": "Listar Ofertas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/offers?status=pendiente",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "offers"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pendiente"
+                }
+              ]
+            },
+            "description": "Obtiene una lista de ofertas filtradas por estado"
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Oferta Específica",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/offers/{{offer_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "offers",
+                "{{offer_id}}"
+              ]
+            },
+            "description": "Obtiene los detalles completos de una oferta específica"
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Nueva Oferta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property_id\": \"{{property_id}}\",\n  \"offered_price\": 180000000,\n  \"currency\": \"CLP\",\n  \"conditions\": \"Contado, escritura inmediata, comisión incluida\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/offers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "offers"
+              ]
+            },
+            "description": "Crea una nueva oferta para una propiedad"
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar Estado de Oferta",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"aceptada\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/offers/{{offer_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "offers",
+                "{{offer_id}}"
+              ]
+            },
+            "description": "Actualiza el estado de una oferta (ejemplo: aceptar oferta)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tareas",
+      "item": [
+        {
+          "name": "Listar Tareas Asignadas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tasks?status=pending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            },
+            "description": "Obtiene una lista de tareas asignadas al usuario"
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar Estado de Tarea",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tasks/{{task_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tasks",
+                "{{task_id}}"
+              ]
+            },
+            "description": "Actualiza el estado de una tarea (ejemplo: marcar como completada)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Obtener Métricas de Usuario",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/analytics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "analytics"
+              ]
+            },
+            "description": "Obtiene métricas y estadísticas del usuario (propiedades, ofertas, conversión, etc.)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Casos de Uso Prácticos",
+      "item": [
+        {
+          "name": "Sincronización de Propiedades - CRM",
+          "item": [
+            {
+              "name": "1. Obtener Propiedades Recientes",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-API-Key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/properties?limit=50&created_after={{last_sync_date}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "properties"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "50"
+                    },
+                    {
+                      "key": "created_after",
+                      "value": "{{last_sync_date}}",
+                      "description": "Fecha en formato ISO 8601"
+                    }
+                  ]
+                },
+                "description": "Obtener propiedades creadas después de la última sincronización"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Crear Propiedad en CRM Externo",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{property.address_street}} {{property.address_number}}\",\n  \"value\": {{property.price}},\n  \"description\": \"{{property.description}}\",\n  \"custom_fields\": {\n    \"tipo\": \"{{property.property_type}}\",\n    \"dormitorios\": {{property.bedrooms}},\n    \"baños\": {{property.bathrooms}},\n    \"metros\": {{property.area_sqm}}\n  }\n}"
+                },
+                "url": {
+                  "raw": "https://your-crm.com/api/v2/leads",
+                  "host": [
+                    "your-crm.com"
+                  ],
+                  "path": [
+                    "api",
+                    "v2",
+                    "leads"
+                  ]
+                },
+                "description": "Ejemplo de cómo crear un lead en un CRM externo con datos de la propiedad"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Monitoreo de Ofertas - Dashboard",
+          "item": [
+            {
+              "name": "Obtener Ofertas Activas",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-API-Key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/offers?status=pendiente&limit=100",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "offers"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "pendiente"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "description": "Obtener todas las ofertas pendientes para mostrar en un dashboard"
+              },
+              "response": []
+            },
+            {
+              "name": "Calcular Métricas",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "// Calcular métricas a partir de la respuesta",
+                      "if (pm.response.code === 200) {",
+                      "    const data = pm.response.json().data;",
+                      "    ",
+                      "    // Contar ofertas por precio",
+                      "    const priceRanges = {",
+                      "        'under_100m': 0,",
+                      "        '100m_200m': 0,",
+                      "        'over_200m': 0",
+                      "    };",
+                      "    ",
+                      "    data.forEach(offer => {",
+                      "        const price = offer.offered_price;",
+                      "        if (price < 100000000) priceRanges.under_100m++;",
+                      "        else if (price <= 200000000) priceRanges['100m_200m']++;",
+                      "        else priceRanges.over_200m++;",
+                      "    });",
+                      "    ",
+                      "    // Guardar métricas en variables",
+                      "    pm.collectionVariables.set('total_offers', data.length);",
+                      "    pm.collectionVariables.set('avg_offer_price', data.reduce((sum, o) => sum + o.offered_price, 0) / data.length);",
+                      "    pm.collectionVariables.set('offers_under_100m', priceRanges.under_100m);",
+                      "    ",
+                      "    console.log('Métricas calculadas:', {",
+                      "        total: data.length,",
+                      "        avgPrice: pm.collectionVariables.get('avg_offer_price'),",
+                      "        priceRanges",
+                      "    });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-API-Key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/analytics",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "analytics"
+                  ]
+                },
+                "description": "Obtener métricas generales y calcular estadísticas adicionales"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Automatización - Webhook Testing",
+          "item": [
+            {
+              "name": "Simular Webhook - Nueva Oferta",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Webhook-Signature",
+                    "value": "sha256=test_signature_here",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"event\": \"offer.created\",\n  \"data\": {\n    \"id\": \"offer_test_123\",\n    \"property_id\": \"prop_test_456\",\n    \"buyer_id\": \"user_test_789\",\n    \"offered_price\": 150000000,\n    \"status\": \"pendiente\",\n    \"created_at\": \"2024-01-15T10:00:00Z\"\n  },\n  \"timestamp\": \"2024-01-15T10:00:00Z\",\n  \"webhookId\": \"wh_test_123\",\n  \"attempt\": 1,\n  \"signature\": \"sha256=test_signature_here\"\n}"
+                },
+                "url": {
+                  "raw": "https://your-app.com/webhooks/plataforma-inmobiliaria",
+                  "host": [
+                    "your-app.com"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "plataforma-inmobiliaria"
+                  ]
+                },
+                "description": "Simular recepción de webhook cuando se crea una nueva oferta"
+              },
+              "response": []
+            },
+            {
+              "name": "Validar Firma del Webhook",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "// Validar firma del webhook",
+                      "const crypto = require('crypto-js');",
+                      "const secret = 'your_webhook_secret';",
+                      "const signature = pm.request.headers.get('X-Webhook-Signature');",
+                      "const payload = pm.request.body.raw;",
+                      "",
+                      "const expectedSignature = 'sha256=' + crypto.HmacSHA256(payload, secret).toString();",
+                      "",
+                      "pm.test('Webhook signature is valid', function () {",
+                      "    pm.expect(signature).to.eql(expectedSignature);",
+                      "});",
+                      "",
+                      "pm.test('Event is offer.created', function () {",
+                      "    const jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.event).to.eql('offer.created');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Webhook-Signature",
+                    "value": "sha256=test_signature_here",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"event\": \"offer.created\",\n  \"data\": {\n    \"id\": \"offer_test_123\",\n    \"property_id\": \"prop_test_456\",\n    \"buyer_id\": \"user_test_789\",\n    \"offered_price\": 150000000,\n    \"status\": \"pendiente\",\n    \"created_at\": \"2024-01-15T10:00:00Z\"\n  },\n  \"timestamp\": \"2024-01-15T10:00:00Z\",\n  \"webhookId\": \"wh_test_123\",\n  \"attempt\": 1,\n  \"signature\": \"sha256=test_signature_here\"\n}"
+                },
+                "url": {
+                  "raw": "https://your-app.com/webhooks/validate",
+                  "host": [
+                    "your-app.com"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "validate"
+                  ]
+                },
+                "description": "Endpoint para validar la firma del webhook antes de procesarlo"
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Error Handling",
+      "item": [
+        {
+          "name": "API Key Inválida",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "invalid_api_key",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/properties",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "properties"
+              ]
+            },
+            "description": "Probar respuesta cuando se envía una API key inválida"
+          },
+          "response": []
+        },
+        {
+          "name": "Rate Limit Excedido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/properties",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "properties"
+              ]
+            },
+            "description": "Si ejecutas este request múltiples veces rápidamente, eventualmente recibirás un error de rate limit"
+          },
+          "response": []
+        },
+        {
+          "name": "Recurso No Encontrado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/properties/non_existent_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "properties",
+                "non_existent_id"
+              ]
+            },
+            "description": "Probar respuesta cuando se solicita un recurso que no existe"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Scripts globales de pre-request",
+          "",
+          "// Configurar timestamp para requests",
+          "pm.globals.set(\"timestamp\", new Date().toISOString());",
+          "",
+          "// Generar IDs únicos para testing",
+          "if (!pm.globals.get(\"property_id\")) {",
+          "    pm.globals.set(\"property_id\", \"prop_test_\" + Math.random().toString(36).substr(2, 9));",
+          "}",
+          "if (!pm.globals.get(\"offer_id\")) {",
+          "    pm.globals.set(\"offer_id\", \"offer_test_\" + Math.random().toString(36).substr(2, 9));",
+          "}",
+          "if (!pm.globals.get(\"task_id\")) {",
+          "    pm.globals.set(\"task_id\", \"task_test_\" + Math.random().toString(36).substr(2, 9));",
+          "}",
+          "",
+          "// Configurar fecha de última sincronización",
+          "if (!pm.globals.get(\"last_sync_date\")) {",
+          "    const yesterday = new Date();",
+          "    yesterday.setDate(yesterday.getDate() - 1);",
+          "    pm.globals.set(\"last_sync_date\", yesterday.toISOString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.plataformainmobiliaria.com/v1",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "your-api-key-here",
+      "type": "string"
+    }
+  ]
+}

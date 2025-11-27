@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postulación - Sin Conexión</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .offline-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        .offline-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #fff, #e0e7ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .offline-subtitle {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .offline-message {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .feature-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .feature-description {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .retry-button {
+            background: linear-gradient(45deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        }
+
+        .retry-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+        }
+
+        .retry-button:active {
+            transform: translateY(0);
+        }
+
+        .connection-status {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+
+        .connection-status.online {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .offline-container {
+                padding: 30px 20px;
+            }
+
+            .offline-title {
+                font-size: 1.8rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon pulse">📱</div>
+
+        <h1 class="offline-title">Sin Conexión a Internet</h1>
+        <p class="offline-subtitle">No te preocupes, puedes continuar trabajando</p>
+
+        <p class="offline-message">
+            Has perdido la conexión a internet, pero tu panel de postulaciones sigue funcionando.
+            Los cambios se sincronizarán automáticamente cuando recuperes la conexión.
+        </p>
+
+        <div class="features-grid">
+            <div class="feature-item">
+                <span class="feature-icon">💾</span>
+                <div class="feature-title">Trabajo Offline</div>
+                <div class="feature-description">
+                    Visualiza y edita postulaciones sin conexión
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <span class="feature-icon">🔄</span>
+                <div class="feature-title">Sincronización</div>
+                <div class="feature-description">
+                    Los cambios se sincronizan cuando vuelvas online
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <span class="feature-icon">📋</span>
+                <div class="feature-title">Datos Cacheados</div>
+                <div class="feature-description">
+                    Accede a postulaciones previamente cargadas
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <span class="feature-icon">⚡</span>
+                <div class="feature-title">Rápido</div>
+                <div class="feature-description">
+                    Funciona sin demoras de red
+                </div>
+            </div>
+        </div>
+
+        <button class="retry-button" onclick="window.location.reload()">
+            🔄 Intentar Reconectar
+        </button>
+
+        <div class="connection-status" id="connection-status">
+            🔴 Sin conexión
+        </div>
+    </div>
+
+    <script>
+        // Actualizar estado de conexión
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connection-status');
+            if (navigator.onLine) {
+                statusElement.textContent = '🟢 Conexión restaurada - Recargando...';
+                statusElement.classList.add('online');
+                // Auto-recargar después de 2 segundos si hay conexión
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                statusElement.textContent = '🔴 Sin conexión';
+                statusElement.classList.remove('online');
+            }
+        }
+
+        // Escuchar cambios en el estado de conexión
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+
+        // Estado inicial
+        updateConnectionStatus();
+
+        // Verificar conexión periódicamente
+        setInterval(() => {
+            if (navigator.onLine) {
+                // Intentar una petición simple para verificar conectividad real
+                fetch(window.location.origin + '/favicon.ico', {
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                })
+                .then(() => {
+                    updateConnectionStatus();
+                })
+                .catch(() => {
+                    // Mantener como offline
+                });
+            }
+        }, 5000);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (event) => {
+            // Ctrl/Cmd + R o F5 para recargar
+            if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
+                event.preventDefault();
+                window.location.reload();
+            } else if (event.key === 'F5') {
+                event.preventDefault();
+                window.location.reload();
+            }
+
+            // Escape para ir a la página principal (si está cacheada)
+            if (event.key === 'Escape') {
+                if (window.location.pathname !== '/' && navigator.onLine) {
+                    window.location.href = '/';
+                }
+            }
+        });
+
+        // Mostrar información de debug en desarrollo
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('📱 Offline page loaded');
+            console.log('🌐 Online status:', navigator.onLine);
+            console.log('💾 Service Worker:', 'supported', navigator.serviceWorker ? 'yes' : 'no');
+        }
+    </script>
+</body>
+</html>

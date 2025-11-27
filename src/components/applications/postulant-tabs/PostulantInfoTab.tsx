@@ -21,10 +21,10 @@ import {
   Upload,
   Download
 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { CustomButton } from '../common';
-import { supabase } from '../../lib/supabase';
-import { postulantValidations } from '../../lib/postulantValidations';
+import { useAuth } from '../../../hooks/useAuth';
+import { CustomButton } from '../../common';
+import { supabase } from '../../../lib/supabase';
+import { postulantValidations } from '../../../lib/postulantValidations';
 import toast from 'react-hot-toast';
 
 interface ApplicationData {

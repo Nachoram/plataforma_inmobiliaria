@@ -7,7 +7,7 @@ import 'react-calendar/dist/Calendar.css';
 import './AdminPropertyDetailView.css';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { PostulationAdminPanel } from './PostulationAdminPanel';
+import { PropertyPostulationAdminPanel } from './PropertyPostulationAdminPanel';
 import SaleOfferAdminPanel from '../sales/SaleOfferAdminPanel';
 
 interface PropertyWithImages extends Property {
@@ -142,7 +142,7 @@ export const AdminPropertyDetailView: React.FC = () => {
 
   // ===================================================================
   // NOTE: Postulation admin panel has been extracted to a separate
-  // component: PostulationAdminPanel.tsx (2025-10-28)
+  // component: PropertyPostulationAdminPanel.tsx (2025-10-28)
   // 
   // This includes:
   // - Postulations table UI
@@ -486,7 +486,7 @@ export const AdminPropertyDetailView: React.FC = () => {
 
         {/* Panel de Administración de Postulaciones - Solo para Arriendos */}
         {id && property && isOwner && property.listing_type === 'arriendo' && (
-          <PostulationAdminPanel propertyId={id} property={property} />
+          <PropertyPostulationAdminPanel propertyId={id} property={property} />
         )}
 
         {/* Panel de Administración de Ofertas - Solo para Ventas */}

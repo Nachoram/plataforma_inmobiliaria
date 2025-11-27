@@ -248,7 +248,7 @@ const getUserFriendlyErrorMessage = (error: any, defaultMessage: string = 'Ha oc
  * @param {PostulationAdminPanelProps} props - Props del componente
  * @returns {JSX.Element} Panel de administración de postulaciones
  */
-export const PostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
+export const PropertyPostulationAdminPanel: React.FC<PostulationAdminPanelProps> = ({
   propertyId,
   property
 }) => {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Settings, Mail, Phone, DollarSign, Briefcase, UserCheck, FileText } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -24,10 +25,9 @@ interface PostulationsListProps {
 }
 
 const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propPostulations, propertyId }) => {
+  const navigate = useNavigate();
   const [postulations, setPostulations] = useState<Postulation[]>(propPostulations || []);
   const [loading, setLoading] = useState(!propPostulations && !!propertyId);
-  const [selectedPostulation, setSelectedPostulation] = useState<Postulation | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Si no se pasaron postulaciones pero sí un propertyId, cargarlas
   React.useEffect(() => {
@@ -107,8 +107,7 @@ const PostulationsList: React.FC<PostulationsListProps> = ({ postulations: propP
   }, [propPostulations, propertyId]);
 
   const handleViewDetails = (postulation: Postulation) => {
-    setSelectedPostulation(postulation);
-    setIsModalOpen(true);
+    navigate(`/postulation/${postulation.id}/admin`);
   };
 
   const getStatusColor = (status: string) => {

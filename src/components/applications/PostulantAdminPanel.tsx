@@ -22,7 +22,9 @@ import {
   Eye,
   Edit3,
   X,
-  Paperclip
+  Paperclip,
+  Zap,
+  TrendingUp
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -120,16 +122,23 @@ interface RequestData {
   internal_notes?: string;
 }
 
-type TabType = 'info' | 'documents' | 'messages';
+type TabType = 'info' | 'documents' | 'messages' | 'actions';
 
 // ========================================================================
 // MAIN COMPONENT
 // ========================================================================
 
 export const PostulantAdminPanel: React.FC = () => {
-  const { applicationId } = useParams<{ applicationId: string }>();
+  const params = useParams();
+  console.log('🔍 POSTULANT ADMIN PANEL - PARAMS RECIBIDOS:', params);
+
+  // La ruta /postulation/:id/admin pasa el parámetro como 'id', no 'applicationId'
+  const { id: applicationId } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  console.log('📋 POSTULANT ADMIN PANEL - applicationId (desde id):', applicationId);
+  console.log('👤 POSTULANT ADMIN PANEL - user:', user?.id);
 
   // State
   const [activeTab, setActiveTab] = useState<TabType>('info');
@@ -171,7 +180,14 @@ export const PostulantAdminPanel: React.FC = () => {
   }, [user, applicationId]);
 
   const fetchApplicationData = async () => {
-    if (!user || !applicationId) return;
+    console.log('🚀 POSTULANT ADMIN PANEL: Iniciando fetchApplicationData');
+    console.log('🔍 POSTULANT ADMIN PANEL: applicationId en fetch:', applicationId);
+    console.log('👤 POSTULANT ADMIN PANEL: user en fetch:', user);
+
+    if (!user || !applicationId) {
+      console.log('❌ POSTULANT ADMIN PANEL: Faltan user o applicationId', { user: !!user, applicationId });
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -471,6 +487,68 @@ export const PostulantAdminPanel: React.FC = () => {
         );
       case 'messages':
         return <PostulantMessagesTab messages={messages} application={application} onRefresh={fetchApplicationData} />;
+      case 'actions':
+        return (
+          <div className="space-y-8">
+            {/* Acciones Administrativas */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Zap className="h-5 w-5 text-purple-600 mr-2" />
+                Acciones Disponibles
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                  onClick={handleViewContract}
+                  disabled={!contractData}
+                  className={`w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
+                    !contractData
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                  title={!contractData ? 'No hay contrato disponible' : 'Ver contrato generado'}
+                >
+                  <Eye className="h-5 w-5" />
+                  <span>Ver Contrato</span>
+                </button>
+
+                <button
+                  onClick={handleDownloadContract}
+                  disabled={!contractData}
+                  className={`w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
+                    !contractData
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                  title={!contractData ? 'No hay contrato disponible' : 'Descargar contrato generado'}
+                >
+                  <FileText className="h-5 w-5" />
+                  <span>Descargar Contrato</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    // TODO: Implement commercial report generation
+                    toast.info('Funcionalidad de generar informe comercial en desarrollo');
+                  }}
+                  className="w-full bg-teal-600 text-white px-4 py-3 rounded-lg hover:bg-teal-700 transition-colors flex items-center justify-center space-x-2"
+                  title="Generar un informe comercial detallado"
+                >
+                  <TrendingUp className="h-5 w-5" />
+                  <span>Informe Comercial</span>
+                </button>
+
+                <button
+                  onClick={() => navigate('/my-applications')}
+                  className="w-full bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2"
+                  title="Volver a la lista de postulaciones"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                  <span>Volver a Postulaciones</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
       default:
         return (
           <PostulantInfoTab
@@ -611,9 +689,10 @@ export const PostulantAdminPanel: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex space-x-8 overflow-x-auto">
               {[
-                { id: 'info', label: 'Información y Acciones', icon: FileText },
-                { id: 'documents', label: 'Documentos', icon: Paperclip, count: documents.length },
-                { id: 'messages', label: 'Mensajes', icon: MessageSquare, count: unreadMessages }
+                { id: 'info', label: 'Información', icon: FileText },
+              { id: 'documents', label: 'Documentos', icon: Paperclip, count: documents.length },
+              { id: 'messages', label: 'Mensajes', icon: MessageSquare, count: unreadMessages },
+              { id: 'actions', label: 'Acciones', icon: Zap }
               ].map(tab => (
                 <button
                   key={tab.id}

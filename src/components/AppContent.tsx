@@ -19,8 +19,8 @@ import { AdminPropertyDetailView } from './properties/AdminPropertyDetailView';
 import { RentalApplicationPage } from './properties/RentalApplicationPage';
 
 // Application components
-import { PostulationAdminPanel } from './applications/PostulationAdminPanel';
 import { PostulantAdminPanel } from './applications/PostulantAdminPanel';
+import { PostulationAdminPanel } from './applications/PostulationAdminPanel';
 
 // Sales components
 import SaleOfferManagementPage from './sales/SaleOfferManagementPage';

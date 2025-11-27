@@ -1,7 +1,7 @@
 /**
- * PostulationAdminPanel.test.tsx
+ * PropertyPostulationAdminPanel.test.tsx
  * 
- * Test suite para el componente PostulationAdminPanel
+ * Test suite para el componente PropertyPostulationAdminPanel
  * 
  * COBERTURA:
  * - Renderizado básico del componente
@@ -12,14 +12,14 @@
  * - Manejo de errores
  * - Estados de carga y sin datos
  * 
- * @module PostulationAdminPanel.test
+ * @module PropertyPostulationAdminPanel.test
  * @since 2025-10-28
  */
 
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { PostulationAdminPanel } from '../PostulationAdminPanel';
+import { PropertyPostulationAdminPanel } from '../PropertyPostulationAdminPanel';
 import { supabase } from '../../../lib/supabase';
 import { toast } from 'react-hot-toast';
 
@@ -133,7 +133,7 @@ const createSupabaseMock = (data: any[], error: any = null) => {
 // TEST SUITE
 // ========================================================================
 
-describe('PostulationAdminPanel', () => {
+describe('PropertyPostulationAdminPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -146,7 +146,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
     
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -159,7 +159,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -178,7 +178,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -197,7 +197,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([], mockError);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -212,7 +212,7 @@ describe('PostulationAdminPanel', () => {
     const mockChain = createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="" 
         property={mockProperty as any} 
       />
@@ -234,7 +234,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -257,7 +257,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -292,7 +292,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -323,7 +323,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -354,7 +354,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -389,7 +389,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -420,7 +420,7 @@ describe('PostulationAdminPanel', () => {
     const mockChain = createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -467,7 +467,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -482,7 +482,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -497,7 +497,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -523,7 +523,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([postulationWithoutGuarantor]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -546,7 +546,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -569,7 +569,7 @@ describe('PostulationAdminPanel', () => {
     createSupabaseMock([mockPostulation, { ...mockPostulation, id: 'another-id' }]);
 
     render(
-      <PostulationAdminPanel 
+      <PropertyPostulationAdminPanel 
         propertyId="property-123" 
         property={mockProperty as any} 
       />
@@ -594,7 +594,7 @@ describe('PostulationAdminPanel', () => {
       createSupabaseMock([mockPostulation]); // status: 'pendiente'
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />
@@ -621,7 +621,7 @@ describe('PostulationAdminPanel', () => {
       createSupabaseMock([mockApprovedPostulation]);
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />
@@ -660,7 +660,7 @@ describe('PostulationAdminPanel', () => {
       });
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />
@@ -700,7 +700,7 @@ describe('PostulationAdminPanel', () => {
       createSupabaseMock([mockApprovedPostulation]);
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />
@@ -735,7 +735,7 @@ describe('PostulationAdminPanel', () => {
       createSupabaseMock([mockApprovedPostulation]);
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />
@@ -768,7 +768,7 @@ describe('PostulationAdminPanel', () => {
       createSupabaseMock([mockApprovedPostulation]);
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />
@@ -816,7 +816,7 @@ describe('PostulationAdminPanel', () => {
       });
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />
@@ -856,7 +856,7 @@ describe('PostulationAdminPanel', () => {
       createSupabaseMock([mockApprovedPostulation]);
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />
@@ -894,7 +894,7 @@ describe('PostulationAdminPanel', () => {
       createSupabaseMock([mockApprovedPostulation]);
 
       render(
-        <PostulationAdminPanel 
+        <PropertyPostulationAdminPanel 
           propertyId="property-123" 
           property={mockProperty as any} 
         />

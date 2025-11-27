@@ -1500,8 +1500,6 @@ export const PostulationAdminPanel: React.FC = () => {
   // ========================================================================
 
   const renderTabContent = () => {
-    console.log('🎯 renderTabContent: Renderizando pestaña:', activeTab);
-
     switch (activeTab) {
       case 'info':
         return (
@@ -1706,6 +1704,7 @@ export const PostulationAdminPanel: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+
 
       {/* Admin Panel Indicator */}
       <div className="h-1 bg-gradient-to-r from-blue-600 to-blue-700"></div>

@@ -95,3 +95,5 @@ BEGIN
     RAISE NOTICE '⚡ Triggers e índices creados';
     RAISE NOTICE '🔄 Sistema de autorizaciones de documentos listo para usar';
 END $$;
+
+

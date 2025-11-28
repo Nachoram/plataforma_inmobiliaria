@@ -172,3 +172,5 @@ COMMENT ON COLUMN scheduled_visits.visit_purpose IS 'Purpose of the visit (tour,
 COMMENT ON COLUMN scheduled_visits.check_in_time IS 'Actual time when visitor arrived';
 COMMENT ON COLUMN scheduled_visits.check_out_time IS 'Actual time when visit ended';
 COMMENT ON COLUMN scheduled_visits.assigned_agent IS 'Agent assigned to conduct the visit';
+
+

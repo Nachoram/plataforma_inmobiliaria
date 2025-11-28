@@ -79,3 +79,5 @@ const PostulationDocumentsTabSkeleton = () => (
 // Export both the lazy component and skeleton
 export { PostulationDocumentsTab, PostulationDocumentsTabSkeleton };
 export default PostulationDocumentsTab;
+
+

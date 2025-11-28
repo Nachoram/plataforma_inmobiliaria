@@ -10,3 +10,5 @@ WHERE status IS NULL OR status != 'available';
 
 -- Verificar que se actualizaron correctamente
 SELECT id, address_street, status FROM properties WHERE status = 'available';
+
+

@@ -374,3 +374,5 @@ export const useModalManager = (): UseModalManagerReturn => {
     registerModalRef
   } as UseModalManagerReturn & { registerModalRef: (id: string, element: HTMLElement | null) => void };
 };
+
+

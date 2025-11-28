@@ -277,3 +277,5 @@ COMMENT ON COLUMN api_keys.rate_limit IS 'Límite de rate en formato JSON';
 COMMENT ON COLUMN webhooks.events IS 'Array de eventos que trigger el webhook';
 COMMENT ON COLUMN webhooks.secret IS 'Secret para firmar payloads de webhooks';
 COMMENT ON COLUMN webhooks.retry_policy IS 'Política de reintentos en formato JSON';
+
+

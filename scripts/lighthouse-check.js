@@ -138,3 +138,5 @@ async function runLighthouseCheck() {
 
 // Run the check
 runLighthouseCheck();
+
+

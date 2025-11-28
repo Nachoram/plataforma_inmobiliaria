@@ -1,5 +1,103 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { FeatureFlag, FeatureFlagsState, useFeatureFlagsState } from '../../hooks/useFeatureFlags';
+import { FeatureFlag, FeatureFlagsState } from '../../hooks/useFeatureFlags';
+
+// Estado inicial - todos los flags en false por defecto (producción segura)
+const initialFlags: FeatureFlagsState = {
+  offer_details_refactor: false,
+  advanced_cache: false,
+  performance_monitoring: false,
+  toast_notifications: false,
+};
+
+// Flags de desarrollo - activados en desarrollo
+const developmentFlags: Partial<FeatureFlagsState> = {
+  offer_details_refactor: true,
+  advanced_cache: true,
+  performance_monitoring: true,
+  toast_notifications: true,
+};
+
+// Función para obtener flags iniciales
+const getInitialFlags = (customInitialFlags: Partial<FeatureFlagsState> = {}): FeatureFlagsState => {
+  // En desarrollo, activar flags de desarrollo
+  const isDevelopment = import.meta.env.DEV;
+
+  let flags = { ...initialFlags };
+
+  if (isDevelopment) {
+    flags = { ...flags, ...developmentFlags };
+  }
+
+  // Aplicar flags personalizados (desde props o variables de entorno)
+  flags = { ...flags, ...customInitialFlags };
+
+  return flags;
+};
+
+// Hook principal para gestión de feature flags
+const useFeatureFlagsState = (customInitialFlags: Partial<FeatureFlagsState> = {}) => {
+  const [flags, setFlags] = useState<FeatureFlagsState>(() => getInitialFlags(customInitialFlags));
+
+  // Cargar flags desde localStorage al inicializar (solo en el cliente)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('feature-flags');
+        if (stored) {
+          const parsedFlags = JSON.parse(stored);
+          setFlags(prev => ({ ...prev, ...parsedFlags }));
+        }
+      } catch (error) {
+        console.warn('Error loading feature flags from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Guardar automáticamente en localStorage cuando cambian los flags (solo en el cliente)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('feature-flags', JSON.stringify(flags));
+      } catch (error) {
+        console.warn('Error saving feature flags to localStorage:', error);
+      }
+    }
+  }, [flags]);
+
+  // Función para verificar si un flag está habilitado
+  const isEnabled = (flag: FeatureFlag): boolean => {
+    return Boolean(flags[flag]);
+  };
+
+  // Función para habilitar un flag
+  const enableFlag = (flag: FeatureFlag): void => {
+    setFlags(prev => ({ ...prev, [flag]: true }));
+  };
+
+  // Función para deshabilitar un flag
+  const disableFlag = (flag: FeatureFlag): void => {
+    setFlags(prev => ({ ...prev, [flag]: false }));
+  };
+
+  // Función para alternar un flag
+  const toggleFlag = (flag: FeatureFlag): void => {
+    setFlags(prev => ({ ...prev, [flag]: !prev[flag] }));
+  };
+
+  // Función para resetear flags a valores iniciales
+  const resetFlags = (): void => {
+    setFlags(getInitialFlags(customInitialFlags));
+  };
+
+  return {
+    flags,
+    isEnabled,
+    enableFlag,
+    disableFlag,
+    toggleFlag,
+    resetFlags,
+  };
+};
 
 // Contexto de feature flags
 interface FeatureFlagsContextType {

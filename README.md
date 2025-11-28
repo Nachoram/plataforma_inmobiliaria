@@ -4,6 +4,7 @@ Una plataforma inmobiliaria completa y escalable construida con tecnologías mod
 
 ## 📋 Tabla de Contenidos
 
+- [🆕 Últimas Actualizaciones](#-últimas-actualizaciones)
 - [🏗️ Arquitectura](#-arquitectura)
 - [🛠️ Tecnologías](#️-tecnologías)
 - [🚀 Instalación y Configuración](#-instalación-y-configuración)
@@ -20,6 +21,35 @@ Una plataforma inmobiliaria completa y escalable construida con tecnologías mod
 - [🧪 Testing](#-testing)
 - [📚 API Reference](#-api-reference)
 - [🤝 Contribución](#-contribución)
+
+## 🆕 Últimas Actualizaciones
+
+### v2.1.0 - Gestión Mejorada de Estacionamientos (Commit: 21b267c)
+
+**🎯 Mejoras en Formulario de Propiedades de Alquiler:**
+
+- **✅ Eliminada duplicación** de campos de estacionamientos para **Casa** y **Departamento**
+- **✅ Habilitados estacionamientos** para **Bodegas** con sistema completo de gestión
+- **✅ Optimizada experiencia** de usuario por tipo de propiedad
+
+**📊 Comportamiento por Tipo de Propiedad:**
+
+| Tipo | Campo Simple | Sección Completa | Estado |
+|------|-------------|-----------------|---------|
+| Casa | ❌ No | ✅ Sí | Optimizado |
+| Departamento | ❌ No | ✅ Sí | Optimizado |
+| Bodega | ❌ No | ✅ Sí | **Nuevo** |
+| Oficina | ✅ Sí | ✅ Sí | Completo |
+| Local Comercial | ✅ Sí | ❌ No | Básico |
+
+**🔧 Detalles Técnicos:**
+- Componente `ParkingSpaceForm` extendido a Bodegas
+- Lógica de BD actualizada para persistencia correcta
+- Compatibilidad total con propiedades existentes
+
+*Ver documentación completa: [`ESTACIONAMIENTOS_POR_TIPO_PROPIEDAD.md`](ESTACIONAMIENTOS_POR_TIPO_PROPIEDAD.md)*
+
+---
 
 ## 🏗️ Arquitectura
 

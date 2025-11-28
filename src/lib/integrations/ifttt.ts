@@ -586,3 +586,5 @@ export const ifttt = {
 };
 
 export default getIFTTTIntegration;
+
+

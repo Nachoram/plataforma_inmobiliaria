@@ -443,3 +443,5 @@ function getCategoryColor(category: Template['category']): string {
   };
   return colors[category] || '#6B7280';
 }
+
+

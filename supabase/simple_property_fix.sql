@@ -26,3 +26,5 @@ FROM properties
 WHERE status IN ('disponible', 'activa')
 ORDER BY address_street
 LIMIT 5;
+
+

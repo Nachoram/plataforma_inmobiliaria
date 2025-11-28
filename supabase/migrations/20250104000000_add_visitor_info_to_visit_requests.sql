@@ -39,3 +39,5 @@ ADD CONSTRAINT check_visitor_phone_format CHECK (
   visitor_phone IS NULL OR
   visitor_phone ~ '^[0-9+\-\s()]+$'
 );
+
+

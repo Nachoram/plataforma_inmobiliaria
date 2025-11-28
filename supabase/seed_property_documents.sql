@@ -84,3 +84,5 @@ BEGIN
         RAISE NOTICE 'ℹ️ Los documentos ya existen para la propiedad ID: %', property_id;
     END IF;
 END $$;
+
+

@@ -23,6 +23,9 @@ export const useRoutePreloader = () => {
         // Prefetch de dashboard (visitado por usuarios activos)
         import('../components/dashboard/ApplicationsPage');
         import('../components/portfolio/PortfolioPage');
+
+        // Prefetch de calendario (nueva funcionalidad crítica)
+        import('../components/profile/UserProfilePage');
       }, 2000); // Delay de 2 segundos
 
       // Contracts are now admin-only and don't need public preloading
@@ -69,6 +72,13 @@ export const preloadRoute = async (routeName: string) => {
         break;
       case 'property-form':
         await import('../components/properties/PropertyFormPage');
+        break;
+      case 'profile':
+        await import('../components/profile/UserProfilePage');
+        break;
+      case 'calendar':
+        await import('../components/profile/UserCalendarSection');
+        await import('../components/profile/EventDetailsModal');
         break;
       default:
         console.warn(`Ruta no reconocida para preload: ${routeName}`);

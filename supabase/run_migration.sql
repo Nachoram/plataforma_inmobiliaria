@@ -2,3 +2,5 @@
 -- Copiar y pegar el contenido del archivo apply_calendar_migration.sql
 
 \i apply_calendar_migration.sql
+
+

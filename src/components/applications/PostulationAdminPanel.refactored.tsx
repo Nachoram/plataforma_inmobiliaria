@@ -355,3 +355,5 @@ const ContractModal: React.FC<{
 };
 
 export default PostulationAdminPanel;
+
+

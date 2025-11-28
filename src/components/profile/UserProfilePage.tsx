@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import {
@@ -10,8 +10,14 @@ import {
   UserCircle,
   Home,
   ShoppingCart,
-  Briefcase
+  Briefcase,
+  Calendar as CalendarIcon
 } from 'lucide-react';
+
+// Lazy load del componente de calendario para mejorar performance
+const UserCalendarSection = lazy(() => import('./UserCalendarSection').then(module => ({
+  default: module.UserCalendarSection
+})));
 
 // Tipos
 type ProfileType = 'corredor_independiente' | 'empresa_corretaje' | 'buscar_arriendo' | 'buscar_compra';
@@ -49,6 +55,7 @@ export const UserProfilePage: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'calendar'>('profile');
 
   // Estados del perfil
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -196,12 +203,27 @@ export const UserProfilePage: React.FC = () => {
         {/* Header */}
         <div className="bg-gradient-to-br from-blue-50 via-white to-orange-50 rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <UserCircle className="h-8 w-8 text-white" />
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${
+              activeTab === 'profile'
+                ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                : 'bg-gradient-to-br from-green-500 to-teal-600'
+            }`}>
+              {activeTab === 'profile' ? (
+                <UserCircle className="h-8 w-8 text-white" />
+              ) : (
+                <CalendarIcon className="h-8 w-8 text-white" />
+              )}
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Mi Perfil</h1>
-              <p className="text-gray-600">Gestiona tu información, documentos y avales frecuentes</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {activeTab === 'profile' ? 'Mi Perfil' : 'Mi Calendario'}
+              </h1>
+              <p className="text-gray-600">
+                {activeTab === 'profile'
+                  ? 'Gestiona tu información, documentos y avales frecuentes'
+                  : 'Visitas, firmas y plazos importantes en un solo lugar'
+                }
+              </p>
             </div>
           </div>
         </div>
@@ -222,13 +244,55 @@ export const UserProfilePage: React.FC = () => {
 
         {/* Content */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <ProfileSection
-            profileData={profileData}
-            setProfileData={setProfileData}
-            toggleProfileType={toggleProfileType}
-            handleSave={handleSaveProfile}
-            saving={saving}
-          />
+          {/* Pestañas de Navegación */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="flex space-x-8">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'profile'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <UserCircle className="h-4 w-4" />
+                Información del Perfil
+              </button>
+              <button
+                onClick={() => setActiveTab('calendar')}
+                className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'calendar'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                Calendario de Actividades
+              </button>
+            </nav>
+          </div>
+
+          {/* Contenido de Pestañas */}
+          {activeTab === 'profile' && (
+            <ProfileSection
+              profileData={profileData}
+              setProfileData={setProfileData}
+              toggleProfileType={toggleProfileType}
+              handleSave={handleSaveProfile}
+              saving={saving}
+            />
+          )}
+
+          {activeTab === 'calendar' && (
+            <Suspense fallback={
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+                <span className="ml-3 text-gray-600">Cargando calendario...</span>
+              </div>
+            }>
+              <UserCalendarSection />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>

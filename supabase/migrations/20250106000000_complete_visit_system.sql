@@ -352,3 +352,5 @@ BEGIN
     RAISE NOTICE '🔐 Políticas RLS aplicadas a ambas tablas';
     RAISE NOTICE '✅ Sistema de visitas 100% operativo';
 END $$;
+
+

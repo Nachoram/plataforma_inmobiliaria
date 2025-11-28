@@ -47,3 +47,5 @@ CREATE POLICY "Users can delete offers on their properties" ON property_sale_off
 -- REACTIVAR RLS (estaba deshabilitado temporalmente)
 ALTER TABLE property_sale_offers ENABLE ROW LEVEL SECURITY;
 
+
+

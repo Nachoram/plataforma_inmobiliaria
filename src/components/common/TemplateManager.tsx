@@ -611,3 +611,5 @@ function getCategoryIcon(category: Template['category']): string {
   };
   return icons[category] || '📝';
 }
+
+

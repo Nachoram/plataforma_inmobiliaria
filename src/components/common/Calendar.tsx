@@ -11,8 +11,16 @@ import {
   X
 } from 'lucide-react';
 import { useCalendar, CalendarEvent } from '../../hooks/useCalendar';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday } from 'date-fns';
-import { es } from 'date-fns/locale';
+import format from 'date-fns/format';
+import startOfMonth from 'date-fns/startOfMonth';
+import endOfMonth from 'date-fns/endOfMonth';
+import startOfWeek from 'date-fns/startOfWeek';
+import endOfWeek from 'date-fns/endOfWeek';
+import addDays from 'date-fns/addDays';
+import isSameMonth from 'date-fns/isSameMonth';
+import isSameDay from 'date-fns/isSameDay';
+import isToday from 'date-fns/isToday';
+import es from 'date-fns/locale/es';
 
 interface CalendarProps {
   className?: string;
@@ -488,3 +496,5 @@ export const Calendar: React.FC<CalendarProps> = ({
     </div>
   );
 };
+
+

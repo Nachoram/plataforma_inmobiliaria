@@ -21,3 +21,5 @@ SELECT id, address_street, address_number, status
 FROM properties
 WHERE status = 'available'
 ORDER BY address_street;
+
+

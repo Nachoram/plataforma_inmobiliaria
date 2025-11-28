@@ -37,6 +37,7 @@ export default defineConfig({
           'vendor-router': ['react-router-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-ui': ['lucide-react'],
+          'vendor-utils': ['date-fns', 'dompurify', 'html2canvas'],
 
           // Feature chunks - contracts moved to admin dashboard
           'properties': [
@@ -56,12 +57,35 @@ export default defineConfig({
           ],
           'marketplace': [
             './src/components/panel/PanelPage.tsx'
+          ],
+
+          // Nueva funcionalidad: Calendario
+          'calendar': [
+            './src/components/profile/UserCalendarSection.tsx',
+            './src/components/profile/EventDetailsModal.tsx',
+            './src/hooks/useUserCalendar.ts',
+            './src/components/common/Calendar.tsx'
           ]
         }
       }
     },
     // Optimize chunk size
-    chunkSizeWarningLimit: 600 // Increase warning limit to 600kb
+    chunkSizeWarningLimit: 1000, // Aumentar límite a 1000kb
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remover console.logs en producción
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'] // Remover funciones de logging
+      },
+      mangle: {
+        safari10: true // Compatibilidad con Safari 10
+      }
+    },
+    // Optimizaciones adicionales
+    sourcemap: false, // Deshabilitar sourcemaps en producción para reducir tamaño
+    cssCodeSplit: true, // Separar CSS en chunks
+    reportCompressedSize: true // Reportar tamaños comprimidos
   },
   resolve: {
     alias: [

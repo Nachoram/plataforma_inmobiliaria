@@ -46,3 +46,5 @@ WHERE availability_data IS NOT NULL AND type = 'availability';
 
 -- 4. Verificar que todo esté correcto
 SELECT 'Tabla calendar_events creada/verificada exitosamente' as status;
+
+

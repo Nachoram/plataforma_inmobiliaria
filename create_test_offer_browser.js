@@ -69,3 +69,5 @@ window.createTestOffer = createTestOffer;
 console.log('✅ Función createTestOffer() lista para usar.');
 console.log('📝 Ejecuta: createTestOffer() en la consola del navegador.');
 console.log('🌐 Asegúrate de estar en http://localhost:5173');
+
+

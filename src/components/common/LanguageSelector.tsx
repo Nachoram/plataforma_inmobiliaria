@@ -356,3 +356,5 @@ const COMMON_TRANSLATIONS = [
   { key: 'nav.dashboard', description: 'Navegación dashboard' },
   { key: 'nav.settings', description: 'Navegación configuración' }
 ];
+
+

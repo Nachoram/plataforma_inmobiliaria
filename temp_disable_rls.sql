@@ -7,3 +7,5 @@ ALTER TABLE property_sale_offers DISABLE ROW LEVEL SECURITY;
 GRANT SELECT ON property_sale_offers TO authenticated;
 GRANT SELECT ON properties TO authenticated;
 
+
+

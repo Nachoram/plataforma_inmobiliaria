@@ -65,3 +65,5 @@ export const BuyerOfferHeader: React.FC<BuyerOfferHeaderProps> = ({
 };
 
 export default BuyerOfferHeader;
+
+

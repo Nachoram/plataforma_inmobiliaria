@@ -483,3 +483,5 @@ export const PerformanceAnalyzer: React.FC<PerformanceAnalyzerProps> = ({ isOpen
     </div>
   );
 };
+
+

@@ -236,3 +236,5 @@ describe('OfferDetailsPanel - Performance Tests', () => {
     consoleSpy.mockRestore();
   });
 });
+
+

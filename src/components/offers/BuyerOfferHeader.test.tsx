@@ -206,3 +206,5 @@ describe('BuyerOfferHeader', () => {
     expect(headerContainer).toBeInTheDocument();
   });
 });
+
+

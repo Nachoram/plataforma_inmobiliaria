@@ -207,3 +207,5 @@ BEGIN
     RAISE NOTICE '🔐 Políticas RLS aplicadas';
     RAISE NOTICE '📊 Sistema de visitas agendadas operativo';
 END $$;
+
+

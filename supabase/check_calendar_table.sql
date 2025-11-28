@@ -44,3 +44,5 @@ SELECT
   with_check
 FROM pg_policies
 WHERE tablename = 'calendar_events';
+
+

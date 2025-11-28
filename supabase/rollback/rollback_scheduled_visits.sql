@@ -24,3 +24,5 @@ DROP INDEX IF EXISTS idx_scheduled_visits_property_date;
 
 -- Drop table
 DROP TABLE IF EXISTS scheduled_visits;
+
+

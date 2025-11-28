@@ -37,3 +37,5 @@ WHERE id = '073bb955-71dc-457b-8404-0100d370608e';
 -- 6. Verificar si hay datos en la tabla properties
 SELECT COUNT(*) as total_properties FROM properties;
 
+
+

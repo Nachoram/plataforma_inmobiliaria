@@ -14,3 +14,5 @@ SELECT DISTINCT status, COUNT(*) as count
 FROM properties
 GROUP BY status
 ORDER BY count DESC;
+
+

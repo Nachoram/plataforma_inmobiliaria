@@ -538,3 +538,5 @@ const removeStoredFailedOperation = async (id: string): Promise<void> => {
 const clearStoredFailedOperations = async (): Promise<void> => {
   localStorage.removeItem('sync_failed_operations');
 };
+
+

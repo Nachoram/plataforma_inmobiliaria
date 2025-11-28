@@ -481,3 +481,5 @@ function getFontSizeMultiplier(size: ThemeConfig['fontSize']): string {
   };
   return multipliers[size];
 }
+
+

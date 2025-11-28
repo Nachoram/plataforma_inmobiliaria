@@ -6,6 +6,9 @@ import { useAuth } from '../../hooks/useAuth';
 import ParkingSpaceForm, { ParkingSpace } from './ParkingSpaceForm';
 import StorageSpaceForm, { StorageSpace } from './StorageSpaceForm';
 import { ProgressiveDocumentUpload, DocumentType } from '../documents/ProgressiveDocumentUpload';
+import { PropertyBasicInfo } from './rental-form/components/PropertyBasicInfo/PropertyBasicInfo';
+import { PropertyInternalFeatures } from './rental-form/components/PropertyInternalFeatures/PropertyInternalFeatures';
+import { PropertyOwners } from './rental-form/components/PropertyOwners/PropertyOwners';
 
 // Datos de regiones y comunas de Chile
 const CHILE_REGIONS_COMMUNES = {

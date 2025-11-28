@@ -404,3 +404,5 @@ function getNotificationTypeDescription(type: keyof PushNotificationSettings['ty
   };
   return descriptions[type] || 'Notificación general';
 }
+
+

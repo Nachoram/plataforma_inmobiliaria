@@ -354,3 +354,5 @@ describe('OfferDetailsPanel - UX Tests', () => {
     expect(tabs.length).toBe(4);
   });
 });
+
+

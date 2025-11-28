@@ -221,3 +221,5 @@ BEGIN
     RAISE NOTICE '🔐 Políticas RLS aplicadas';
     RAISE NOTICE '📊 Índices de performance creados';
 END $$;
+
+

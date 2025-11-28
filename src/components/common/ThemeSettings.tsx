@@ -379,3 +379,5 @@ const COLOR_PREVIEWS: Record<ColorScheme, { primary: string; secondary: string; 
   red: { primary: '#EF4444', secondary: '#6B7280', accent: '#10B981' },
   gray: { primary: '#6B7280', secondary: '#9CA3AF', accent: '#3B82F6' }
 };
+
+

@@ -49,3 +49,5 @@ const PostulationInfoTabSkeleton = () => (
 // Export both the lazy component and skeleton
 export { PostulationInfoTab, PostulationInfoTabSkeleton };
 export default PostulationInfoTab;
+
+

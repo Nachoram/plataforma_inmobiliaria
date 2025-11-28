@@ -20,3 +20,5 @@ SELECT id, address_street, address_number, status, listing_type
 FROM properties
 WHERE status = 'available'
 ORDER BY created_at DESC;
+
+

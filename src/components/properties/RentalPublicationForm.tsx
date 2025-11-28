@@ -1181,6 +1181,31 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     }
   };
 
+  const saveStorageSpaces = async (propertyId: string, storageSpaces: StorageSpace[]) => {
+    try {
+      // For now, we'll store this information in the property metadata
+      // In a real implementation, you'd have a storage_spaces table
+      const storageData = {
+        storage_spaces: storageSpaces
+      };
+
+      const { error } = await supabase
+        .from('properties')
+        .update({ storage_spaces: storageData })
+        .eq('id', propertyId);
+
+      if (error) {
+        console.error('Error saving storage spaces:', error);
+        throw error;
+      }
+
+      console.log('✅ Storage spaces saved successfully');
+    } catch (error) {
+      console.error('Error saving storage spaces:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🚀 Iniciando handleSubmit...');
@@ -1538,6 +1563,12 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
       if (propertyResult?.id && formData.parkingSpaces.length > 0) {
         console.log('🚗 Guardando espacios de estacionamiento:', formData.parkingSpaces.length);
         await saveParkingSpaces(propertyResult.id, formData.parkingSpaces);
+      }
+
+      // Handle storage spaces
+      if (propertyResult?.id && formData.storageSpaces.length > 0) {
+        console.log('📦 Guardando espacios de almacenamiento:', formData.storageSpaces.length);
+        await saveStorageSpaces(propertyResult.id, formData.storageSpaces);
       }
 
       toast.success(isEditing ? 'Propiedad actualizada exitosamente!' : 'Propiedad publicada exitosamente!');

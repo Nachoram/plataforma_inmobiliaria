@@ -915,8 +915,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
     //   newErrors.personeria_certificate = 'El certificado de personería es requerido para personas jurídicas';
     // }
 
-    // Validaciones específicas para bodega (Casa, Departamento, Oficina)
-    if (propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina') {
+    // Validaciones específicas para bodega (Casa, Departamento, Oficina, Bodega)
+    if (propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Bodega') {
       // Validar M² Bodega si tiene bodega
       if (formData.tieneBodega === 'Sí') {
         if (!formData.metrosBodega || parseFloat(formData.metrosBodega) <= 0) {
@@ -1322,8 +1322,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         propertyData.ano_construccion = anoConstruccion; // Can be null
         propertyData.ubicacion_estacionamiento = parkingSpaces > 0 ? formData.ubicacionEstacionamiento || null : null;
 
-        // Campos específicos de bodega - permitidos para Casa, Departamento y Oficina
-        if (formData.tipoPropiedad === 'Casa' || formData.tipoPropiedad === 'Departamento' || formData.tipoPropiedad === 'Oficina') {
+        // Campos específicos de bodega - permitidos para Casa, Departamento, Oficina y Bodega
+        if (formData.tipoPropiedad === 'Casa' || formData.tipoPropiedad === 'Departamento' || formData.tipoPropiedad === 'Oficina' || formData.tipoPropiedad === 'Bodega') {
           propertyData.tiene_bodega = formData.tieneBodega === 'Sí';
           propertyData.metros_bodega = metrosBodega;
           propertyData.ubicacion_bodega = formData.ubicacionBodega || null;
@@ -1669,7 +1669,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     const updatedFormData = { ...formData, tipoPropiedad: newType };
 
                     if (newType === 'Bodega') {
-                      // CORREGIDO: Bodega - Solo numeroBodega requerido, limpiar campos tradicionales
+                      // CORREGIDO: Bodega - numeroBodega requerido, campos de bodega permitidos, limpiar campos tradicionales
                       updatedFormData.bedrooms = '0';
                       updatedFormData.bathrooms = '0';
                       // estacionamientos se mantiene para permitir configuración de espacios
@@ -1677,9 +1677,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       // metrosTotales se mantiene (M² de la Bodega)
                       updatedFormData.tieneTerraza = 'No';
                       updatedFormData.tieneSalaEstar = 'No';
-                      updatedFormData.tieneBodega = 'No';
-                      updatedFormData.metrosBodega = '';
-                      updatedFormData.ubicacionBodega = '';
+                      // campos de bodega se mantienen para permitir configuración de espacios adicionales
                       updatedFormData.parcela_number = '';
                       // numeroBodega se mantiene (requerido)
 
@@ -2262,7 +2260,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                   </select>
                 </div>
 
-                {/* Bodega - Solo para Casa y Departamento */}
+                {/* Bodega - Disponible para Casa, Departamento, Oficina y Bodega */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2383,6 +2381,83 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                           onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
                           className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                           placeholder="Ej: B-115 (piso -1)"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sección 3.6: Características de Bodega - Solo para Bodegas */}
+          {propertyType === 'Bodega' && (
+            <div className="space-y-3">
+              <div className="border-b pb-2">
+                <h2 className="text-xl font-bold text-gray-900">Espacios de Almacenamiento Adicionales</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Configura espacios de almacenamiento adicionales además del espacio principal
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {/* Campos de bodega adicionales para Bodegas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      ¿Tiene Espacios de Almacenamiento Adicionales?
+                    </label>
+                    <select
+                      value={formData.tieneBodega}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        tieneBodega: e.target.value,
+                        metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega,
+                        ubicacionBodega: e.target.value === 'No' ? '' : formData.ubicacionBodega
+                      })}
+                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    >
+                      <option value="No">No</option>
+                      <option value="Sí">Sí</option>
+                    </select>
+                  </div>
+
+                  {formData.tieneBodega === 'Sí' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          M² Espacios Adicionales <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          required={formData.tieneBodega === 'Sí'}
+                          value={formData.metrosBodega}
+                          onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.metrosBodega ? 'border-red-500 bg-red-50' : ''
+                          }`}
+                          placeholder="Ej: 25"
+                        />
+                        {errors.metrosBodega && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            {errors.metrosBodega}
+                          </p>
+                        )}
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Ubicación/Nº Espacios Adicionales (Opcional)
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={50}
+                          value={formData.ubicacionBodega}
+                          onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
+                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          placeholder="Ej: Área B-2, Nivel 2"
                         />
                       </div>
                     </>

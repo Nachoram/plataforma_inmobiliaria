@@ -182,3 +182,4 @@ BEGIN
     RAISE NOTICE '🔄 Incluye visitas, firmas de contratos y negociaciones activas';
     RAISE NOTICE '🎨 Eventos coloreados por tipo: azul (visitas), verde (firmas), naranja (negociaciones)';
 END $$;
+

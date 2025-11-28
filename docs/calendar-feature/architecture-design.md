@@ -410,3 +410,4 @@ const EVENT_ICONS = {
 - ✅ Reducción de consultas de soporte
 
 Esta arquitectura proporciona una base sólida y escalable para la implementación de la sección calendario, manteniendo consistencia con el sistema existente mientras introduce las nuevas funcionalidades requeridas.
+

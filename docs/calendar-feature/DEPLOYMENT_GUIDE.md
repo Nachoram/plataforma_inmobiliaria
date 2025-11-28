@@ -287,3 +287,4 @@ ALTER TABLE property_sale_offers ADD COLUMN deadline_date DATE;
 ---
 
 **🎉 Proyecto desplegado exitosamente - Usuarios pueden acceder a su calendario integrado** 🚀
+

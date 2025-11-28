@@ -273,3 +273,4 @@ docs/calendar-feature/
 ---
 
 *Backend de calendario implementado - Listo para desarrollo frontend* 🚀
+

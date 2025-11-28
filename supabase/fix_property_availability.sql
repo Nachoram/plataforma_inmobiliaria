@@ -22,3 +22,4 @@ WHERE status = 'available'
 ORDER BY created_at DESC;
 
 
+

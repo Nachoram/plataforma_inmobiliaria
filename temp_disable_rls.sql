@@ -9,3 +9,4 @@ GRANT SELECT ON properties TO authenticated;
 
 
 
+

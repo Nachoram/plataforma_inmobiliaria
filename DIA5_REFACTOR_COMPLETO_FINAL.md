@@ -355,3 +355,4 @@ Este refactor no solo mejoró el OfferDetailsPanel, sino que estableció un **nu
 **FIRMADO:** Equipo de Desarrollo 🚀**
 
 
+

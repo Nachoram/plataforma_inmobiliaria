@@ -23,3 +23,4 @@ WHERE status = 'available'
 ORDER BY address_street;
 
 
+

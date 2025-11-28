@@ -49,3 +49,4 @@ ALTER TABLE property_sale_offers ENABLE ROW LEVEL SECURITY;
 
 
 
+

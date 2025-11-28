@@ -445,3 +445,4 @@ function getCategoryColor(category: Template['category']): string {
 }
 
 
+

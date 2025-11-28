@@ -197,3 +197,4 @@ Esta fase se enfoca únicamente en:
 4. ⏳ Creación de documentación técnica
 
 **No incluye implementación de código aún.**
+

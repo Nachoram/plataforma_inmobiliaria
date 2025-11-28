@@ -72,3 +72,4 @@ BEGIN
     RAISE NOTICE '📊 Created index for deadline_date queries';
     RAISE NOTICE '💡 Offers can now have expiration dates for calendar integration';
 END $$;
+

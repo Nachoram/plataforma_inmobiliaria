@@ -12,3 +12,4 @@ WHERE status IS NULL OR status != 'available';
 SELECT id, address_street, status FROM properties WHERE status = 'available';
 
 
+

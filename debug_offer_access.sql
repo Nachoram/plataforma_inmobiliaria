@@ -39,3 +39,4 @@ SELECT COUNT(*) as total_properties FROM properties;
 
 
 
+

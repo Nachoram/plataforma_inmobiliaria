@@ -178,3 +178,4 @@ Si encuentras problemas o tienes preguntas:
 **¡El Calendario de Actividades está diseñado para hacer tu trabajo más eficiente y organizado!**
 
 ¿Tienes preguntas sobre alguna funcionalidad específica? Revisa la documentación técnica o contacta al equipo de soporte. 🚀
+

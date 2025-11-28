@@ -304,3 +304,4 @@ export const usePostulationPanel = (initialTab: TabType = 'info') => {
 };
 
 
+

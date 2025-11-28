@@ -48,3 +48,4 @@ WHERE availability_data IS NOT NULL AND type = 'availability';
 SELECT 'Tabla calendar_events creada/verificada exitosamente' as status;
 
 
+

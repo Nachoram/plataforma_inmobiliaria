@@ -145,3 +145,4 @@ describe('UserCalendarSection', () => {
     expect(screen.getByText('Próximos 7 días')).toBeInTheDocument();
   });
 });
+

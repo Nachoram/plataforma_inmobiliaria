@@ -356,3 +356,4 @@ describe('OfferDetailsPanel - UX Tests', () => {
 });
 
 
+

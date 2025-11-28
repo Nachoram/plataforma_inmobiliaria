@@ -279,3 +279,4 @@ COMMENT ON COLUMN webhooks.secret IS 'Secret para firmar payloads de webhooks';
 COMMENT ON COLUMN webhooks.retry_policy IS 'Política de reintentos en formato JSON';
 
 
+

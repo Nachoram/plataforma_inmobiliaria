@@ -552,3 +552,4 @@ export const getComponentPerformance = (componentName: string) => {
 export default getPerformanceMonitor;
 
 
+

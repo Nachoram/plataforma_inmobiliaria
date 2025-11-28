@@ -174,3 +174,4 @@ COMMENT ON COLUMN scheduled_visits.check_out_time IS 'Actual time when visit end
 COMMENT ON COLUMN scheduled_visits.assigned_agent IS 'Agent assigned to conduct the visit';
 
 
+

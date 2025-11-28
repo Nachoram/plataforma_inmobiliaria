@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, X, FileText, Image, Check, AlertCircle, Loader2, Building, User, Building2, CheckCircle } from 'lucide-react';
+import { Upload, X, FileText, Image, Check, AlertCircle, Loader2, Building, User, Building2, CheckCircle, Car } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import ParkingSpaceForm, { ParkingSpace } from './ParkingSpaceForm';
@@ -1277,7 +1277,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         // Bodega: Solo numeroBodega requerido, resto de campos tradicionales son NULL/0
         propertyData.bedrooms = 0;
         propertyData.bathrooms = 0;
-        propertyData.estacionamientos = 0;
+        propertyData.estacionamientos = parkingSpaces;
         propertyData.metros_utiles = null; // NO aplica para Bodega
         propertyData.metros_totales = metrosTotales; // Can be null if not provided
         propertyData.tiene_terraza = false;
@@ -1672,8 +1672,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                       // CORREGIDO: Bodega - Solo numeroBodega requerido, limpiar campos tradicionales
                       updatedFormData.bedrooms = '0';
                       updatedFormData.bathrooms = '0';
-                      updatedFormData.estacionamientos = '0';
-                      updatedFormData.ubicacionEstacionamiento = '';
+                      // estacionamientos se mantiene para permitir configuración de espacios
                       updatedFormData.metrosUtiles = ''; // NULL en BD
                       // metrosTotales se mantiene (M² de la Bodega)
                       updatedFormData.tieneTerraza = 'No';
@@ -2004,8 +2003,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 </div>
               )}
 
-              {/* Estacionamientos - Ocultar para Bodega, Estacionamiento y Parcela */}
-              {propertyType !== 'Bodega' && !isParking && propertyType !== 'Parcela' && (
+              {/* Estacionamientos - Ocultar para Bodega, Estacionamiento, Parcela, Casa y Departamento */}
+              {propertyType !== 'Bodega' && !isParking && propertyType !== 'Parcela' && propertyType !== 'Casa' && propertyType !== 'Departamento' && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Estacionamientos
@@ -2025,8 +2024,8 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                 </div>
               )}
 
-              {/* Ubicación de Estacionamientos - Ocultar para Bodega, Estacionamiento y Parcela */}
-              {propertyType !== 'Bodega' && !isParking && propertyType !== 'Parcela' && formData.estacionamientos !== '0' && (
+              {/* Ubicación de Estacionamientos - Ocultar para Bodega, Estacionamiento, Parcela, Casa y Departamento */}
+              {propertyType !== 'Bodega' && !isParking && propertyType !== 'Parcela' && propertyType !== 'Casa' && propertyType !== 'Departamento' && formData.estacionamientos !== '0' && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Ubicación/Nº Estacionamiento(s) (Opcional)
@@ -2394,7 +2393,7 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           )}
 
           {/* Sección 3.7: Estacionamientos */}
-          {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Parcela') && (
+          {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Parcela' || propertyType === 'Bodega') && (
             <div className="space-y-3">
               <div className="border-b pb-2">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center">

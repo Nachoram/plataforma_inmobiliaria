@@ -1,0 +1,43 @@
+# ANÁLISIS PREVIO - LÓGICA DE ESTACIONAMIENTOS EN FORMULARIO DE ARRIENDO
+# Fecha: $(date)
+# Archivo: RentalPublicationForm.tsx
+
+## ESTADO ACTUAL DEL CÓDIGO
+
+### 1. CAMPO SIMPLE DE ESTACIONAMIENTOS (líneas 2008-2026)
+- **Ubicación**: Sección "Información de la Propiedad"
+- **Condición actual**: propertyType !== 'Bodega' && !isParking && propertyType !== 'Parcela'
+- **Comportamiento**: Se muestra para TODOS los tipos EXCEPTO Bodega, Estacionamiento y Parcela
+- **Campos**: Select con opciones 0, 1, 2, 3, 4, 5+
+
+### 2. SECCIÓN COMPLETA DE ESTACIONAMIENTOS (línea 2397)
+- **Ubicación**: Sección independiente "Estacionamientos"
+- **Condición actual**: propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Parcela'
+- **Comportamiento**: Se muestra SOLO para Casa, Departamento, Oficina y Parcela
+- **Componente**: ParkingSpaceForm (permite múltiples espacios con detalles)
+
+### 3. COMPONENTE PARKINGSPACEFORM
+- **Estado**: ✅ Correctamente importado y funcional
+- **Ubicación**: src/components/properties/ParkingSpaceForm.tsx
+- **Funcionalidad**: Permite agregar múltiples espacios con número, tipo (techado/descubierto/combo), ubicación y costo adicional
+
+## PROBLEMA IDENTIFICADO
+
+### DUPLICACIÓN PARA CASA Y DEPARTAMENTO
+- **Casa**: Tiene campo simple (select) + sección completa (ParkingSpaceForm)
+- **Departamento**: Tiene campo simple (select) + sección completa (ParkingSpaceForm)
+- **Oficina**: Tiene campo simple (select) + sección completa (ParkingSpaceForm)
+- **Parcela**: Solo sección completa (ParkingSpaceForm) - OK
+- **Bodega**: Solo campo simple (select) - FALTA sección completa
+- **Estacionamiento**: Nada - OK
+- **Local Comercial**: Solo campo simple (select) - OK
+
+## BACKUP CREADO
+- Archivo: src/components/properties/RentalPublicationForm.tsx.backup
+- Fecha: $(date)
+
+## PRÓXIMOS PASOS (FASE 2)
+1. Modificar condición del campo simple para excluir Casa y Departamento
+2. Agregar Bodega a la condición de la sección completa
+3. Ajustar lógica de limpieza de campos para Bodegas
+4. Ajustar lógica de envío para Bodegas

@@ -4,6 +4,7 @@ import { Upload, X, FileText, Image, Check, AlertCircle, Loader2, Building, User
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import ParkingSpaceForm, { ParkingSpace } from './ParkingSpaceForm';
+import StorageSpaceForm, { StorageSpace } from './StorageSpaceForm';
 import { ProgressiveDocumentUpload, DocumentType } from '../documents/ProgressiveDocumentUpload';
 
 // Datos de regiones y comunas de Chile
@@ -345,6 +346,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
         // Parking Spaces - inicializar con datos existentes o vacío
         parkingSpaces: [] as ParkingSpace[],
 
+        // Storage Spaces - inicializar con datos existentes o vacío
+        storageSpaces: [] as StorageSpace[],
+
         // Amenidades - Tabla eliminada, inicializar vacío
         amenidades: [],
 
@@ -411,6 +415,9 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
 
       // Parking Spaces
       parkingSpaces: [] as ParkingSpace[],
+
+      // Storage Spaces
+      storageSpaces: [] as StorageSpace[],
 
       // Archivos
       photos_urls: [] as string[],

@@ -2259,12 +2259,33 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <option value="Sí">Sí</option>
                   </select>
                 </div>
+              </div>
+            </div>
+          )}
 
-                {/* Bodega - Disponible para Casa, Departamento, Oficina y Bodega */}
+          {/* Sección 2.5: Espacios de Almacenamiento - Para Casa, Departamento, Oficina y Bodega */}
+          {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Bodega') && (
+            <div className="space-y-3">
+              <div className="border-b pb-2">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                  <svg className="h-6 w-6 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  Espacios de Almacenamiento
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {propertyType === 'Bodega'
+                    ? 'Configura espacios de almacenamiento adicionales además del espacio principal'
+                    : 'Configura espacios de almacenamiento disponibles en la propiedad'
+                  }
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      ¿Tiene Bodega?
+                      {propertyType === 'Bodega' ? '¿Tiene Espacios Adicionales?' : '¿Tiene Bodega?'}
                     </label>
                     <select
                       value={formData.tieneBodega}
@@ -2285,27 +2306,38 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
                     <>
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          M² Bodega
+                          {propertyType === 'Bodega' ? 'M² Espacios Adicionales' : 'M² Bodega'} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
                           min="0"
+                          step="0.1"
+                          required={formData.tieneBodega === 'Sí'}
                           value={formData.metrosBodega}
                           onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
-                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                          placeholder="Ej: 5"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.metrosBodega ? 'border-red-500 bg-red-50' : ''
+                          }`}
+                          placeholder={propertyType === 'Bodega' ? "Ej: 25" : "Ej: 5"}
                         />
+                        {errors.metrosBodega && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            {errors.metrosBodega}
+                          </p>
+                        )}
                       </div>
-                      <div>
+                      <div className="md:col-span-2">
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Ubicación/Nº Bodega (Opcional)
+                          {propertyType === 'Bodega' ? 'Ubicación/Nº Espacios Adicionales' : 'Ubicación/Nº Bodega'} (Opcional)
                         </label>
                         <input
                           type="text"
+                          maxLength={50}
                           value={formData.ubicacionBodega}
                           onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
                           className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                          placeholder="Ej: B-115 (piso -1)"
+                          placeholder={propertyType === 'Bodega' ? "Ej: Área B-2, Nivel 2" : "Ej: B-115 (piso -1)"}
                         />
                       </div>
                     </>
@@ -2314,7 +2346,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               </div>
             </div>
           )}
-
 
           {/* Sección 3.5: Características de Oficina - Solo para Oficinas */}
           {propertyType === 'Oficina' && (
@@ -2324,148 +2355,11 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                {/* Bodega para Oficinas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      ¿Tiene Bodega?
-                    </label>
-                    <select
-                      value={formData.tieneBodega}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        tieneBodega: e.target.value,
-                        metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega,
-                        ubicacionBodega: e.target.value === 'No' ? '' : formData.ubicacionBodega
-                      })}
-                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                    >
-                      <option value="No">No</option>
-                      <option value="Sí">Sí</option>
-                    </select>
-                  </div>
-
-                  {formData.tieneBodega === 'Sí' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          M² Bodega <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          required={formData.tieneBodega === 'Sí'}
-                          value={formData.metrosBodega}
-                          onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors.metrosBodega ? 'border-red-500 bg-red-50' : ''
-                          }`}
-                          placeholder="Ej: 5"
-                        />
-                        {errors.metrosBodega && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors.metrosBodega}
-                          </p>
-                        )}
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Ubicación/Nº Bodega (Opcional)
-                        </label>
-                        <input
-                          type="text"
-                          maxLength={50}
-                          value={formData.ubicacionBodega}
-                          onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
-                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                          placeholder="Ej: B-115 (piso -1)"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
+                {/* Sección de Oficina sin campos de bodega - ahora están unificados */}
               </div>
             </div>
           )}
 
-          {/* Sección 3.6: Características de Bodega - Solo para Bodegas */}
-          {propertyType === 'Bodega' && (
-            <div className="space-y-3">
-              <div className="border-b pb-2">
-                <h2 className="text-xl font-bold text-gray-900">Espacios de Almacenamiento Adicionales</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Configura espacios de almacenamiento adicionales además del espacio principal
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {/* Campos de bodega adicionales para Bodegas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      ¿Tiene Espacios de Almacenamiento Adicionales?
-                    </label>
-                    <select
-                      value={formData.tieneBodega}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        tieneBodega: e.target.value,
-                        metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega,
-                        ubicacionBodega: e.target.value === 'No' ? '' : formData.ubicacionBodega
-                      })}
-                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                    >
-                      <option value="No">No</option>
-                      <option value="Sí">Sí</option>
-                    </select>
-                  </div>
-
-                  {formData.tieneBodega === 'Sí' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          M² Espacios Adicionales <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          required={formData.tieneBodega === 'Sí'}
-                          value={formData.metrosBodega}
-                          onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors.metrosBodega ? 'border-red-500 bg-red-50' : ''
-                          }`}
-                          placeholder="Ej: 25"
-                        />
-                        {errors.metrosBodega && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors.metrosBodega}
-                          </p>
-                        )}
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Ubicación/Nº Espacios Adicionales (Opcional)
-                        </label>
-                        <input
-                          type="text"
-                          maxLength={50}
-                          value={formData.ubicacionBodega}
-                          onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
-                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                          placeholder="Ej: Área B-2, Nivel 2"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Sección 3.7: Estacionamientos */}
           {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Parcela' || propertyType === 'Bodega') && (

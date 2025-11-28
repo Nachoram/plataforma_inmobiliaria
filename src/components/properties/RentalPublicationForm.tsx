@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, X, FileText, Image, Check, AlertCircle, Loader2, Building, User, Building2, CheckCircle, Car } from 'lucide-react';
+import { Upload, X, FileText, Image, Check, AlertCircle, Loader2, Building, User, Building2, CheckCircle, Car, Archive } from 'lucide-react';
 import { supabase, Property } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import ParkingSpaceForm, { ParkingSpace } from './ParkingSpaceForm';
@@ -2270,86 +2270,57 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
             </div>
           )}
 
-          {/* Sección 2.5: Espacios de Almacenamiento - Para Casa, Departamento, Oficina y Bodega */}
-          {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Bodega') && (
-            <div className="space-y-3">
+          {/* Sección 2.5: Espacios de la Propiedad - Para Casa, Departamento y Oficina */}
+          {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina') && (
+            <div className="space-y-6">
               <div className="border-b pb-2">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                  <svg className="h-6 w-6 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  Espacios de Almacenamiento
+                  <Building className="h-6 w-6 mr-2 text-indigo-600" />
+                  Espacios de la Propiedad
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  {propertyType === 'Bodega'
-                    ? 'Configura espacios de almacenamiento adicionales además del espacio principal'
-                    : 'Configura espacios de almacenamiento disponibles en la propiedad'
-                  }
+                  Configura estacionamientos y espacios de almacenamiento disponibles
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {propertyType === 'Bodega' ? '¿Tiene Espacios Adicionales?' : '¿Tiene Bodega?'}
-                    </label>
-                    <select
-                      value={formData.tieneBodega}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        tieneBodega: e.target.value,
-                        metrosBodega: e.target.value === 'No' ? '' : formData.metrosBodega,
-                        ubicacionBodega: e.target.value === 'No' ? '' : formData.ubicacionBodega
-                      })}
-                      className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                    >
-                      <option value="No">No</option>
-                      <option value="Sí">Sí</option>
-                    </select>
-                  </div>
-
-                  {formData.tieneBodega === 'Sí' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {propertyType === 'Bodega' ? 'M² Espacios Adicionales' : 'M² Bodega'} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          required={formData.tieneBodega === 'Sí'}
-                          value={formData.metrosBodega}
-                          onChange={(e) => setFormData({ ...formData, metrosBodega: e.target.value })}
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors.metrosBodega ? 'border-red-500 bg-red-50' : ''
-                          }`}
-                          placeholder={propertyType === 'Bodega' ? "Ej: 25" : "Ej: 5"}
-                        />
-                        {errors.metrosBodega && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            {errors.metrosBodega}
-                          </p>
-                        )}
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {propertyType === 'Bodega' ? 'Ubicación/Nº Espacios Adicionales' : 'Ubicación/Nº Bodega'} (Opcional)
-                        </label>
-                        <input
-                          type="text"
-                          maxLength={50}
-                          value={formData.ubicacionBodega}
-                          onChange={(e) => setFormData({ ...formData, ubicacionBodega: e.target.value })}
-                          className="w-full px-3 py-2 text-sm border-2 sm:border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                          placeholder={propertyType === 'Bodega' ? "Ej: Área B-2, Nivel 2" : "Ej: B-115 (piso -1)"}
-                        />
-                      </div>
-                    </>
-                  )}
+              {/* Sub-sección: Estacionamientos */}
+              <div className="space-y-3">
+                <div className="border-b pb-2 border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <Car className="h-5 w-5 mr-2 text-blue-600" />
+                    Estacionamientos
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Configura los espacios de estacionamiento disponibles
+                  </p>
                 </div>
+
+                <ParkingSpaceForm
+                  parkingSpaces={formData.parkingSpaces}
+                  onChange={(parkingSpaces) => setFormData({ ...formData, parkingSpaces })}
+                  propertyId={isEditing ? initialData?.id : undefined}
+                  maxSpaces={10}
+                />
+              </div>
+
+              {/* Sub-sección: Espacios de Almacenamiento */}
+              <div className="space-y-3">
+                <div className="border-b pb-2 border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <Archive className="h-5 w-5 mr-2 text-amber-600" />
+                    Espacios de Almacenamiento
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Configura bodegas y espacios de almacenamiento disponibles
+                  </p>
+                </div>
+
+                <StorageSpaceForm
+                  storageSpaces={formData.storageSpaces}
+                  onChange={(storageSpaces) => setFormData({ ...formData, storageSpaces })}
+                  propertyId={isEditing ? initialData?.id : undefined}
+                  maxSpaces={5}
+                />
               </div>
             </div>
           )}
@@ -2368,26 +2339,6 @@ export const RentalPublicationForm: React.FC<RentalPublicationFormProps> = ({
           )}
 
 
-          {/* Sección 3.7: Estacionamientos */}
-          {(propertyType === 'Casa' || propertyType === 'Departamento' || propertyType === 'Oficina' || propertyType === 'Parcela' || propertyType === 'Bodega') && (
-            <div className="space-y-3">
-              <div className="border-b pb-2">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                  <Car className="h-6 w-6 mr-2 text-blue-600" />
-                  Estacionamientos
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Configura los espacios de estacionamiento disponibles
-                </p>
-              </div>
-
-              <ParkingSpaceForm
-                parkingSpaces={formData.parkingSpaces}
-                onChange={(parkingSpaces) => setFormData({ ...formData, parkingSpaces })}
-                propertyId={isEditing ? initialData?.id : undefined}
-              />
-            </div>
-          )}
 
           {/* Sección 4: Datos del Propietario */}
           <div className="space-y-3">
